@@ -8,7 +8,19 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Resolved
 
-(none yet)
+### Missing table GRANTs on new Supabase project
+- **Added:** 2026-08-19 (Week 1, feature 4)
+- **What:** RLS policies were created for the projects table, but the authenticated role had no baseline GRANT (select/insert/update/delete), causing "permission denied for table" errors despite correct RLS.
+- **Why deferred:** Not deferred — this was a genuine gap caused by a recent Supabase platform default change (new projects no longer auto-grant table access). Discovered during manual testing, not known in advance.
+- **Severity:** High (blocked all writes to the table)
+- **Resolved:** 2026-08-19 — added explicit GRANT statement in Supabase SQL Editor for the authenticated role.
+
+### Broken row-click links using unreliable <tr> positioning
+- **Added:** 2026-08-19 (Week 1, feature 4)
+- **What:** Project rows used an absolutely-positioned overlay Link (position: relative on <tr>, absolute inset-0 on the Link) intended to make the whole row clickable. Because <tr> doesn't reliably establish a CSS containing block for absolutely positioned descendants, the overlay expanded to cover the entire page instead of just its row, hijacking clicks on unrelated buttons ("New Project", "Log Out") above the table.
+- **Why deferred:** Not deferred — introduced unintentionally when building the dashboard, found during manual testing.
+- **Severity:** High (broke navigation and logout entirely)
+- **Resolved:** 2026-08-19 — replaced overlay-link pattern with per-cell Links wrapping each <td>'s content.
 
 ---
 
