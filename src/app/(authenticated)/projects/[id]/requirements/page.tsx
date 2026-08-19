@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { UploadForm } from "./upload-form";
+import { DeleteDocumentButton } from "./delete-document-button";
 
 const BUCKET = "3pl-sourcing-documents";
 const SIGNED_URL_EXPIRY_SECONDS = 60;
@@ -31,13 +32,19 @@ export default async function RequirementsPage({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id")
+    .select("id, owner_id")
     .eq("id", id)
     .single();
 
   if (!project) {
     notFound();
   }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const isOwner = user?.id === project.owner_id;
 
   const { data: documents } = await supabase
     .from("documents")
@@ -121,18 +128,27 @@ export default async function RequirementsPage({
                             {new Date(doc.uploaded_at).toLocaleDateString()}
                           </p>
                         </div>
-                        {signedUrl ? (
-                          <a
-                            href={signedUrl}
-                            className="text-sm font-medium text-route-indigo hover:underline"
-                          >
-                            Download
-                          </a>
-                        ) : (
-                          <span className="text-sm text-slate">
-                            Unavailable
-                          </span>
-                        )}
+                        <div className="flex items-center gap-4">
+                          {signedUrl ? (
+                            <a
+                              href={signedUrl}
+                              className="text-sm font-medium text-route-indigo hover:underline"
+                            >
+                              Download
+                            </a>
+                          ) : (
+                            <span className="text-sm text-slate">
+                              Unavailable
+                            </span>
+                          )}
+                          {isOwner && (
+                            <DeleteDocumentButton
+                              projectId={id}
+                              documentId={doc.id}
+                              fileName={doc.file_name}
+                            />
+                          )}
+                        </div>
                       </li>
                     );
                   })}

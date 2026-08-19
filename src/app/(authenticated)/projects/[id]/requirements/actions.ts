@@ -53,3 +53,42 @@ export async function uploadDocument(
   revalidatePath(`/projects/${projectId}/requirements`);
   return {};
 }
+
+export type DeleteDocumentState = { error?: string };
+
+export async function deleteDocument(
+  projectId: string,
+  documentId: string,
+): Promise<DeleteDocumentState> {
+  const supabase = await createClient();
+
+  // The delete is scoped by RLS to documents the current user owns; a row
+  // is only returned here if the delete was actually allowed to happen.
+  const { data: deletedDocs, error: deleteError } = await supabase
+    .from("documents")
+    .delete()
+    .eq("id", documentId)
+    .eq("project_id", projectId)
+    .select("file_path");
+
+  if (deleteError) {
+    return { error: deleteError.message };
+  }
+
+  const deletedDoc = deletedDocs?.[0];
+
+  if (!deletedDoc) {
+    return { error: "You don't have permission to delete this document." };
+  }
+
+  const { error: storageError } = await supabase.storage
+    .from(BUCKET)
+    .remove([deletedDoc.file_path]);
+
+  if (storageError) {
+    return { error: storageError.message };
+  }
+
+  revalidatePath(`/projects/${projectId}/requirements`);
+  return {};
+}

@@ -25,6 +25,7 @@ All notable changes to this project will be documented in this file.
 - Client Requirements page (`src/app/(authenticated)/projects/[id]/requirements/page.tsx`) listing that project's `documents` rows grouped under RFI / Kickoff Meeting Transcript / Other Documents, with a fresh 60-second signed download URL generated per page load (never stored) and a "No documents uploaded yet" fallback per group; also includes a stub "RFI Template" section.
 - Upload form (`upload-form.tsx`, Client Component) and Server Action (`src/app/(authenticated)/projects/[id]/requirements/actions.ts`) that uploads the chosen file to the `3pl-sourcing-documents` bucket under `${projectId}/${uuid}-${fileName}`, inserts the matching `documents` row, and revalidates the page so the new document appears immediately.
 - The "Client Requirements" card on the project details page is now a working link to `/projects/[id]/requirements`; the other three placeholder cards are unchanged.
+- Owner-only document delete: the requirements page now compares the current user's id to the project's `owner_id` and only renders a "Delete" control for the owner, opening a confirmation dialog (`delete-document-button.tsx`) before calling the new `deleteDocument` Server Action, which removes the storage object and `documents` row and relies entirely on RLS to reject non-owner deletes rather than duplicating the ownership check in application code.
 
 ### Changed
 
