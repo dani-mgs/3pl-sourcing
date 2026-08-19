@@ -56,23 +56,39 @@ export default async function DashboardPage() {
               {projects.map((project) => (
                 <tr
                   key={project.id}
-                  className="relative border-t border-gray-200 hover:bg-gray-50"
+                  className="border-t border-gray-200 hover:bg-gray-50"
                 >
-                  <td className="px-4 py-2">
+                  <td className="px-0 py-0">
                     <Link
                       href={`/projects/${project.id}`}
-                      className="absolute inset-0"
-                    />
-                    <span className="relative text-gray-900">
+                      className="block px-4 py-2 text-gray-900"
+                    >
                       {project.client_name}
-                    </span>
+                    </Link>
                   </td>
-                  <td className="px-4 py-2 text-gray-700">
-                    {project.project_name}
+                  <td className="px-0 py-0">
+                    <Link
+                      href={`/projects/${project.id}`}
+                      className="block px-4 py-2 text-gray-700"
+                    >
+                      {project.project_name}
+                    </Link>
                   </td>
-                  <td className="px-4 py-2 text-gray-700">{project.status}</td>
-                  <td className="px-4 py-2 text-gray-700">
-                    {new Date(project.date_created).toLocaleDateString()}
+                  <td className="px-0 py-0">
+                    <Link
+                      href={`/projects/${project.id}`}
+                      className="block px-4 py-2 text-gray-700"
+                    >
+                      {project.status}
+                    </Link>
+                  </td>
+                  <td className="px-0 py-0">
+                    <Link
+                      href={`/projects/${project.id}`}
+                      className="block px-4 py-2 text-gray-700"
+                    >
+                      {new Date(project.date_created).toLocaleDateString()}
+                    </Link>
                   </td>
                 </tr>
               ))}
