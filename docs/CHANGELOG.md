@@ -27,3 +27,7 @@ All notable changes to this project will be documented in this file.
 - Applied the design system (`docs/DESIGN_SYSTEM.md`) across the login page, dashboard, new-project form, and logout button: Space Grotesk/Inter fonts wired up in the root layout via `next/font/google`, and colors, spacing, shape, and shadows brought in line with the documented tokens.
 - Dashboard empty state now reads "No projects yet. Create your first one to get started." per the empty-state convention.
 - Status pipeline (signature dotted element) intentionally deferred — no 3PL detail page exists yet to host it.
+- Moved `src/app/dashboard/` into a `(authenticated)` route group (`src/app/(authenticated)/dashboard/`, with `new/` alongside it) so `/dashboard` and `/dashboard/new` URLs are unchanged.
+- Added `src/app/(authenticated)/layout.tsx`, a shared Server Component header ("3PL Sourcing" + Log Out) rendered once above all authenticated pages instead of being duplicated per-page.
+- Removed the now-redundant header row and Log Out button from the dashboard page; it keeps only its page-specific title and New Project button.
+- Confirmed `src/middleware.ts` still protects `/dashboard` and `/dashboard/new`, since route groups don't change URL pathnames.
