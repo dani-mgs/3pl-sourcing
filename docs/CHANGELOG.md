@@ -19,3 +19,5 @@ All notable changes to this project will be documented in this file.
 - Projects dashboard (`src/app/dashboard/page.tsx`) listing client, project, status, and creation date for each project, linking through to `/projects/[id]`.
 - New Project form (`src/app/dashboard/new/page.tsx`) and Server Action (`src/app/dashboard/new/actions.ts`) that inserts a row into `projects`, setting `owner_id` from the authenticated user.
 - Confirmed existing auth middleware already covers `/dashboard` and `/dashboard/new` with no changes needed.
+- Logout capability: Server Action (`src/app/logout/actions.ts`) that signs out via Supabase and redirects to `/login`.
+- "Log Out" button added to the dashboard header, wired to the logout Server Action.

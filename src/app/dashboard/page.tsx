@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { logout } from "@/app/logout/actions";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -12,12 +13,22 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Projects</h1>
-        <Link
-          href="/dashboard/new"
-          className="rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800"
-        >
-          New Project
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/new"
+            className="rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800"
+          >
+            New Project
+          </Link>
+          <form action={logout}>
+            <button
+              type="submit"
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Log Out
+            </button>
+          </form>
+        </div>
       </div>
 
       {error && (
