@@ -4,7 +4,17 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
-(none yet)
+### Header bar spacing feels tight
+- **Added:** 2026-08-19 (Week 1, shared authenticated layout)
+- **What:** The header bar ("3PL Sourcing" / "Log Out") has no vertical padding and both elements sit flush against the edges with little breathing room.
+- **Why deferred:** Cosmetic only, doesn't block any functionality. Fixing now would be premature polish before more pages exist to calibrate spacing against.
+- **Severity:** Low
+
+### "New Project" button overlaps header border
+- **Added:** 2026-08-19 (Week 1, shared authenticated layout)
+- **What:** The "New Project" button on the dashboard page visually overlaps the header's bottom border line slightly.
+- **Why deferred:** Cosmetic alignment issue, doesn't block functionality.
+- **Severity:** Low
 
 ## Resolved
 
