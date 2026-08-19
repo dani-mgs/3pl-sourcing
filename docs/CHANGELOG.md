@@ -22,6 +22,9 @@ All notable changes to this project will be documented in this file.
 - Logout capability: Server Action (`src/app/logout/actions.ts`) that signs out via Supabase and redirects to `/login`.
 - "Log Out" button added to the dashboard header, wired to the logout Server Action.
 - Project details page (`src/app/(authenticated)/projects/[id]/page.tsx`) fetching a single project by id, showing client/project name, a status badge, and creation date, plus placeholder cards for the upcoming Client Requirements, 3PL List, Comparison, and Recommendation steps. Calls `notFound()` when no matching project exists. Uses the shared `(authenticated)` layout, so project rows on the dashboard now land here instead of 404ing.
+- Client Requirements page (`src/app/(authenticated)/projects/[id]/requirements/page.tsx`) listing that project's `documents` rows grouped under RFI / Kickoff Meeting Transcript / Other Documents, with a fresh 60-second signed download URL generated per page load (never stored) and a "No documents uploaded yet" fallback per group; also includes a stub "RFI Template" section.
+- Upload form (`upload-form.tsx`, Client Component) and Server Action (`src/app/(authenticated)/projects/[id]/requirements/actions.ts`) that uploads the chosen file to the `3pl-sourcing-documents` bucket under `${projectId}/${uuid}-${fileName}`, inserts the matching `documents` row, and revalidates the page so the new document appears immediately.
+- The "Client Requirements" card on the project details page is now a working link to `/projects/[id]/requirements`; the other three placeholder cards are unchanged.
 
 ### Changed
 

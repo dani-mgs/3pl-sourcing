@@ -1,11 +1,12 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 const UPCOMING_STEPS = [
-  "Client Requirements",
-  "3PL List",
-  "Comparison",
-  "Recommendation",
+  { title: "Client Requirements", href: "requirements" },
+  { title: "3PL List", href: null },
+  { title: "Comparison", href: null },
+  { title: "Recommendation", href: null },
 ];
 
 export default async function ProjectDetailsPage({
@@ -39,17 +40,29 @@ export default async function ProjectDetailsPage({
       </p>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {UPCOMING_STEPS.map((step) => (
-          <div
-            key={step}
-            className="rounded-2xl border border-fog bg-white p-6 shadow-sm"
-          >
-            <h2 className="font-display text-lg font-semibold text-ink-navy">
-              {step}
-            </h2>
-            <p className="mt-1 text-sm text-slate">Coming soon</p>
-          </div>
-        ))}
+        {UPCOMING_STEPS.map((step) =>
+          step.href ? (
+            <Link
+              key={step.title}
+              href={`/projects/${id}/${step.href}`}
+              className="rounded-2xl border border-fog bg-white p-6 shadow-sm hover:bg-mist"
+            >
+              <h2 className="font-display text-lg font-semibold text-ink-navy">
+                {step.title}
+              </h2>
+            </Link>
+          ) : (
+            <div
+              key={step.title}
+              className="rounded-2xl border border-fog bg-white p-6 shadow-sm"
+            >
+              <h2 className="font-display text-lg font-semibold text-ink-navy">
+                {step.title}
+              </h2>
+              <p className="mt-1 text-sm text-slate">Coming soon</p>
+            </div>
+          ),
+        )}
       </div>
     </div>
   );
