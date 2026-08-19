@@ -16,3 +16,6 @@ All notable changes to this project will be documented in this file.
 - Server Action (`src/app/login/actions.ts`) that signs in via Supabase and redirects to `/dashboard` on success.
 - Middleware now redirects unauthenticated requests to `/login`, leaving `/login` itself public.
 - Tailwind CSS added for form styling.
+- Projects dashboard (`src/app/dashboard/page.tsx`) listing client, project, status, and creation date for each project, linking through to `/projects/[id]`.
+- New Project form (`src/app/dashboard/new/page.tsx`) and Server Action (`src/app/dashboard/new/actions.ts`) that inserts a row into `projects`, setting `owner_id` from the authenticated user.
+- Confirmed existing auth middleware already covers `/dashboard` and `/dashboard/new` with no changes needed.
