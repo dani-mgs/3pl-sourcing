@@ -21,6 +21,7 @@ All notable changes to this project will be documented in this file.
 - Confirmed existing auth middleware already covers `/dashboard` and `/dashboard/new` with no changes needed.
 - Logout capability: Server Action (`src/app/logout/actions.ts`) that signs out via Supabase and redirects to `/login`.
 - "Log Out" button added to the dashboard header, wired to the logout Server Action.
+- Project details page (`src/app/(authenticated)/projects/[id]/page.tsx`) fetching a single project by id, showing client/project name, a status badge, and creation date, plus placeholder cards for the upcoming Client Requirements, 3PL List, Comparison, and Recommendation steps. Calls `notFound()` when no matching project exists. Uses the shared `(authenticated)` layout, so project rows on the dashboard now land here instead of 404ing.
 
 ### Changed
 
