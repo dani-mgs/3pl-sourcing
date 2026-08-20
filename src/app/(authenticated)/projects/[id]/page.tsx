@@ -26,8 +26,15 @@ export default async function ProjectDetailsPage({
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-8 py-10">
-      <div className="mb-2 flex items-center gap-3">
+    <div className="max-w-5xl px-8 py-10">
+      <Link
+        href="/dashboard"
+        className="text-sm font-medium text-move-green hover:underline"
+      >
+        ← Back to Dashboard
+      </Link>
+
+      <div className="mt-2 mb-2 flex items-center gap-3">
         <h1 className="font-display text-2xl font-semibold text-move-navy">
           {project.client_name} — {project.project_name}
         </h1>

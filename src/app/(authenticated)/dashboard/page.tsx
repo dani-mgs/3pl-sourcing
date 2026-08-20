@@ -18,7 +18,7 @@ export default async function DashboardPage() {
     .eq("status", "Active");
 
   return (
-    <div className="mx-auto max-w-4xl px-8 py-10">
+    <div className="max-w-5xl px-8 py-10">
       <div className="mb-8 flex items-center justify-between">
         <h1 className="font-display text-2xl font-semibold text-move-navy">
           Projects

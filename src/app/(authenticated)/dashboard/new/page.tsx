@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { createProject } from "./actions";
 
@@ -20,12 +21,19 @@ export default function NewProjectPage() {
   >(createProjectAction, {});
 
   return (
-    <div className="mx-auto max-w-sm px-8 py-10">
-      <h1 className="mb-8 font-display text-2xl font-semibold text-move-navy">
+    <div className="max-w-5xl px-8 py-10">
+      <Link
+        href="/dashboard"
+        className="text-sm font-medium text-move-green hover:underline"
+      >
+        ← Back to Dashboard
+      </Link>
+
+      <h1 className="mt-2 mb-8 font-display text-2xl font-semibold text-move-navy">
         New Project
       </h1>
 
-      <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+      <div className="max-w-sm rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
         <form action={formAction} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <label

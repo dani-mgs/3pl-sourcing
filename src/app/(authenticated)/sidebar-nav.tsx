@@ -9,7 +9,7 @@ export function SidebarNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-1 flex-col gap-1 py-4">
+    <nav className="flex flex-col gap-1 py-4">
       {NAV_ITEMS.map((item) => {
         const isActive =
           pathname === item.href || pathname.startsWith(`${item.href}/`);
