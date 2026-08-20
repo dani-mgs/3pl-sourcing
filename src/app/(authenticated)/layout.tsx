@@ -1,28 +1,42 @@
+import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/logout/actions";
+import { SidebarNav } from "./sidebar-nav";
 
-export default function AuthenticatedLayout({
+export default async function AuthenticatedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
-    <>
-      <header className="bg-move-navy">
-        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-8">
+    <div className="flex min-h-screen">
+      <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col bg-move-navy">
+        <div className="p-6">
           <span className="font-display text-lg font-semibold text-white">
             3PL Sourcing
           </span>
+        </div>
+
+        <SidebarNav />
+
+        <div className="mt-auto p-6">
+          <p className="mb-3 truncate text-xs text-white/60">{user?.email}</p>
           <form action={logout}>
             <button
               type="submit"
-              className="rounded-xl border border-white px-4 py-2.5 text-sm font-medium text-white hover:bg-white/10"
+              className="w-full rounded-xl border border-white px-4 py-2.5 text-sm font-medium text-white hover:bg-white/10"
             >
               Log Out
             </button>
           </form>
         </div>
-      </header>
-      {children}
-    </>
+      </aside>
+
+      <main className="flex-1 bg-neutral-bg">{children}</main>
+    </div>
   );
 }

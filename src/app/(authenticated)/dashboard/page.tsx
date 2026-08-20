@@ -8,6 +8,15 @@ export default async function DashboardPage() {
     .select("id, client_name, project_name, status, date_created")
     .order("date_created", { ascending: false });
 
+  const { count: totalCount } = await supabase
+    .from("projects")
+    .select("*", { count: "exact", head: true });
+
+  const { count: activeCount } = await supabase
+    .from("projects")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "Active");
+
   return (
     <div className="mx-auto max-w-4xl px-8 py-10">
       <div className="mb-8 flex items-center justify-between">
@@ -20,6 +29,21 @@ export default async function DashboardPage() {
         >
           New Project
         </Link>
+      </div>
+
+      <div className="mb-6 grid grid-cols-2 gap-6">
+        <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+          <p className="font-display text-3xl font-semibold text-move-navy">
+            {totalCount ?? 0}
+          </p>
+          <p className="text-sm text-slate-500">Total Projects</p>
+        </div>
+        <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+          <p className="font-display text-3xl font-semibold text-move-navy">
+            {activeCount ?? 0}
+          </p>
+          <p className="text-sm text-slate-500">Active Projects</p>
+        </div>
       </div>
 
       {error && (
