@@ -27,7 +27,7 @@ export default async function ProvidersPage({
     .order("created_at", { ascending: false });
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-4xl px-8 py-10">
       <Link
         href={`/projects/${id}`}
         className="text-sm font-medium text-move-green hover:underline"
@@ -35,7 +35,7 @@ export default async function ProvidersPage({
         ← Back to project
       </Link>
 
-      <div className="mt-2 mb-6 flex items-center justify-between">
+      <div className="mt-2 mb-8 flex items-center justify-between">
         <h1 className="font-display text-2xl font-semibold text-move-navy">
           3PL List
         </h1>
@@ -58,16 +58,16 @@ export default async function ProvidersPage({
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-neutral-border">
-                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-neutral-muted">
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Company
                 </th>
-                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-neutral-muted">
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Contact
                 </th>
-                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-neutral-muted">
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Location
                 </th>
-                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-neutral-muted">
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Status
                 </th>
               </tr>
@@ -81,7 +81,7 @@ export default async function ProvidersPage({
                   <td className="px-0 py-0">
                     <Link
                       href={`/projects/${id}/providers/${provider.id}`}
-                      className="block px-4 py-2 text-move-navy"
+                      className="block px-4 py-3 text-move-navy"
                     >
                       {provider.company_name}
                     </Link>
@@ -89,7 +89,7 @@ export default async function ProvidersPage({
                   <td className="px-0 py-0">
                     <Link
                       href={`/projects/${id}/providers/${provider.id}`}
-                      className="block px-4 py-2 text-move-navy"
+                      className="block px-4 py-3 text-move-navy"
                     >
                       {provider.contact_person}
                     </Link>
@@ -97,7 +97,7 @@ export default async function ProvidersPage({
                   <td className="px-0 py-0">
                     <Link
                       href={`/projects/${id}/providers/${provider.id}`}
-                      className="block px-4 py-2 text-neutral-muted"
+                      className="block px-4 py-3 text-neutral-muted"
                     >
                       {provider.location}
                     </Link>
@@ -105,7 +105,7 @@ export default async function ProvidersPage({
                   <td className="px-0 py-0">
                     <Link
                       href={`/projects/${id}/providers/${provider.id}`}
-                      className="block px-4 py-2"
+                      className="block px-4 py-3"
                     >
                       <StatusBadge status={provider.status as ProviderStatus} />
                     </Link>

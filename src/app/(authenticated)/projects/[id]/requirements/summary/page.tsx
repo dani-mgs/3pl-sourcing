@@ -32,7 +32,7 @@ export default async function RequirementsSummaryPage({
     .maybeSingle();
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-4xl px-8 py-10">
       <Link
         href={`/projects/${id}/requirements`}
         className="text-sm font-medium text-move-green hover:underline"
@@ -40,7 +40,7 @@ export default async function RequirementsSummaryPage({
         ← Back to Client Requirements
       </Link>
 
-      <h1 className="mt-2 mb-6 font-display text-2xl font-semibold text-move-navy">
+      <h1 className="mt-2 mb-8 font-display text-2xl font-semibold text-move-navy">
         Requirements Summary
       </h1>
 

@@ -9,8 +9,8 @@ export default async function DashboardPage() {
     .order("date_created", { ascending: false });
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="mx-auto max-w-4xl px-8 py-10">
+      <div className="mb-8 flex items-center justify-between">
         <h1 className="font-display text-2xl font-semibold text-move-navy">
           Projects
         </h1>
@@ -41,16 +41,16 @@ export default async function DashboardPage() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-neutral-border">
-                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-neutral-muted">
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Client
                 </th>
-                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-neutral-muted">
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Project
                 </th>
-                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-neutral-muted">
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Status
                 </th>
-                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-neutral-muted">
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Created
                 </th>
               </tr>
@@ -64,7 +64,7 @@ export default async function DashboardPage() {
                   <td className="px-0 py-0">
                     <Link
                       href={`/projects/${project.id}`}
-                      className="block px-4 py-2 text-move-navy"
+                      className="block px-4 py-3 text-move-navy"
                     >
                       {project.client_name}
                     </Link>
@@ -72,7 +72,7 @@ export default async function DashboardPage() {
                   <td className="px-0 py-0">
                     <Link
                       href={`/projects/${project.id}`}
-                      className="block px-4 py-2 text-move-navy"
+                      className="block px-4 py-3 text-move-navy"
                     >
                       {project.project_name}
                     </Link>
@@ -80,7 +80,7 @@ export default async function DashboardPage() {
                   <td className="px-0 py-0">
                     <Link
                       href={`/projects/${project.id}`}
-                      className="block px-4 py-2"
+                      className="block px-4 py-3"
                     >
                       <span className="inline-block rounded-full bg-neutral-bg px-2.5 py-1 text-xs font-medium text-neutral-muted">
                         {project.status}
@@ -90,7 +90,7 @@ export default async function DashboardPage() {
                   <td className="px-0 py-0">
                     <Link
                       href={`/projects/${project.id}`}
-                      className="block px-4 py-2 text-neutral-muted"
+                      className="block px-4 py-3 text-neutral-muted"
                     >
                       {new Date(project.date_created).toLocaleDateString()}
                     </Link>

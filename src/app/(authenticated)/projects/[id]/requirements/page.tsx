@@ -69,7 +69,7 @@ export default async function RequirementsPage({
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-4xl px-8 py-10">
       <Link
         href={`/projects/${id}`}
         className="text-sm font-medium text-move-green hover:underline"
@@ -77,7 +77,7 @@ export default async function RequirementsPage({
         ← Back to project
       </Link>
 
-      <div className="mt-2 mb-6 flex items-center justify-between">
+      <div className="mt-2 mb-8 flex items-center justify-between">
         <h1 className="font-display text-2xl font-semibold text-move-navy">
           Client Requirements
         </h1>

@@ -8,7 +8,7 @@ export default function AuthenticatedLayout({
   return (
     <>
       <header className="bg-move-navy">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-8">
           <span className="font-display text-lg font-semibold text-white">
             3PL Sourcing
           </span>
