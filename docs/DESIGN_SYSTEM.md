@@ -37,6 +37,18 @@ Status pipeline badges:
 - Inputs: rounded-xl, border Neutral Border, focus ring in Move Green
 - Header bar: solid Move Navy background, white text/icons
 
+## Spacing & Layout Rhythm
+- Header bar: fixed height h-16 (64px), horizontal padding px-8, vertical content vertically centered (flex items-center justify-between). Never let header content touch the top/bottom edge of the bar.
+- Page container: max-w-6xl mx-auto px-8 py-10 (not px-4 py-8 — needs more breathing room on wide screens)
+- Page title + primary action row (e.g. "Projects" + "New Project" button): flex justify-between items-center, with mb-8 below this row before any content starts
+- Between major page sections (e.g. an info card and a table below it, or stacked cards): gap-6 minimum
+- Card internal padding: p-6 minimum, p-8 for a card that's the primary content of a page (not a small supporting card)
+- Table cells: px-4 py-3 (increase from any tighter default) so rows have visible breathing room, not text touching cell edges
+- Form fields: gap-4 between stacked fields, gap-2 between a label and its input
+- Buttons: px-4 py-2.5 minimum (already specified, re-confirming it applies everywhere, no page should use a smaller button)
+
+General rule: nothing should visually touch another element's edge or the viewport edge. Every section needs deliberate space around it — if in doubt, add more space, not less.
+
 ## Component conventions
 - Primary button: bg Move Green, hover Move Green Hover, white text, text-sm font-medium, px-4 py-2.5, rounded-xl, shadow-sm
 - Secondary button: border Neutral Border, hover bg Neutral Background, Move Navy text, text-sm font-medium, px-4 py-2.5, rounded-xl
