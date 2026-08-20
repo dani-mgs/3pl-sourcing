@@ -1,49 +1,51 @@
 # Design System — 3PL Sourcing Platform
 
-Direction: clean, precise, and a little architectural. Soft geometric shapes (rounded corners, pill badges) instead of sharp edges. This is an internal ops tool — clarity and consistency first, restrained polish, not a marketing site.
+Subset of Move Supply Chain's actual brand (per their brand guidelines), adapted for a dense internal tool. Same colors and typographic character as their marketing site, calmer proportions — no gradients or hero shapes, this is a data-heavy work tool, not a landing page.
 
 ## Colors
-- Ink Navy #1E2540 — headings, primary text, dark UI elements
-- Route Indigo #4F46E5 — primary buttons, links, active states, focus rings
-- Route Indigo Hover #4338CA
-- Cargo Amber #F59E0B — sparing accent, signature route-line, "in progress" emphasis
-- Mist #F5F6FA — page background
-- Fog #E4E7EF — borders, dividers
-- Slate #6B7280 — muted text, timestamps, captions
-- Danger Rose #E11D48 — errors, destructive actions
-- Success Emerald #059669 — confirmations, "Vetted" status
+- Move Green (Primary) #44B048 — primary buttons, links, active states, focus rings
+- Move Green Hover #3A9A3E
+- Move Navy (Secondary) #192E5B — headings, primary text, header bar background
+- Move Orange (Accent) #FF5E43 — sparing use only: current-step highlight in status pipeline, urgent/attention-worthy states. Never a default button color.
+- Neutral Background #F7F8FA — page background
+- Neutral Border #E5E7EB — borders, dividers
+- Neutral Muted #6B7280 — timestamps, captions, secondary text
+- Surface #FFFFFF — cards, tables
+- Danger #DC2626 — errors, destructive actions
 
-Status pipeline badges (soft pastel-tinted, not saturated defaults):
-- Potential: bg #F1F2F6, text #6B7280
-- Contacted: bg #E8E7FC, text #4F46E5
-- Discovery Call: bg #FEF3E2, text #B45309
-- Quotation Received: bg #FEF3E2, text #F59E0B
-- Negotiation: bg #FFE4E0, text #EA580C
-- Vetted: bg #D1FAE5, text #059669
-- Rejected: bg #FFE1E7, text #E11D48
+Status pipeline badges:
+- Potential: bg #F1F2F4, text #6B7280
+- Contacted: bg #E8F5E9, text #3A9A3E
+- Discovery Call: bg #E3E9F5, text #192E5B
+- Quotation Received: bg #FFF0EC, text #FF5E43
+- Negotiation: bg #FFE8E0, text #E5502E
+- Vetted: bg #E1F5E3, text #2E7D32
+- Rejected: bg #FDE8E8, text #DC2626
 
 ## Typography
-- Display/headings: Space Grotesk, loaded via next/font/google
-- Body: Inter, loaded via next/font/google
-- Page title: Space Grotesk, text-2xl font-semibold
-- Section title: Space Grotesk, text-lg font-semibold
+- Headings: Plus Jakarta Sans, loaded via next/font/google (free substitute for Move's Aeonik — closest match in geometric character)
+- Body: Inter, loaded via next/font/google (substitute for Move's ITC Avant Garde — better suited to dense tables/forms)
+- Page title: Plus Jakarta Sans, text-2xl font-semibold
+- Section title: Plus Jakarta Sans, text-lg font-semibold
 - Body: Inter, text-sm
 - Muted/caption: Inter, text-xs text-slate-500
 
 ## Shape
-- Cards/containers: rounded-2xl, shadow-sm, border in Fog
+- Cards/containers: rounded-2xl, shadow-sm, border in Neutral Border, bg white
 - Buttons: rounded-xl
 - Badges/pills: rounded-full
-- Inputs: rounded-xl, border in Fog, focus ring in Route Indigo
+- Inputs: rounded-xl, border Neutral Border, focus ring in Move Green
+- Header bar: solid Move Navy background, white text/icons
 
 ## Component conventions
-- Primary button: bg Route Indigo, hover Route Indigo Hover, white text, text-sm font-medium, px-4 py-2.5, rounded-xl, shadow-sm
-- Secondary button: border Fog, hover bg Mist, Ink Navy text, text-sm font-medium, px-4 py-2.5, rounded-xl
-- Danger button: bg Danger Rose, hover darker rose, white text, same sizing as primary
-- Card: bg white, rounded-2xl, shadow-sm, border Fog, p-6
-- Table: header row text-xs text-slate-500 uppercase tracking-wide border-b Fog; body rows border-b Fog, hover bg Mist; always use per-cell Links for row navigation, never an absolute-overlay Link on <tr>
-- Status pipeline (signature element, used only on the 3PL detail page): horizontal connected dots/nodes — filled Route Indigo for completed steps, Cargo Amber ring for current step, empty Fog-outlined for upcoming steps, connected by a thin line. Compact views elsewhere use the simple pill badges instead.
-- Empty state: centered, text-slate-500 text-sm, one direct sentence plus an action, e.g. "No projects yet. Create your first one to get started."
+- Primary button: bg Move Green, hover Move Green Hover, white text, text-sm font-medium, px-4 py-2.5, rounded-xl, shadow-sm
+- Secondary button: border Neutral Border, hover bg Neutral Background, Move Navy text, text-sm font-medium, px-4 py-2.5, rounded-xl
+- Danger button: bg Danger, hover darker red, white text, same sizing as primary
+- Header bar: bg Move Navy, white text, app name in Plus Jakarta Sans, "Log Out" as an outlined white button
+- Card: bg white, rounded-2xl, shadow-sm, border Neutral Border, p-6
+- Table: header row text-xs text-slate-500 uppercase tracking-wide border-b Neutral Border; body rows border-b Neutral Border, hover bg Neutral Background; always per-cell Links for row navigation, never absolute-overlay on <tr>
+- Status pipeline (signature element, 3PL detail page): horizontal connected nodes — filled Move Green for completed steps, Move Orange ring for current step, empty outline for upcoming steps, connected by a thin line
+- Empty state: centered, text-slate-500 text-sm, one direct sentence plus an action
 
 ## Deliberately out of scope
-No dark mode, no heavy animation, no illustrations, no custom icon set beyond what's needed. Keep restraint everywhere except the signature status-pipeline element.
+No dark mode, no heavy animation, no illustrations, no gradients, no hero-style layout blocks — those belong on Move's marketing site, not this internal tool. Restraint everywhere except the signature status-pipeline element.
