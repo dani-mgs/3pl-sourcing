@@ -33,21 +33,21 @@ export function DeleteDocumentButton({
           setError(null);
           setConfirming(true);
         }}
-        className="text-sm font-medium text-danger-rose hover:underline"
+        className="text-sm font-medium text-danger hover:underline"
       >
         Delete
       </button>
 
-      {error && <p className="max-w-40 text-right text-xs text-danger-rose">{error}</p>}
+      {error && <p className="max-w-40 text-right text-xs text-danger">{error}</p>}
 
       {confirming &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-navy/40 px-4">
-            <div className="w-full max-w-sm rounded-2xl border border-fog bg-white p-6 shadow-sm">
-              <h2 className="font-display text-lg font-semibold text-ink-navy">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-move-navy/40 px-4">
+            <div className="w-full max-w-sm rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+              <h2 className="font-display text-lg font-semibold text-move-navy">
                 Delete document
               </h2>
-              <p className="mt-2 text-sm text-slate">
+              <p className="mt-2 text-sm text-neutral-muted">
                 Delete {fileName}? This cannot be undone.
               </p>
 
@@ -56,7 +56,7 @@ export function DeleteDocumentButton({
                   type="button"
                   onClick={() => setConfirming(false)}
                   disabled={isPending}
-                  className="rounded-xl border border-fog px-4 py-2.5 text-sm font-medium text-ink-navy hover:bg-mist disabled:opacity-50"
+                  className="rounded-xl border border-neutral-border px-4 py-2.5 text-sm font-medium text-move-navy hover:bg-neutral-bg disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -64,7 +64,7 @@ export function DeleteDocumentButton({
                   type="button"
                   onClick={handleConfirm}
                   disabled={isPending}
-                  className="rounded-xl bg-danger-rose px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-danger-rose/90 disabled:opacity-50"
+                  className="rounded-xl bg-danger px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-danger/90 disabled:opacity-50"
                 >
                   {isPending ? "Deleting..." : "Delete"}
                 </button>

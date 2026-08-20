@@ -35,16 +35,16 @@ export default async function RequirementsSummaryPage({
     <div className="mx-auto max-w-4xl px-4 py-8">
       <Link
         href={`/projects/${id}/requirements`}
-        className="text-sm font-medium text-route-indigo hover:underline"
+        className="text-sm font-medium text-move-green hover:underline"
       >
         ← Back to Client Requirements
       </Link>
 
-      <h1 className="mt-2 mb-6 font-display text-2xl font-semibold text-ink-navy">
+      <h1 className="mt-2 mb-6 font-display text-2xl font-semibold text-move-navy">
         Requirements Summary
       </h1>
 
-      <div className="rounded-2xl border border-fog bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
         <RequirementsSummaryForm
           projectId={id}
           summary={summary as RequirementsSummaryRow | null}

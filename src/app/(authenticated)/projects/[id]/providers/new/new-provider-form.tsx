@@ -14,8 +14,8 @@ const STATUS_OPTIONS = [
 ];
 
 const fieldClass =
-  "rounded-xl border border-fog px-3 py-2 text-sm text-ink-navy focus:border-route-indigo focus:outline-none focus:ring-2 focus:ring-route-indigo";
-const labelClass = "text-sm font-medium text-ink-navy";
+  "rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green";
+const labelClass = "text-sm font-medium text-move-navy";
 
 export function NewProviderForm({ projectId }: { projectId: string }) {
   const [state, formAction, pending] = useActionState<
@@ -108,12 +108,12 @@ export function NewProviderForm({ projectId }: { projectId: string }) {
         </select>
       </div>
 
-      {state.error && <p className="text-sm text-danger-rose">{state.error}</p>}
+      {state.error && <p className="text-sm text-danger">{state.error}</p>}
 
       <button
         type="submit"
         disabled={pending}
-        className="mt-2 rounded-xl bg-route-indigo px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-route-indigo-hover disabled:opacity-50"
+        className="mt-2 rounded-xl bg-move-green px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-move-green-hover disabled:opacity-50"
       >
         {pending ? "Adding..." : "Add Provider"}
       </button>

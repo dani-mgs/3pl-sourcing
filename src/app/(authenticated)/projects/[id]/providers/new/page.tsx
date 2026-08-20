@@ -21,11 +21,11 @@ export default async function NewProviderPage({
 
   return (
     <div className="mx-auto max-w-sm px-4 py-8">
-      <h1 className="mb-6 font-display text-2xl font-semibold text-ink-navy">
+      <h1 className="mb-6 font-display text-2xl font-semibold text-move-navy">
         Add Provider
       </h1>
 
-      <div className="rounded-2xl border border-fog bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
         <NewProviderForm projectId={id} />
       </div>
     </div>

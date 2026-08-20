@@ -8,13 +8,13 @@ export type ProviderStatus =
   | "Rejected";
 
 const STATUS_STYLES: Record<ProviderStatus, string> = {
-  Potential: "bg-[#F1F2F6] text-[#6B7280]",
-  Contacted: "bg-[#E8E7FC] text-[#4F46E5]",
-  "Discovery Call": "bg-[#FEF3E2] text-[#B45309]",
-  "Quotation Received": "bg-[#FEF3E2] text-[#F59E0B]",
-  Negotiation: "bg-[#FFE4E0] text-[#EA580C]",
-  Vetted: "bg-[#D1FAE5] text-[#059669]",
-  Rejected: "bg-[#FFE1E7] text-[#E11D48]",
+  Potential: "bg-[#F1F2F4] text-[#6B7280]",
+  Contacted: "bg-[#E8F5E9] text-[#3A9A3E]",
+  "Discovery Call": "bg-[#E3E9F5] text-[#192E5B]",
+  "Quotation Received": "bg-[#FFF0EC] text-[#FF5E43]",
+  Negotiation: "bg-[#FFE8E0] text-[#E5502E]",
+  Vetted: "bg-[#E1F5E3] text-[#2E7D32]",
+  Rejected: "bg-[#FDE8E8] text-[#DC2626]",
 };
 
 export function StatusBadge({ status }: { status: ProviderStatus }) {

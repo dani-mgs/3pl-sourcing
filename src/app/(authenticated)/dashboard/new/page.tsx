@@ -21,16 +21,16 @@ export default function NewProjectPage() {
 
   return (
     <div className="mx-auto max-w-sm px-4 py-8">
-      <h1 className="mb-6 font-display text-2xl font-semibold text-ink-navy">
+      <h1 className="mb-6 font-display text-2xl font-semibold text-move-navy">
         New Project
       </h1>
 
-      <div className="rounded-2xl border border-fog bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
         <form action={formAction} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <label
               htmlFor="client_name"
-              className="text-sm font-medium text-ink-navy"
+              className="text-sm font-medium text-move-navy"
             >
               Client Name
             </label>
@@ -39,14 +39,14 @@ export default function NewProjectPage() {
               name="client_name"
               type="text"
               required
-              className="rounded-xl border border-fog px-3 py-2 text-sm text-ink-navy focus:border-route-indigo focus:outline-none focus:ring-2 focus:ring-route-indigo"
+              className="rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green"
             />
           </div>
 
           <div className="flex flex-col gap-1">
             <label
               htmlFor="project_name"
-              className="text-sm font-medium text-ink-navy"
+              className="text-sm font-medium text-move-navy"
             >
               Project Name
             </label>
@@ -55,14 +55,14 @@ export default function NewProjectPage() {
               name="project_name"
               type="text"
               required
-              className="rounded-xl border border-fog px-3 py-2 text-sm text-ink-navy focus:border-route-indigo focus:outline-none focus:ring-2 focus:ring-route-indigo"
+              className="rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green"
             />
           </div>
 
           <div className="flex flex-col gap-1">
             <label
               htmlFor="status"
-              className="text-sm font-medium text-ink-navy"
+              className="text-sm font-medium text-move-navy"
             >
               Status
             </label>
@@ -70,7 +70,7 @@ export default function NewProjectPage() {
               id="status"
               name="status"
               defaultValue="Active"
-              className="rounded-xl border border-fog px-3 py-2 text-sm text-ink-navy focus:border-route-indigo focus:outline-none focus:ring-2 focus:ring-route-indigo"
+              className="rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green"
             >
               <option value="Active">Active</option>
               <option value="On Hold">On Hold</option>
@@ -79,13 +79,13 @@ export default function NewProjectPage() {
           </div>
 
           {state.error && (
-            <p className="text-sm text-danger-rose">{state.error}</p>
+            <p className="text-sm text-danger">{state.error}</p>
           )}
 
           <button
             type="submit"
             disabled={pending}
-            className="mt-2 rounded-xl bg-route-indigo px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-route-indigo-hover disabled:opacity-50"
+            className="mt-2 rounded-xl bg-move-green px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-move-green-hover disabled:opacity-50"
           >
             {pending ? "Creating..." : "Create Project"}
           </button>

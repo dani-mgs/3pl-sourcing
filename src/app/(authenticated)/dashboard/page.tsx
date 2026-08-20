@@ -11,46 +11,46 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-display text-2xl font-semibold text-ink-navy">
+        <h1 className="font-display text-2xl font-semibold text-move-navy">
           Projects
         </h1>
         <Link
           href="/dashboard/new"
-          className="rounded-xl bg-route-indigo px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-route-indigo-hover"
+          className="rounded-xl bg-move-green px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-move-green-hover"
         >
           New Project
         </Link>
       </div>
 
       {error && (
-        <p className="text-sm text-danger-rose">
+        <p className="text-sm text-danger">
           Could not load projects: {error.message}
         </p>
       )}
 
       {!error && (!projects || projects.length === 0) && (
-        <div className="rounded-2xl border border-fog bg-white p-6 shadow-sm">
-          <p className="py-8 text-center text-sm text-slate">
+        <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+          <p className="py-8 text-center text-sm text-neutral-muted">
             No projects yet. Create your first one to get started.
           </p>
         </div>
       )}
 
       {!error && projects && projects.length > 0 && (
-        <div className="overflow-hidden rounded-2xl border border-fog bg-white shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-neutral-border bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-fog">
-                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate">
+              <tr className="border-b border-neutral-border">
+                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Client
                 </th>
-                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate">
+                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Project
                 </th>
-                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate">
+                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Status
                 </th>
-                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-slate">
+                <th className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Created
                 </th>
               </tr>
@@ -59,12 +59,12 @@ export default async function DashboardPage() {
               {projects.map((project) => (
                 <tr
                   key={project.id}
-                  className="border-b border-fog last:border-b-0 hover:bg-mist"
+                  className="border-b border-neutral-border last:border-b-0 hover:bg-neutral-bg"
                 >
                   <td className="px-0 py-0">
                     <Link
                       href={`/projects/${project.id}`}
-                      className="block px-4 py-2 text-ink-navy"
+                      className="block px-4 py-2 text-move-navy"
                     >
                       {project.client_name}
                     </Link>
@@ -72,7 +72,7 @@ export default async function DashboardPage() {
                   <td className="px-0 py-0">
                     <Link
                       href={`/projects/${project.id}`}
-                      className="block px-4 py-2 text-ink-navy"
+                      className="block px-4 py-2 text-move-navy"
                     >
                       {project.project_name}
                     </Link>
@@ -82,7 +82,7 @@ export default async function DashboardPage() {
                       href={`/projects/${project.id}`}
                       className="block px-4 py-2"
                     >
-                      <span className="inline-block rounded-full bg-mist px-2.5 py-1 text-xs font-medium text-slate">
+                      <span className="inline-block rounded-full bg-neutral-bg px-2.5 py-1 text-xs font-medium text-neutral-muted">
                         {project.status}
                       </span>
                     </Link>
@@ -90,7 +90,7 @@ export default async function DashboardPage() {
                   <td className="px-0 py-0">
                     <Link
                       href={`/projects/${project.id}`}
-                      className="block px-4 py-2 text-slate"
+                      className="block px-4 py-2 text-neutral-muted"
                     >
                       {new Date(project.date_created).toLocaleDateString()}
                     </Link>

@@ -76,58 +76,58 @@ export default async function ProviderDetailsPage({
     <div className="mx-auto max-w-4xl px-4 py-8">
       <Link
         href={`/projects/${id}/providers`}
-        className="text-sm font-medium text-route-indigo hover:underline"
+        className="text-sm font-medium text-move-green hover:underline"
       >
         ← Back to 3PL List
       </Link>
 
       <div className="mt-2 mb-6 flex items-center gap-3">
-        <h1 className="font-display text-2xl font-semibold text-ink-navy">
+        <h1 className="font-display text-2xl font-semibold text-move-navy">
           {provider.company_name}
         </h1>
         <StatusBadge status={provider.status as ProviderStatus} />
       </div>
 
-      <div className="mb-6 rounded-2xl border border-fog bg-white p-6 shadow-sm">
-        <h2 className="mb-4 font-display text-lg font-semibold text-ink-navy">
+      <div className="mb-6 rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+        <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
           Provider Info
         </h2>
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <dt className="text-xs text-slate">Website</dt>
-            <dd className="text-sm text-ink-navy">
+            <dt className="text-xs text-neutral-muted">Website</dt>
+            <dd className="text-sm text-move-navy">
               {provider.website || "—"}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-slate">Contact Person</dt>
-            <dd className="text-sm text-ink-navy">
+            <dt className="text-xs text-neutral-muted">Contact Person</dt>
+            <dd className="text-sm text-move-navy">
               {provider.contact_person || "—"}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-slate">Email</dt>
-            <dd className="text-sm text-ink-navy">{provider.email || "—"}</dd>
+            <dt className="text-xs text-neutral-muted">Email</dt>
+            <dd className="text-sm text-move-navy">{provider.email || "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-slate">Phone</dt>
-            <dd className="text-sm text-ink-navy">{provider.phone || "—"}</dd>
+            <dt className="text-xs text-neutral-muted">Phone</dt>
+            <dd className="text-sm text-move-navy">{provider.phone || "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-slate">Location</dt>
-            <dd className="text-sm text-ink-navy">
+            <dt className="text-xs text-neutral-muted">Location</dt>
+            <dd className="text-sm text-move-navy">
               {provider.location || "—"}
             </dd>
           </div>
           <div className="sm:col-span-2">
-            <dt className="text-xs text-slate">Notes</dt>
-            <dd className="text-sm text-ink-navy">{provider.notes || "—"}</dd>
+            <dt className="text-xs text-neutral-muted">Notes</dt>
+            <dd className="text-sm text-move-navy">{provider.notes || "—"}</dd>
           </div>
         </dl>
       </div>
 
-      <div className="mb-6 rounded-2xl border border-fog bg-white p-6 shadow-sm">
-        <h2 className="mb-4 font-display text-lg font-semibold text-ink-navy">
+      <div className="mb-6 rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+        <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
           Upload Document
         </h2>
         <UploadProviderDocumentForm projectId={id} providerId={providerId} />
@@ -139,14 +139,14 @@ export default async function ProviderDetailsPage({
           return (
             <div
               key={group.type}
-              className="rounded-2xl border border-fog bg-white p-6 shadow-sm"
+              className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm"
             >
-              <h2 className="mb-4 font-display text-lg font-semibold text-ink-navy">
+              <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
                 {group.title}
               </h2>
 
               {docs.length === 0 ? (
-                <p className="text-sm text-slate">
+                <p className="text-sm text-neutral-muted">
                   No documents uploaded yet
                 </p>
               ) : (
@@ -156,25 +156,25 @@ export default async function ProviderDetailsPage({
                     return (
                       <li
                         key={doc.id}
-                        className="flex items-center justify-between border-b border-fog pb-3 last:border-b-0 last:pb-0"
+                        className="flex items-center justify-between border-b border-neutral-border pb-3 last:border-b-0 last:pb-0"
                       >
                         <div>
-                          <p className="text-sm text-ink-navy">
+                          <p className="text-sm text-move-navy">
                             {doc.file_name}
                           </p>
-                          <p className="text-xs text-slate">
+                          <p className="text-xs text-neutral-muted">
                             {new Date(doc.uploaded_at).toLocaleDateString()}
                           </p>
                         </div>
                         {signedUrl ? (
                           <a
                             href={signedUrl}
-                            className="text-sm font-medium text-route-indigo hover:underline"
+                            className="text-sm font-medium text-move-green hover:underline"
                           >
                             Download
                           </a>
                         ) : (
-                          <span className="text-sm text-slate">
+                          <span className="text-sm text-neutral-muted">
                             Unavailable
                           </span>
                         )}

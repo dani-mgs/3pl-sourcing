@@ -7,15 +7,15 @@ export default function AuthenticatedLayout({
 }) {
   return (
     <>
-      <header className="border-b border-fog bg-white">
+      <header className="bg-move-navy">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
-          <span className="font-display text-lg font-semibold text-ink-navy">
+          <span className="font-display text-lg font-semibold text-white">
             3PL Sourcing
           </span>
           <form action={logout}>
             <button
               type="submit"
-              className="rounded-xl border border-fog px-4 py-2.5 text-sm font-medium text-ink-navy hover:bg-mist"
+              className="rounded-xl border border-white px-4 py-2.5 text-sm font-medium text-white hover:bg-white/10"
             >
               Log Out
             </button>

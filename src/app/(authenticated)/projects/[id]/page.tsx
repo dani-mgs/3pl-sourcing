@@ -28,14 +28,14 @@ export default async function ProjectDetailsPage({
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="mb-2 flex items-center gap-3">
-        <h1 className="font-display text-2xl font-semibold text-ink-navy">
+        <h1 className="font-display text-2xl font-semibold text-move-navy">
           {project.client_name} — {project.project_name}
         </h1>
-        <span className="inline-block rounded-full bg-mist px-2.5 py-1 text-xs font-medium text-slate">
+        <span className="inline-block rounded-full bg-neutral-bg px-2.5 py-1 text-xs font-medium text-neutral-muted">
           {project.status}
         </span>
       </div>
-      <p className="mb-8 text-xs text-slate">
+      <p className="mb-8 text-xs text-neutral-muted">
         Created {new Date(project.date_created).toLocaleDateString()}
       </p>
 
@@ -45,21 +45,21 @@ export default async function ProjectDetailsPage({
             <Link
               key={step.title}
               href={`/projects/${id}/${step.href}`}
-              className="rounded-2xl border border-fog bg-white p-6 shadow-sm hover:bg-mist"
+              className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm hover:bg-neutral-bg"
             >
-              <h2 className="font-display text-lg font-semibold text-ink-navy">
+              <h2 className="font-display text-lg font-semibold text-move-navy">
                 {step.title}
               </h2>
             </Link>
           ) : (
             <div
               key={step.title}
-              className="rounded-2xl border border-fog bg-white p-6 shadow-sm"
+              className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm"
             >
-              <h2 className="font-display text-lg font-semibold text-ink-navy">
+              <h2 className="font-display text-lg font-semibold text-move-navy">
                 {step.title}
               </h2>
-              <p className="mt-1 text-sm text-slate">Coming soon</p>
+              <p className="mt-1 text-sm text-neutral-muted">Coming soon</p>
             </div>
           ),
         )}
