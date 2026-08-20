@@ -21,9 +21,7 @@ export async function saveRequirementsSummary(
     order_volume: formData.get("order_volume") as string,
     sku_count: formData.get("sku_count") as string,
     b2b_or_b2c: formData.get("b2b_or_b2c") as string,
-    special_handling_requirements: formData.get(
-      "special_handling_requirements",
-    ) as string,
+    special_handling: formData.get("special_handling") as string,
     target_cost: formData.get("target_cost") as string,
     turnaround_time: formData.get("turnaround_time") as string,
     notes: formData.get("notes") as string,

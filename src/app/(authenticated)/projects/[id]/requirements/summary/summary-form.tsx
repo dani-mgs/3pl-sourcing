@@ -12,7 +12,7 @@ export type RequirementsSummaryRow = {
   order_volume: string | null;
   sku_count: string | null;
   b2b_or_b2c: string | null;
-  special_handling_requirements: string | null;
+  special_handling: string | null;
   target_cost: string | null;
   turnaround_time: string | null;
   notes: string | null;
@@ -137,17 +137,14 @@ export function RequirementsSummaryForm({
       </div>
 
       <div className="flex flex-col gap-1">
-        <label
-          htmlFor="special_handling_requirements"
-          className={labelClass}
-        >
+        <label htmlFor="special_handling" className={labelClass}>
           Special Handling Requirements
         </label>
         <textarea
-          id="special_handling_requirements"
-          name="special_handling_requirements"
+          id="special_handling"
+          name="special_handling"
           rows={3}
-          defaultValue={summary?.special_handling_requirements ?? ""}
+          defaultValue={summary?.special_handling ?? ""}
           className={fieldClass}
         />
       </div>

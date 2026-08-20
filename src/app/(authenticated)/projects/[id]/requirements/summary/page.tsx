@@ -26,7 +26,7 @@ export default async function RequirementsSummaryPage({
   const { data: summary } = await supabase
     .from("requirements_summary")
     .select(
-      "location, storage_requirements, order_volume, sku_count, b2b_or_b2c, special_handling_requirements, target_cost, turnaround_time, notes",
+      "location, storage_requirements, order_volume, sku_count, b2b_or_b2c, special_handling, target_cost, turnaround_time, notes",
     )
     .eq("project_id", id)
     .maybeSingle();
