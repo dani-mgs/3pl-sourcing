@@ -15,7 +15,7 @@ export type RequirementsSummaryRow = {
   special_handling_requirements: string | null;
   target_cost: string | null;
   turnaround_time: string | null;
-  other_notes: string | null;
+  notes: string | null;
 };
 
 const fieldClass =
@@ -153,14 +153,14 @@ export function RequirementsSummaryForm({
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="other_notes" className={labelClass}>
+        <label htmlFor="notes" className={labelClass}>
           Other Notes
         </label>
         <textarea
-          id="other_notes"
-          name="other_notes"
+          id="notes"
+          name="notes"
           rows={3}
-          defaultValue={summary?.other_notes ?? ""}
+          defaultValue={summary?.notes ?? ""}
           className={fieldClass}
         />
       </div>

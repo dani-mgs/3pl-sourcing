@@ -26,7 +26,7 @@ export async function saveRequirementsSummary(
     ) as string,
     target_cost: formData.get("target_cost") as string,
     turnaround_time: formData.get("turnaround_time") as string,
-    other_notes: formData.get("other_notes") as string,
+    notes: formData.get("notes") as string,
     updated_at: new Date().toISOString(),
   };
 
