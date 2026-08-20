@@ -16,6 +16,12 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Why deferred:** Cosmetic alignment issue, doesn't block functionality.
 - **Severity:** Low
 
+### Inconsistent timestamp column naming across tables
+- **Added:** 2026-08-19 (Week 2 review/cleanup)
+- **What:** projects uses "date_created" while providers and documents/provider_documents use "created_at"/"uploaded_at" — inconsistent naming convention across the schema.
+- **Why deferred:** Cosmetic at the schema level, doesn't affect functionality. Renaming now would touch working tables mid-build for no functional gain.
+- **Severity:** Low
+
 ## Resolved
 
 ### Missing table GRANTs on new Supabase project
