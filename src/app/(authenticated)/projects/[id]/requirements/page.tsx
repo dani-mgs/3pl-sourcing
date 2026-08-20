@@ -77,9 +77,17 @@ export default async function RequirementsPage({
         ← Back to project
       </Link>
 
-      <h1 className="mt-2 mb-6 font-display text-2xl font-semibold text-ink-navy">
-        Client Requirements
-      </h1>
+      <div className="mt-2 mb-6 flex items-center justify-between">
+        <h1 className="font-display text-2xl font-semibold text-ink-navy">
+          Client Requirements
+        </h1>
+        <Link
+          href={`/projects/${id}/requirements/summary`}
+          className="rounded-xl border border-fog px-4 py-2.5 text-sm font-medium text-ink-navy hover:bg-mist"
+        >
+          Requirements Summary
+        </Link>
+      </div>
 
       <div className="mb-6 rounded-2xl border border-fog bg-white p-6 shadow-sm">
         <h2 className="font-display text-lg font-semibold text-ink-navy">
