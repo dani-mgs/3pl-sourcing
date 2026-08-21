@@ -25,24 +25,24 @@ export default async function DashboardPage() {
         </h1>
         <Link
           href="/dashboard/new"
-          className="rounded-xl bg-move-green px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-move-green-hover"
+          className="whitespace-nowrap rounded-xl bg-move-green px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-move-green-hover"
         >
           New Project
         </Link>
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-6">
-        <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-          <p className="font-display text-3xl font-semibold text-move-navy">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <p className="text-3xl font-semibold text-[#192E5B]">
             {totalCount ?? 0}
           </p>
-          <p className="text-sm text-slate-500">Total Projects</p>
+          <p className="mt-2 text-sm text-gray-500">Total Projects</p>
         </div>
-        <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-          <p className="font-display text-3xl font-semibold text-move-navy">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <p className="text-3xl font-semibold text-[#192E5B]">
             {activeCount ?? 0}
           </p>
-          <p className="text-sm text-slate-500">Active Projects</p>
+          <p className="mt-2 text-sm text-gray-500">Active Projects</p>
         </div>
       </div>
 

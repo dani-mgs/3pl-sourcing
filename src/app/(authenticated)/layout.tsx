@@ -15,12 +15,9 @@ export default async function AuthenticatedLayout({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col bg-move-navy">
+      <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col bg-move-navy pt-6">
         <div className="p-6">
-          <Link
-            href="/dashboard"
-            className="font-display text-lg font-semibold text-white"
-          >
+          <Link href="/dashboard" className="text-lg font-semibold text-white">
             3PL Sourcing
           </Link>
         </div>
