@@ -2,8 +2,16 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { STATUS_DOT_COLORS, type ProviderStatus } from "./status-badge";
 
-const STATUS_OPTIONS = [
+const STATUS_OPTIONS: ProviderStatus[] = [
   "Potential",
   "Contacted",
   "Discovery Call",
@@ -215,18 +223,24 @@ export function ProviderForm({
         <label htmlFor="status" className={labelClass}>
           Status
         </label>
-        <select
-          id="status"
+        <Select
           name="status"
           defaultValue={defaultValues?.status ?? "Potential"}
-          className={fieldClass}
         >
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="status" className="w-full rounded-xl border-neutral-border">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                <span
+                  className={`inline-block size-2 shrink-0 rounded-full ${STATUS_DOT_COLORS[option]}`}
+                />
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}

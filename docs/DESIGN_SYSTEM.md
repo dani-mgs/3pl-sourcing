@@ -13,14 +13,14 @@ Subset of Move Supply Chain's actual brand (per their brand guidelines), adapted
 - Surface #FFFFFF — cards, tables
 - Danger #DC2626 — errors, destructive actions
 
-Status pipeline badges:
-- Potential: bg #F1F2F4, text #6B7280
-- Contacted: bg #E8F5E9, text #3A9A3E
-- Discovery Call: bg #E3E9F5, text #192E5B
-- Quotation Received: bg #FFF0EC, text #FF5E43
-- Negotiation: bg #FFE8E0, text #E5502E
-- Vetted: bg #E1F5E3, text #2E7D32
-- Rejected: bg #FDE8E8, text #DC2626
+Status pipeline badges — colors read as progressively positive as the pipeline advances, moving toward Move Green as it nears "Vetted"; "Rejected" is the only negative/red status in the set:
+- Potential: bg #F1F2F4, text #6B7280 (neutral gray, no progress yet)
+- Contacted: bg #E3F2FD, text #1565C0 (light blue, positive movement)
+- Discovery Call: bg #E0F2F1, text #00796B (teal, continued progress)
+- Quotation Received: bg #E8F5E9, text #2E7D32 (light green, good progress)
+- Negotiation: bg #DCFCE7, text #15803D (stronger green, nearly there)
+- Vetted: bg #D1FAE5, text #059669 (Move Green family, success)
+- Rejected: bg #FDE8E8, text #DC2626 (the only red in the set)
 
 ## Typography
 - Headings: Plus Jakarta Sans, loaded via next/font/google (free substitute for Move's Aeonik — closest match in geometric character)
