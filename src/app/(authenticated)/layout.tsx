@@ -12,6 +12,23 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 
+function getDisplayName(user: {
+  email?: string | null;
+  user_metadata?: Record<string, unknown>;
+} | null): string {
+  const firstName = user?.user_metadata?.first_name;
+  if (typeof firstName === "string" && firstName.trim()) {
+    return firstName.trim();
+  }
+
+  const localPart = user?.email?.split("@")[0];
+  if (!localPart) {
+    return "";
+  }
+
+  return localPart.charAt(0).toUpperCase() + localPart.slice(1);
+}
+
 export default async function AuthenticatedLayout({
   children,
 }: {
@@ -21,6 +38,8 @@ export default async function AuthenticatedLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const displayName = getDisplayName(user);
 
   return (
     <SidebarProvider className="h-svh overflow-hidden">
@@ -40,7 +59,7 @@ export default async function AuthenticatedLayout({
 
         <SidebarFooter className="p-6">
           <p className="mb-3 truncate text-xs text-sidebar-foreground/60">
-            {user?.email}
+            {displayName}
           </p>
           <form action={logout}>
             <Button
