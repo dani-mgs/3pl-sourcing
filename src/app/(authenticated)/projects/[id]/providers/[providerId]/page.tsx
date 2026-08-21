@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge, type ProviderStatus } from "../status-badge";
 import { UploadProviderDocumentForm } from "./upload-form";
 import { DeleteProviderButton } from "./delete-provider-button";
+import { DeleteProviderDocumentButton } from "./delete-provider-document-button";
 
 const BUCKET = "3pl-sourcing-documents";
 const SIGNED_URL_EXPIRY_SECONDS = 60;
@@ -182,18 +183,26 @@ export default async function ProviderDetailsPage({
                             {new Date(doc.uploaded_at).toLocaleDateString()}
                           </p>
                         </div>
-                        {signedUrl ? (
-                          <a
-                            href={signedUrl}
-                            className="text-sm font-medium text-move-green hover:underline"
-                          >
-                            Download
-                          </a>
-                        ) : (
-                          <span className="text-sm text-neutral-muted">
-                            Unavailable
-                          </span>
-                        )}
+                        <div className="flex items-center gap-4">
+                          {signedUrl ? (
+                            <a
+                              href={signedUrl}
+                              className="text-sm font-medium text-move-green hover:underline"
+                            >
+                              Download
+                            </a>
+                          ) : (
+                            <span className="text-sm text-neutral-muted">
+                              Unavailable
+                            </span>
+                          )}
+                          <DeleteProviderDocumentButton
+                            projectId={id}
+                            providerId={providerId}
+                            documentId={doc.id}
+                            fileName={doc.file_name}
+                          />
+                        </div>
                       </li>
                     );
                   })}

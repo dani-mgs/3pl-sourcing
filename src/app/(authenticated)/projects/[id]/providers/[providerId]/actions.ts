@@ -63,6 +63,48 @@ export async function uploadProviderDocument(
   return {};
 }
 
+export type DeleteProviderDocumentState = { error?: string };
+
+export async function deleteProviderDocument(
+  projectId: string,
+  providerId: string,
+  documentId: string,
+): Promise<DeleteProviderDocumentState> {
+  const supabase = await createClient();
+
+  const { data: document, error: fetchError } = await supabase
+    .from("provider_documents")
+    .select("file_path")
+    .eq("id", documentId)
+    .eq("provider_id", providerId)
+    .single();
+
+  if (fetchError || !document) {
+    return { error: fetchError?.message ?? "Document not found." };
+  }
+
+  const { error: storageError } = await supabase.storage
+    .from(BUCKET)
+    .remove([document.file_path]);
+
+  if (storageError) {
+    return { error: storageError.message };
+  }
+
+  const { error: deleteError } = await supabase
+    .from("provider_documents")
+    .delete()
+    .eq("id", documentId)
+    .eq("provider_id", providerId);
+
+  if (deleteError) {
+    return { error: deleteError.message };
+  }
+
+  revalidatePath(`/projects/${projectId}/providers/${providerId}`);
+  return {};
+}
+
 export type DeleteProviderState = { error?: string };
 
 export async function deleteProvider(
