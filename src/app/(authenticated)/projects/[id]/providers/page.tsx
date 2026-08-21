@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
 import { StatusBadge, type ProviderStatus } from "./status-badge";
 
 export default async function ProvidersPage({
@@ -39,12 +40,12 @@ export default async function ProvidersPage({
         <h1 className="font-display text-2xl font-semibold text-move-navy">
           3PL List
         </h1>
-        <Link
-          href={`/projects/${id}/providers/new`}
-          className="rounded-xl bg-move-green px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-move-green-hover"
+        <Button
+          nativeButton={false}
+          render={<Link href={`/projects/${id}/providers/new`} />}
         >
           Add Provider
-        </Link>
+        </Button>
       </div>
 
       {!providers || providers.length === 0 ? (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   uploadProviderDocument,
   type UploadProviderDocumentState,
@@ -66,13 +67,9 @@ export function UploadProviderDocumentForm({
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-move-green px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-move-green-hover disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="px-4 py-2.5">
         {pending ? "Uploading..." : "Upload"}
-      </button>
+      </Button>
 
       {state.error && (
         <p className="w-full text-sm text-danger">{state.error}</p>

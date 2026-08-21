@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
+import { Button } from "@/components/ui/button";
 import { createProject } from "./actions";
 
 type NewProjectState = { error?: string };
@@ -90,13 +91,9 @@ export default function NewProjectPage() {
             <p className="text-sm text-danger">{state.error}</p>
           )}
 
-          <button
-            type="submit"
-            disabled={pending}
-            className="mt-2 rounded-xl bg-move-green px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-move-green-hover disabled:opacity-50"
-          >
+          <Button type="submit" disabled={pending} className="mt-2 px-4 py-2.5">
             {pending ? "Creating..." : "Create Project"}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

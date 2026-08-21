@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { Button } from "@/components/ui/button";
 import { deleteDocument } from "./actions";
 
 export function DeleteDocumentButton({
@@ -27,16 +28,17 @@ export function DeleteDocumentButton({
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <button
+      <Button
         type="button"
+        variant="link"
+        className="h-auto p-0 text-sm font-medium text-danger"
         onClick={() => {
           setError(null);
           setConfirming(true);
         }}
-        className="text-sm font-medium text-danger hover:underline"
       >
         Delete
-      </button>
+      </Button>
 
       {error && <p className="max-w-40 text-right text-xs text-danger">{error}</p>}
 
@@ -52,22 +54,24 @@ export function DeleteDocumentButton({
               </p>
 
               <div className="mt-6 flex justify-end gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  className="px-4 py-2.5"
                   onClick={() => setConfirming(false)}
                   disabled={isPending}
-                  className="rounded-xl border border-neutral-border px-4 py-2.5 text-sm font-medium text-move-navy hover:bg-neutral-bg disabled:opacity-50"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="destructive"
+                  className="px-4 py-2.5"
                   onClick={handleConfirm}
                   disabled={isPending}
-                  className="rounded-xl bg-danger px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-danger/90 disabled:opacity-50"
                 >
                   {isPending ? "Deleting..." : "Delete"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>,

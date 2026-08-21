@@ -1,3 +1,5 @@
+import { Badge } from "@/components/ui/badge";
+
 export type ProviderStatus =
   | "Potential"
   | "Contacted"
@@ -23,10 +25,8 @@ const STATUS_STYLES: Record<ProviderStatus, string> = {
 
 export function StatusBadge({ status }: { status: ProviderStatus }) {
   return (
-    <span
-      className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLES[status]}`}
-    >
+    <Badge variant="outline" className={`border-transparent ${STATUS_STYLES[status]}`}>
       {status}
-    </span>
+    </Badge>
   );
 }

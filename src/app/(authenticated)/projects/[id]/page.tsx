@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ProjectStatusBadge } from "../../project-status-badge";
 
 const UPCOMING_STEPS = [
   { title: "Client Requirements", href: "requirements" },
@@ -38,9 +39,7 @@ export default async function ProjectDetailsPage({
         <h1 className="font-display text-2xl font-semibold text-move-navy">
           {project.client_name} — {project.project_name}
         </h1>
-        <span className="inline-block rounded-full bg-neutral-bg px-2.5 py-1 text-xs font-medium text-neutral-muted">
-          {project.status}
-        </span>
+        <ProjectStatusBadge status={project.status} />
       </div>
       <p className="mb-8 text-xs text-neutral-muted">
         Created {new Date(project.date_created).toLocaleDateString()}

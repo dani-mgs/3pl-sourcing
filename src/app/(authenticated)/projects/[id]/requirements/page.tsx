@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
 import { UploadForm } from "./upload-form";
 import { DeleteDocumentButton } from "./delete-document-button";
 
@@ -81,12 +82,13 @@ export default async function RequirementsPage({
         <h1 className="font-display text-2xl font-semibold text-move-navy">
           Client Requirements
         </h1>
-        <Link
-          href={`/projects/${id}/requirements/summary`}
-          className="rounded-xl border border-neutral-border px-4 py-2.5 text-sm font-medium text-move-navy hover:bg-neutral-bg"
+        <Button
+          variant="outline"
+          nativeButton={false}
+          render={<Link href={`/projects/${id}/requirements/summary`} />}
         >
           Requirements Summary
-        </Link>
+        </Button>
       </div>
 
       <div className="mb-6 rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
