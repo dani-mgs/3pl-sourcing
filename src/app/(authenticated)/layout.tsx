@@ -23,8 +23,8 @@ export default async function AuthenticatedLayout({
   } = await supabase.auth.getUser();
 
   return (
-    <SidebarProvider>
-      <Sidebar collapsible="none" className="sticky top-0 h-svh border-r-0">
+    <SidebarProvider className="h-svh overflow-hidden">
+      <Sidebar collapsible="none" className="border-r-0">
         <SidebarHeader className="p-6">
           <Link
             href="/dashboard"
@@ -54,7 +54,7 @@ export default async function AuthenticatedLayout({
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset>{children}</SidebarInset>
+      <SidebarInset className="overflow-y-auto">{children}</SidebarInset>
     </SidebarProvider>
   );
 }
