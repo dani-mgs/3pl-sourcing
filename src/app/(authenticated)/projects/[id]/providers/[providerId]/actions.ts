@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
@@ -55,4 +56,54 @@ export async function uploadProviderDocument(
 
   revalidatePath(`/projects/${projectId}/providers/${providerId}`);
   return {};
+}
+
+export type DeleteProviderState = { error?: string };
+
+export async function deleteProvider(
+  projectId: string,
+  providerId: string,
+): Promise<DeleteProviderState> {
+  const supabase = await createClient();
+
+  const { data: documents, error: fetchError } = await supabase
+    .from("provider_documents")
+    .select("id, file_path")
+    .eq("provider_id", providerId);
+
+  if (fetchError) {
+    return { error: fetchError.message };
+  }
+
+  const filePaths = (documents ?? []).map((doc) => doc.file_path);
+
+  if (filePaths.length > 0) {
+    const { error: storageError } = await supabase.storage
+      .from(BUCKET)
+      .remove(filePaths);
+
+    if (storageError) {
+      return { error: storageError.message };
+    }
+  }
+
+  const { error: deleteDocsError } = await supabase
+    .from("provider_documents")
+    .delete()
+    .eq("provider_id", providerId);
+
+  if (deleteDocsError) {
+    return { error: deleteDocsError.message };
+  }
+
+  const { error: deleteProviderError } = await supabase
+    .from("providers")
+    .delete()
+    .eq("id", providerId);
+
+  if (deleteProviderError) {
+    return { error: deleteProviderError.message };
+  }
+
+  redirect(`/projects/${projectId}/providers`);
 }

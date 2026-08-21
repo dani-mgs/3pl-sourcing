@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, type ProviderStatus } from "../status-badge";
 import { UploadProviderDocumentForm } from "./upload-form";
+import { DeleteProviderButton } from "./delete-provider-button";
 
 const BUCKET = "3pl-sourcing-documents";
 const SIGNED_URL_EXPIRY_SECONDS = 60;
@@ -87,14 +88,20 @@ export default async function ProviderDetailsPage({
           {provider.company_name}
         </h1>
         <StatusBadge status={provider.status as ProviderStatus} />
-        <Button
-          variant="outline"
-          className="ml-auto"
-          nativeButton={false}
-          render={<Link href={`/projects/${id}/providers/${providerId}/edit`} />}
-        >
-          Edit
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href={`/projects/${id}/providers/${providerId}/edit`} />}
+          >
+            Edit
+          </Button>
+          <DeleteProviderButton
+            projectId={id}
+            providerId={providerId}
+            companyName={provider.company_name}
+          />
+        </div>
       </div>
 
       <div className="mb-6 rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
