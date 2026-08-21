@@ -31,6 +31,13 @@ const COUNTRY_CODES = [
   { code: "+971", label: "+971 (UAE)" },
 ];
 
+// Shape Select.Root's `items` prop expects, so the trigger displays the
+// full label ("+1 (US/CA)") instead of falling back to the raw value.
+const COUNTRY_CODE_ITEMS = COUNTRY_CODES.map((country) => ({
+  value: country.code,
+  label: country.label,
+}));
+
 function splitPhone(phone: string | null | undefined) {
   if (!phone) return { countryCode: "+1", digits: "" };
   const match = COUNTRY_CODES.find((c) => phone.startsWith(c.code));
@@ -166,18 +173,25 @@ export function ProviderForm({
           Phone
         </label>
         <div className="flex gap-2">
-          <select
-            id="phone_country"
+          <Select
             name="phone_country"
+            items={COUNTRY_CODE_ITEMS}
             defaultValue={defaultCountryCode}
-            className={`${fieldClass} w-32 shrink-0`}
           >
-            {COUNTRY_CODES.map((country) => (
-              <option key={country.code} value={country.code}>
-                {country.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              id="phone_country"
+              className="w-40 shrink-0 rounded-xl border-neutral-border"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {COUNTRY_CODES.map((country) => (
+                <SelectItem key={country.code} value={country.code}>
+                  {country.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <input
             id="phone_number"
             name="phone_number"

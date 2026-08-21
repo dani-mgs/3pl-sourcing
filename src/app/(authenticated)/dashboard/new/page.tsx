@@ -3,6 +3,13 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createProject } from "./actions";
 
 type NewProjectState = { error?: string };
@@ -77,16 +84,16 @@ export default function NewProjectPage() {
             >
               Status
             </label>
-            <select
-              id="status"
-              name="status"
-              defaultValue="Active"
-              className="rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green"
-            >
-              <option value="Active">Active</option>
-              <option value="On Hold">On Hold</option>
-              <option value="Completed">Completed</option>
-            </select>
+            <Select name="status" defaultValue="Active">
+              <SelectTrigger id="status" className="w-full rounded-xl border-neutral-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="On Hold">On Hold</SelectItem>
+                <SelectItem value="Completed">Completed</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {state.error && (

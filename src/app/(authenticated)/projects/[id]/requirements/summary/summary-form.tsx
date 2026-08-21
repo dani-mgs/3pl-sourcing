@@ -3,6 +3,13 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   saveRequirementsSummary,
   type SaveRequirementsSummaryState,
 } from "./actions";
@@ -90,16 +97,16 @@ export function RequirementsSummaryForm({
           <label htmlFor="b2b_or_b2c" className={labelClass}>
             B2B or B2C
           </label>
-          <select
-            id="b2b_or_b2c"
-            name="b2b_or_b2c"
-            defaultValue={summary?.b2b_or_b2c ?? "B2B"}
-            className={fieldClass}
-          >
-            <option value="B2B">B2B</option>
-            <option value="B2C">B2C</option>
-            <option value="Both">Both</option>
-          </select>
+          <Select name="b2b_or_b2c" defaultValue={summary?.b2b_or_b2c ?? "B2B"}>
+            <SelectTrigger id="b2b_or_b2c" className="w-full rounded-xl border-neutral-border">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="B2B">B2B</SelectItem>
+              <SelectItem value="B2C">B2C</SelectItem>
+              <SelectItem value="Both">Both</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex flex-col gap-1">

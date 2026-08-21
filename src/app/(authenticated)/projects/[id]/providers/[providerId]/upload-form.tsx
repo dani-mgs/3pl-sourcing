@@ -3,6 +3,13 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   uploadProviderDocument,
   type UploadProviderDocumentState,
 } from "./actions";
@@ -40,18 +47,18 @@ export function UploadProviderDocumentForm({
         <label htmlFor="type" className="text-sm font-medium text-move-navy">
           Document Type
         </label>
-        <select
-          id="type"
-          name="type"
-          defaultValue="discovery_transcript"
-          className="rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green"
-        >
-          {TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <Select name="type" items={TYPE_OPTIONS} defaultValue="discovery_transcript">
+          <SelectTrigger id="type" className="w-full rounded-xl border-neutral-border sm:w-56">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TYPE_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex flex-col gap-1">

@@ -2,7 +2,20 @@
 
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { uploadDocument, type UploadDocumentState } from "./actions";
+
+const TYPE_OPTIONS = [
+  { value: "rfi", label: "RFI" },
+  { value: "kickoff_transcript", label: "Kickoff Meeting Transcript" },
+  { value: "other", label: "Other" },
+];
 
 export function UploadForm({ projectId }: { projectId: string }) {
   const [state, formAction, pending] = useActionState<
@@ -19,16 +32,18 @@ export function UploadForm({ projectId }: { projectId: string }) {
         <label htmlFor="type" className="text-sm font-medium text-move-navy">
           Document Type
         </label>
-        <select
-          id="type"
-          name="type"
-          defaultValue="rfi"
-          className="rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green"
-        >
-          <option value="rfi">RFI</option>
-          <option value="kickoff_transcript">Kickoff Meeting Transcript</option>
-          <option value="other">Other</option>
-        </select>
+        <Select name="type" items={TYPE_OPTIONS} defaultValue="rfi">
+          <SelectTrigger id="type" className="w-full rounded-xl border-neutral-border sm:w-56">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TYPE_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex flex-col gap-1">
