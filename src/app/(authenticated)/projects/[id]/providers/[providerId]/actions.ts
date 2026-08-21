@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 const BUCKET = "3pl-sourcing-documents";
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 export type UploadProviderDocumentState = { error?: string };
 
@@ -18,6 +19,10 @@ export async function uploadProviderDocument(
 
   if (!file || file.size === 0) {
     return { error: "Please choose a file to upload." };
+  }
+
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return { error: "File exceeds the 10MB upload limit" };
   }
 
   const supabase = await createClient();

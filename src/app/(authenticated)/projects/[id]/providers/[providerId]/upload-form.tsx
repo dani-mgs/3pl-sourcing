@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -22,6 +22,8 @@ const TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "revised_quotation", label: "Revised Quotation" },
 ];
 
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
 export function UploadProviderDocumentForm({
   projectId,
   providerId,
@@ -37,10 +39,27 @@ export function UploadProviderDocumentForm({
       uploadProviderDocument(projectId, providerId, formData),
     {},
   );
+  const [sizeError, setSizeError] = useState<string | null>(null);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const fileInput = event.currentTarget.elements.namedItem(
+      "file",
+    ) as HTMLInputElement | null;
+    const file = fileInput?.files?.[0];
+
+    if (file && file.size > MAX_FILE_SIZE_BYTES) {
+      event.preventDefault();
+      setSizeError("File exceeds the 10MB upload limit");
+      return;
+    }
+
+    setSizeError(null);
+  }
 
   return (
     <form
       action={formAction}
+      onSubmit={handleSubmit}
       className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end"
     >
       <div className="flex flex-col gap-1">
@@ -79,7 +98,8 @@ export function UploadProviderDocumentForm({
         {pending ? "Uploading..." : "Upload"}
       </Button>
 
-      {state.error && (
+      {sizeError && <p className="w-full text-sm text-danger">{sizeError}</p>}
+      {!sizeError && state.error && (
         <p className="w-full text-sm text-danger">{state.error}</p>
       )}
     </form>
