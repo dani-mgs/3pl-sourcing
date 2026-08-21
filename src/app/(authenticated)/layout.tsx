@@ -24,7 +24,7 @@ export default async function AuthenticatedLayout({
 
   return (
     <SidebarProvider>
-      <Sidebar collapsible="none" className="border-r-0">
+      <Sidebar collapsible="none" className="sticky top-0 h-svh border-r-0">
         <SidebarHeader className="p-6">
           <Link
             href="/dashboard"
