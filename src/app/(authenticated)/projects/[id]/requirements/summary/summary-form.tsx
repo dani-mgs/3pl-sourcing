@@ -20,7 +20,7 @@ export type RequirementsSummaryRow = {
 };
 
 const fieldClass =
-  "rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green";
+  "rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy placeholder:italic placeholder:text-gray-400 focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green";
 const labelClass = "text-sm font-medium text-move-navy";
 
 export function RequirementsSummaryForm({
@@ -50,6 +50,7 @@ export function RequirementsSummaryForm({
             id="location"
             name="location"
             type="text"
+            placeholder="e.g. Los Angeles, USA"
             defaultValue={summary?.location ?? ""}
             className={fieldClass}
           />
@@ -63,6 +64,7 @@ export function RequirementsSummaryForm({
             id="order_volume"
             name="order_volume"
             type="text"
+            placeholder="e.g. 500 units/month"
             defaultValue={summary?.order_volume ?? ""}
             className={fieldClass}
           />
@@ -78,6 +80,7 @@ export function RequirementsSummaryForm({
             type="number"
             min="0"
             step="1"
+            placeholder="e.g. 150"
             defaultValue={summary?.sku_count ?? ""}
             className={fieldClass}
           />
@@ -107,6 +110,7 @@ export function RequirementsSummaryForm({
             id="target_cost"
             name="target_cost"
             type="text"
+            placeholder="e.g. $50,000"
             defaultValue={summary?.target_cost ?? ""}
             className={fieldClass}
           />
@@ -120,6 +124,7 @@ export function RequirementsSummaryForm({
             id="turnaround_time"
             name="turnaround_time"
             type="text"
+            placeholder="e.g. 24-48 hours"
             defaultValue={summary?.turnaround_time ?? ""}
             className={fieldClass}
           />
@@ -134,6 +139,7 @@ export function RequirementsSummaryForm({
           id="storage_requirements"
           name="storage_requirements"
           rows={3}
+          placeholder="e.g. Climate-controlled, hazmat-certified"
           defaultValue={summary?.storage_requirements ?? ""}
           className={fieldClass}
         />
@@ -147,6 +153,7 @@ export function RequirementsSummaryForm({
           id="special_handling"
           name="special_handling"
           rows={3}
+          placeholder="e.g. Fragile items, temperature-sensitive"
           defaultValue={summary?.special_handling ?? ""}
           className={fieldClass}
         />

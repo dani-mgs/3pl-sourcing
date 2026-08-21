@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
 import { StatusBadge, type ProviderStatus } from "../status-badge";
 import { UploadProviderDocumentForm } from "./upload-form";
 
@@ -86,6 +87,14 @@ export default async function ProviderDetailsPage({
           {provider.company_name}
         </h1>
         <StatusBadge status={provider.status as ProviderStatus} />
+        <Button
+          variant="outline"
+          className="ml-auto"
+          nativeButton={false}
+          render={<Link href={`/projects/${id}/providers/${providerId}/edit`} />}
+        >
+          Edit
+        </Button>
       </div>
 
       <div className="mb-6 rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">

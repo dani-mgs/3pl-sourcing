@@ -3,12 +3,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export type CreateProviderState = { error?: string };
+export type UpdateProviderState = { error?: string };
 
-export async function createProvider(
+export async function updateProvider(
   projectId: string,
+  providerId: string,
   formData: FormData,
-): Promise<CreateProviderState> {
+): Promise<UpdateProviderState> {
   const companyName = formData.get("company_name") as string;
   const websiteInput = formData.get("website") as string;
   const website =
@@ -26,21 +27,23 @@ export async function createProvider(
 
   const supabase = await createClient();
 
-  const { error } = await supabase.from("providers").insert({
-    project_id: projectId,
-    company_name: companyName,
-    website,
-    contact_person: contactPerson,
-    email,
-    phone,
-    location,
-    notes,
-    status,
-  });
+  const { error } = await supabase
+    .from("providers")
+    .update({
+      company_name: companyName,
+      website,
+      contact_person: contactPerson,
+      email,
+      phone,
+      location,
+      notes,
+      status,
+    })
+    .eq("id", providerId);
 
   if (error) {
     return { error: error.message };
   }
 
-  redirect(`/projects/${projectId}/providers`);
+  redirect(`/projects/${projectId}/providers/${providerId}`);
 }
