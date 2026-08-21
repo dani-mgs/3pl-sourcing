@@ -40,6 +40,7 @@ export function UploadForm({ projectId }: { projectId: string }) {
           name="file"
           type="file"
           required
+          accept="application/pdf,.doc,.docx,image/png,image/jpeg"
           className="rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy file:mr-3 file:rounded-xl file:border-0 file:bg-neutral-bg file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-move-navy"
         />
       </div>

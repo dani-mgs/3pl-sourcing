@@ -69,7 +69,7 @@ export function NewProviderForm({ projectId }: { projectId: string }) {
         <label htmlFor="phone" className={labelClass}>
           Phone
         </label>
-        <input id="phone" name="phone" type="text" className={fieldClass} />
+        <input id="phone" name="phone" type="tel" className={fieldClass} />
       </div>
 
       <div className="flex flex-col gap-1">

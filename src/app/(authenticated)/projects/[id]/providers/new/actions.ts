@@ -10,7 +10,11 @@ export async function createProvider(
   formData: FormData,
 ): Promise<CreateProviderState> {
   const companyName = formData.get("company_name") as string;
-  const website = formData.get("website") as string;
+  const websiteInput = formData.get("website") as string;
+  const website =
+    websiteInput && !/^https?:\/\//i.test(websiteInput)
+      ? `https://${websiteInput}`
+      : websiteInput;
   const contactPerson = formData.get("contact_person") as string;
   const email = formData.get("email") as string;
   const phone = formData.get("phone") as string;

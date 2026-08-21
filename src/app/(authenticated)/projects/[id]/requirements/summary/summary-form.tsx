@@ -75,7 +75,9 @@ export function RequirementsSummaryForm({
           <input
             id="sku_count"
             name="sku_count"
-            type="text"
+            type="number"
+            min="0"
+            step="1"
             defaultValue={summary?.sku_count ?? ""}
             className={fieldClass}
           />
