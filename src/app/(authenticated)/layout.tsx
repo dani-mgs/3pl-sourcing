@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/logout/actions";
 import { SidebarNav } from "./sidebar-nav";
+import { SidebarGreeting } from "./sidebar-greeting";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -58,9 +59,7 @@ export default async function AuthenticatedLayout({
         </SidebarContent>
 
         <SidebarFooter className="p-6">
-          <p className="mb-3 truncate text-xs text-sidebar-foreground/60">
-            {displayName}
-          </p>
+          <SidebarGreeting displayName={displayName} />
           <form action={logout}>
             <Button
               type="submit"
