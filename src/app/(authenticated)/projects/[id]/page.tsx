@@ -6,7 +6,7 @@ import { ProjectStatusBadge } from "../../project-status-badge";
 const UPCOMING_STEPS = [
   { title: "Client Requirements", href: "requirements" },
   { title: "3PL List", href: "providers" },
-  { title: "Comparison", href: null },
+  { title: "Comparison", href: "comparison" },
   { title: "Recommendation", href: null },
 ];
 
