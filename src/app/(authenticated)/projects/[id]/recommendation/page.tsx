@@ -26,14 +26,16 @@ export default async function RecommendationPage({
 
   const { data: vettedProviders } = await supabase
     .from("providers")
-    .select("id, company_name, cost, service_capability, turnaround_time")
+    .select(
+      "id, company_name, cost, service_capability, turnaround_time, status, created_at",
+    )
     .eq("project_id", id)
     .eq("status", "Vetted")
-    .order("company_name", { ascending: true });
+    .order("created_at", { ascending: true });
 
   const { data: recommendation } = await supabase
     .from("recommendations")
-    .select("priority, provider_id_1, provider_id_2, provider_id_3, notes")
+    .select("priority")
     .eq("project_id", id)
     .maybeSingle();
 

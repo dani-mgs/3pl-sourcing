@@ -11,13 +11,18 @@ export async function saveRecommendation(
 ): Promise<SaveRecommendationState> {
   const supabase = await createClient();
 
+  const providerId = (name: string) => {
+    const value = formData.get(name) as string;
+    return value ? value : null;
+  };
+
   const payload = {
     project_id: projectId,
     priority: formData.get("priority") as string,
-    provider_id_1: formData.get("provider_id_1") as string,
-    provider_id_2: formData.get("provider_id_2") as string,
-    provider_id_3: formData.get("provider_id_3") as string,
-    notes: formData.get("notes") as string,
+    provider_id_1: providerId("provider_id_1"),
+    provider_id_2: providerId("provider_id_2"),
+    provider_id_3: providerId("provider_id_3"),
+    notes: null,
     generated_at: new Date().toISOString(),
   };
 
