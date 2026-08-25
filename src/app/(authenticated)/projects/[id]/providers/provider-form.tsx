@@ -64,6 +64,9 @@ export type ProviderFormDefaults = {
   email: string;
   phone: string;
   location: string;
+  cost: string;
+  service_capability: string;
+  turnaround_time: string;
   notes: string;
   status: string;
 };
@@ -216,6 +219,48 @@ export function ProviderForm({
           type="text"
           placeholder="e.g. Los Angeles, USA"
           defaultValue={defaultValues?.location}
+          className={fieldClass}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="cost" className={labelClass}>
+          Cost
+        </label>
+        <input
+          id="cost"
+          name="cost"
+          type="text"
+          placeholder="e.g. $2.50/order or $15k/month"
+          defaultValue={defaultValues?.cost}
+          className={fieldClass}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="service_capability" className={labelClass}>
+          Service Capability
+        </label>
+        <input
+          id="service_capability"
+          name="service_capability"
+          type="text"
+          placeholder="e.g. Excellent, handles fragile + hazmat"
+          defaultValue={defaultValues?.service_capability}
+          className={fieldClass}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="turnaround_time" className={labelClass}>
+          Turnaround Time
+        </label>
+        <input
+          id="turnaround_time"
+          name="turnaround_time"
+          type="text"
+          placeholder="e.g. 24-48 hours"
+          defaultValue={defaultValues?.turnaround_time}
           className={fieldClass}
         />
       </div>

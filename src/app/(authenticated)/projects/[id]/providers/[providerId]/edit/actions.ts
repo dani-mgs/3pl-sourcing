@@ -22,6 +22,9 @@ export async function updateProvider(
   const phoneNumber = (formData.get("phone_number") as string) || "";
   const phone = phoneNumber ? `${phoneCountry} ${phoneNumber}` : "";
   const location = formData.get("location") as string;
+  const cost = formData.get("cost") as string;
+  const serviceCapability = formData.get("service_capability") as string;
+  const turnaroundTime = formData.get("turnaround_time") as string;
   const notes = formData.get("notes") as string;
   const status = formData.get("status") as string;
 
@@ -36,6 +39,9 @@ export async function updateProvider(
       email,
       phone,
       location,
+      cost,
+      service_capability: serviceCapability,
+      turnaround_time: turnaroundTime,
       notes,
       status,
     })

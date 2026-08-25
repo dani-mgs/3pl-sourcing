@@ -13,7 +13,7 @@ export default async function EditProviderPage({
   const { data: provider } = await supabase
     .from("providers")
     .select(
-      "id, company_name, website, contact_person, email, phone, location, notes, status",
+      "id, company_name, website, contact_person, email, phone, location, cost, service_capability, turnaround_time, notes, status",
     )
     .eq("id", providerId)
     .eq("project_id", id)
@@ -47,6 +47,9 @@ export default async function EditProviderPage({
             email: provider.email ?? "",
             phone: provider.phone ?? "",
             location: provider.location ?? "",
+            cost: provider.cost ?? "",
+            service_capability: provider.service_capability ?? "",
+            turnaround_time: provider.turnaround_time ?? "",
             notes: provider.notes ?? "",
             status: provider.status ?? "Potential",
           }}
