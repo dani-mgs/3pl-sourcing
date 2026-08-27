@@ -7,3 +7,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+
+## Database Changes
+Never run raw SQL directly against Supabase (dashboard or one-off commands).
+Always follow this flow:
+1. Create a migration file: `npx supabase migration new <descriptive_name>`
+2. Write the SQL inside that generated file
+3. Test locally: `npx supabase db reset`
+4. Apply to the live project: `npx supabase db push`
+5. Commit the migration file to git in the same commit/PR as the related feature code
