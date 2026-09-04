@@ -23,10 +23,13 @@ type Priority = (typeof PRIORITY_OPTIONS)[number];
 export type VettedProvider = {
   id: string;
   company_name: string;
-  cost: string | null;
-  service_capability: string | null;
-  turnaround_time: string | null;
+  location: string | null;
   status: string;
+  overall_assessment: string | null;
+  storage_cost: number | null;
+  pick_pack_cost: number | null;
+  receiving_cost: number | null;
+  returns_cost: number | null;
   created_at: string;
 };
 
@@ -36,47 +39,50 @@ export type RecommendationRow = {
 
 const labelClass = "text-sm font-medium text-move-navy";
 
-function parseLeadingNumber(value: string | null): number | null {
-  if (!value) return null;
-  const match = value.match(/\d+(\.\d+)?/);
-  if (!match) return null;
-  const parsed = parseFloat(match[0]);
-  return Number.isNaN(parsed) ? null : parsed;
+const USD_FORMATTER = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+
+function totalCost(provider: VettedProvider): number | null {
+  const costs = [
+    provider.storage_cost,
+    provider.pick_pack_cost,
+    provider.receiving_cost,
+    provider.returns_cost,
+  ];
+  const hasCostData = costs.some((c) => c != null);
+  if (!hasCostData) return null;
+  return costs.reduce((sum: number, c) => sum + (c ?? 0), 0);
 }
 
 function rankProviders(
   providers: VettedProvider[],
   priority: Priority,
-): { provider: VettedProvider; rank: number | null; parsed: number | null }[] {
-  if (priority === "Quality of Service") {
-    return providers.map((provider) => ({
-      provider,
-      rank: null,
-      parsed: null,
-    }));
+): { provider: VettedProvider; rank: number | null }[] {
+  if (priority !== "Cost Savings") {
+    return providers.map((provider) => ({ provider, rank: null }));
   }
 
-  const field = priority === "Cost Savings" ? "cost" : "turnaround_time";
-
-  const withParsed = providers.map((provider) => ({
+  const withCost = providers.map((provider) => ({
     provider,
-    parsed: parseLeadingNumber(provider[field]),
+    cost: totalCost(provider),
   }));
 
-  withParsed.sort((a, b) => {
-    if (a.parsed === null && b.parsed === null) return 0;
-    if (a.parsed === null) return 1;
-    if (b.parsed === null) return -1;
-    return a.parsed - b.parsed;
+  withCost.sort((a, b) => {
+    if (a.cost === null && b.cost === null) return 0;
+    if (a.cost === null) return 1;
+    if (b.cost === null) return -1;
+    return a.cost - b.cost;
   });
 
   let rank = 0;
-  return withParsed.map(({ provider, parsed }) => {
-    if (parsed === null) {
-      return { provider, rank: null, parsed };
+  return withCost.map(({ provider, cost }) => {
+    if (cost === null) {
+      return { provider, rank: null };
     }
     rank += 1;
-    return { provider, rank, parsed };
+    return { provider, rank };
   });
 }
 
@@ -136,8 +142,15 @@ export function RecommendationForm({
         {priority === "Quality of Service" && (
           <p className="text-sm text-neutral-muted">
             Quality of Service can&apos;t be automatically ranked from
-            current data — compare each provider&apos;s Service Capability
+            current data — compare each provider&apos;s Overall Assessment
             notes below.
+          </p>
+        )}
+
+        {priority === "Turnaround Time" && (
+          <p className="text-sm text-neutral-muted">
+            Turnaround Time can&apos;t be automatically ranked from current
+            data.
           </p>
         )}
 
@@ -172,7 +185,7 @@ export function RecommendationForm({
                 <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-move-green text-xs font-semibold text-white">
                   {rank}
                 </span>
-              ) : priority !== "Quality of Service" ? (
+              ) : priority === "Cost Savings" ? (
                 <span className="rounded-full bg-[#F1F2F4] px-2 py-0.5 text-xs font-medium text-neutral-muted">
                   Not enough data to rank
                 </span>
@@ -185,25 +198,25 @@ export function RecommendationForm({
 
             <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
-                <dt className="text-xs text-neutral-muted">Cost</dt>
+                <dt className="text-xs text-neutral-muted">Total Cost</dt>
                 <dd className="text-sm text-move-navy">
-                  {provider.cost || "—"}
+                  {totalCost(provider) != null
+                    ? USD_FORMATTER.format(totalCost(provider)!)
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-neutral-muted">Location</dt>
+                <dd className="text-sm text-move-navy">
+                  {provider.location || "—"}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs text-neutral-muted">
-                  Service Capability
+                  Overall Assessment
                 </dt>
                 <dd className="text-sm text-move-navy">
-                  {provider.service_capability || "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-neutral-muted">
-                  Turnaround Time
-                </dt>
-                <dd className="text-sm text-move-navy">
-                  {provider.turnaround_time || "—"}
+                  {provider.overall_assessment || "—"}
                 </dd>
               </div>
             </dl>

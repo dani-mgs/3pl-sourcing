@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 export type SaveRecommendationState = { error?: string; success?: boolean };
 
 export async function saveRecommendation(
-  projectId: string,
+  clientRequirementId: string,
   formData: FormData,
 ): Promise<SaveRecommendationState> {
   const supabase = await createClient();
@@ -17,32 +17,31 @@ export async function saveRecommendation(
   };
 
   const payload = {
-    project_id: projectId,
+    client_requirement_id: clientRequirementId,
     priority: formData.get("priority") as string,
     provider_id_1: providerId("provider_id_1"),
     provider_id_2: providerId("provider_id_2"),
     provider_id_3: providerId("provider_id_3"),
-    notes: null,
     generated_at: new Date().toISOString(),
   };
 
   const { data: existing } = await supabase
-    .from("recommendations")
+    .from("recommendation")
     .select("id")
-    .eq("project_id", projectId)
+    .eq("client_requirement_id", clientRequirementId)
     .maybeSingle();
 
   const { error } = existing
     ? await supabase
-        .from("recommendations")
+        .from("recommendation")
         .update(payload)
         .eq("id", existing.id)
-    : await supabase.from("recommendations").insert(payload);
+    : await supabase.from("recommendation").insert(payload);
 
   if (error) {
     return { error: error.message };
   }
 
-  revalidatePath(`/projects/${projectId}/recommendation`);
+  revalidatePath(`/projects/${clientRequirementId}/recommendation`);
   return { success: true };
 }

@@ -14,29 +14,29 @@ export default async function RecommendationPage({
 
   const supabase = await createClient();
 
-  const { data: project } = await supabase
-    .from("projects")
+  const { data: clientRequirement } = await supabase
+    .from("client_requirements")
     .select("id")
     .eq("id", id)
     .single();
 
-  if (!project) {
+  if (!clientRequirement) {
     notFound();
   }
 
   const { data: vettedProviders } = await supabase
-    .from("providers")
+    .from("three_pl_providers")
     .select(
-      "id, company_name, cost, service_capability, turnaround_time, status, created_at",
+      "id, company_name, location, status, overall_assessment, storage_cost, pick_pack_cost, receiving_cost, returns_cost, created_at",
     )
-    .eq("project_id", id)
+    .eq("client_requirement_id", id)
     .eq("status", "Vetted")
     .order("created_at", { ascending: true });
 
   const { data: recommendation } = await supabase
-    .from("recommendations")
+    .from("recommendation")
     .select("priority")
-    .eq("project_id", id)
+    .eq("client_requirement_id", id)
     .maybeSingle();
 
   return (
