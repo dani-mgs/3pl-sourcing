@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getUserRole } from "@/lib/auth/get-user-role";
 import { logout } from "@/app/logout/actions";
 import { SidebarNav } from "./sidebar-nav";
 import { SidebarGreeting } from "./sidebar-greeting";
@@ -41,6 +42,7 @@ export default async function AuthenticatedLayout({
   } = await supabase.auth.getUser();
 
   const displayName = getDisplayName(user);
+  const role = await getUserRole();
 
   return (
     <SidebarProvider className="h-svh overflow-hidden">
@@ -55,7 +57,7 @@ export default async function AuthenticatedLayout({
         </SidebarHeader>
 
         <SidebarContent className="px-3">
-          <SidebarNav />
+          <SidebarNav isAdmin={role === "admin"} />
         </SidebarContent>
 
         <SidebarFooter className="p-6">
