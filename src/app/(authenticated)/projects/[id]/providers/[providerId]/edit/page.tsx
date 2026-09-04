@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { EditProviderForm } from "./edit-provider-form";
+import type { ProviderFormDefaults } from "../../provider-form";
 
 export default async function EditProviderPage({
   params,
@@ -11,12 +12,12 @@ export default async function EditProviderPage({
   const supabase = await createClient();
 
   const { data: provider } = await supabase
-    .from("providers")
+    .from("three_pl_providers")
     .select(
-      "id, company_name, website, contact_person, email, phone, location, cost, service_capability, turnaround_time, notes, status",
+      "id, company_name, provider_type, website, location, footprint_source, contact_person, email, phone, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, onboarding_period_months, virtual_tour_url, billing_terms, other_specialization, b2b, b2c, is_incumbent, storage_cost, pick_pack_cost, receiving_cost, returns_cost, status, key_strength, key_weakness_risk, important_assumption, overall_assessment, client_decision, source_basis, next_action, key_notes, notes",
     )
     .eq("id", providerId)
-    .eq("project_id", id)
+    .eq("client_requirement_id", id)
     .single();
 
   if (!provider) {
@@ -36,23 +37,11 @@ export default async function EditProviderPage({
         Edit Provider
       </h1>
 
-      <div className="max-w-sm rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
         <EditProviderForm
-          projectId={id}
+          clientRequirementId={id}
           providerId={providerId}
-          defaultValues={{
-            company_name: provider.company_name ?? "",
-            website: provider.website ?? "",
-            contact_person: provider.contact_person ?? "",
-            email: provider.email ?? "",
-            phone: provider.phone ?? "",
-            location: provider.location ?? "",
-            cost: provider.cost ?? "",
-            service_capability: provider.service_capability ?? "",
-            turnaround_time: provider.turnaround_time ?? "",
-            notes: provider.notes ?? "",
-            status: provider.status ?? "Potential",
-          }}
+          defaultValues={provider as ProviderFormDefaults}
         />
       </div>
     </div>

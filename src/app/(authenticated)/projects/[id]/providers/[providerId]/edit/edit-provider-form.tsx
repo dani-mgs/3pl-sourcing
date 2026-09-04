@@ -5,11 +5,11 @@ import { ProviderForm, type ProviderFormDefaults } from "../../provider-form";
 import { updateProvider, type UpdateProviderState } from "./actions";
 
 export function EditProviderForm({
-  projectId,
+  clientRequirementId,
   providerId,
   defaultValues,
 }: {
-  projectId: string;
+  clientRequirementId: string;
   providerId: string;
   defaultValues: ProviderFormDefaults;
 }) {
@@ -18,7 +18,7 @@ export function EditProviderForm({
     FormData
   >(
     async (_prevState, formData) =>
-      updateProvider(projectId, providerId, formData),
+      updateProvider(clientRequirementId, providerId, formData),
     {},
   );
 

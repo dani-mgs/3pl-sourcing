@@ -51,8 +51,7 @@ export function DeleteProviderButton({
         <DialogHeader>
           <DialogTitle>Delete provider</DialogTitle>
           <DialogDescription>
-            Delete {companyName}? This will also delete all of its uploaded
-            documents. This cannot be undone.
+            Delete {companyName}? This cannot be undone.
           </DialogDescription>
         </DialogHeader>
 

@@ -2,36 +2,49 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { StatusBadge, type ProviderStatus } from "../status-badge";
-import { UploadProviderDocumentForm } from "./upload-form";
 import { DeleteProviderButton } from "./delete-provider-button";
-import { DeleteProviderDocumentButton } from "./delete-provider-document-button";
 
-const BUCKET = "3pl-sourcing-documents";
-const SIGNED_URL_EXPIRY_SECONDS = 60;
+const USD_FORMATTER = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
 
-type ProviderDocumentType =
-  | "discovery_transcript"
-  | "notes"
-  | "document"
-  | "quotation"
-  | "revised_quotation";
-
-type ProviderDocumentRow = {
-  id: string;
-  file_name: string;
-  file_path: string;
-  type: ProviderDocumentType;
-  uploaded_at: string;
-};
-
-const GROUPS: { type: ProviderDocumentType; title: string }[] = [
-  { type: "discovery_transcript", title: "Discovery Call Transcript" },
-  { type: "notes", title: "Notes" },
-  { type: "document", title: "Documents" },
-  { type: "quotation", title: "Quotation" },
-  { type: "revised_quotation", title: "Revised Quotation" },
+const CAPABILITY_FIELDS: { key: string; label: string }[] = [
+  { key: "receiving", label: "Receiving" },
+  { key: "storage", label: "Storage" },
+  { key: "fulfillment", label: "Fulfillment" },
+  { key: "dispatch", label: "Dispatch" },
+  { key: "adhoc_kitting_bundling", label: "Ad-hoc Kitting/Bundling" },
+  { key: "adhoc_labelling", label: "Ad-hoc Labelling" },
+  { key: "returns", label: "Returns" },
+  { key: "annual_inventory_count", label: "Annual Inventory Count" },
+  { key: "cycle_count", label: "Cycle Count" },
+  { key: "inventory_count_on_request", label: "Inventory Count on Request" },
+  { key: "one_time_system_setup", label: "One-Time System Setup" },
+  { key: "lot_batch_expiry_tracking", label: "Lot/Batch Expiry Tracking" },
+  { key: "temp_controlled_storage", label: "Temp-Controlled Storage" },
+  { key: "retail_edi_compliance", label: "Retail EDI Compliance" },
+  { key: "cross_docking", label: "Cross Docking" },
+  { key: "b2b", label: "B2B" },
+  { key: "b2c", label: "B2C" },
 ];
+
+function InfoField({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | null | undefined;
+}) {
+  return (
+    <div>
+      <dt className="text-xs text-neutral-muted">{label}</dt>
+      <dd className="text-sm text-move-navy">{value || "—"}</dd>
+    </div>
+  );
+}
 
 export default async function ProviderDetailsPage({
   params,
@@ -41,39 +54,23 @@ export default async function ProviderDetailsPage({
   const supabase = await createClient();
 
   const { data: provider } = await supabase
-    .from("providers")
+    .from("three_pl_providers")
     .select(
-      "id, company_name, website, contact_person, email, phone, location, notes, status",
+      "id, company_name, provider_type, website, location, footprint_source, contact_person, email, phone, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, onboarding_period_months, virtual_tour_url, billing_terms, other_specialization, b2b, b2c, is_incumbent, storage_cost, pick_pack_cost, receiving_cost, returns_cost, status, key_strength, key_weakness_risk, important_assumption, overall_assessment, client_decision, source_basis, next_action, key_notes, notes, updated_at",
     )
     .eq("id", providerId)
-    .eq("project_id", id)
+    .eq("client_requirement_id", id)
     .single();
 
   if (!provider) {
     notFound();
   }
 
-  const { data: documents } = await supabase
-    .from("provider_documents")
-    .select("id, file_name, file_path, type, uploaded_at")
-    .eq("provider_id", providerId)
-    .order("uploaded_at", { ascending: false });
-
-  const docsByType = new Map<ProviderDocumentType, ProviderDocumentRow[]>();
-  for (const group of GROUPS) docsByType.set(group.type, []);
-  for (const doc of (documents ?? []) as ProviderDocumentRow[]) {
-    docsByType.get(doc.type)?.push(doc);
-  }
-
-  const signedUrls = new Map<string, string>();
-  for (const doc of (documents ?? []) as ProviderDocumentRow[]) {
-    const { data } = await supabase.storage
-      .from(BUCKET)
-      .createSignedUrl(doc.file_path, SIGNED_URL_EXPIRY_SECONDS);
-    if (data?.signedUrl) {
-      signedUrls.set(doc.id, data.signedUrl);
-    }
-  }
+  const totalCost =
+    (provider.storage_cost ?? 0) +
+    (provider.pick_pack_cost ?? 0) +
+    (provider.receiving_cost ?? 0) +
+    (provider.returns_cost ?? 0);
 
   return (
     <div className="max-w-5xl px-8 py-10">
@@ -84,11 +81,16 @@ export default async function ProviderDetailsPage({
         ← Back to 3PL List
       </Link>
 
-      <div className="mt-2 mb-8 flex items-center gap-3">
+      <div className="mt-2 mb-2 flex items-center gap-3">
         <h1 className="font-display text-2xl font-semibold text-move-navy">
           {provider.company_name}
         </h1>
         <StatusBadge status={provider.status as ProviderStatus} />
+        {provider.is_incumbent && (
+          <Badge variant="outline" className="border-transparent bg-[#E3F2FD] text-[#1565C0]">
+            Incumbent
+          </Badge>
+        )}
         <div className="ml-auto flex items-center gap-2">
           <Button
             variant="outline"
@@ -104,113 +106,163 @@ export default async function ProviderDetailsPage({
           />
         </div>
       </div>
-
-      <div className="mb-6 rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-        <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
-          Provider Info
-        </h2>
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <dt className="text-xs text-neutral-muted">Website</dt>
-            <dd className="text-sm text-move-navy">
-              {provider.website || "—"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-neutral-muted">Contact Person</dt>
-            <dd className="text-sm text-move-navy">
-              {provider.contact_person || "—"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-neutral-muted">Email</dt>
-            <dd className="text-sm text-move-navy">{provider.email || "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-neutral-muted">Phone</dt>
-            <dd className="text-sm text-move-navy">{provider.phone || "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-neutral-muted">Location</dt>
-            <dd className="text-sm text-move-navy">
-              {provider.location || "—"}
-            </dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-xs text-neutral-muted">Notes</dt>
-            <dd className="text-sm text-move-navy">{provider.notes || "—"}</dd>
-          </div>
-        </dl>
-      </div>
-
-      <div className="mb-6 rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-        <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
-          Upload Document
-        </h2>
-        <UploadProviderDocumentForm projectId={id} providerId={providerId} />
-      </div>
+      <p className="mb-8 text-xs text-neutral-muted">
+        Last updated {new Date(provider.updated_at).toLocaleDateString()}
+      </p>
 
       <div className="flex flex-col gap-6">
-        {GROUPS.map((group) => {
-          const docs = docsByType.get(group.type) ?? [];
-          return (
-            <div
-              key={group.type}
-              className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm"
-            >
-              <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
-                {group.title}
-              </h2>
+        <section className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+          <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
+            Company Info
+          </h2>
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <InfoField label="Provider Type" value={provider.provider_type} />
+            <InfoField label="Website" value={provider.website} />
+            <InfoField label="Location" value={provider.location} />
+            <InfoField
+              label="Footprint Source"
+              value={provider.footprint_source}
+            />
+            <InfoField
+              label="Contact Person"
+              value={provider.contact_person}
+            />
+            <InfoField label="Email" value={provider.email} />
+            <InfoField label="Phone" value={provider.phone} />
+          </dl>
+        </section>
 
-              {docs.length === 0 ? (
-                <p className="text-sm text-neutral-muted">
-                  No documents uploaded yet
-                </p>
-              ) : (
-                <ul className="flex flex-col gap-3">
-                  {docs.map((doc) => {
-                    const signedUrl = signedUrls.get(doc.id);
-                    return (
-                      <li
-                        key={doc.id}
-                        className="flex items-center justify-between border-b border-neutral-border pb-3 last:border-b-0 last:pb-0"
-                      >
-                        <div>
-                          <p className="text-sm text-move-navy">
-                            {doc.file_name}
-                          </p>
-                          <p className="text-xs text-neutral-muted">
-                            {new Date(doc.uploaded_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          {signedUrl ? (
-                            <a
-                              href={signedUrl}
-                              className="text-sm font-medium text-move-green hover:underline"
-                            >
-                              Download
-                            </a>
-                          ) : (
-                            <span className="text-sm text-neutral-muted">
-                              Unavailable
-                            </span>
-                          )}
-                          <DeleteProviderDocumentButton
-                            projectId={id}
-                            providerId={providerId}
-                            documentId={doc.id}
-                            fileName={doc.file_name}
-                          />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          );
-        })}
+        <section className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+          <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
+            Capabilities
+          </h2>
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+            {CAPABILITY_FIELDS.map((capability) => {
+              const enabled = Boolean(
+                provider[capability.key as keyof typeof provider],
+              );
+              return (
+                <li
+                  key={capability.key}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <span
+                    className={
+                      enabled
+                        ? "text-move-green"
+                        : "text-neutral-muted"
+                    }
+                  >
+                    {enabled ? "✓" : "—"}
+                  </span>
+                  <span className={enabled ? "text-move-navy" : "text-neutral-muted"}>
+                    {capability.label}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <section className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+          <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
+            Commercial Terms
+          </h2>
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <InfoField
+              label="Onboarding Period"
+              value={
+                provider.onboarding_period_months
+                  ? `${provider.onboarding_period_months} months`
+                  : null
+              }
+            />
+            <InfoField
+              label="Virtual Tour URL"
+              value={provider.virtual_tour_url}
+            />
+            <InfoField label="Billing Terms" value={provider.billing_terms} />
+            <InfoField
+              label="Other Specialization"
+              value={provider.other_specialization}
+            />
+          </dl>
+        </section>
+
+        <section className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+          <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
+            Costs (USD)
+          </h2>
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <InfoField
+              label="Storage Cost"
+              value={
+                provider.storage_cost != null
+                  ? USD_FORMATTER.format(provider.storage_cost)
+                  : null
+              }
+            />
+            <InfoField
+              label="Pick & Pack Cost"
+              value={
+                provider.pick_pack_cost != null
+                  ? USD_FORMATTER.format(provider.pick_pack_cost)
+                  : null
+              }
+            />
+            <InfoField
+              label="Receiving Cost"
+              value={
+                provider.receiving_cost != null
+                  ? USD_FORMATTER.format(provider.receiving_cost)
+                  : null
+              }
+            />
+            <InfoField
+              label="Returns Cost"
+              value={
+                provider.returns_cost != null
+                  ? USD_FORMATTER.format(provider.returns_cost)
+                  : null
+              }
+            />
+          </dl>
+          <div className="mt-4 border-t border-neutral-border pt-4">
+            <InfoField
+              label="Total Cost"
+              value={USD_FORMATTER.format(totalCost)}
+            />
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+          <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
+            Status &amp; Assessment
+          </h2>
+          <dl className="grid grid-cols-1 gap-4">
+            <InfoField label="Key Strength" value={provider.key_strength} />
+            <InfoField
+              label="Key Weakness / Risk"
+              value={provider.key_weakness_risk}
+            />
+            <InfoField
+              label="Important Assumption"
+              value={provider.important_assumption}
+            />
+            <InfoField
+              label="Overall Assessment"
+              value={provider.overall_assessment}
+            />
+            <InfoField
+              label="Client Decision"
+              value={provider.client_decision}
+            />
+            <InfoField label="Source / Basis" value={provider.source_basis} />
+            <InfoField label="Next Action" value={provider.next_action} />
+            <InfoField label="Key Notes" value={provider.key_notes} />
+            <InfoField label="Notes" value={provider.notes} />
+          </dl>
+        </section>
       </div>
     </div>
   );
