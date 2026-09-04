@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function createProject(formData: FormData) {
   const clientName = formData.get("client_name") as string;
-  const projectName = formData.get("project_name") as string;
   const status = formData.get("status") as string;
 
   const supabase = await createClient();
@@ -18,9 +17,8 @@ export async function createProject(formData: FormData) {
     return { error: "You must be signed in to create a project." };
   }
 
-  const { error } = await supabase.from("projects").insert({
+  const { error } = await supabase.from("client_requirements").insert({
     client_name: clientName,
-    project_name: projectName,
     status,
     owner_id: user.id,
   });

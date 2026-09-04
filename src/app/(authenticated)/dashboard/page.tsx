@@ -7,16 +7,16 @@ import { ProjectStatusBadge } from "../project-status-badge";
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: projects, error } = await supabase
-    .from("projects")
-    .select("id, client_name, project_name, status, date_created")
+    .from("client_requirements")
+    .select("id, client_name, status, date_created")
     .order("date_created", { ascending: false });
 
   const { count: totalCount } = await supabase
-    .from("projects")
+    .from("client_requirements")
     .select("*", { count: "exact", head: true });
 
   const { count: activeCount } = await supabase
-    .from("projects")
+    .from("client_requirements")
     .select("*", { count: "exact", head: true })
     .eq("status", "Active");
 
@@ -43,7 +43,7 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-neutral-muted">Total Projects</p>
+            <p className="text-sm text-neutral-muted">Total Clients</p>
           </CardContent>
         </Card>
         <Card>
@@ -53,7 +53,7 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-neutral-muted">Active Projects</p>
+            <p className="text-sm text-neutral-muted">Active Clients</p>
           </CardContent>
         </Card>
       </div>
@@ -81,9 +81,6 @@ export default async function DashboardPage() {
                   Client
                 </th>
                 <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
-                  Project
-                </th>
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Status
                 </th>
                 <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
@@ -103,14 +100,6 @@ export default async function DashboardPage() {
                       className="block px-4 py-3 text-move-navy"
                     >
                       {project.client_name}
-                    </Link>
-                  </td>
-                  <td className="px-0 py-0">
-                    <Link
-                      href={`/projects/${project.id}`}
-                      className="block px-4 py-3 text-move-navy"
-                    >
-                      {project.project_name}
                     </Link>
                   </td>
                   <td className="px-0 py-0">

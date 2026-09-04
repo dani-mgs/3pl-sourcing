@@ -62,23 +62,6 @@ export default function NewProjectPage() {
 
           <div className="flex flex-col gap-1">
             <label
-              htmlFor="project_name"
-              className="text-sm font-medium text-move-navy"
-            >
-              Project Name
-            </label>
-            <input
-              id="project_name"
-              name="project_name"
-              type="text"
-              required
-              placeholder="e.g. West Coast Fulfillment"
-              className="rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy placeholder:italic placeholder:text-gray-400 focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label
               htmlFor="status"
               className="text-sm font-medium text-move-navy"
             >
