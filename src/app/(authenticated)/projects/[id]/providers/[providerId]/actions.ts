@@ -11,13 +11,18 @@ export async function deleteProvider(
 ): Promise<DeleteProviderState> {
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("three_pl_providers")
     .delete()
-    .eq("id", providerId);
+    .eq("id", providerId)
+    .select();
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (!data || data.length === 0) {
+    return { error: "You don't have permission to make this change." };
   }
 
   redirect(`/projects/${projectId}/providers`);
