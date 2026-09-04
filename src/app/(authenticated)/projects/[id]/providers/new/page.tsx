@@ -10,13 +10,13 @@ export default async function NewProviderPage({
 
   const supabase = await createClient();
 
-  const { data: project } = await supabase
-    .from("projects")
+  const { data: clientRequirement } = await supabase
+    .from("client_requirements")
     .select("id")
     .eq("id", id)
     .single();
 
-  if (!project) {
+  if (!clientRequirement) {
     notFound();
   }
 
@@ -33,8 +33,8 @@ export default async function NewProviderPage({
         Add Provider
       </h1>
 
-      <div className="max-w-sm rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-        <NewProviderForm projectId={id} />
+      <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+        <NewProviderForm clientRequirementId={id} />
       </div>
     </div>
   );

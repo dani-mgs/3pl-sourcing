@@ -2,7 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { StatusBadge, type ProviderStatus } from "./status-badge";
+
+const USD_FORMATTER = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
 
 export default async function ProvidersPage({
   params,
@@ -11,20 +17,22 @@ export default async function ProvidersPage({
 
   const supabase = await createClient();
 
-  const { data: project } = await supabase
-    .from("projects")
+  const { data: clientRequirement } = await supabase
+    .from("client_requirements")
     .select("id")
     .eq("id", id)
     .single();
 
-  if (!project) {
+  if (!clientRequirement) {
     notFound();
   }
 
   const { data: providers } = await supabase
-    .from("providers")
-    .select("id, company_name, contact_person, location, status")
-    .eq("project_id", id)
+    .from("three_pl_providers")
+    .select(
+      "id, company_name, location, status, is_incumbent, storage_cost, pick_pack_cost, receiving_cost, returns_cost",
+    )
+    .eq("client_requirement_id", id)
     .order("created_at", { ascending: false });
 
   return (
@@ -63,56 +71,69 @@ export default async function ProvidersPage({
                   Company
                 </th>
                 <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
-                  Contact
-                </th>
-                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Location
                 </th>
                 <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Status
                 </th>
+                <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
+                  Total Cost
+                </th>
               </tr>
             </thead>
             <tbody>
-              {providers.map((provider) => (
-                <tr
-                  key={provider.id}
-                  className="border-b border-neutral-border last:border-b-0 hover:bg-neutral-bg"
-                >
-                  <td className="px-0 py-0">
-                    <Link
-                      href={`/projects/${id}/providers/${provider.id}`}
-                      className="block px-4 py-3 text-move-navy"
-                    >
-                      {provider.company_name}
-                    </Link>
-                  </td>
-                  <td className="px-0 py-0">
-                    <Link
-                      href={`/projects/${id}/providers/${provider.id}`}
-                      className="block px-4 py-3 text-move-navy"
-                    >
-                      {provider.contact_person}
-                    </Link>
-                  </td>
-                  <td className="px-0 py-0">
-                    <Link
-                      href={`/projects/${id}/providers/${provider.id}`}
-                      className="block px-4 py-3 text-neutral-muted"
-                    >
-                      {provider.location}
-                    </Link>
-                  </td>
-                  <td className="px-0 py-0">
-                    <Link
-                      href={`/projects/${id}/providers/${provider.id}`}
-                      className="block px-4 py-3"
-                    >
-                      <StatusBadge status={provider.status as ProviderStatus} />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+              {providers.map((provider) => {
+                const totalCost =
+                  (provider.storage_cost ?? 0) +
+                  (provider.pick_pack_cost ?? 0) +
+                  (provider.receiving_cost ?? 0) +
+                  (provider.returns_cost ?? 0);
+
+                return (
+                  <tr
+                    key={provider.id}
+                    className="border-b border-neutral-border last:border-b-0 hover:bg-neutral-bg"
+                  >
+                    <td className="px-0 py-0">
+                      <Link
+                        href={`/projects/${id}/providers/${provider.id}`}
+                        className="flex items-center gap-2 px-4 py-3 text-move-navy"
+                      >
+                        {provider.company_name}
+                        {provider.is_incumbent && (
+                          <Badge variant="outline" className="border-transparent bg-[#E3F2FD] text-[#1565C0]">
+                            Incumbent
+                          </Badge>
+                        )}
+                      </Link>
+                    </td>
+                    <td className="px-0 py-0">
+                      <Link
+                        href={`/projects/${id}/providers/${provider.id}`}
+                        className="block px-4 py-3 text-neutral-muted"
+                      >
+                        {provider.location}
+                      </Link>
+                    </td>
+                    <td className="px-0 py-0">
+                      <Link
+                        href={`/projects/${id}/providers/${provider.id}`}
+                        className="block px-4 py-3"
+                      >
+                        <StatusBadge status={provider.status as ProviderStatus} />
+                      </Link>
+                    </td>
+                    <td className="px-0 py-0">
+                      <Link
+                        href={`/projects/${id}/providers/${provider.id}`}
+                        className="block px-4 py-3 text-move-navy"
+                      >
+                        {USD_FORMATTER.format(totalCost)}
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
