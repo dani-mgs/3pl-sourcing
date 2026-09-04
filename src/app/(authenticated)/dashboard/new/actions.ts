@@ -17,14 +17,21 @@ export async function createProject(formData: FormData) {
     return { error: "You must be signed in to create a project." };
   }
 
-  const { error } = await supabase.from("client_requirements").insert({
-    client_name: clientName,
-    status,
-    owner_id: user.id,
-  });
+  const { data, error } = await supabase
+    .from("client_requirements")
+    .insert({
+      client_name: clientName,
+      status,
+      owner_id: user.id,
+    })
+    .select();
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (!data || data.length === 0) {
+    return { error: "You don't have permission to make this change." };
   }
 
   redirect("/dashboard");

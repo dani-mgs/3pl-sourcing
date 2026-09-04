@@ -31,15 +31,20 @@ export async function saveRecommendation(
     .eq("client_requirement_id", clientRequirementId)
     .maybeSingle();
 
-  const { error } = existing
+  const { data, error } = existing
     ? await supabase
         .from("recommendation")
         .update(payload)
         .eq("id", existing.id)
-    : await supabase.from("recommendation").insert(payload);
+        .select()
+    : await supabase.from("recommendation").insert(payload).select();
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (!data || data.length === 0) {
+    return { error: "You don't have permission to make this change." };
   }
 
   revalidatePath(`/projects/${clientRequirementId}/recommendation`);

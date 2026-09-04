@@ -39,7 +39,7 @@ export async function updateProvider(
 
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("three_pl_providers")
     .update({
       company_name: formData.get("company_name") as string,
@@ -96,7 +96,8 @@ export async function updateProvider(
       key_notes: optionalText(formData, "key_notes"),
       notes: optionalText(formData, "notes"),
     })
-    .eq("id", providerId);
+    .eq("id", providerId)
+    .select();
 
   if (error) {
     if (error.code === UNIQUE_VIOLATION) {
@@ -108,6 +109,10 @@ export async function updateProvider(
     }
     console.error("updateProvider error:", error);
     return { error: "An unexpected error occurred." };
+  }
+
+  if (!data || data.length === 0) {
+    return { error: "You don't have permission to make this change." };
   }
 
   redirect(`/projects/${clientRequirementId}/providers/${providerId}`);

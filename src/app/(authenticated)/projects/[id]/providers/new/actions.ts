@@ -38,7 +38,7 @@ export async function createProvider(
 
   const supabase = await createClient();
 
-  const { error } = await supabase.from("three_pl_providers").insert({
+  const { data, error } = await supabase.from("three_pl_providers").insert({
     client_requirement_id: clientRequirementId,
     company_name: formData.get("company_name") as string,
     provider_type: optionalText(formData, "provider_type"),
@@ -93,7 +93,7 @@ export async function createProvider(
     next_action: optionalText(formData, "next_action"),
     key_notes: optionalText(formData, "key_notes"),
     notes: optionalText(formData, "notes"),
-  });
+  }).select();
 
   if (error) {
     if (error.code === UNIQUE_VIOLATION) {
@@ -105,6 +105,10 @@ export async function createProvider(
     }
     console.error("createProvider error:", error);
     return { error: "An unexpected error occurred." };
+  }
+
+  if (!data || data.length === 0) {
+    return { error: "You don't have permission to make this change." };
   }
 
   redirect(`/projects/${clientRequirementId}/providers`);

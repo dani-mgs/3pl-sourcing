@@ -40,13 +40,18 @@ export async function saveRateDetails(
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("rate_details")
-    .upsert(payload, { onConflict: "provider_id" });
+    .upsert(payload, { onConflict: "provider_id" })
+    .select();
 
   if (error) {
     console.error("saveRateDetails error:", error);
     return { error: "An unexpected error occurred." };
+  }
+
+  if (!data || data.length === 0) {
+    return { error: "You don't have permission to make this change." };
   }
 
   revalidatePath(`/projects/${projectId}/providers/${providerId}/rates`);

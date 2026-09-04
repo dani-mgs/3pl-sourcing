@@ -58,13 +58,18 @@ export async function updateClientRequirements(
     ),
   };
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("client_requirements")
     .update(payload)
-    .eq("id", clientRequirementId);
+    .eq("id", clientRequirementId)
+    .select();
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (!data || data.length === 0) {
+    return { error: "You don't have permission to make this change." };
   }
 
   revalidatePath(`/projects/${clientRequirementId}`);
