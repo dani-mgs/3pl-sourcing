@@ -2,9 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProjectStatusBadge } from "../../project-status-badge";
+import {
+  ClientRequirementsForm,
+  type ClientRequirementsFields,
+} from "./client-requirements-form";
 
-const UPCOMING_STEPS = [
-  { title: "Client Requirements", href: "requirements" },
+const NEXT_STEPS = [
   { title: "3PL List", href: "providers" },
   { title: "Comparison", href: "comparison" },
   { title: "Recommendation", href: "recommendation" },
@@ -16,13 +19,15 @@ export default async function ProjectDetailsPage({
   const { id } = await params;
 
   const supabase = await createClient();
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, client_name, project_name, status, date_created")
+  const { data: clientRequirement } = await supabase
+    .from("client_requirements")
+    .select(
+      "id, client_name, status, date_created, current_incumbent_3pl, target_geography, benchmark_period, avg_monthly_orders, peak_monthly_orders, latest_month_orders, avg_monthly_units, peak_monthly_units, business_model, core_cost_categories, main_decision_focus, key_capability_needs, tech_integration_requirement, special_handling_requirement, fixed_comparison_principle, important_limitation, assumptions_data_limitations",
+    )
     .eq("id", id)
     .single();
 
-  if (!project) {
+  if (!clientRequirement) {
     notFound();
   }
 
@@ -37,38 +42,33 @@ export default async function ProjectDetailsPage({
 
       <div className="mt-2 mb-2 flex items-center gap-3">
         <h1 className="font-display text-2xl font-semibold text-move-navy">
-          {project.client_name} — {project.project_name}
+          {clientRequirement.client_name}
         </h1>
-        <ProjectStatusBadge status={project.status} />
+        <ProjectStatusBadge status={clientRequirement.status} />
       </div>
       <p className="mb-8 text-xs text-neutral-muted">
-        Created {new Date(project.date_created).toLocaleDateString()}
+        Created {new Date(clientRequirement.date_created).toLocaleDateString()}
       </p>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {UPCOMING_STEPS.map((step) =>
-          step.href ? (
-            <Link
-              key={step.title}
-              href={`/projects/${id}/${step.href}`}
-              className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm hover:bg-neutral-bg"
-            >
-              <h2 className="font-display text-lg font-semibold text-move-navy">
-                {step.title}
-              </h2>
-            </Link>
-          ) : (
-            <div
-              key={step.title}
-              className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm"
-            >
-              <h2 className="font-display text-lg font-semibold text-move-navy">
-                {step.title}
-              </h2>
-              <p className="mt-1 text-sm text-neutral-muted">Coming soon</p>
-            </div>
-          ),
-        )}
+      <div className="mb-8">
+        <ClientRequirementsForm
+          clientRequirementId={id}
+          fields={clientRequirement as ClientRequirementsFields}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {NEXT_STEPS.map((step) => (
+          <Link
+            key={step.title}
+            href={`/projects/${id}/${step.href}`}
+            className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm hover:bg-neutral-bg"
+          >
+            <h2 className="font-display text-lg font-semibold text-move-navy">
+              {step.title}
+            </h2>
+          </Link>
+        ))}
       </div>
     </div>
   );
