@@ -95,6 +95,13 @@ export default async function ProviderDetailsPage({
           <Button
             variant="outline"
             nativeButton={false}
+            render={<Link href={`/projects/${id}/providers/${providerId}/rates`} />}
+          >
+            Rate Details
+          </Button>
+          <Button
+            variant="outline"
+            nativeButton={false}
             render={<Link href={`/projects/${id}/providers/${providerId}/edit`} />}
           >
             Edit
