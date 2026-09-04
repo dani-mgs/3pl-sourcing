@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge, type ProviderStatus } from "../status-badge";
@@ -66,6 +67,8 @@ export default async function ProviderDetailsPage({
     notFound();
   }
 
+  const { canWrite } = await getOwnershipContext(id);
+
   const totalCost =
     (provider.storage_cost ?? 0) +
     (provider.pick_pack_cost ?? 0) +
@@ -99,18 +102,22 @@ export default async function ProviderDetailsPage({
           >
             Rate Details
           </Button>
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link href={`/projects/${id}/providers/${providerId}/edit`} />}
-          >
-            Edit
-          </Button>
-          <DeleteProviderButton
-            projectId={id}
-            providerId={providerId}
-            companyName={provider.company_name}
-          />
+          {canWrite && (
+            <>
+              <Button
+                variant="outline"
+                nativeButton={false}
+                render={<Link href={`/projects/${id}/providers/${providerId}/edit`} />}
+              >
+                Edit
+              </Button>
+              <DeleteProviderButton
+                projectId={id}
+                providerId={providerId}
+                companyName={provider.company_name}
+              />
+            </>
+          )}
         </div>
       </div>
       <p className="mb-8 text-xs text-neutral-muted">

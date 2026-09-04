@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { RateDetailsForm, type RateDetailsRow } from "./rate-details-form";
 
 export default async function RateDetailsPage({
@@ -20,6 +21,8 @@ export default async function RateDetailsPage({
   if (!provider) {
     notFound();
   }
+
+  const { canWrite } = await getOwnershipContext(id);
 
   const { data: rateDetails } = await supabase
     .from("rate_details")
@@ -47,6 +50,7 @@ export default async function RateDetailsPage({
           clientRequirementId={id}
           providerId={providerId}
           rateDetails={rateDetails as RateDetailsRow | null}
+          canWrite={canWrite}
         />
       </div>
     </div>

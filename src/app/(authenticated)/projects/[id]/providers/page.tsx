@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge, type ProviderStatus } from "./status-badge";
@@ -27,6 +28,8 @@ export default async function ProvidersPage({
     notFound();
   }
 
+  const { canWrite } = await getOwnershipContext(id);
+
   const { data: providers } = await supabase
     .from("three_pl_providers")
     .select(
@@ -48,12 +51,14 @@ export default async function ProvidersPage({
         <h1 className="font-display text-2xl font-semibold text-move-navy">
           3PL List
         </h1>
-        <Button
-          nativeButton={false}
-          render={<Link href={`/projects/${id}/providers/new`} />}
-        >
-          Add Provider
-        </Button>
+        {canWrite && (
+          <Button
+            nativeButton={false}
+            render={<Link href={`/projects/${id}/providers/new`} />}
+          >
+            Add Provider
+          </Button>
+        )}
       </div>
 
       {!providers || providers.length === 0 ? (

@@ -41,16 +41,18 @@ const RATE_FIELDS: { name: keyof RateDetailsRow; label: string }[] = [
 
 const labelClass = "text-sm font-medium text-move-navy";
 const fieldClass =
-  "rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy placeholder:italic placeholder:text-gray-400 focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green";
+  "rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy placeholder:italic placeholder:text-gray-400 focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green disabled:cursor-not-allowed disabled:bg-neutral-bg disabled:text-neutral-muted";
 
 export function RateDetailsForm({
   clientRequirementId,
   providerId,
   rateDetails,
+  canWrite,
 }: {
   clientRequirementId: string;
   providerId: string;
   rateDetails: RateDetailsRow | null;
+  canWrite: boolean;
 }) {
   const [state, formAction, pending] = useActionState<
     SaveRateDetailsState,
@@ -78,6 +80,7 @@ export function RateDetailsForm({
                 min="0"
                 step="0.01"
                 defaultValue={rateDetails?.[field.name] ?? ""}
+                disabled={!canWrite}
                 className={`${fieldClass} flex-1`}
               />
             </div>
@@ -85,18 +88,20 @@ export function RateDetailsForm({
         ))}
       </div>
 
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={pending} className="mt-2 px-4 py-2.5">
-          {pending ? "Saving..." : "Save"}
-        </Button>
+      {canWrite && (
+        <div className="flex items-center gap-3">
+          <Button type="submit" disabled={pending} className="mt-2 px-4 py-2.5">
+            {pending ? "Saving..." : "Save"}
+          </Button>
 
-        {state.success && (
-          <span className="text-sm font-medium text-move-green">Saved</span>
-        )}
-        {state.error && (
-          <span className="text-sm text-danger">{state.error}</span>
-        )}
-      </div>
+          {state.success && (
+            <span className="text-sm font-medium text-move-green">Saved</span>
+          )}
+          {state.error && (
+            <span className="text-sm text-danger">{state.error}</span>
+          )}
+        </div>
+      )}
     </form>
   );
 }

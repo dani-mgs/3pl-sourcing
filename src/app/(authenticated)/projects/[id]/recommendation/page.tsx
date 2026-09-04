@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import {
   RecommendationForm,
   type RecommendationRow,
@@ -39,6 +40,8 @@ export default async function RecommendationPage({
     .eq("client_requirement_id", id)
     .maybeSingle();
 
+  const { canWrite } = await getOwnershipContext(id);
+
   return (
     <div className="max-w-5xl px-8 py-10">
       <Link
@@ -70,6 +73,7 @@ export default async function RecommendationPage({
           projectId={id}
           providers={vettedProviders as VettedProvider[]}
           recommendation={recommendation as RecommendationRow | null}
+          canWrite={canWrite}
         />
       )}
     </div>

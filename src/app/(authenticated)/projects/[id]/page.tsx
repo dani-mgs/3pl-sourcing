@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  getClientOwner,
+  getOwnershipContext,
+} from "@/lib/auth/get-ownership-context";
 import { ProjectStatusBadge } from "../../project-status-badge";
 import {
   ClientRequirementsForm,
   type ClientRequirementsFields,
 } from "./client-requirements-form";
+import { ViewOnlyBanner } from "./view-only-banner";
 
 const NEXT_STEPS = [
   { title: "3PL List", href: "providers" },
@@ -31,6 +36,9 @@ export default async function ProjectDetailsPage({
     notFound();
   }
 
+  const { canWrite } = await getOwnershipContext(id);
+  const owner = canWrite ? null : await getClientOwner(id);
+
   return (
     <div className="max-w-5xl px-8 py-10">
       <Link
@@ -50,10 +58,15 @@ export default async function ProjectDetailsPage({
         Created {new Date(clientRequirement.date_created).toLocaleDateString()}
       </p>
 
+      {!canWrite && owner && (
+        <ViewOnlyBanner ownerDisplayName={owner.displayName} />
+      )}
+
       <div className="mb-8">
         <ClientRequirementsForm
           clientRequirementId={id}
           fields={clientRequirement as ClientRequirementsFields}
+          canWrite={canWrite}
         />
       </div>
 

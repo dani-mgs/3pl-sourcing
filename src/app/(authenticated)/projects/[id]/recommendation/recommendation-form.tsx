@@ -90,10 +90,12 @@ export function RecommendationForm({
   projectId,
   providers,
   recommendation,
+  canWrite,
 }: {
   projectId: string;
   providers: VettedProvider[];
   recommendation: RecommendationRow | null;
+  canWrite: boolean;
 }) {
   const [state, formAction, pending] = useActionState<
     SaveRecommendationState,
@@ -158,20 +160,22 @@ export function RecommendationForm({
         <input type="hidden" name="provider_id_2" value={topThreeIds[1] ?? ""} />
         <input type="hidden" name="provider_id_3" value={topThreeIds[2] ?? ""} />
 
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={pending} className="px-4 py-2.5">
-            {pending ? "Saving..." : "Save Recommendation"}
-          </Button>
+        {canWrite && (
+          <div className="flex items-center gap-3">
+            <Button type="submit" disabled={pending} className="px-4 py-2.5">
+              {pending ? "Saving..." : "Save Recommendation"}
+            </Button>
 
-          {state.success && (
-            <span className="text-sm font-medium text-move-green">
-              Saved
-            </span>
-          )}
-          {state.error && (
-            <span className="text-sm text-danger">{state.error}</span>
-          )}
-        </div>
+            {state.success && (
+              <span className="text-sm font-medium text-move-green">
+                Saved
+              </span>
+            )}
+            {state.error && (
+              <span className="text-sm text-danger">{state.error}</span>
+            )}
+          </div>
+        )}
       </form>
 
       <div className="flex flex-col gap-4">
