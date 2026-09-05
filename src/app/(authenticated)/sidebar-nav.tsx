@@ -10,12 +10,16 @@ import {
 
 const NAV_ITEMS = [{ label: "Dashboard", href: "/dashboard" }];
 
-export function SidebarNav() {
+export function SidebarNav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
+
+  const navItems = isAdmin
+    ? [...NAV_ITEMS, { label: "Administration", href: "/admin" }]
+    : NAV_ITEMS;
 
   return (
     <SidebarMenu>
-      {NAV_ITEMS.map((item) => {
+      {navItems.map((item) => {
         const isActive =
           pathname === item.href || pathname.startsWith(`${item.href}/`);
 
