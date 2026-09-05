@@ -1,18 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth/get-user-role";
-import { logout } from "@/app/logout/actions";
-import { SidebarNav } from "./sidebar-nav";
-import { SidebarGreeting } from "./sidebar-greeting";
-import { Button } from "@/components/ui/button";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar";
+import { Greeting } from "./greeting";
+import { UserMenu } from "./user-menu";
 
 function getDisplayName(user: {
   email?: string | null;
@@ -45,36 +35,22 @@ export default async function AuthenticatedLayout({
   const role = await getUserRole();
 
   return (
-    <SidebarProvider className="h-svh overflow-hidden">
-      <Sidebar collapsible="none" className="border-r-0">
-        <SidebarHeader className="p-6">
-          <Link
-            href="/dashboard"
-            className="font-display text-lg font-semibold text-sidebar-foreground"
-          >
+    <div className="min-h-svh bg-neutral-bg">
+      <header className="sticky top-0 z-40 flex h-16 items-center justify-between bg-move-navy px-8">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <span className="size-3 rounded-sm bg-move-green" />
+          <span className="font-display text-lg font-semibold text-white">
             3PL Sourcing
-          </Link>
-        </SidebarHeader>
+          </span>
+        </Link>
 
-        <SidebarContent className="px-3">
-          <SidebarNav isAdmin={role === "admin"} />
-        </SidebarContent>
+        <div className="flex items-center gap-3">
+          <Greeting displayName={displayName} />
+          <UserMenu displayName={displayName} isAdmin={role === "admin"} />
+        </div>
+      </header>
 
-        <SidebarFooter className="p-6">
-          <SidebarGreeting displayName={displayName} />
-          <form action={logout}>
-            <Button
-              type="submit"
-              variant="outline"
-              className="w-full justify-center border-sidebar-foreground/30 bg-transparent text-sidebar-foreground hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
-            >
-              Log Out
-            </Button>
-          </form>
-        </SidebarFooter>
-      </Sidebar>
-
-      <SidebarInset className="overflow-y-auto">{children}</SidebarInset>
-    </SidebarProvider>
+      <main>{children}</main>
+    </div>
   );
 }

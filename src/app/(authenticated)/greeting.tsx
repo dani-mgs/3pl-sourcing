@@ -51,7 +51,7 @@ function getServerSnapshot(): null {
   return null;
 }
 
-export function SidebarGreeting({ displayName }: { displayName: string }) {
+export function Greeting({ displayName }: { displayName: string }) {
   const greeting = useSyncExternalStore(
     subscribe,
     getClientSnapshot,
@@ -59,8 +59,8 @@ export function SidebarGreeting({ displayName }: { displayName: string }) {
   );
 
   return (
-    <p className="mb-3 truncate text-base font-light text-sidebar-foreground/60">
+    <span className="truncate text-sm font-light text-white/60">
       {greeting ? `${greeting}, ${displayName}` : displayName}
-    </p>
+    </span>
   );
 }
