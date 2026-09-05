@@ -86,6 +86,7 @@ export async function updateProvider(
       receiving_cost: optionalNumber(formData, "receiving_cost"),
       returns_cost: optionalNumber(formData, "returns_cost"),
       status: formData.get("status") as string,
+      assessment_status: optionalText(formData, "assessment_status"),
       key_strength: optionalText(formData, "key_strength"),
       key_weakness_risk: optionalText(formData, "key_weakness_risk"),
       important_assumption: optionalText(formData, "important_assumption"),

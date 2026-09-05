@@ -22,13 +22,21 @@ import {
 import { StatusBadge, type ProviderStatus } from "../providers/status-badge";
 
 const STATUS_OPTIONS: ProviderStatus[] = [
-  "Potential",
+  "Potential / Not Contacted",
+  "Baseline",
   "Contacted",
-  "Discovery Call",
-  "Quotation Received",
+  "Client Requirements Sent",
+  "Scheduled for Discovery Call",
+  "Waiting for Quotation",
+  "Reviewing Quotation",
+  "Clarifications",
   "Negotiation",
+  "Shortlisted",
   "Vetted",
-  "Rejected",
+  "Unfit",
+  "Do not Contact",
+  "Withdrawn / No Response",
+  "Completed / Closed",
 ];
 
 const CAPABILITY_FILTERS: { key: CapabilityKey; label: string }[] = [

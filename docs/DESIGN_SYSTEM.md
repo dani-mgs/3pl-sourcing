@@ -13,14 +13,29 @@ Subset of Move Supply Chain's actual brand (per their brand guidelines), adapted
 - Surface #FFFFFF — cards, tables
 - Danger #DC2626 — errors, destructive actions
 
-Status pipeline badges — colors read as progressively positive as the pipeline advances, moving toward Move Green as it nears "Vetted"; "Rejected" is the only negative/red status in the set:
-- Potential: bg #F1F2F4, text #6B7280 (neutral gray, no progress yet)
-- Contacted: bg #E3F2FD, text #1565C0 (light blue, positive movement)
-- Discovery Call: bg #E0F2F1, text #00796B (teal, continued progress)
-- Quotation Received: bg #E8F5E9, text #2E7D32 (light green, good progress)
-- Negotiation: bg #DCFCE7, text #15803D (stronger green, nearly there)
-- Vetted: bg #D1FAE5, text #059669 (Move Green family, success)
-- Rejected: bg #FDE8E8, text #DC2626 (the only red in the set)
+Status colors (14 values):
+- Potential / Not Contacted: bg #F1F2F4, text #6B7280
+- Baseline: bg #EEF0F4, text #4B5563
+- Contacted: bg #E3F2FD, text #1565C0
+- Client Requirements Sent: bg #E1EEFB, text #0D47A1
+- Scheduled for Discovery Call: bg #E0F2F1, text #00796B
+- Waiting for Quotation: bg #FFF8E1, text #B8860B
+- Reviewing Quotation: bg #FFF3CD, text #92700A
+- Clarifications: bg #FFE8CC, text #B15400
+- Negotiation: bg #DCFCE7, text #15803D
+- Shortlisted: bg #D1FAE5, text #0F766E
+- Vetted: bg #D1FAE5, text #059669
+- Unfit: bg #FDE8E8, text #DC2626
+- Do not Contact: bg #FBE0E0, text #B91C1C
+- Withdrawn / No Response: bg #F1F2F4, text #9CA3AF
+- Completed / Closed: bg #E3E9F5, text #192E5B
+
+Assessment colors (5 values, new field "assessment_status"):
+- Under Assessment: bg #F1F2F4, text #6B7280
+- Fit: bg #DCFCE7, text #15803D
+- Move Recommended: bg #D1FAE5, text #059669
+- Unfit: bg #FDE8E8, text #DC2626
+- Awarded/Approved: bg #E3E9F5, text #192E5B
 
 ## Typography
 - Headings: Plus Jakarta Sans, loaded via next/font/google (free substitute for Move's Aeonik — closest match in geometric character)

@@ -9,16 +9,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { STATUS_DOT_COLORS, type ProviderStatus } from "./status-badge";
+import {
+  STATUS_DOT_COLORS,
+  ASSESSMENT_DOT_COLORS,
+  type ProviderStatus,
+  type AssessmentStatus,
+} from "./status-badge";
 
 export const STATUS_OPTIONS: ProviderStatus[] = [
-  "Potential",
+  "Potential / Not Contacted",
+  "Baseline",
   "Contacted",
-  "Discovery Call",
-  "Quotation Received",
+  "Client Requirements Sent",
+  "Scheduled for Discovery Call",
+  "Waiting for Quotation",
+  "Reviewing Quotation",
+  "Clarifications",
   "Negotiation",
+  "Shortlisted",
   "Vetted",
-  "Rejected",
+  "Unfit",
+  "Do not Contact",
+  "Withdrawn / No Response",
+  "Completed / Closed",
+];
+
+export const ASSESSMENT_OPTIONS: AssessmentStatus[] = [
+  "Under Assessment",
+  "Move Recommended",
+  "Fit",
+  "Unfit",
+  "Awarded/Approved",
 ];
 
 export const COUNTRY_CODES = [
@@ -119,6 +140,7 @@ export type ProviderFormDefaults = {
   receiving_cost: number | null;
   returns_cost: number | null;
   status: string | null;
+  assessment_status: string | null;
   key_strength: string | null;
   key_weakness_risk: string | null;
   important_assumption: string | null;
@@ -501,7 +523,7 @@ export function ProviderForm({
           </label>
           <Select
             name="status"
-            defaultValue={defaultValues?.status ?? "Potential"}
+            defaultValue={defaultValues?.status ?? "Potential / Not Contacted"}
           >
             <SelectTrigger id="status" className="w-full rounded-xl border-neutral-border">
               <SelectValue />
@@ -511,6 +533,30 @@ export function ProviderForm({
                 <SelectItem key={option} value={option}>
                   <span
                     className={`inline-block size-2 shrink-0 rounded-full ${STATUS_DOT_COLORS[option]}`}
+                  />
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor="assessment_status" className={labelClass}>
+            Assessment
+          </label>
+          <Select
+            name="assessment_status"
+            defaultValue={defaultValues?.assessment_status ?? undefined}
+          >
+            <SelectTrigger id="assessment_status" className="w-full rounded-xl border-neutral-border">
+              <SelectValue placeholder="Select an assessment" />
+            </SelectTrigger>
+            <SelectContent>
+              {ASSESSMENT_OPTIONS.map((option) => (
+                <SelectItem key={option} value={option}>
+                  <span
+                    className={`inline-block size-2 shrink-0 rounded-full ${ASSESSMENT_DOT_COLORS[option]}`}
                   />
                   {option}
                 </SelectItem>

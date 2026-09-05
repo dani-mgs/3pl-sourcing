@@ -14,7 +14,7 @@ export default async function EditProviderPage({
   const { data: provider } = await supabase
     .from("three_pl_providers")
     .select(
-      "id, company_name, provider_type, website, location, footprint_source, contact_person, email, phone, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, onboarding_period_months, virtual_tour_url, billing_terms, other_specialization, b2b, b2c, is_incumbent, storage_cost, pick_pack_cost, receiving_cost, returns_cost, status, key_strength, key_weakness_risk, important_assumption, overall_assessment, client_decision, source_basis, next_action, key_notes, notes",
+      "id, company_name, provider_type, website, location, footprint_source, contact_person, email, phone, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, onboarding_period_months, virtual_tour_url, billing_terms, other_specialization, b2b, b2c, is_incumbent, storage_cost, pick_pack_cost, receiving_cost, returns_cost, status, assessment_status, key_strength, key_weakness_risk, important_assumption, overall_assessment, client_decision, source_basis, next_action, key_notes, notes",
     )
     .eq("id", providerId)
     .eq("client_requirement_id", id)

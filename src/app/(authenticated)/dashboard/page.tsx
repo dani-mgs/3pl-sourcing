@@ -3,13 +3,21 @@ import { DashboardContent, type DashboardRow } from "./dashboard-content";
 import { STATUS_DOT_COLORS, type ProviderStatus } from "../projects/[id]/providers/status-badge";
 
 const STATUS_ORDER: ProviderStatus[] = [
-  "Potential",
+  "Potential / Not Contacted",
+  "Baseline",
   "Contacted",
-  "Discovery Call",
-  "Quotation Received",
+  "Client Requirements Sent",
+  "Scheduled for Discovery Call",
+  "Waiting for Quotation",
+  "Reviewing Quotation",
+  "Clarifications",
   "Negotiation",
+  "Shortlisted",
   "Vetted",
-  "Rejected",
+  "Unfit",
+  "Do not Contact",
+  "Withdrawn / No Response",
+  "Completed / Closed",
 ];
 
 function formatRelativeTime(dateString: string): string {

@@ -4,7 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge, type ProviderStatus } from "../status-badge";
+import {
+  StatusBadge,
+  AssessmentBadge,
+  type ProviderStatus,
+  type AssessmentStatus,
+} from "../status-badge";
 import { DeleteProviderButton } from "./delete-provider-button";
 
 const USD_FORMATTER = new Intl.NumberFormat("en-US", {
@@ -57,7 +62,7 @@ export default async function ProviderDetailsPage({
   const { data: provider } = await supabase
     .from("three_pl_providers")
     .select(
-      "id, company_name, provider_type, website, location, footprint_source, contact_person, email, phone, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, onboarding_period_months, virtual_tour_url, billing_terms, other_specialization, b2b, b2c, is_incumbent, storage_cost, pick_pack_cost, receiving_cost, returns_cost, status, key_strength, key_weakness_risk, important_assumption, overall_assessment, client_decision, source_basis, next_action, key_notes, notes, updated_at",
+      "id, company_name, provider_type, website, location, footprint_source, contact_person, email, phone, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, onboarding_period_months, virtual_tour_url, billing_terms, other_specialization, b2b, b2c, is_incumbent, storage_cost, pick_pack_cost, receiving_cost, returns_cost, status, assessment_status, key_strength, key_weakness_risk, important_assumption, overall_assessment, client_decision, source_basis, next_action, key_notes, notes, updated_at",
     )
     .eq("id", providerId)
     .eq("client_requirement_id", id)
@@ -89,6 +94,11 @@ export default async function ProviderDetailsPage({
           {provider.company_name}
         </h1>
         <StatusBadge status={provider.status as ProviderStatus} />
+        {provider.assessment_status && (
+          <AssessmentBadge
+            status={provider.assessment_status as AssessmentStatus}
+          />
+        )}
         {provider.is_incumbent && (
           <Badge variant="outline" className="border-transparent bg-[#E3F2FD] text-[#1565C0]">
             Incumbent
