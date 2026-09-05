@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { Filter, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -84,6 +86,40 @@ const COLUMN_DEFS: { key: ColumnKey; label: string }[] = [
   { key: "status", label: "Status" },
   { key: "assessment", label: "Assessment" },
 ];
+
+const ACTIVE_FILTER_CLASS =
+  "border-[#44B048] bg-[#44B048]/10 text-[#192E5B] hover:bg-[#44B048]/15";
+
+function SelectClearAllRow({
+  onSelectAll,
+  onClearAll,
+}: {
+  onSelectAll: () => void;
+  onClearAll: () => void;
+}) {
+  return (
+    <>
+      <div className="flex items-center gap-1.5 px-1.5 py-1 text-xs text-neutral-muted">
+        <button
+          type="button"
+          className="hover:text-move-navy hover:underline"
+          onClick={onSelectAll}
+        >
+          Select All
+        </button>
+        <span>·</span>
+        <button
+          type="button"
+          className="hover:text-move-navy hover:underline"
+          onClick={onClearAll}
+        >
+          Clear All
+        </button>
+      </div>
+      <DropdownMenuSeparator />
+    </>
+  );
+}
 
 export type ProviderRow = {
   id: string;
@@ -188,11 +224,23 @@ export function ProjectSummaryTable({
 
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={<Button type="button" variant="outline" />}
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={statusFilter.size > 0 ? ACTIVE_FILTER_CLASS : undefined}
+                />
+              }
             >
+              <Filter className="size-3.5" />
               Status{statusFilter.size > 0 ? ` (${statusFilter.size})` : ""}
+              <ChevronDown className="size-3.5" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
+            <DropdownMenuContent align="start" className="max-h-96 overflow-y-auto">
+              <SelectClearAllRow
+                onSelectAll={() => setStatusFilter(new Set(STATUS_OPTIONS))}
+                onClearAll={() => setStatusFilter(new Set())}
+              />
               {STATUS_OPTIONS.map((status) => (
                 <DropdownMenuCheckboxItem
                   key={status}
@@ -212,11 +260,27 @@ export function ProjectSummaryTable({
 
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={<Button type="button" variant="outline" />}
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={serviceFilter.size > 0 ? ACTIVE_FILTER_CLASS : undefined}
+                />
+              }
             >
+              <Filter className="size-3.5" />
               Service{serviceFilter.size > 0 ? ` (${serviceFilter.size})` : ""}
+              <ChevronDown className="size-3.5" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
+            <DropdownMenuContent align="start" className="max-h-96 overflow-y-auto">
+              <SelectClearAllRow
+                onSelectAll={() =>
+                  setServiceFilter(
+                    new Set(SERVICE_FIELDS.map((service) => service.key)),
+                  )
+                }
+                onClearAll={() => setServiceFilter(new Set())}
+              />
               {SERVICE_FIELDS.map((service) => (
                 <DropdownMenuCheckboxItem
                   key={service.key}
@@ -236,12 +300,28 @@ export function ProjectSummaryTable({
 
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={<Button type="button" variant="outline" />}
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={
+                    assessmentFilter.size > 0 ? ACTIVE_FILTER_CLASS : undefined
+                  }
+                />
+              }
             >
+              <Filter className="size-3.5" />
               Assessment
               {assessmentFilter.size > 0 ? ` (${assessmentFilter.size})` : ""}
+              <ChevronDown className="size-3.5" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
+            <DropdownMenuContent align="start" className="max-h-96 overflow-y-auto">
+              <SelectClearAllRow
+                onSelectAll={() =>
+                  setAssessmentFilter(new Set(ASSESSMENT_OPTIONS))
+                }
+                onClearAll={() => setAssessmentFilter(new Set())}
+              />
               {ASSESSMENT_OPTIONS.map((assessment) => (
                 <DropdownMenuCheckboxItem
                   key={assessment}
@@ -264,6 +344,7 @@ export function ProjectSummaryTable({
               render={<Button type="button" variant="outline" />}
             >
               Columns
+              <ChevronDown className="size-3.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {COLUMN_DEFS.map((column) => (
