@@ -87,7 +87,7 @@ export default async function ProjectSummaryPage({
   ).map((cap) => cap.label);
 
   return (
-    <div className="max-w-6xl px-8 py-10">
+    <div className="mx-auto max-w-6xl px-8 py-10">
       <div className="mb-2 text-xs text-neutral-muted">
         <Link href="/dashboard" className="hover:underline">
           Projects

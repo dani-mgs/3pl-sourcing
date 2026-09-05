@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -177,20 +176,88 @@ export function ProjectSummaryTable({
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="search" className="text-sm font-medium text-move-navy">
-              Search
-            </label>
-            <Input
-              id="search"
-              type="text"
-              placeholder="Search by company name"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-64 rounded-xl border-neutral-border"
-            />
-          </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Input
+            type="text"
+            aria-label="Search"
+            placeholder="Search by company name"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-64 rounded-xl border-neutral-border"
+          />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button type="button" variant="outline" />}
+            >
+              Status{statusFilter.size > 0 ? ` (${statusFilter.size})` : ""}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
+              {STATUS_OPTIONS.map((status) => (
+                <DropdownMenuCheckboxItem
+                  key={status}
+                  checked={statusFilter.has(status)}
+                  onCheckedChange={(checked) =>
+                    setStatusFilter((prev) =>
+                      toggleSetValue(prev, status, checked === true),
+                    )
+                  }
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  {status}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button type="button" variant="outline" />}
+            >
+              Service{serviceFilter.size > 0 ? ` (${serviceFilter.size})` : ""}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
+              {SERVICE_FIELDS.map((service) => (
+                <DropdownMenuCheckboxItem
+                  key={service.key}
+                  checked={serviceFilter.has(service.key)}
+                  onCheckedChange={(checked) =>
+                    setServiceFilter((prev) =>
+                      toggleSetValue(prev, service.key, checked === true),
+                    )
+                  }
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  {service.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button type="button" variant="outline" />}
+            >
+              Assessment
+              {assessmentFilter.size > 0 ? ` (${assessmentFilter.size})` : ""}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
+              {ASSESSMENT_OPTIONS.map((assessment) => (
+                <DropdownMenuCheckboxItem
+                  key={assessment}
+                  checked={assessmentFilter.has(assessment)}
+                  onCheckedChange={(checked) =>
+                    setAssessmentFilter((prev) =>
+                      toggleSetValue(prev, assessment, checked === true),
+                    )
+                  }
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  {assessment}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -216,76 +283,6 @@ export function ProjectSummaryTable({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-move-navy">Status</span>
-            <div className="grid max-h-40 grid-cols-1 gap-1.5 overflow-y-auto pr-2">
-              {STATUS_OPTIONS.map((status) => (
-                <label
-                  key={status}
-                  className="flex items-center gap-2 text-xs text-move-navy"
-                >
-                  <Checkbox
-                    checked={statusFilter.has(status)}
-                    onCheckedChange={(checked) =>
-                      setStatusFilter((prev) =>
-                        toggleSetValue(prev, status, checked === true),
-                      )
-                    }
-                  />
-                  {status}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-move-navy">Service</span>
-            <div className="grid max-h-40 grid-cols-1 gap-1.5 overflow-y-auto pr-2">
-              {SERVICE_FIELDS.map((service) => (
-                <label
-                  key={service.key}
-                  className="flex items-center gap-2 text-xs text-move-navy"
-                >
-                  <Checkbox
-                    checked={serviceFilter.has(service.key)}
-                    onCheckedChange={(checked) =>
-                      setServiceFilter((prev) =>
-                        toggleSetValue(prev, service.key, checked === true),
-                      )
-                    }
-                  />
-                  {service.label}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-move-navy">
-              Assessment
-            </span>
-            <div className="grid max-h-40 grid-cols-1 gap-1.5 overflow-y-auto pr-2">
-              {ASSESSMENT_OPTIONS.map((assessment) => (
-                <label
-                  key={assessment}
-                  className="flex items-center gap-2 text-xs text-move-navy"
-                >
-                  <Checkbox
-                    checked={assessmentFilter.has(assessment)}
-                    onCheckedChange={(checked) =>
-                      setAssessmentFilter((prev) =>
-                        toggleSetValue(prev, assessment, checked === true),
-                      )
-                    }
-                  />
-                  {assessment}
-                </label>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 

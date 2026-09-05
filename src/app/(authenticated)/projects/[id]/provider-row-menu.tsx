@@ -47,7 +47,10 @@ export function ProviderRowMenu({
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex size-7 items-center justify-center rounded-lg text-move-navy outline-none hover:bg-neutral-bg focus-visible:ring-2 focus-visible:ring-move-green">
+        <DropdownMenuTrigger
+          aria-label="Row actions"
+          className="flex size-9 items-center justify-center rounded-lg border border-neutral-border bg-white text-lg font-bold leading-none text-move-navy outline-none hover:bg-neutral-bg hover:border-move-navy/40 focus-visible:ring-2 focus-visible:ring-move-green aria-expanded:bg-neutral-bg"
+        >
           ⋯
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

@@ -114,7 +114,7 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="max-w-6xl px-8 py-10">
+    <div className="mx-auto max-w-6xl px-8 py-10">
       <DashboardContent rows={rows} />
     </div>
   );
