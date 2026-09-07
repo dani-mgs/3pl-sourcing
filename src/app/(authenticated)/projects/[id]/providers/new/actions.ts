@@ -112,5 +112,5 @@ export async function createProvider(
     return { error: "You don't have permission to make this change." };
   }
 
-  redirect(`/projects/${clientRequirementId}/providers`);
+  redirect(`/projects/${clientRequirementId}`);
 }

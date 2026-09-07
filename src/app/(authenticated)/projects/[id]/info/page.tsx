@@ -5,18 +5,9 @@ import {
   getClientOwner,
   getOwnershipContext,
 } from "@/lib/auth/get-ownership-context";
-import { ProjectStatusBadge } from "../../../project-status-badge";
-import {
-  ClientRequirementsForm,
-  type ClientRequirementsFields,
-} from "./client-requirements-form";
+import { ClientInfoForm } from "./client-info-form";
+import type { ClientIntakeFields } from "@/components/client-intake-form";
 import { ViewOnlyBanner } from "./view-only-banner";
-
-const NEXT_STEPS = [
-  { title: "3PL List", href: "providers" },
-  { title: "Comparison", href: "comparison" },
-  { title: "Recommendation", href: "recommendation" },
-];
 
 export default async function ClientInfoPage({
   params,
@@ -27,7 +18,7 @@ export default async function ClientInfoPage({
   const { data: clientRequirement } = await supabase
     .from("client_requirements")
     .select(
-      "id, client_name, status, date_created, current_incumbent_3pl, target_geography, benchmark_period, avg_monthly_orders, peak_monthly_orders, latest_month_orders, avg_monthly_units, peak_monthly_units, business_model, core_cost_categories, main_decision_focus, key_capability_needs, tech_integration_requirement, special_handling_requirement, fixed_comparison_principle, important_limitation, assumptions_data_limitations",
+      "client_name, date_created, business_model, target_geography, avg_monthly_orders, peak_monthly_orders, latest_month_orders, avg_monthly_units, peak_monthly_units, benchmark_period, core_cost_categories, key_capability_needs, main_decision_focus, tech_integration_requirement, special_handling_requirement, fixed_comparison_principle, important_limitation, assumptions_data_limitations",
     )
     .eq("id", id)
     .single();
@@ -48,11 +39,10 @@ export default async function ClientInfoPage({
         ← Back to Project
       </Link>
 
-      <div className="mt-2 mb-2 flex items-center gap-3">
+      <div className="mt-2 mb-2">
         <h1 className="font-display text-2xl font-semibold text-move-navy">
           {clientRequirement.client_name}
         </h1>
-        <ProjectStatusBadge status={clientRequirement.status} />
       </div>
       <p className="mb-8 text-xs text-neutral-muted">
         Created {new Date(clientRequirement.date_created).toLocaleDateString()}
@@ -62,26 +52,12 @@ export default async function ClientInfoPage({
         <ViewOnlyBanner ownerDisplayName={owner.displayName} />
       )}
 
-      <div className="mb-8">
-        <ClientRequirementsForm
+      <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+        <ClientInfoForm
           clientRequirementId={id}
-          fields={clientRequirement as ClientRequirementsFields}
+          defaultValues={clientRequirement as ClientIntakeFields}
           canWrite={canWrite}
         />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {NEXT_STEPS.map((step) => (
-          <Link
-            key={step.title}
-            href={`/projects/${id}/${step.href}`}
-            className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm hover:bg-neutral-bg"
-          >
-            <h2 className="font-display text-lg font-semibold text-move-navy">
-              {step.title}
-            </h2>
-          </Link>
-        ))}
       </div>
     </div>
   );

@@ -24,21 +24,26 @@ export async function updateClientRequirements(
   clientRequirementId: string,
   formData: FormData,
 ): Promise<SaveClientRequirementsState> {
+  const clientName = formData.get("client_name") as string;
+  if (!clientName?.trim()) {
+    return { error: "Client name is required." };
+  }
+
   const supabase = await createClient();
 
   const payload = {
-    current_incumbent_3pl: optionalText(formData, "current_incumbent_3pl"),
+    client_name: clientName,
+    business_model: optionalText(formData, "business_model"),
     target_geography: optionalText(formData, "target_geography"),
-    benchmark_period: optionalText(formData, "benchmark_period"),
     avg_monthly_orders: optionalInt(formData, "avg_monthly_orders"),
     peak_monthly_orders: optionalInt(formData, "peak_monthly_orders"),
     latest_month_orders: optionalInt(formData, "latest_month_orders"),
     avg_monthly_units: optionalInt(formData, "avg_monthly_units"),
     peak_monthly_units: optionalInt(formData, "peak_monthly_units"),
-    business_model: optionalText(formData, "business_model"),
+    benchmark_period: optionalText(formData, "benchmark_period"),
     core_cost_categories: optionalText(formData, "core_cost_categories"),
-    main_decision_focus: optionalText(formData, "main_decision_focus"),
     key_capability_needs: optionalText(formData, "key_capability_needs"),
+    main_decision_focus: optionalText(formData, "main_decision_focus"),
     tech_integration_requirement: optionalText(
       formData,
       "tech_integration_requirement",
