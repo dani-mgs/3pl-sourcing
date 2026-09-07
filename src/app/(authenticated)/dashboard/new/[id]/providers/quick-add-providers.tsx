@@ -3,28 +3,15 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ProviderForm } from "@/components/provider-form";
 import {
   StatusBadge,
   type ProviderStatus,
 } from "../../../../projects/[id]/providers/status-badge";
-import { STATUS_OPTIONS } from "../../../../projects/[id]/providers/provider-form";
 import {
   quickAddProvider,
   removeQuickAddedProvider,
 } from "./actions";
-
-const fieldClass =
-  "rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy placeholder:italic placeholder:text-gray-400 focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green";
-const labelClass = "text-sm font-medium text-move-navy";
-
-const DEFAULT_STATUS: ProviderStatus = "Potential / Not Contacted";
 
 type QuickAddedProvider = {
   id: string;
@@ -46,9 +33,9 @@ export function QuickAddProviders({
   reviewHref: string;
 }) {
   const [providers, setProviders] = useState(initialProviders);
-  const [status, setStatus] = useState<ProviderStatus>(DEFAULT_STATUS);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [formKey, setFormKey] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
 
@@ -63,8 +50,7 @@ export function QuickAddProviders({
       if (result.provider) {
         setProviders((prev) => [...prev, result.provider!]);
       }
-      formRef.current?.reset();
-      setStatus(DEFAULT_STATUS);
+      setFormKey((k) => k + 1);
     });
   }
 
@@ -103,8 +89,6 @@ export function QuickAddProviders({
       if (result.provider) {
         setProviders((prev) => [...prev, result.provider!]);
       }
-      formRef.current?.reset();
-      setStatus(DEFAULT_STATUS);
       router.push(href);
     });
   }
@@ -112,86 +96,15 @@ export function QuickAddProviders({
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-        <form
-          ref={formRef}
-          action={handleAddAnother}
-          className="flex flex-col gap-4"
-        >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="company_name" className={labelClass}>
-              Company Name
-            </label>
-            <input
-              id="company_name"
-              name="company_name"
-              type="text"
-              required
-              placeholder="e.g. Acme Logistics"
-              className={fieldClass}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="location" className={labelClass}>
-              Location
-            </label>
-            <input
-              id="location"
-              name="location"
-              type="text"
-              placeholder="e.g. Los Angeles, USA"
-              className={fieldClass}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="contact_person" className={labelClass}>
-              Contact Person
-            </label>
-            <input
-              id="contact_person"
-              name="contact_person"
-              type="text"
-              placeholder="e.g. Jane Smith"
-              className={fieldClass}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="status" className={labelClass}>
-              Status
-            </label>
-            <Select
-              name="status"
-              value={status}
-              onValueChange={(value) => setStatus(value as ProviderStatus)}
-            >
-              <SelectTrigger
-                id="status"
-                className="w-full rounded-xl border-neutral-border"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {error && <p className="text-sm text-danger">{error}</p>}
-
-          <Button
-            type="submit"
-            variant="outline"
-            disabled={isPending}
-            className="self-start px-4 py-2.5"
-          >
-            {isPending ? "Adding..." : "Add Another"}
-          </Button>
-        </form>
+        <ProviderForm
+          key={formKey}
+          formRef={formRef}
+          formAction={handleAddAnother}
+          pending={isPending}
+          error={error ?? undefined}
+          submitLabel="Add Another"
+          pendingLabel="Adding..."
+        />
       </div>
 
       {providers.length > 0 && (

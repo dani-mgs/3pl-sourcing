@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { EditProviderForm } from "./edit-provider-form";
-import type { ProviderFormDefaults } from "../../provider-form";
+import type { ProviderFormDefaults } from "@/components/provider-form";
 
 export default async function EditProviderPage({
   params,
@@ -34,7 +34,7 @@ export default async function EditProviderPage({
       </Link>
 
       <h1 className="mt-2 mb-8 font-display text-2xl font-semibold text-move-navy">
-        Edit Provider
+        Edit 3PL
       </h1>
 
       <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">

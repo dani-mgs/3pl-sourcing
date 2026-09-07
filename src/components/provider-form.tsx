@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -14,7 +14,7 @@ import {
   ASSESSMENT_DOT_COLORS,
   type ProviderStatus,
   type AssessmentStatus,
-} from "./status-badge";
+} from "@/app/(authenticated)/projects/[id]/providers/status-badge";
 
 export const STATUS_OPTIONS: ProviderStatus[] = [
   "Potential / Not Contacted",
@@ -152,6 +152,56 @@ export type ProviderFormDefaults = {
   notes: string | null;
 };
 
+function CapabilityChips({
+  defaultValues,
+}: {
+  defaultValues?: ProviderFormDefaults;
+}) {
+  const [values, setValues] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      CAPABILITY_FIELDS.map((capability) => [
+        capability.name,
+        Boolean(
+          defaultValues?.[capability.name as keyof ProviderFormDefaults],
+        ),
+      ]),
+    ),
+  );
+
+  function toggle(name: string) {
+    setValues((prev) => ({ ...prev, [name]: !prev[name] }));
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {CAPABILITY_FIELDS.map((capability) => {
+        const isSelected = values[capability.name];
+        return (
+          <div key={capability.name}>
+            <button
+              type="button"
+              onClick={() => toggle(capability.name)}
+              aria-pressed={isSelected}
+              className={
+                isSelected
+                  ? "rounded-full bg-move-green px-3 py-1 text-xs font-medium text-white"
+                  : "rounded-full border border-neutral-border px-3 py-1 text-xs font-medium text-move-navy hover:border-move-green"
+              }
+            >
+              {capability.label}
+            </button>
+            <input
+              type="hidden"
+              name={capability.name}
+              value={isSelected ? "true" : "false"}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ProviderForm({
   formAction,
   pending,
@@ -159,6 +209,7 @@ export function ProviderForm({
   defaultValues,
   submitLabel,
   pendingLabel,
+  formRef,
 }: {
   formAction: (formData: FormData) => void;
   pending: boolean;
@@ -166,6 +217,7 @@ export function ProviderForm({
   defaultValues?: ProviderFormDefaults;
   submitLabel: string;
   pendingLabel: string;
+  formRef?: RefObject<HTMLFormElement | null>;
 }) {
   const { countryCode: defaultCountryCode, digits: defaultDigits } =
     splitPhone(defaultValues?.phone);
@@ -177,7 +229,7 @@ export function ProviderForm({
   const [phoneDigits, setPhoneDigits] = useState(defaultDigits);
 
   return (
-    <form action={formAction} className="flex flex-col gap-8">
+    <form ref={formRef} action={formAction} className="flex flex-col gap-8">
       <section className="flex flex-col gap-4">
         <h3 className={sectionTitleClass}>Company Info</h3>
 
@@ -207,7 +259,7 @@ export function ProviderForm({
 
           <div className="flex flex-col gap-1">
             <label htmlFor="provider_type" className={labelClass}>
-              Provider Type
+              3PL Type
             </label>
             <input
               id="provider_type"
@@ -340,24 +392,7 @@ export function ProviderForm({
 
       <section className="flex flex-col gap-4">
         <h3 className={sectionTitleClass}>Capabilities</h3>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-          {CAPABILITY_FIELDS.map((capability) => (
-            <label key={capability.name} className={checkboxLabelClass}>
-              <input
-                type="checkbox"
-                name={capability.name}
-                value="true"
-                defaultChecked={Boolean(
-                  defaultValues?.[
-                    capability.name as keyof ProviderFormDefaults
-                  ],
-                )}
-                className="size-4 rounded border-neutral-border text-move-green focus:ring-move-green"
-              />
-              {capability.label}
-            </label>
-          ))}
-        </div>
+        <CapabilityChips defaultValues={defaultValues} />
       </section>
 
       <section className="flex flex-col gap-4">

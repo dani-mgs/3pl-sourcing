@@ -140,7 +140,7 @@ export default async function ProviderDetailsPage({
             Company Info
           </h2>
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <InfoField label="Provider Type" value={provider.provider_type} />
+            <InfoField label="3PL Type" value={provider.provider_type} />
             <InfoField label="Website" value={provider.website} />
             <InfoField label="Location" value={provider.location} />
             <InfoField

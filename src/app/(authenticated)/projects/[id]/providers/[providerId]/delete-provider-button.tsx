@@ -45,11 +45,11 @@ export function DeleteProviderButton({
       }}
     >
       <DialogTrigger render={<Button type="button" variant="destructive" />}>
-        Delete Provider
+        Delete 3PL
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete provider</DialogTitle>
+          <DialogTitle>Delete 3PL</DialogTitle>
           <DialogDescription>
             Delete {companyName}? This cannot be undone.
           </DialogDescription>

@@ -58,7 +58,7 @@ export default async function RecommendationPage({
       {!vettedProviders || vettedProviders.length === 0 ? (
         <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
           <p className="py-8 text-center text-sm text-neutral-muted">
-            No vetted 3PLs yet. Vet at least one provider before making a
+            No vetted 3PLs yet. Vet at least one 3PL before making a
             recommendation.{" "}
             <Link
               href={`/projects/${id}/providers`}

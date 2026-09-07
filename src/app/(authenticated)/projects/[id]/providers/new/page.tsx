@@ -30,7 +30,7 @@ export default async function NewProviderPage({
       </Link>
 
       <h1 className="mt-2 mb-8 font-display text-2xl font-semibold text-move-navy">
-        Add Provider
+        Add 3PL
       </h1>
 
       <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">

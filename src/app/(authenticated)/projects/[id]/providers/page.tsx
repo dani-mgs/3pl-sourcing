@@ -56,7 +56,7 @@ export default async function ProvidersPage({
             nativeButton={false}
             render={<Link href={`/projects/${id}/providers/new`} />}
           >
-            Add Provider
+            Add 3PL
           </Button>
         )}
       </div>
@@ -64,7 +64,7 @@ export default async function ProvidersPage({
       {!providers || providers.length === 0 ? (
         <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
           <p className="py-8 text-center text-sm text-neutral-muted">
-            No providers yet. Add your first one to get started.
+            No 3PLs yet. Add your first one to get started.
           </p>
         </div>
       ) : (

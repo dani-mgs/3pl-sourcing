@@ -87,7 +87,7 @@ export function ProviderRowMenu({
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete provider</DialogTitle>
+            <DialogTitle>Delete 3PL</DialogTitle>
             <DialogDescription>
               Delete {companyName}? This cannot be undone.
             </DialogDescription>

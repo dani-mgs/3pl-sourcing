@@ -144,7 +144,7 @@ export function RecommendationForm({
         {priority === "Quality of Service" && (
           <p className="text-sm text-neutral-muted">
             Quality of Service can&apos;t be automatically ranked from
-            current data — compare each provider&apos;s Overall Assessment
+            current data — compare each 3PL&apos;s Overall Assessment
             notes below.
           </p>
         )}

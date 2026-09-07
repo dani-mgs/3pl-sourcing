@@ -22,7 +22,7 @@ import {
 import {
   STATUS_OPTIONS,
   ASSESSMENT_OPTIONS,
-} from "./providers/provider-form";
+} from "@/components/provider-form";
 import { ProviderRowMenu } from "./provider-row-menu";
 
 type ServiceKey =

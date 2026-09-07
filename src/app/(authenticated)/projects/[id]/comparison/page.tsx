@@ -164,12 +164,12 @@ export default async function ComparisonPage({
       {rows.length === 0 ? (
         <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
           <p className="py-8 text-center text-sm text-neutral-muted">
-            No providers yet.{" "}
+            No 3PLs yet.{" "}
             <Link
               href={`/projects/${id}/providers`}
               className="font-medium text-move-green hover:underline"
             >
-              Add providers first
+              Add 3PLs first
             </Link>{" "}
             to compare them here.
           </p>

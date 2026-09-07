@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { ProviderForm, type ProviderFormDefaults } from "../../provider-form";
+import { ProviderForm, type ProviderFormDefaults } from "@/components/provider-form";
 import { updateProvider, type UpdateProviderState } from "./actions";
 
 export function EditProviderForm({
