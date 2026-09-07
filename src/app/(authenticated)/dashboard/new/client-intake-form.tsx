@@ -8,6 +8,32 @@ const fieldClass =
   "rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy placeholder:italic placeholder:text-gray-400 focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green";
 const labelClass = "text-sm font-medium text-move-navy";
 
+const CORE_COST_CATEGORY_PRESETS = [
+  "Storage",
+  "Pick & Pack",
+  "Receiving",
+  "Returns",
+  "Kitting",
+];
+
+const KEY_CAPABILITY_PRESETS = [
+  "Receiving",
+  "Storage",
+  "Fulfillment (Pick, Check, Pack)",
+  "Dispatch",
+  "Adhoc Kitting / Bundling",
+  "Adhoc Labelling",
+  "Returns",
+  "Annual Inventory Count",
+  "Cycle Count",
+  "Inventory Count upon Request",
+  "One Time System Set-up",
+  "Lot / Batch / Expiry Tracking",
+  "Temperature-Controlled Storage",
+  "Retail / EDI Compliance",
+  "Cross-Docking",
+];
+
 export type ClientIntakeFields = {
   client_name: string | null;
   business_model: string | null;
@@ -88,78 +114,123 @@ function TextAreaField({
   );
 }
 
-function ChipInput({
+function PresetChipPicker({
   name,
   label,
+  presets,
   defaultValue,
 }: {
   name: string;
   label: string;
+  presets: string[];
   defaultValue: string | null;
 }) {
-  const [chips, setChips] = useState<string[]>(
-    defaultValue
-      ? defaultValue
-          .split(",")
-          .map((chip) => chip.trim())
-          .filter(Boolean)
-      : [],
+  const initialTokens = defaultValue
+    ? defaultValue
+        .split(",")
+        .map((token) => token.trim())
+        .filter(Boolean)
+    : [];
+
+  const [selectedPresets, setSelectedPresets] = useState<Set<string>>(
+    new Set(initialTokens.filter((token) => presets.includes(token))),
   );
-  const [inputValue, setInputValue] = useState("");
+  const [customChips, setCustomChips] = useState<string[]>(
+    initialTokens.filter((token) => !presets.includes(token)),
+  );
+  const [customInput, setCustomInput] = useState("");
 
-  function addChip() {
-    const trimmed = inputValue.trim();
-    if (trimmed && !chips.includes(trimmed)) {
-      setChips([...chips, trimmed]);
+  function togglePreset(option: string) {
+    setSelectedPresets((prev) => {
+      const next = new Set(prev);
+      if (next.has(option)) {
+        next.delete(option);
+      } else {
+        next.add(option);
+      }
+      return next;
+    });
+  }
+
+  function addCustomChip() {
+    const trimmed = customInput.trim();
+    if (trimmed && !customChips.includes(trimmed) && !presets.includes(trimmed)) {
+      setCustomChips([...customChips, trimmed]);
     }
-    setInputValue("");
+    setCustomInput("");
   }
 
-  function removeChip(chip: string) {
-    setChips(chips.filter((c) => c !== chip));
+  function removeCustomChip(chip: string) {
+    setCustomChips(customChips.filter((c) => c !== chip));
   }
+
+  const value = [
+    ...presets.filter((option) => selectedPresets.has(option)),
+    ...customChips,
+  ].join(", ");
 
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={name} className={labelClass}>
-        {label}
-      </label>
-      <div
-        className={`flex flex-wrap items-center gap-1.5 ${fieldClass} focus-within:border-move-green focus-within:ring-2 focus-within:ring-move-green`}
-      >
-        {chips.map((chip) => (
-          <span
-            key={chip}
-            className="flex items-center gap-1 rounded-full bg-neutral-bg px-2 py-0.5 text-xs text-move-navy"
-          >
-            {chip}
+    <div className="flex flex-col gap-2">
+      <label className={labelClass}>{label}</label>
+
+      <div className="flex flex-wrap gap-2">
+        {presets.map((option) => {
+          const isSelected = selectedPresets.has(option);
+          return (
             <button
+              key={option}
               type="button"
-              onClick={() => removeChip(chip)}
-              className="text-neutral-muted hover:text-danger"
-              aria-label={`Remove ${chip}`}
+              onClick={() => togglePreset(option)}
+              aria-pressed={isSelected}
+              className={
+                isSelected
+                  ? "rounded-full bg-move-green px-3 py-1 text-xs font-medium text-white"
+                  : "rounded-full border border-neutral-border px-3 py-1 text-xs font-medium text-move-navy hover:border-move-green"
+              }
             >
-              ×
+              {option}
             </button>
-          </span>
-        ))}
-        <input
-          id={name}
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addChip();
-            }
-          }}
-          onBlur={addChip}
-          placeholder={chips.length === 0 ? "Type and press Enter" : ""}
-          className="min-w-32 flex-1 border-none p-0 text-sm text-move-navy placeholder:italic placeholder:text-gray-400 outline-none focus:ring-0"
-        />
+          );
+        })}
       </div>
-      <input type="hidden" name={name} value={chips.join(", ")} />
+
+      {customChips.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {customChips.map((chip) => (
+            <span
+              key={chip}
+              className="flex items-center gap-1 rounded-full bg-neutral-bg px-2 py-0.5 text-xs text-move-navy"
+            >
+              {chip}
+              <button
+                type="button"
+                onClick={() => removeCustomChip(chip)}
+                className="text-neutral-muted hover:text-danger"
+                aria-label={`Remove ${chip}`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <input
+        type="text"
+        value={customInput}
+        onChange={(e) => setCustomInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            addCustomChip();
+          }
+        }}
+        onBlur={addCustomChip}
+        placeholder="+ Others — type and press Enter to add"
+        className="w-full max-w-xs rounded-xl border border-neutral-border px-3 py-1.5 text-xs text-move-navy placeholder:italic placeholder:text-gray-400 focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green"
+      />
+
+      <input type="hidden" name={name} value={value} />
     </div>
   );
 }
@@ -240,14 +311,16 @@ export function ClientIntakeForm({
         />
       </div>
 
-      <ChipInput
+      <PresetChipPicker
         name="core_cost_categories"
         label="Core Cost Categories"
+        presets={CORE_COST_CATEGORY_PRESETS}
         defaultValue={defaultValues?.core_cost_categories ?? null}
       />
-      <ChipInput
+      <PresetChipPicker
         name="key_capability_needs"
         label="Services Required"
+        presets={KEY_CAPABILITY_PRESETS}
         defaultValue={defaultValues?.key_capability_needs ?? null}
       />
 
