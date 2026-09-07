@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -36,15 +37,20 @@ type QuickAddedProvider = {
 export function QuickAddProviders({
   clientRequirementId,
   initialProviders,
+  backHref,
+  reviewHref,
 }: {
   clientRequirementId: string;
   initialProviders: QuickAddedProvider[];
+  backHref: string;
+  reviewHref: string;
 }) {
   const [providers, setProviders] = useState(initialProviders);
   const [status, setStatus] = useState<ProviderStatus>(DEFAULT_STATUS);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
 
   function handleAddAnother(formData: FormData) {
     setError(null);
@@ -76,13 +82,41 @@ export function QuickAddProviders({
     });
   }
 
+  function handleNavigateForward(href: string) {
+    const companyName = (
+      formRef.current?.elements.namedItem("company_name") as HTMLInputElement
+    )?.value;
+
+    if (!companyName?.trim()) {
+      router.push(href);
+      return;
+    }
+
+    setError(null);
+    startTransition(async () => {
+      const formData = new FormData(formRef.current!);
+      const result = await quickAddProvider(clientRequirementId, formData);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      if (result.provider) {
+        setProviders((prev) => [...prev, result.provider!]);
+      }
+      formRef.current?.reset();
+      setStatus(DEFAULT_STATUS);
+      router.push(href);
+    });
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <form
-        ref={formRef}
-        action={handleAddAnother}
-        className="flex flex-col gap-4"
-      >
+      <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+        <form
+          ref={formRef}
+          action={handleAddAnother}
+          className="flex flex-col gap-4"
+        >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
             <label htmlFor="company_name" className={labelClass}>
@@ -149,15 +183,16 @@ export function QuickAddProviders({
 
         {error && <p className="text-sm text-danger">{error}</p>}
 
-        <Button
-          type="submit"
-          variant="outline"
-          disabled={isPending}
-          className="self-start px-4 py-2.5"
-        >
-          {isPending ? "Adding..." : "Add Another"}
-        </Button>
-      </form>
+          <Button
+            type="submit"
+            variant="outline"
+            disabled={isPending}
+            className="self-start px-4 py-2.5"
+          >
+            {isPending ? "Adding..." : "Add Another"}
+          </Button>
+        </form>
+      </div>
 
       {providers.length > 0 && (
         <div className="overflow-hidden rounded-2xl border border-neutral-border bg-white shadow-sm">
@@ -207,6 +242,38 @@ export function QuickAddProviders({
           </table>
         </div>
       )}
+
+      <div className="flex items-center justify-between gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => router.push(backHref)}
+          className="px-4 py-2.5"
+        >
+          ← Back to Client Info
+        </Button>
+
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isPending}
+            onClick={() => handleNavigateForward(reviewHref)}
+            className="px-4 py-2.5"
+          >
+            Skip for now →
+          </Button>
+          <Button
+            type="button"
+            disabled={isPending}
+            onClick={() => handleNavigateForward(reviewHref)}
+            className="px-4 py-2.5"
+          >
+            {isPending ? "Saving..." : "Continue to Verify →"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

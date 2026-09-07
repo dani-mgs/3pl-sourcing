@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Button } from "@/components/ui/button";
 import { WizardSteps } from "@/components/wizard-steps";
 import { QuickAddProviders } from "./quick-add-providers";
 
@@ -43,43 +41,12 @@ export default async function AddProvidersStepPage({
       <div className="grid grid-cols-1 gap-8 md:grid-cols-[180px_1fr]">
         <WizardSteps currentStep={2} />
 
-        <div className="flex flex-col gap-6">
-          <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-            <QuickAddProviders
-              clientRequirementId={id}
-              initialProviders={providers ?? []}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={<Link href={`/dashboard/new/${id}`} />}
-              className="px-4 py-2.5"
-            >
-              ← Back to Client Info
-            </Button>
-
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                nativeButton={false}
-                render={<Link href={`/dashboard/new/${id}/review`} />}
-                className="px-4 py-2.5"
-              >
-                Skip for now →
-              </Button>
-              <Button
-                nativeButton={false}
-                render={<Link href={`/dashboard/new/${id}/review`} />}
-                className="px-4 py-2.5"
-              >
-                Continue to Verify →
-              </Button>
-            </div>
-          </div>
-        </div>
+        <QuickAddProviders
+          clientRequirementId={id}
+          initialProviders={providers ?? []}
+          backHref={`/dashboard/new/${id}`}
+          reviewHref={`/dashboard/new/${id}/review`}
+        />
       </div>
     </div>
   );
