@@ -31,10 +31,10 @@ export default async function AddProvidersStepPage({
   return (
     <div className="max-w-5xl px-8 py-10">
       <Link
-        href="/dashboard"
+        href={`/dashboard/new/${id}`}
         className="text-sm font-medium text-move-green hover:underline"
       >
-        ← Back to Dashboard
+        ← Back to Client Info
       </Link>
 
       <div className="mt-2 mb-8">
