@@ -51,6 +51,7 @@ export async function quickAddProvider(
   }
 
   revalidatePath(`/dashboard/new/${clientRequirementId}/providers`);
+  revalidatePath(`/dashboard/new/${clientRequirementId}/review`);
   return { provider: data };
 }
 
@@ -77,5 +78,6 @@ export async function removeQuickAddedProvider(
   }
 
   revalidatePath(`/dashboard/new/${clientRequirementId}/providers`);
+  revalidatePath(`/dashboard/new/${clientRequirementId}/review`);
   return {};
 }

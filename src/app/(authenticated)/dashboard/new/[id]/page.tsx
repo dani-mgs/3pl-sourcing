@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { WizardSteps } from "@/components/wizard-steps";
@@ -27,14 +26,7 @@ export default async function EditClientIntakePage({
 
   return (
     <div className="max-w-5xl px-8 py-10">
-      <Link
-        href={`/dashboard/new/${id}/review`}
-        className="text-sm font-medium text-move-green hover:underline"
-      >
-        ← Back to Review
-      </Link>
-
-      <div className="mt-2 mb-8">
+      <div className="mb-8">
         <p className="text-xs font-medium tracking-wide text-neutral-muted uppercase">
           New Project
         </p>
@@ -54,6 +46,8 @@ export default async function EditClientIntakePage({
           <ClientIntakeForm
             clientRequirementId={id}
             defaultValues={clientRequirement as ClientIntakeFields}
+            backHref={`/dashboard/new/${id}/review`}
+            backLabel="← Back to Review"
           />
         </div>
       </div>

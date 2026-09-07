@@ -69,14 +69,7 @@ export default async function ReviewStepPage({
 
   return (
     <div className="max-w-5xl px-8 py-10">
-      <Link
-        href={`/dashboard/new/${id}/providers`}
-        className="text-sm font-medium text-move-green hover:underline"
-      >
-        ← Back to Add 3PLs
-      </Link>
-
-      <h1 className="mt-2 mb-8 font-display text-2xl font-semibold text-move-navy">
+      <h1 className="mb-8 font-display text-2xl font-semibold text-move-navy">
         Verify Details
       </h1>
 
@@ -158,13 +151,23 @@ export default async function ReviewStepPage({
             )}
           </section>
 
-          <Button
-            nativeButton={false}
-            render={<Link href={`/projects/${id}`} />}
-            className="self-start px-4 py-2.5"
-          >
-            Finish
-          </Button>
+          <div className="flex items-center justify-between gap-3">
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href={`/dashboard/new/${id}/providers`} />}
+              className="px-4 py-2.5"
+            >
+              ← Back to Add 3PLs
+            </Button>
+            <Button
+              nativeButton={false}
+              render={<Link href={`/projects/${id}`} />}
+              className="px-4 py-2.5"
+            >
+              Finish
+            </Button>
+          </div>
         </div>
       </div>
     </div>

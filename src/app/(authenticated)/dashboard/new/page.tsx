@@ -1,18 +1,10 @@
-import Link from "next/link";
 import { WizardSteps } from "@/components/wizard-steps";
 import { ClientIntakeForm } from "./client-intake-form";
 
 export default function NewProjectPage() {
   return (
     <div className="max-w-5xl px-8 py-10">
-      <Link
-        href="/dashboard"
-        className="text-sm font-medium text-move-green hover:underline"
-      >
-        ← Back to Dashboard
-      </Link>
-
-      <div className="mt-2 mb-8">
+      <div className="mb-8">
         <p className="text-xs font-medium tracking-wide text-neutral-muted uppercase">
           New Project
         </p>
@@ -29,7 +21,11 @@ export default function NewProjectPage() {
         <WizardSteps currentStep={1} />
 
         <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-          <ClientIntakeForm clientRequirementId={null} />
+          <ClientIntakeForm
+            clientRequirementId={null}
+            backHref="/dashboard"
+            backLabel="← Back to Dashboard"
+          />
         </div>
       </div>
     </div>

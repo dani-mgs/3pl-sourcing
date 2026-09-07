@@ -30,14 +30,7 @@ export default async function AddProvidersStepPage({
 
   return (
     <div className="max-w-5xl px-8 py-10">
-      <Link
-        href={`/dashboard/new/${id}`}
-        className="text-sm font-medium text-move-green hover:underline"
-      >
-        ← Back to Client Info
-      </Link>
-
-      <div className="mt-2 mb-8">
+      <div className="mb-8">
         <h1 className="font-display text-2xl font-semibold text-move-navy">
           Add 3PLs
         </h1>
@@ -58,22 +51,33 @@ export default async function AddProvidersStepPage({
             />
           </div>
 
-          <div className="flex items-center gap-3">
-            <Button
-              nativeButton={false}
-              render={<Link href={`/dashboard/new/${id}/review`} />}
-              className="px-4 py-2.5"
-            >
-              Continue to Verify →
-            </Button>
+          <div className="flex items-center justify-between gap-3">
             <Button
               variant="outline"
               nativeButton={false}
-              render={<Link href={`/dashboard/new/${id}/review`} />}
+              render={<Link href={`/dashboard/new/${id}`} />}
               className="px-4 py-2.5"
             >
-              Skip for now →
+              ← Back to Client Info
             </Button>
+
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                nativeButton={false}
+                render={<Link href={`/dashboard/new/${id}/review`} />}
+                className="px-4 py-2.5"
+              >
+                Skip for now →
+              </Button>
+              <Button
+                nativeButton={false}
+                render={<Link href={`/dashboard/new/${id}/review`} />}
+                className="px-4 py-2.5"
+              >
+                Continue to Verify →
+              </Button>
+            </div>
           </div>
         </div>
       </div>
