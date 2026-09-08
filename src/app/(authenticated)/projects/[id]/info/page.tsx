@@ -10,6 +10,7 @@ import { SectionCard } from "@/components/section-card";
 import { ToggleChipDisplay } from "@/components/toggle-chip-display";
 import { parseChipValue } from "@/lib/chip-value";
 import { ViewOnlyBanner } from "./view-only-banner";
+import { DeleteClientButton } from "./delete-client-button";
 
 function InfoField({
   label,
@@ -47,6 +48,13 @@ export default async function ClientInfoPage({
   const { canWrite } = await getOwnershipContext(id);
   const owner = canWrite ? null : await getClientOwner(id);
 
+  const { count: providerCount } = canWrite
+    ? await supabase
+        .from("three_pl_providers")
+        .select("id", { count: "exact", head: true })
+        .eq("client_requirement_id", id)
+    : { count: null };
+
   return (
     <div className="max-w-5xl px-8 py-10">
       <div className="mb-2 text-xs text-neutral-muted">
@@ -61,15 +69,22 @@ export default async function ClientInfoPage({
         <h1 className="font-display text-2xl font-semibold text-move-navy">
           {clientRequirement.client_name}
         </h1>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
           {canWrite && (
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={<Link href={`/projects/${id}/info/edit`} />}
-            >
-              Edit
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                nativeButton={false}
+                render={<Link href={`/projects/${id}/info/edit`} />}
+              >
+                Edit
+              </Button>
+              <DeleteClientButton
+                clientRequirementId={id}
+                clientName={clientRequirement.client_name}
+                providerCount={providerCount ?? 0}
+              />
+            </>
           )}
         </div>
       </div>

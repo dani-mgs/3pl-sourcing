@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth/get-user-role";
 import { ReassignOwnerForm, type ProfileOption } from "./reassign-owner-form";
 import { RoleActionButton } from "./role-action-button";
+import { EditNameButton } from "./edit-name-button";
 
 export default async function AdministrationPage() {
   const role = await getUserRole();
@@ -95,13 +96,20 @@ export default async function AdministrationPage() {
                   key={profile.id}
                   className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-border pb-4 last:border-b-0 last:pb-0"
                 >
-                  <div>
-                    <p className="text-sm font-medium text-move-navy">
-                      {profile.first_name?.trim() || profile.email}
-                    </p>
-                    <p className="text-xs text-neutral-muted">
-                      {profile.email} · {profile.role}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <p className="text-sm font-medium text-move-navy">
+                        {profile.first_name?.trim() || profile.email}
+                      </p>
+                      <p className="text-xs text-neutral-muted">
+                        {profile.email} · {profile.role}
+                      </p>
+                    </div>
+                    <EditNameButton
+                      userId={profile.id}
+                      currentName={profile.first_name?.trim() ?? ""}
+                      displayLabel={profile.first_name?.trim() || profile.email}
+                    />
                   </div>
                   {profile.role === "admin" ? (
                     profile.id !== currentUser?.id && (

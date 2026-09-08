@@ -36,6 +36,33 @@ export async function reassignOwner(
   return { success: true };
 }
 
+export async function updateUserDisplayName(
+  userId: string,
+  newName: string,
+): Promise<AdminActionState> {
+  if ((await getUserRole()) !== "admin") {
+    return { error: "You don't have permission to make this change." };
+  }
+
+  const trimmed = newName.trim();
+  if (!trimmed) {
+    return { error: "Name is required." };
+  }
+
+  const adminClient = createAdminClient();
+  const { error } = await adminClient.auth.admin.updateUserById(userId, {
+    user_metadata: { first_name: trimmed },
+  });
+
+  if (error) {
+    console.error("updateUserDisplayName error:", error);
+    return { error: "An unexpected error occurred." };
+  }
+
+  revalidatePath("/admin");
+  return { success: true };
+}
+
 export async function updateUserRole(
   userId: string,
   newRole: "admin" | "logistics_expert",
