@@ -115,8 +115,7 @@ export default async function ProjectSummaryPage({
             </p>
           )}
           <p className="mt-1 text-xs text-neutral-muted">
-            Owner {ownerDisplay} · Go-live{" "}
-            {new Date(clientRequirement.date_created).toLocaleDateString()}
+            Owner {ownerDisplay}
             {aggregateCapabilityLabels.length > 0 &&
               ` · ${aggregateCapabilityLabels.join(", ")}`}
           </p>

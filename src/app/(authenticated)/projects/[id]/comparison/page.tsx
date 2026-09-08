@@ -12,10 +12,21 @@ type ProviderRow = {
   is_incumbent: boolean;
   b2b: boolean;
   b2c: boolean;
-  fulfillment: boolean;
+  receiving: boolean;
   storage: boolean;
-  cross_docking: boolean;
+  fulfillment: boolean;
+  dispatch: boolean;
+  adhoc_kitting_bundling: boolean;
+  adhoc_labelling: boolean;
+  returns: boolean;
+  annual_inventory_count: boolean;
+  cycle_count: boolean;
+  inventory_count_on_request: boolean;
+  one_time_system_setup: boolean;
+  lot_batch_expiry_tracking: boolean;
   temp_controlled_storage: boolean;
+  retail_edi_compliance: boolean;
+  cross_docking: boolean;
   storage_cost: number | null;
   pick_pack_cost: number | null;
   receiving_cost: number | null;
@@ -99,10 +110,25 @@ function buildComparisonRows(
       is_incumbent: p.is_incumbent,
       b2b: p.b2b,
       b2c: p.b2c,
-      fulfillment: p.fulfillment,
+      receiving: p.receiving,
       storage: p.storage,
-      cross_docking: p.cross_docking,
+      fulfillment: p.fulfillment,
+      dispatch: p.dispatch,
+      adhoc_kitting_bundling: p.adhoc_kitting_bundling,
+      adhoc_labelling: p.adhoc_labelling,
+      returns: p.returns,
+      annual_inventory_count: p.annual_inventory_count,
+      cycle_count: p.cycle_count,
+      inventory_count_on_request: p.inventory_count_on_request,
+      one_time_system_setup: p.one_time_system_setup,
+      lot_batch_expiry_tracking: p.lot_batch_expiry_tracking,
       temp_controlled_storage: p.temp_controlled_storage,
+      retail_edi_compliance: p.retail_edi_compliance,
+      cross_docking: p.cross_docking,
+      storage_cost: p.storage_cost,
+      pick_pack_cost: p.pick_pack_cost,
+      receiving_cost: p.receiving_cost,
+      returns_cost: p.returns_cost,
       has_cost_data: p.has_cost_data,
       total_cost: p.total_cost,
       cost_rank,
@@ -136,7 +162,7 @@ export default async function ComparisonPage({
   const { data: providers } = await supabase
     .from("three_pl_providers")
     .select(
-      "id, company_name, location, status, is_incumbent, b2b, b2c, fulfillment, storage, cross_docking, temp_controlled_storage, storage_cost, pick_pack_cost, receiving_cost, returns_cost",
+      "id, company_name, location, status, is_incumbent, b2b, b2c, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, storage_cost, pick_pack_cost, receiving_cost, returns_cost",
     )
     .eq("client_requirement_id", id)
     .order("created_at", { ascending: false });
