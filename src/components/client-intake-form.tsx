@@ -14,6 +14,20 @@ const CORE_COST_CATEGORY_PRESETS = [
   "Kitting",
 ];
 
+// Preset/custom chip values are joined with "; " rather than "," because several
+// preset labels (e.g. "Fulfillment (Pick, Check, Pack)") contain commas themselves,
+// which would otherwise fragment on split. No preset or expected custom value
+// contains a semicolon.
+const CHIP_SEPARATOR = "; ";
+
+function parseChipValue(value: string | null): string[] {
+  if (!value) return [];
+  return value
+    .split(";")
+    .map((token) => token.trim())
+    .filter(Boolean);
+}
+
 const KEY_CAPABILITY_PRESETS = [
   "Receiving",
   "Storage",
@@ -131,12 +145,7 @@ function PresetChipPicker({
   defaultValue: string | null;
   disabled?: boolean;
 }) {
-  const initialTokens = defaultValue
-    ? defaultValue
-        .split(",")
-        .map((token) => token.trim())
-        .filter(Boolean)
-    : [];
+  const initialTokens = parseChipValue(defaultValue);
 
   const [selectedPresets, setSelectedPresets] = useState<Set<string>>(
     new Set(initialTokens.filter((token) => presets.includes(token))),
@@ -173,7 +182,7 @@ function PresetChipPicker({
   const value = [
     ...presets.filter((option) => selectedPresets.has(option)),
     ...customChips,
-  ].join(", ");
+  ].join(CHIP_SEPARATOR);
 
   return (
     <div className="flex flex-col gap-2">

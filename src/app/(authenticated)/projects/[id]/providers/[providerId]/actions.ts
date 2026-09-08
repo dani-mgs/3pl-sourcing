@@ -25,5 +25,5 @@ export async function deleteProvider(
     return { error: "You don't have permission to make this change." };
   }
 
-  redirect(`/projects/${projectId}/providers`);
+  redirect(`/projects/${projectId}`);
 }
