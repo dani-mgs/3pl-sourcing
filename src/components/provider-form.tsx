@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -172,6 +172,22 @@ function CapabilityChips({
     setValues((prev) => ({ ...prev, [name]: !prev[name] }));
   }
 
+  // The browser's native reset (run by React after a `<form action>` call
+  // finishes, success or error) can silently revert each hidden input's
+  // submitted `.value` back to whatever it was at mount, even though the
+  // visible chip — driven purely by `values` above — still looks correct.
+  // Force every hidden input back in sync with `values` after each render
+  // so a later real submission never sends stale capability data.
+  const hiddenInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  useEffect(() => {
+    for (const capability of CAPABILITY_FIELDS) {
+      const node = hiddenInputRefs.current[capability.name];
+      if (node) {
+        node.value = values[capability.name] ? "true" : "false";
+      }
+    }
+  });
+
   return (
     <div className="flex flex-wrap gap-2">
       {CAPABILITY_FIELDS.map((capability) => {
@@ -191,6 +207,9 @@ function CapabilityChips({
               {capability.label}
             </button>
             <input
+              ref={(node) => {
+                hiddenInputRefs.current[capability.name] = node;
+              }}
               type="hidden"
               name={capability.name}
               value={isSelected ? "true" : "false"}
@@ -200,6 +219,85 @@ function CapabilityChips({
       })}
     </div>
   );
+}
+
+type FormFieldValues = {
+  company_name: string;
+  provider_type: string;
+  website: string;
+  location: string;
+  footprint_source: string;
+  contact_person: string;
+  email: string;
+  onboarding_period_months: string;
+  virtual_tour_url: string;
+  billing_terms: string;
+  other_specialization: string;
+  is_incumbent: boolean;
+  storage_cost: string;
+  pick_pack_cost: string;
+  receiving_cost: string;
+  returns_cost: string;
+  status: string;
+  assessment_status: string;
+  key_strength: string;
+  key_weakness_risk: string;
+  important_assumption: string;
+  overall_assessment: string;
+  client_decision: string;
+  source_basis: string;
+  next_action: string;
+  key_notes: string;
+  notes: string;
+};
+
+function initialFieldValues(
+  defaultValues?: ProviderFormDefaults,
+): FormFieldValues {
+  return {
+    company_name: defaultValues?.company_name ?? "",
+    provider_type: defaultValues?.provider_type ?? "",
+    website: defaultValues?.website ?? "",
+    location: defaultValues?.location ?? "",
+    footprint_source: defaultValues?.footprint_source ?? "",
+    contact_person: defaultValues?.contact_person ?? "",
+    email: defaultValues?.email ?? "",
+    onboarding_period_months:
+      defaultValues?.onboarding_period_months != null
+        ? String(defaultValues.onboarding_period_months)
+        : "",
+    virtual_tour_url: defaultValues?.virtual_tour_url ?? "",
+    billing_terms: defaultValues?.billing_terms ?? "",
+    other_specialization: defaultValues?.other_specialization ?? "",
+    is_incumbent: Boolean(defaultValues?.is_incumbent),
+    storage_cost:
+      defaultValues?.storage_cost != null
+        ? String(defaultValues.storage_cost)
+        : "",
+    pick_pack_cost:
+      defaultValues?.pick_pack_cost != null
+        ? String(defaultValues.pick_pack_cost)
+        : "",
+    receiving_cost:
+      defaultValues?.receiving_cost != null
+        ? String(defaultValues.receiving_cost)
+        : "",
+    returns_cost:
+      defaultValues?.returns_cost != null
+        ? String(defaultValues.returns_cost)
+        : "",
+    status: defaultValues?.status ?? "Potential / Not Contacted",
+    assessment_status: defaultValues?.assessment_status ?? "",
+    key_strength: defaultValues?.key_strength ?? "",
+    key_weakness_risk: defaultValues?.key_weakness_risk ?? "",
+    important_assumption: defaultValues?.important_assumption ?? "",
+    overall_assessment: defaultValues?.overall_assessment ?? "",
+    client_decision: defaultValues?.client_decision ?? "",
+    source_basis: defaultValues?.source_basis ?? "",
+    next_action: defaultValues?.next_action ?? "",
+    key_notes: defaultValues?.key_notes ?? "",
+    notes: defaultValues?.notes ?? "",
+  };
 }
 
 export function ProviderForm({
@@ -227,6 +325,34 @@ export function ProviderForm({
   );
   const [emailError, setEmailError] = useState<string | null>(null);
   const [phoneDigits, setPhoneDigits] = useState(defaultDigits);
+  const [phoneCountry, setPhoneCountry] = useState(defaultCountryCode);
+
+  // Every field below is controlled (rather than native `defaultValue`)
+  // because React resets uncontrolled form elements after any `<form action>`
+  // function finishes — success or error — which would otherwise wipe
+  // everything the user typed when e.g. the incumbent-conflict error returns.
+  const [values, setValues] = useState<FormFieldValues>(() =>
+    initialFieldValues(defaultValues),
+  );
+
+  function updateField<K extends keyof FormFieldValues>(
+    key: K,
+    value: FormFieldValues[K],
+  ) {
+    setValues((prev) => ({ ...prev, [key]: value }));
+  }
+
+  // React's built-in resync of controlled props is skipped when a value is
+  // unchanged from the previous render, so the native reset the browser runs
+  // after a `<form action>` call finishes (success or error) can silently
+  // desync this checkbox's own DOM `.checked` — which FormData reads directly
+  // — from `values.is_incumbent`. Force it back into sync after every render.
+  const incumbentRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (incumbentRef.current) {
+      incumbentRef.current.checked = values.is_incumbent;
+    }
+  });
 
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-8">
@@ -244,7 +370,8 @@ export function ProviderForm({
               type="text"
               required
               placeholder="e.g. Acme Logistics"
-              defaultValue={defaultValues?.company_name ?? ""}
+              value={values.company_name}
+              onChange={(e) => updateField("company_name", e.target.value)}
               className={fieldClass}
               onBlur={(e) =>
                 setCompanyNameError(
@@ -266,7 +393,8 @@ export function ProviderForm({
               name="provider_type"
               type="text"
               placeholder="e.g. Asset-based 3PL"
-              defaultValue={defaultValues?.provider_type ?? ""}
+              value={values.provider_type}
+              onChange={(e) => updateField("provider_type", e.target.value)}
               className={fieldClass}
             />
           </div>
@@ -280,7 +408,8 @@ export function ProviderForm({
               name="website"
               type="text"
               placeholder="e.g. acmelogistics.com"
-              defaultValue={defaultValues?.website ?? ""}
+              value={values.website}
+              onChange={(e) => updateField("website", e.target.value)}
               className={fieldClass}
             />
           </div>
@@ -294,7 +423,8 @@ export function ProviderForm({
               name="location"
               type="text"
               placeholder="e.g. Los Angeles, USA"
-              defaultValue={defaultValues?.location ?? ""}
+              value={values.location}
+              onChange={(e) => updateField("location", e.target.value)}
               className={fieldClass}
             />
           </div>
@@ -308,7 +438,10 @@ export function ProviderForm({
               name="footprint_source"
               type="text"
               placeholder="e.g. Owned warehouse network"
-              defaultValue={defaultValues?.footprint_source ?? ""}
+              value={values.footprint_source}
+              onChange={(e) =>
+                updateField("footprint_source", e.target.value)
+              }
               className={fieldClass}
             />
           </div>
@@ -322,7 +455,8 @@ export function ProviderForm({
               name="contact_person"
               type="text"
               placeholder="e.g. Jane Smith"
-              defaultValue={defaultValues?.contact_person ?? ""}
+              value={values.contact_person}
+              onChange={(e) => updateField("contact_person", e.target.value)}
               className={fieldClass}
             />
           </div>
@@ -336,7 +470,8 @@ export function ProviderForm({
               name="email"
               type="email"
               placeholder="e.g. jane@acmelogistics.com"
-              defaultValue={defaultValues?.email ?? ""}
+              value={values.email}
+              onChange={(e) => updateField("email", e.target.value)}
               className={fieldClass}
               onBlur={(e) => {
                 const value = e.target.value.trim();
@@ -358,7 +493,8 @@ export function ProviderForm({
               <Select
                 name="phone_country"
                 items={COUNTRY_CODE_ITEMS}
-                defaultValue={defaultCountryCode}
+                value={phoneCountry}
+                onValueChange={(value) => setPhoneCountry(value as string)}
               >
                 <SelectTrigger
                   id="phone_country"
@@ -408,7 +544,10 @@ export function ProviderForm({
               type="number"
               min="0"
               step="1"
-              defaultValue={defaultValues?.onboarding_period_months ?? ""}
+              value={values.onboarding_period_months}
+              onChange={(e) =>
+                updateField("onboarding_period_months", e.target.value)
+              }
               className={fieldClass}
             />
           </div>
@@ -422,7 +561,10 @@ export function ProviderForm({
               name="virtual_tour_url"
               type="url"
               placeholder="e.g. https://acmelogistics.com/tour"
-              defaultValue={defaultValues?.virtual_tour_url ?? ""}
+              value={values.virtual_tour_url}
+              onChange={(e) =>
+                updateField("virtual_tour_url", e.target.value)
+              }
               className={fieldClass}
             />
           </div>
@@ -436,7 +578,8 @@ export function ProviderForm({
               name="billing_terms"
               type="text"
               placeholder="e.g. Net 30"
-              defaultValue={defaultValues?.billing_terms ?? ""}
+              value={values.billing_terms}
+              onChange={(e) => updateField("billing_terms", e.target.value)}
               className={fieldClass}
             />
           </div>
@@ -449,7 +592,10 @@ export function ProviderForm({
               id="other_specialization"
               name="other_specialization"
               type="text"
-              defaultValue={defaultValues?.other_specialization ?? ""}
+              value={values.other_specialization}
+              onChange={(e) =>
+                updateField("other_specialization", e.target.value)
+              }
               className={fieldClass}
             />
           </div>
@@ -458,10 +604,14 @@ export function ProviderForm({
         <div className="flex flex-col gap-1">
           <label className={checkboxLabelClass}>
             <input
+              ref={incumbentRef}
               type="checkbox"
               name="is_incumbent"
               value="true"
-              defaultChecked={Boolean(defaultValues?.is_incumbent)}
+              checked={values.is_incumbent}
+              onChange={(e) =>
+                updateField("is_incumbent", e.target.checked)
+              }
               className="size-4 rounded border-neutral-border text-move-green focus:ring-move-green"
             />
             Incumbent
@@ -487,7 +637,8 @@ export function ProviderForm({
                 type="number"
                 min="0"
                 step="0.01"
-                defaultValue={defaultValues?.storage_cost ?? ""}
+                value={values.storage_cost}
+                onChange={(e) => updateField("storage_cost", e.target.value)}
                 className={`${fieldClass} flex-1`}
               />
             </div>
@@ -505,7 +656,10 @@ export function ProviderForm({
                 type="number"
                 min="0"
                 step="0.01"
-                defaultValue={defaultValues?.pick_pack_cost ?? ""}
+                value={values.pick_pack_cost}
+                onChange={(e) =>
+                  updateField("pick_pack_cost", e.target.value)
+                }
                 className={`${fieldClass} flex-1`}
               />
             </div>
@@ -523,7 +677,10 @@ export function ProviderForm({
                 type="number"
                 min="0"
                 step="0.01"
-                defaultValue={defaultValues?.receiving_cost ?? ""}
+                value={values.receiving_cost}
+                onChange={(e) =>
+                  updateField("receiving_cost", e.target.value)
+                }
                 className={`${fieldClass} flex-1`}
               />
             </div>
@@ -541,7 +698,8 @@ export function ProviderForm({
                 type="number"
                 min="0"
                 step="0.01"
-                defaultValue={defaultValues?.returns_cost ?? ""}
+                value={values.returns_cost}
+                onChange={(e) => updateField("returns_cost", e.target.value)}
                 className={`${fieldClass} flex-1`}
               />
             </div>
@@ -558,7 +716,8 @@ export function ProviderForm({
           </label>
           <Select
             name="status"
-            defaultValue={defaultValues?.status ?? "Potential / Not Contacted"}
+            value={values.status}
+            onValueChange={(value) => updateField("status", value as string)}
           >
             <SelectTrigger id="status" className="w-full rounded-xl border-neutral-border">
               <SelectValue />
@@ -582,7 +741,10 @@ export function ProviderForm({
           </label>
           <Select
             name="assessment_status"
-            defaultValue={defaultValues?.assessment_status ?? undefined}
+            value={values.assessment_status || null}
+            onValueChange={(value) =>
+              updateField("assessment_status", (value as string) ?? "")
+            }
           >
             <SelectTrigger id="assessment_status" className="w-full rounded-xl border-neutral-border">
               <SelectValue placeholder="Select an assessment" />
@@ -608,7 +770,8 @@ export function ProviderForm({
             id="key_strength"
             name="key_strength"
             rows={2}
-            defaultValue={defaultValues?.key_strength ?? ""}
+            value={values.key_strength}
+            onChange={(e) => updateField("key_strength", e.target.value)}
             className={fieldClass}
           />
         </div>
@@ -621,7 +784,10 @@ export function ProviderForm({
             id="key_weakness_risk"
             name="key_weakness_risk"
             rows={2}
-            defaultValue={defaultValues?.key_weakness_risk ?? ""}
+            value={values.key_weakness_risk}
+            onChange={(e) =>
+              updateField("key_weakness_risk", e.target.value)
+            }
             className={fieldClass}
           />
         </div>
@@ -634,7 +800,10 @@ export function ProviderForm({
             id="important_assumption"
             name="important_assumption"
             rows={2}
-            defaultValue={defaultValues?.important_assumption ?? ""}
+            value={values.important_assumption}
+            onChange={(e) =>
+              updateField("important_assumption", e.target.value)
+            }
             className={fieldClass}
           />
         </div>
@@ -647,7 +816,10 @@ export function ProviderForm({
             id="overall_assessment"
             name="overall_assessment"
             rows={2}
-            defaultValue={defaultValues?.overall_assessment ?? ""}
+            value={values.overall_assessment}
+            onChange={(e) =>
+              updateField("overall_assessment", e.target.value)
+            }
             className={fieldClass}
           />
         </div>
@@ -660,7 +832,8 @@ export function ProviderForm({
             id="client_decision"
             name="client_decision"
             type="text"
-            defaultValue={defaultValues?.client_decision ?? ""}
+            value={values.client_decision}
+            onChange={(e) => updateField("client_decision", e.target.value)}
             className={fieldClass}
           />
         </div>
@@ -673,7 +846,8 @@ export function ProviderForm({
             id="source_basis"
             name="source_basis"
             type="text"
-            defaultValue={defaultValues?.source_basis ?? ""}
+            value={values.source_basis}
+            onChange={(e) => updateField("source_basis", e.target.value)}
             className={fieldClass}
           />
         </div>
@@ -686,7 +860,8 @@ export function ProviderForm({
             id="next_action"
             name="next_action"
             type="text"
-            defaultValue={defaultValues?.next_action ?? ""}
+            value={values.next_action}
+            onChange={(e) => updateField("next_action", e.target.value)}
             className={fieldClass}
           />
         </div>
@@ -699,7 +874,8 @@ export function ProviderForm({
             id="key_notes"
             name="key_notes"
             rows={2}
-            defaultValue={defaultValues?.key_notes ?? ""}
+            value={values.key_notes}
+            onChange={(e) => updateField("key_notes", e.target.value)}
             className={fieldClass}
           />
         </div>
@@ -712,7 +888,8 @@ export function ProviderForm({
             id="notes"
             name="notes"
             rows={3}
-            defaultValue={defaultValues?.notes ?? ""}
+            value={values.notes}
+            onChange={(e) => updateField("notes", e.target.value)}
             className={fieldClass}
           />
         </div>
@@ -720,7 +897,7 @@ export function ProviderForm({
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <Button type="submit" disabled={pending} className="px-4 py-2.5">
+      <Button type="submit" disabled={pending} className="self-start px-4 py-2.5">
         {pending ? pendingLabel : submitLabel}
       </Button>
     </form>
