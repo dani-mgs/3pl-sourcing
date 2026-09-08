@@ -61,10 +61,10 @@ export default async function RecommendationPage({
             No vetted 3PLs yet. Vet at least one 3PL before making a
             recommendation.{" "}
             <Link
-              href={`/projects/${id}/providers`}
+              href={`/projects/${id}`}
               className="font-medium text-move-green hover:underline"
             >
-              Go to 3PL List
+              Go to Project Summary
             </Link>
           </p>
         </div>

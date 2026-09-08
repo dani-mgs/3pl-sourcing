@@ -1,11 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 
 export type SaveClientRequirementsState = {
   error?: string;
-  success?: boolean;
 };
 
 function optionalText(formData: FormData, key: string): string | null {
@@ -27,6 +27,11 @@ export async function updateClientRequirements(
   const clientName = formData.get("client_name") as string;
   if (!clientName?.trim()) {
     return { error: "Client name is required." };
+  }
+
+  const { canWrite } = await getOwnershipContext(clientRequirementId);
+  if (!canWrite) {
+    return { error: "You don't have permission to make this change." };
   }
 
   const supabase = await createClient();
@@ -77,6 +82,5 @@ export async function updateClientRequirements(
     return { error: "You don't have permission to make this change." };
   }
 
-  revalidatePath(`/projects/${clientRequirementId}/info`);
-  return { success: true };
+  redirect(`/projects/${clientRequirementId}/info`);
 }

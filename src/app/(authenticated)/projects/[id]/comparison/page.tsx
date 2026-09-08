@@ -166,7 +166,7 @@ export default async function ComparisonPage({
           <p className="py-8 text-center text-sm text-neutral-muted">
             No 3PLs yet.{" "}
             <Link
-              href={`/projects/${id}/providers`}
+              href={`/projects/${id}`}
               className="font-medium text-move-green hover:underline"
             >
               Add 3PLs first

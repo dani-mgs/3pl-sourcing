@@ -23,10 +23,10 @@ export default async function NewProviderPage({
   return (
     <div className="max-w-5xl px-8 py-10">
       <Link
-        href={`/projects/${id}/providers`}
+        href={`/projects/${id}`}
         className="text-sm font-medium text-move-green hover:underline"
       >
-        ← Back to 3PL List
+        ← Back to Project
       </Link>
 
       <h1 className="mt-2 mb-8 font-display text-2xl font-semibold text-move-navy">

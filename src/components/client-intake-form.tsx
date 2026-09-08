@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CHIP_SEPARATOR, parseChipValue } from "@/lib/chip-value";
 
 const fieldClass =
   "rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy placeholder:italic placeholder:text-gray-400 focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green disabled:cursor-not-allowed disabled:bg-neutral-bg disabled:text-neutral-muted";
@@ -13,20 +14,6 @@ const CORE_COST_CATEGORY_PRESETS = [
   "Returns",
   "Kitting",
 ];
-
-// Preset/custom chip values are joined with "; " rather than "," because several
-// preset labels (e.g. "Fulfillment (Pick, Check, Pack)") contain commas themselves,
-// which would otherwise fragment on split. No preset or expected custom value
-// contains a semicolon.
-const CHIP_SEPARATOR = "; ";
-
-function parseChipValue(value: string | null): string[] {
-  if (!value) return [];
-  return value
-    .split(";")
-    .map((token) => token.trim())
-    .filter(Boolean);
-}
 
 const KEY_CAPABILITY_PRESETS = [
   "Receiving",

@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SectionCard } from "@/components/section-card";
+import { ToggleChipDisplay } from "@/components/toggle-chip-display";
 import {
   StatusBadge,
   AssessmentBadge,
@@ -59,16 +61,23 @@ export default async function ProviderDetailsPage({
 
   const supabase = await createClient();
 
-  const { data: provider } = await supabase
-    .from("three_pl_providers")
-    .select(
-      "id, company_name, provider_type, website, location, footprint_source, contact_person, email, phone, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, onboarding_period_months, virtual_tour_url, billing_terms, other_specialization, b2b, b2c, is_incumbent, storage_cost, pick_pack_cost, receiving_cost, returns_cost, status, assessment_status, key_strength, key_weakness_risk, important_assumption, overall_assessment, client_decision, source_basis, next_action, key_notes, notes, updated_at",
-    )
-    .eq("id", providerId)
-    .eq("client_requirement_id", id)
-    .single();
+  const [{ data: provider }, { data: clientRequirement }] = await Promise.all([
+    supabase
+      .from("three_pl_providers")
+      .select(
+        "id, company_name, provider_type, website, location, footprint_source, contact_person, email, phone, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, onboarding_period_months, virtual_tour_url, billing_terms, other_specialization, b2b, b2c, is_incumbent, storage_cost, pick_pack_cost, receiving_cost, returns_cost, status, assessment_status, key_strength, key_weakness_risk, important_assumption, overall_assessment, client_decision, source_basis, next_action, key_notes, notes, updated_at",
+      )
+      .eq("id", providerId)
+      .eq("client_requirement_id", id)
+      .single(),
+    supabase
+      .from("client_requirements")
+      .select("client_name")
+      .eq("id", id)
+      .single(),
+  ]);
 
-  if (!provider) {
+  if (!provider || !clientRequirement) {
     notFound();
   }
 
@@ -82,12 +91,17 @@ export default async function ProviderDetailsPage({
 
   return (
     <div className="max-w-5xl px-8 py-10">
-      <Link
-        href={`/projects/${id}/providers`}
-        className="text-sm font-medium text-move-green hover:underline"
-      >
-        ← Back to 3PL List
-      </Link>
+      <div className="mb-2 text-xs text-neutral-muted">
+        <Link href="/dashboard" className="hover:underline">
+          Projects
+        </Link>
+        <span className="mx-1.5">/</span>
+        <Link href={`/projects/${id}`} className="hover:underline">
+          {clientRequirement.client_name}
+        </Link>
+        <span className="mx-1.5">/</span>
+        <span>{provider.company_name}</span>
+      </div>
 
       <div className="mt-2 mb-2 flex items-center gap-3">
         <h1 className="font-display text-2xl font-semibold text-move-navy">
@@ -135,10 +149,7 @@ export default async function ProviderDetailsPage({
       </p>
 
       <div className="flex flex-col gap-6">
-        <section className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-          <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
-            Company Info
-          </h2>
+        <SectionCard title="Company Info">
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <InfoField label="3PL Type" value={provider.provider_type} />
             <InfoField label="Website" value={provider.website} />
@@ -154,44 +165,20 @@ export default async function ProviderDetailsPage({
             <InfoField label="Email" value={provider.email} />
             <InfoField label="Phone" value={provider.phone} />
           </dl>
-        </section>
+        </SectionCard>
 
-        <section className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-          <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
-            Capabilities
-          </h2>
-          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-            {CAPABILITY_FIELDS.map((capability) => {
-              const enabled = Boolean(
+        <SectionCard title="Capabilities">
+          <ToggleChipDisplay
+            chips={CAPABILITY_FIELDS.map((capability) => ({
+              label: capability.label,
+              selected: Boolean(
                 provider[capability.key as keyof typeof provider],
-              );
-              return (
-                <li
-                  key={capability.key}
-                  className="flex items-center gap-2 text-sm"
-                >
-                  <span
-                    className={
-                      enabled
-                        ? "text-move-green"
-                        : "text-neutral-muted"
-                    }
-                  >
-                    {enabled ? "✓" : "—"}
-                  </span>
-                  <span className={enabled ? "text-move-navy" : "text-neutral-muted"}>
-                    {capability.label}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+              ),
+            }))}
+          />
+        </SectionCard>
 
-        <section className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-          <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
-            Commercial Terms
-          </h2>
+        <SectionCard title="Commercial Terms">
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <InfoField
               label="Onboarding Period"
@@ -211,12 +198,9 @@ export default async function ProviderDetailsPage({
               value={provider.other_specialization}
             />
           </dl>
-        </section>
+        </SectionCard>
 
-        <section className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-          <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
-            Costs (USD)
-          </h2>
+        <SectionCard title="Costs (USD)">
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <InfoField
               label="Storage Cost"
@@ -257,12 +241,9 @@ export default async function ProviderDetailsPage({
               value={USD_FORMATTER.format(totalCost)}
             />
           </div>
-        </section>
+        </SectionCard>
 
-        <section className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-          <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
-            Status &amp; Assessment
-          </h2>
+        <SectionCard title="Status & Assessment">
           <dl className="grid grid-cols-1 gap-4">
             <InfoField label="Key Strength" value={provider.key_strength} />
             <InfoField
@@ -286,7 +267,7 @@ export default async function ProviderDetailsPage({
             <InfoField label="Key Notes" value={provider.key_notes} />
             <InfoField label="Notes" value={provider.notes} />
           </dl>
-        </section>
+        </SectionCard>
       </div>
     </div>
   );
