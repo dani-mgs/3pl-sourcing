@@ -4,6 +4,8 @@ import { getUserRole } from "@/lib/auth/get-user-role";
 import { ReassignOwnerForm, type ProfileOption } from "./reassign-owner-form";
 import { RoleActionButton } from "./role-action-button";
 import { EditNameButton } from "./edit-name-button";
+import { CreateUserButton } from "./create-user-button";
+import { DeleteUserButton } from "./delete-user-button";
 
 export default async function AdministrationPage() {
   const role = await getUserRole();
@@ -37,6 +39,14 @@ export default async function AdministrationPage() {
   const ownerDisplayById = new Map(
     (profiles ?? []).map((p) => [p.id, p.first_name?.trim() || p.email]),
   );
+
+  const ownedClientCountById = new Map<string, number>();
+  for (const clientRequirement of clientRequirements ?? []) {
+    ownedClientCountById.set(
+      clientRequirement.owner_id,
+      (ownedClientCountById.get(clientRequirement.owner_id) ?? 0) + 1,
+    );
+  }
 
   return (
     <div className="max-w-6xl px-8 py-10">
@@ -83,9 +93,12 @@ export default async function AdministrationPage() {
         </section>
 
         <section className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-          <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">
-            User &amp; Role Management
-          </h2>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-display text-lg font-semibold text-move-navy">
+              User &amp; Role Management
+            </h2>
+            <CreateUserButton />
+          </div>
 
           {!profiles || profiles.length === 0 ? (
             <p className="py-4 text-sm text-neutral-muted">No users yet.</p>
@@ -111,21 +124,32 @@ export default async function AdministrationPage() {
                       displayLabel={profile.first_name?.trim() || profile.email}
                     />
                   </div>
-                  {profile.role === "admin" ? (
-                    profile.id !== currentUser?.id && (
+                  <div className="flex items-center gap-2">
+                    {profile.role === "admin" ? (
+                      profile.id !== currentUser?.id && (
+                        <RoleActionButton
+                          userId={profile.id}
+                          newRole="logistics_expert"
+                          label="Demote to Logistics Expert"
+                        />
+                      )
+                    ) : (
                       <RoleActionButton
                         userId={profile.id}
-                        newRole="logistics_expert"
-                        label="Demote to Logistics Expert"
+                        newRole="admin"
+                        label="Promote to Admin"
                       />
-                    )
-                  ) : (
-                    <RoleActionButton
-                      userId={profile.id}
-                      newRole="admin"
-                      label="Promote to Admin"
-                    />
-                  )}
+                    )}
+                    {profile.id !== currentUser?.id && (
+                      <DeleteUserButton
+                        userId={profile.id}
+                        email={profile.email}
+                        ownedClientCount={
+                          ownedClientCountById.get(profile.id) ?? 0
+                        }
+                      />
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
