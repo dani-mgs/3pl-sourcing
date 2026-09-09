@@ -1,7 +1,7 @@
 import { WizardSteps } from "@/components/wizard-steps";
-import { NewProjectEntry } from "./new-project-entry";
+import { ClientIntakeForm } from "../client-intake-form";
 
-export default function NewProjectPage() {
+export default function NewProjectManualPage() {
   return (
     <div className="max-w-5xl px-8 py-10">
       <div className="mb-8">
@@ -21,7 +21,11 @@ export default function NewProjectPage() {
         <WizardSteps currentStep={1} />
 
         <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-          <NewProjectEntry />
+          <ClientIntakeForm
+            clientRequirementId={null}
+            backHref="/dashboard/new"
+            backLabel="← Back"
+          />
         </div>
       </div>
     </div>

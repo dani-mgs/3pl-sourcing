@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
     "@base-ui/react": "^1.7.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.109.0",
@@ -16,7 +17,9 @@
     "clsx": "^2.1.1",
     "cn": "^0.2.5",
     "lucide-react": "^1.33.0",
+    "mammoth": "^1.12.2",
     "next": "16.3.1",
+    "pdf-parse": "^2.4.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "shadcn": "^4.18.0",
