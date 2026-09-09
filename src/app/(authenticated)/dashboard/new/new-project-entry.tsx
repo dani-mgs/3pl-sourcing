@@ -70,8 +70,6 @@ export function NewProjectEntry() {
 
         <form
           action={(formData) => {
-            const file = fileInputRef.current?.files?.[0];
-            setFileName(file?.name ?? null);
             handleUpload(formData);
           }}
           className="flex flex-col gap-4"
@@ -81,9 +79,24 @@ export function NewProjectEntry() {
             type="file"
             name="document"
             accept=".txt,.pdf,.docx"
-            required
-            className="rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy file:mr-3 file:rounded-lg file:border-0 file:bg-move-green file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
+            className="hidden"
+            onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
           />
+
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="px-4 py-2.5"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isPending}
+            >
+              Choose File
+            </Button>
+            <span className="text-sm text-neutral-muted">
+              {fileName ?? "No file chosen"}
+            </span>
+          </div>
 
           {uploadError && (
             <p className="text-sm text-danger">{uploadError}</p>
