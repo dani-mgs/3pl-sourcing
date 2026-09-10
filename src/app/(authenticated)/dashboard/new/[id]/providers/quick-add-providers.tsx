@@ -1,9 +1,13 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ProviderForm } from "@/components/provider-form";
+import { ProviderForm, type ProviderFormDefaults } from "@/components/provider-form";
+import {
+  EXISTING_PROVIDER_STORAGE_KEY,
+  type ExtractedExistingProvider,
+} from "@/lib/existing-provider-prefill";
 import {
   StatusBadge,
   type ProviderStatus,
@@ -12,6 +16,69 @@ import {
   quickAddProvider,
   removeQuickAddedProvider,
 } from "./actions";
+
+const BLANK_PROVIDER_DEFAULTS: ProviderFormDefaults = {
+  company_name: null,
+  provider_type: null,
+  website: null,
+  location: null,
+  footprint_source: null,
+  contact_person: null,
+  email: null,
+  phone: null,
+  receiving: false,
+  storage: false,
+  fulfillment: false,
+  dispatch: false,
+  adhoc_kitting_bundling: false,
+  adhoc_labelling: false,
+  returns: false,
+  annual_inventory_count: false,
+  cycle_count: false,
+  inventory_count_on_request: false,
+  one_time_system_setup: false,
+  lot_batch_expiry_tracking: false,
+  temp_controlled_storage: false,
+  retail_edi_compliance: false,
+  cross_docking: false,
+  b2b: false,
+  b2c: false,
+  onboarding_period_months: null,
+  virtual_tour_url: null,
+  billing_terms: null,
+  other_specialization: null,
+  is_incumbent: false,
+  storage_cost: null,
+  pick_pack_cost: null,
+  receiving_cost: null,
+  returns_cost: null,
+  status: null,
+  assessment_status: null,
+  key_strength: null,
+  key_weakness_risk: null,
+  important_assumption: null,
+  overall_assessment: null,
+  client_decision: null,
+  source_basis: null,
+  next_action: null,
+  key_notes: null,
+  notes: null,
+};
+
+function providerDefaultsFromExtraction(
+  extracted: ExtractedExistingProvider,
+): ProviderFormDefaults {
+  return {
+    ...BLANK_PROVIDER_DEFAULTS,
+    company_name: extracted.company_name,
+    location: extracted.location,
+    storage_cost: extracted.storage_cost,
+    pick_pack_cost: extracted.pick_pack_cost,
+    receiving_cost: extracted.receiving_cost,
+    returns_cost: extracted.returns_cost,
+    is_incumbent: true,
+  };
+}
 
 type QuickAddedProvider = {
   id: string;
@@ -36,8 +103,30 @@ export function QuickAddProviders({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
+  const [formDefaults, setFormDefaults] = useState<
+    ProviderFormDefaults | undefined
+  >(undefined);
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    // sessionStorage only exists client-side, so this has to run post-mount rather
+    // than as a lazy useState initializer — that would read a different value during
+    // SSR vs. client hydration and cause a mismatch. The one extra client-only render
+    // this causes is intentional.
+    try {
+      const raw = sessionStorage.getItem(EXISTING_PROVIDER_STORAGE_KEY);
+      if (!raw) return;
+      sessionStorage.removeItem(EXISTING_PROVIDER_STORAGE_KEY);
+      const extracted = JSON.parse(raw) as ExtractedExistingProvider;
+      if (!extracted.company_name?.trim()) return;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFormDefaults(providerDefaultsFromExtraction(extracted));
+      setFormKey((k) => k + 1);
+    } catch {
+      // malformed or unavailable sessionStorage — form just starts blank
+    }
+  }, []);
 
   function handleAddAnother(formData: FormData) {
     setError(null);
@@ -50,6 +139,7 @@ export function QuickAddProviders({
       if (result.provider) {
         setProviders((prev) => [...prev, result.provider!]);
       }
+      setFormDefaults(undefined);
       setFormKey((k) => k + 1);
     });
   }
@@ -104,6 +194,7 @@ export function QuickAddProviders({
           error={error ?? undefined}
           submitLabel="Add Another"
           pendingLabel="Adding..."
+          defaultValues={formDefaults}
         />
       </div>
 

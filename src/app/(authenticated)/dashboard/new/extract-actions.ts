@@ -3,9 +3,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { CHIP_SEPARATOR } from "@/lib/chip-value";
 import type { ClientIntakeFields } from "@/components/client-intake-form";
+import type { ExtractedExistingProvider } from "@/lib/existing-provider-prefill";
 
 export type ExtractIntakeState =
-  | { fields: ClientIntakeFields }
+  | { fields: ClientIntakeFields; existingProvider?: ExtractedExistingProvider }
   | { error: string };
 
 const CORE_COST_CATEGORY_PRESETS = [
@@ -66,6 +67,19 @@ const EXTRACT_TOOL = {
       fixed_comparison_principle: { type: "string" },
       important_limitation: { type: "string" },
       assumptions_data_limitations: { type: "string" },
+      existing_provider: {
+        type: "object",
+        description:
+          "Only include this if the document clearly names a specific existing, current, or incumbent 3PL provider the client already uses. Never invent a provider that isn't actually named. Leave individual cost fields out if a specific number isn't given, even when the provider's name is known.",
+        properties: {
+          company_name: { type: "string" },
+          location: { type: "string" },
+          storage_cost: { type: "number" },
+          pick_pack_cost: { type: "number" },
+          receiving_cost: { type: "number" },
+          returns_cost: { type: "number" },
+        },
+      },
     },
   },
 };
@@ -88,6 +102,14 @@ type ExtractedIntake = {
   fixed_comparison_principle?: string;
   important_limitation?: string;
   assumptions_data_limitations?: string;
+  existing_provider?: {
+    company_name?: string;
+    location?: string;
+    storage_cost?: number;
+    pick_pack_cost?: number;
+    receiving_cost?: number;
+    returns_cost?: number;
+  };
 };
 
 async function extractTextFromFile(file: File): Promise<string> {
@@ -149,6 +171,24 @@ function toClientIntakeFields(extracted: ExtractedIntake): ClientIntakeFields {
   };
 }
 
+function toExistingProvider(
+  extracted: ExtractedIntake,
+): ExtractedExistingProvider | undefined {
+  const provider = extracted.existing_provider;
+  if (!provider?.company_name?.trim()) {
+    return undefined;
+  }
+
+  return {
+    company_name: provider.company_name,
+    location: provider.location ?? null,
+    storage_cost: provider.storage_cost ?? null,
+    pick_pack_cost: provider.pick_pack_cost ?? null,
+    receiving_cost: provider.receiving_cost ?? null,
+    returns_cost: provider.returns_cost ?? null,
+  };
+}
+
 export async function extractClientIntake(
   formData: FormData,
 ): Promise<ExtractIntakeState> {
@@ -198,8 +238,10 @@ export async function extractClientIntake(
       return { error: "Couldn't extract any usable details from that document." };
     }
 
-    const fields = toClientIntakeFields(toolUse.input as ExtractedIntake);
-    return { fields };
+    const input = toolUse.input as ExtractedIntake;
+    const fields = toClientIntakeFields(input);
+    const existingProvider = toExistingProvider(input);
+    return existingProvider ? { fields, existingProvider } : { fields };
   } catch (err) {
     console.error("extractClientIntake: Anthropic API call failed", err);
     return { error: "Document extraction failed. You can still fill in the form manually." };

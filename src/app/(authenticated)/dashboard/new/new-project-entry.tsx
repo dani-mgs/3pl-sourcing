@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FileText, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ClientIntakeFields } from "@/components/client-intake-form";
+import { EXISTING_PROVIDER_STORAGE_KEY } from "@/lib/existing-provider-prefill";
 import { ClientIntakeForm } from "./client-intake-form";
 import { extractClientIntake } from "./extract-actions";
 
@@ -31,6 +32,18 @@ export function NewProjectEntry() {
       }
       setPrefilled(result.fields);
       setWasPrefilled(true);
+      try {
+        if (result.existingProvider) {
+          sessionStorage.setItem(
+            EXISTING_PROVIDER_STORAGE_KEY,
+            JSON.stringify(result.existingProvider),
+          );
+        } else {
+          sessionStorage.removeItem(EXISTING_PROVIDER_STORAGE_KEY);
+        }
+      } catch {
+        // sessionStorage unavailable (e.g. private browsing) — Step 2 just won't pre-fill
+      }
       setMode("form");
     });
   }
