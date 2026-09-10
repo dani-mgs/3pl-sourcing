@@ -75,18 +75,18 @@ export function EditClientInfoForm({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-xl border border-dashed border-neutral-border p-4">
+      <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+        <h2 className="font-display text-lg font-semibold text-move-navy">
+          Upload a Document to Update
+        </h2>
+        <p className="mt-1 text-sm text-neutral-muted">
+          Accepts .txt, .pdf, or .docx. We&apos;ll find anything new and merge
+          it in — existing fields you&apos;ve already filled in won&apos;t be
+          touched.
+        </p>
+
         {!uploadOpen ? (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium text-move-navy">
-                Upload a Document to Update
-              </p>
-              <p className="text-xs text-neutral-muted">
-                Pull new details from meeting notes (.txt, .pdf, .docx) into
-                this form — only the fields it mentions will change.
-              </p>
-            </div>
+          <div className="mt-4">
             <Button
               type="button"
               variant="outline"
@@ -106,7 +106,7 @@ export function EditClientInfoForm({
               setFileName(file?.name ?? null);
               handleUpload(formData);
             }}
-            className="flex flex-col gap-3"
+            className="mt-4 flex flex-col gap-4"
           >
             <input
               ref={fileInputRef}
@@ -161,27 +161,29 @@ export function EditClientInfoForm({
         )}
 
         {uploadNotice && (
-          <p className="mt-2 text-sm text-move-navy">{uploadNotice}</p>
+          <p className="mt-4 text-sm text-move-navy">{uploadNotice}</p>
         )}
       </div>
 
-      <form action={formAction} className="flex flex-col gap-6">
-        <ClientIntakeFormFields
-          key={formKey}
-          defaultValues={values}
-          highlightedFields={highlighted}
-        />
+      <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+        <form action={formAction} className="flex flex-col gap-6">
+          <ClientIntakeFormFields
+            key={formKey}
+            defaultValues={values}
+            highlightedFields={highlighted}
+          />
 
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={pending} className="px-4 py-2.5">
-            {pending ? "Saving..." : "Save"}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button type="submit" disabled={pending} className="px-4 py-2.5">
+              {pending ? "Saving..." : "Save"}
+            </Button>
 
-          {state.error && (
-            <span className="text-sm text-danger">{state.error}</span>
-          )}
-        </div>
-      </form>
+            {state.error && (
+              <span className="text-sm text-danger">{state.error}</span>
+            )}
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

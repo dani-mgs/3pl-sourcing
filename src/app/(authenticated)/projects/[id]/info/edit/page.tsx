@@ -41,12 +41,10 @@ export default async function EditClientInfoPage({
         Edit Client Info
       </h1>
 
-      <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-        <EditClientInfoForm
-          clientRequirementId={id}
-          defaultValues={clientRequirement as ClientIntakeFields}
-        />
-      </div>
+      <EditClientInfoForm
+        clientRequirementId={id}
+        defaultValues={clientRequirement as ClientIntakeFields}
+      />
     </div>
   );
 }
