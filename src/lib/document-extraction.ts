@@ -50,10 +50,17 @@ export type ExtractionToolResult<T> = { input: T } | { error: string };
 // Runs a single forced tool-use call against the extraction model and returns
 // the tool's raw structured input — callers map that into their own domain
 // type and apply their own field-omission rules.
+//
+// `currentValues`, when passed (merge-mode callers only), is the record's
+// existing field values, included alongside the document text so the model
+// can tell a genuinely new/changed value apart from a restatement of
+// something already on file — without it, the model has no way to know a
+// re-paraphrased mention of an unchanged fact isn't new information.
 export async function runExtractionTool<T>(
   text: string,
   tool: ExtractionTool,
   systemPrompt: string,
+  currentValues?: Record<string, unknown>,
 ): Promise<ExtractionToolResult<T>> {
   if (!process.env.ANTHROPIC_API_KEY) {
     console.error("runExtractionTool: ANTHROPIC_API_KEY is not configured");
@@ -63,11 +70,15 @@ export async function runExtractionTool<T>(
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+    const userContent = currentValues
+      ? `CURRENT RECORD VALUES (already on file — for comparison only, do not treat these as document content):\n${JSON.stringify(currentValues, null, 2)}\n\nDOCUMENT TEXT:\n${text.slice(0, 50_000)}`
+      : text.slice(0, 50_000);
+
     const response = await anthropic.messages.create({
       model: EXTRACTION_MODEL,
       max_tokens: 1024,
       system: systemPrompt,
-      messages: [{ role: "user", content: text.slice(0, 50_000) }],
+      messages: [{ role: "user", content: userContent }],
       tools: [tool],
       tool_choice: { type: "tool", name: tool.name },
     });

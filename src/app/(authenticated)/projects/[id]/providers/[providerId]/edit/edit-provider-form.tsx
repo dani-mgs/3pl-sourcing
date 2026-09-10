@@ -40,7 +40,7 @@ export function EditProviderForm({
     setUploadError(null);
     setUploadNotice(null);
     startExtraction(async () => {
-      const result = await extractProviderIntake(formData);
+      const result = await extractProviderIntake(formData, values);
       if ("error" in result) {
         setUploadError(result.error);
         return;

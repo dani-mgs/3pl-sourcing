@@ -44,7 +44,7 @@ export function EditClientInfoForm({
     setUploadError(null);
     setUploadNotice(null);
     startExtraction(async () => {
-      const result = await extractClientIntake(formData);
+      const result = await extractClientIntake(formData, values);
       if ("error" in result) {
         setUploadError(result.error);
         return;

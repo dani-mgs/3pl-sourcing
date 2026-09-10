@@ -17,3 +17,21 @@ export function mergeScalarField<T extends object, K extends keyof T>(
     changed.add(key as string);
   }
 }
+
+// Builds the "current values" context object sent to a merge-mode extraction
+// call: only the listed keys, and only where a value is already set — an
+// unset field on the record isn't useful context for "is this a restatement
+// of something we already have."
+export function pickNonNull<T extends object, K extends keyof T>(
+  source: T,
+  keys: K[],
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const key of keys) {
+    const value = source[key];
+    if (value != null && value !== false) {
+      result[key as string] = value;
+    }
+  }
+  return result;
+}

@@ -2,6 +2,7 @@
 
 import { CHIP_SEPARATOR } from "@/lib/chip-value";
 import { extractTextFromFile, runExtractionTool } from "@/lib/document-extraction";
+import { pickNonNull } from "@/lib/merge-fields";
 import type { ClientIntakeFields } from "@/components/client-intake-form";
 import type { ExtractedExistingProvider } from "@/lib/existing-provider-prefill";
 
@@ -159,8 +160,16 @@ function toExistingProvider(
   };
 }
 
+// currentValues, when passed, puts this call in "merge mode" (the Client
+// Info edit page updating an existing client) rather than blank-slate
+// prefill (the New Project wizard, which has no existing record to compare
+// against and always omits this argument).
+const MERGE_MODE_INSTRUCTION =
+  " You will be given the record's CURRENT values alongside the document. Only include a field in your output if the document states a genuinely NEW or CHANGED value for it. If the document merely restates or confirms something that matches the current value (even if phrased differently), omit that field entirely — do not return a re-paraphrased version of unchanged information.";
+
 export async function extractClientIntake(
   formData: FormData,
+  currentValues?: ClientIntakeFields,
 ): Promise<ExtractIntakeState> {
   const file = formData.get("document") as File | null;
 
@@ -185,10 +194,37 @@ export async function extractClientIntake(
     return { error: "No readable text was found in that file." };
   }
 
+  let systemPrompt =
+    "You extract structured client-intake data for a 3PL (third-party logistics) sourcing tool from freeform notes or documents. Only record a field if the source text clearly and confidently states it. Never guess, infer beyond what's written, or fabricate a value — omit any field that isn't clearly present. For the two list fields, only use values from the enum options given; do not invent new category labels.";
+
+  let currentValuesForPrompt: Record<string, unknown> | undefined;
+  if (currentValues) {
+    systemPrompt += MERGE_MODE_INSTRUCTION;
+    currentValuesForPrompt = pickNonNull(currentValues, [
+      "business_model",
+      "target_geography",
+      "avg_monthly_orders",
+      "peak_monthly_orders",
+      "latest_month_orders",
+      "avg_monthly_units",
+      "peak_monthly_units",
+      "benchmark_period",
+      "core_cost_categories",
+      "key_capability_needs",
+      "main_decision_focus",
+      "tech_integration_requirement",
+      "special_handling_requirement",
+      "fixed_comparison_principle",
+      "important_limitation",
+      "assumptions_data_limitations",
+    ]);
+  }
+
   const result = await runExtractionTool<ExtractedIntake>(
     text,
     EXTRACT_TOOL,
-    "You extract structured client-intake data for a 3PL (third-party logistics) sourcing tool from freeform notes or documents. Only record a field if the source text clearly and confidently states it. Never guess, infer beyond what's written, or fabricate a value — omit any field that isn't clearly present. For the two list fields, only use values from the enum options given; do not invent new category labels.",
+    systemPrompt,
+    currentValuesForPrompt,
   );
 
   if ("error" in result) {

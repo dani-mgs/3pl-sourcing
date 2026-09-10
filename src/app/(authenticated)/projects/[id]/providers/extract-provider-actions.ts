@@ -1,7 +1,9 @@
 "use server";
 
 import { extractTextFromFile, runExtractionTool } from "@/lib/document-extraction";
+import { pickNonNull } from "@/lib/merge-fields";
 import type { ExtractedProviderFields } from "@/lib/merge-provider-fields";
+import type { ProviderFormDefaults } from "@/components/provider-form";
 
 export type ExtractProviderState =
   | { fields: ExtractedProviderFields }
@@ -122,8 +124,16 @@ const EXTRACT_PROVIDER_TOOL = {
   },
 };
 
+// currentValues, when passed, puts this call in "merge mode" (the Edit 3PL
+// page updating an existing provider) rather than blank-slate prefill (the
+// Add 3PL "Start from Scratch"/upload choice screen, which has no existing
+// record to compare against and always omits this argument).
+const MERGE_MODE_INSTRUCTION =
+  " You will be given the record's CURRENT values alongside the document. Only include a field in your output if the document states a genuinely NEW or CHANGED value for it. If the document merely restates or confirms something that matches the current value (even if phrased differently), omit that field entirely — do not return a re-paraphrased version of unchanged information. For capability fields, this means: if a capability is already true on the current record and the document merely reconfirms it, omit that capability from your output rather than returning it again.";
+
 export async function extractProviderIntake(
   formData: FormData,
+  currentValues?: ProviderFormDefaults,
 ): Promise<ExtractProviderState> {
   const file = formData.get("document") as File | null;
 
@@ -148,10 +158,53 @@ export async function extractProviderIntake(
     return { error: "No readable text was found in that file." };
   }
 
+  let systemPrompt =
+    "You extract structured data about a specific 3PL (third-party logistics) provider from freeform notes or documents describing them. Only record a field if the source text clearly and confidently states it. Never guess, infer beyond what's written, or fabricate a value — omit any field that isn't clearly present. For capability fields (receiving, storage, fulfillment, and so on), only include the key — set to true — if the document explicitly confirms the provider offers that capability. Never include a capability set to false, and never guess a capability based on the provider's general type or industry. Do not extract or infer any pipeline status, assessment, or incumbent designation — those are not part of this schema.";
+
+  let currentValuesForPrompt: Record<string, unknown> | undefined;
+  if (currentValues) {
+    systemPrompt += MERGE_MODE_INSTRUCTION;
+    currentValuesForPrompt = pickNonNull(currentValues, [
+      "provider_type",
+      "website",
+      "location",
+      "footprint_source",
+      "contact_person",
+      "email",
+      "phone",
+      "receiving",
+      "storage",
+      "fulfillment",
+      "dispatch",
+      "adhoc_kitting_bundling",
+      "adhoc_labelling",
+      "returns",
+      "annual_inventory_count",
+      "cycle_count",
+      "inventory_count_on_request",
+      "one_time_system_setup",
+      "lot_batch_expiry_tracking",
+      "temp_controlled_storage",
+      "retail_edi_compliance",
+      "cross_docking",
+      "b2b",
+      "b2c",
+      "onboarding_period_months",
+      "virtual_tour_url",
+      "billing_terms",
+      "other_specialization",
+      "storage_cost",
+      "pick_pack_cost",
+      "receiving_cost",
+      "returns_cost",
+    ]);
+  }
+
   const result = await runExtractionTool<ExtractedProviderFields>(
     text,
     EXTRACT_PROVIDER_TOOL,
-    "You extract structured data about a specific 3PL (third-party logistics) provider from freeform notes or documents describing them. Only record a field if the source text clearly and confidently states it. Never guess, infer beyond what's written, or fabricate a value — omit any field that isn't clearly present. For capability fields (receiving, storage, fulfillment, and so on), only include the key — set to true — if the document explicitly confirms the provider offers that capability. Never include a capability set to false, and never guess a capability based on the provider's general type or industry. Do not extract or infer any pipeline status, assessment, or incumbent designation — those are not part of this schema.",
+    systemPrompt,
+    currentValuesForPrompt,
   );
 
   if ("error" in result) {
