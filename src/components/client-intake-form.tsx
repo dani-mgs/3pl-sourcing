@@ -53,6 +53,14 @@ export type ClientIntakeFields = {
   assumptions_data_limitations: string | null;
 };
 
+function UpdatedBadge() {
+  return (
+    <span className="ml-1.5 rounded-full bg-move-green/10 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-move-green uppercase">
+      Updated
+    </span>
+  );
+}
+
 function TextField({
   name,
   label,
@@ -61,6 +69,7 @@ function TextField({
   required,
   type = "text",
   disabled,
+  updated,
 }: {
   name: string;
   label: string;
@@ -69,11 +78,13 @@ function TextField({
   required?: boolean;
   type?: "text" | "number";
   disabled?: boolean;
+  updated?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={name} className={labelClass}>
         {label}
+        {updated && <UpdatedBadge />}
       </label>
       <input
         id={name}
@@ -85,7 +96,9 @@ function TextField({
         placeholder={placeholder}
         defaultValue={defaultValue ?? ""}
         disabled={disabled}
-        className={fieldClass}
+        className={
+          updated ? `${fieldClass} ring-2 ring-move-green/40` : fieldClass
+        }
       />
     </div>
   );
@@ -96,16 +109,19 @@ function TextAreaField({
   label,
   defaultValue,
   disabled,
+  updated,
 }: {
   name: string;
   label: string;
   defaultValue: string | null;
   disabled?: boolean;
+  updated?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={name} className={labelClass}>
         {label}
+        {updated && <UpdatedBadge />}
       </label>
       <textarea
         id={name}
@@ -113,7 +129,9 @@ function TextAreaField({
         rows={3}
         defaultValue={defaultValue ?? ""}
         disabled={disabled}
-        className={fieldClass}
+        className={
+          updated ? `${fieldClass} ring-2 ring-move-green/40` : fieldClass
+        }
       />
     </div>
   );
@@ -125,12 +143,14 @@ function PresetChipPicker({
   presets,
   defaultValue,
   disabled,
+  updated,
 }: {
   name: string;
   label: string;
   presets: string[];
   defaultValue: string | null;
   disabled?: boolean;
+  updated?: boolean;
 }) {
   const initialTokens = parseChipValue(defaultValue);
 
@@ -173,7 +193,10 @@ function PresetChipPicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <label className={labelClass}>{label}</label>
+      <label className={labelClass}>
+        {label}
+        {updated && <UpdatedBadge />}
+      </label>
 
       <div className="flex flex-wrap gap-2">
         {presets.map((option) => {
@@ -244,10 +267,15 @@ function PresetChipPicker({
 export function ClientIntakeFormFields({
   defaultValues,
   disabled,
+  highlightedFields,
 }: {
   defaultValues?: ClientIntakeFields;
   disabled?: boolean;
+  highlightedFields?: Set<string>;
 }) {
+  const updated = (field: keyof ClientIntakeFields) =>
+    highlightedFields?.has(field) ?? false;
+
   return (
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -258,6 +286,7 @@ export function ClientIntakeFormFields({
           placeholder="e.g. Acme Corp"
           required
           disabled={disabled}
+          updated={updated("client_name")}
         />
         <TextField
           name="business_model"
@@ -265,6 +294,7 @@ export function ClientIntakeFormFields({
           defaultValue={defaultValues?.business_model ?? null}
           placeholder="e.g. B2C DTC"
           disabled={disabled}
+          updated={updated("business_model")}
         />
         <TextField
           name="target_geography"
@@ -272,6 +302,7 @@ export function ClientIntakeFormFields({
           defaultValue={defaultValues?.target_geography ?? null}
           placeholder="e.g. Los Angeles, USA"
           disabled={disabled}
+          updated={updated("target_geography")}
         />
         <TextField
           name="avg_monthly_orders"
@@ -279,6 +310,7 @@ export function ClientIntakeFormFields({
           type="number"
           defaultValue={defaultValues?.avg_monthly_orders ?? null}
           disabled={disabled}
+          updated={updated("avg_monthly_orders")}
         />
         <TextField
           name="peak_monthly_orders"
@@ -286,6 +318,7 @@ export function ClientIntakeFormFields({
           type="number"
           defaultValue={defaultValues?.peak_monthly_orders ?? null}
           disabled={disabled}
+          updated={updated("peak_monthly_orders")}
         />
         <TextField
           name="latest_month_orders"
@@ -293,6 +326,7 @@ export function ClientIntakeFormFields({
           type="number"
           defaultValue={defaultValues?.latest_month_orders ?? null}
           disabled={disabled}
+          updated={updated("latest_month_orders")}
         />
         <TextField
           name="avg_monthly_units"
@@ -300,6 +334,7 @@ export function ClientIntakeFormFields({
           type="number"
           defaultValue={defaultValues?.avg_monthly_units ?? null}
           disabled={disabled}
+          updated={updated("avg_monthly_units")}
         />
         <TextField
           name="peak_monthly_units"
@@ -307,6 +342,7 @@ export function ClientIntakeFormFields({
           type="number"
           defaultValue={defaultValues?.peak_monthly_units ?? null}
           disabled={disabled}
+          updated={updated("peak_monthly_units")}
         />
         <TextField
           name="benchmark_period"
@@ -314,6 +350,7 @@ export function ClientIntakeFormFields({
           defaultValue={defaultValues?.benchmark_period ?? null}
           placeholder="e.g. Feb 1-15 2027"
           disabled={disabled}
+          updated={updated("benchmark_period")}
         />
       </div>
 
@@ -323,6 +360,7 @@ export function ClientIntakeFormFields({
         presets={CORE_COST_CATEGORY_PRESETS}
         defaultValue={defaultValues?.core_cost_categories ?? null}
         disabled={disabled}
+        updated={updated("core_cost_categories")}
       />
       <PresetChipPicker
         name="key_capability_needs"
@@ -330,6 +368,7 @@ export function ClientIntakeFormFields({
         presets={KEY_CAPABILITY_PRESETS}
         defaultValue={defaultValues?.key_capability_needs ?? null}
         disabled={disabled}
+        updated={updated("key_capability_needs")}
       />
 
       <TextAreaField
@@ -337,36 +376,42 @@ export function ClientIntakeFormFields({
         label="Main Decision Focus"
         defaultValue={defaultValues?.main_decision_focus ?? null}
         disabled={disabled}
+        updated={updated("main_decision_focus")}
       />
       <TextAreaField
         name="tech_integration_requirement"
         label="Technology/Integration Requirement"
         defaultValue={defaultValues?.tech_integration_requirement ?? null}
         disabled={disabled}
+        updated={updated("tech_integration_requirement")}
       />
       <TextAreaField
         name="special_handling_requirement"
         label="Special Handling Requirement"
         defaultValue={defaultValues?.special_handling_requirement ?? null}
         disabled={disabled}
+        updated={updated("special_handling_requirement")}
       />
       <TextAreaField
         name="fixed_comparison_principle"
         label="Fixed Comparison Principle"
         defaultValue={defaultValues?.fixed_comparison_principle ?? null}
         disabled={disabled}
+        updated={updated("fixed_comparison_principle")}
       />
       <TextAreaField
         name="important_limitation"
         label="Important Limitation"
         defaultValue={defaultValues?.important_limitation ?? null}
         disabled={disabled}
+        updated={updated("important_limitation")}
       />
       <TextAreaField
         name="assumptions_data_limitations"
         label="Assumptions/Data Limitations"
         defaultValue={defaultValues?.assumptions_data_limitations ?? null}
         disabled={disabled}
+        updated={updated("assumptions_data_limitations")}
       />
     </>
   );

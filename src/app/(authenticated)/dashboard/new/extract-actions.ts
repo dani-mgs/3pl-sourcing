@@ -5,6 +5,17 @@ import { CHIP_SEPARATOR } from "@/lib/chip-value";
 import type { ClientIntakeFields } from "@/components/client-intake-form";
 import type { ExtractedExistingProvider } from "@/lib/existing-provider-prefill";
 
+// pdfjs-dist (which pdf-parse wraps) always parses on a "worker". In Node it
+// disables real worker threads and instead needs a `globalThis.pdfjsWorker`
+// global — normally populated by dynamically import()-ing its own worker
+// module, which is what "Setting up fake worker failed: Cannot find module
+// '.../pdf.worker.mjs'" is: that dynamic import gets mangled by Turbopack's
+// server bundle (pointing `workerSrc` at the real on-disk file doesn't help —
+// Turbopack rewrites that import too once it recognizes the path). Statically
+// importing the worker module ourselves sets the same global as a side effect,
+// so pdfjs-dist finds it already populated and never attempts that import at all.
+import "pdfjs-dist/legacy/build/pdf.worker.mjs";
+
 export type ExtractIntakeState =
   | { fields: ClientIntakeFields; existingProvider?: ExtractedExistingProvider }
   | { error: string };
