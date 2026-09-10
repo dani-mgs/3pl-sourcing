@@ -37,13 +37,11 @@ export default async function EditProviderPage({
         Edit 3PL
       </h1>
 
-      <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-        <EditProviderForm
-          clientRequirementId={id}
-          providerId={providerId}
-          defaultValues={provider as ProviderFormDefaults}
-        />
-      </div>
+      <EditProviderForm
+        clientRequirementId={id}
+        providerId={providerId}
+        defaultValues={provider as ProviderFormDefaults}
+      />
     </div>
   );
 }

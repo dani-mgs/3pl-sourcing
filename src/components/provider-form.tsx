@@ -104,6 +104,16 @@ const checkboxLabelClass = "flex items-center gap-2 text-sm text-move-navy";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const updatedFieldClass = "ring-2 ring-move-green/40";
+
+function UpdatedBadge() {
+  return (
+    <span className="ml-1.5 rounded-full bg-move-green/10 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-move-green uppercase">
+      Updated
+    </span>
+  );
+}
+
 export type ProviderFormDefaults = {
   company_name: string | null;
   provider_type: string | null;
@@ -152,10 +162,60 @@ export type ProviderFormDefaults = {
   notes: string | null;
 };
 
+export const BLANK_PROVIDER_DEFAULTS: ProviderFormDefaults = {
+  company_name: null,
+  provider_type: null,
+  website: null,
+  location: null,
+  footprint_source: null,
+  contact_person: null,
+  email: null,
+  phone: null,
+  receiving: false,
+  storage: false,
+  fulfillment: false,
+  dispatch: false,
+  adhoc_kitting_bundling: false,
+  adhoc_labelling: false,
+  returns: false,
+  annual_inventory_count: false,
+  cycle_count: false,
+  inventory_count_on_request: false,
+  one_time_system_setup: false,
+  lot_batch_expiry_tracking: false,
+  temp_controlled_storage: false,
+  retail_edi_compliance: false,
+  cross_docking: false,
+  b2b: false,
+  b2c: false,
+  onboarding_period_months: null,
+  virtual_tour_url: null,
+  billing_terms: null,
+  other_specialization: null,
+  is_incumbent: false,
+  storage_cost: null,
+  pick_pack_cost: null,
+  receiving_cost: null,
+  returns_cost: null,
+  status: null,
+  assessment_status: null,
+  key_strength: null,
+  key_weakness_risk: null,
+  important_assumption: null,
+  overall_assessment: null,
+  client_decision: null,
+  source_basis: null,
+  next_action: null,
+  key_notes: null,
+  notes: null,
+};
+
 function CapabilityChips({
   defaultValues,
+  highlightedFields,
 }: {
   defaultValues?: ProviderFormDefaults;
+  highlightedFields?: Set<string>;
 }) {
   const [values, setValues] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(
@@ -192,6 +252,7 @@ function CapabilityChips({
     <div className="flex flex-wrap gap-2">
       {CAPABILITY_FIELDS.map((capability) => {
         const isSelected = values[capability.name];
+        const isUpdated = highlightedFields?.has(capability.name) ?? false;
         return (
           <div key={capability.name}>
             <button
@@ -199,9 +260,10 @@ function CapabilityChips({
               onClick={() => toggle(capability.name)}
               aria-pressed={isSelected}
               className={
-                isSelected
+                (isSelected
                   ? "rounded-full bg-move-green px-3 py-1 text-xs font-medium text-white"
-                  : "rounded-full border border-neutral-border px-3 py-1 text-xs font-medium text-move-navy hover:border-move-green"
+                  : "rounded-full border border-neutral-border px-3 py-1 text-xs font-medium text-move-navy hover:border-move-green") +
+                (isUpdated ? " ring-2 ring-offset-1 ring-move-green" : "")
               }
             >
               {capability.label}
@@ -308,6 +370,7 @@ export function ProviderForm({
   submitLabel,
   pendingLabel,
   formRef,
+  highlightedFields,
 }: {
   formAction: (formData: FormData) => void;
   pending: boolean;
@@ -316,7 +379,9 @@ export function ProviderForm({
   submitLabel: string;
   pendingLabel: string;
   formRef?: RefObject<HTMLFormElement | null>;
+  highlightedFields?: Set<string>;
 }) {
+  const isUpdated = (field: string) => highlightedFields?.has(field) ?? false;
   const { countryCode: defaultCountryCode, digits: defaultDigits } =
     splitPhone(defaultValues?.phone);
 
@@ -387,6 +452,7 @@ export function ProviderForm({
           <div className="flex flex-col gap-1">
             <label htmlFor="provider_type" className={labelClass}>
               3PL Type
+              {isUpdated("provider_type") && <UpdatedBadge />}
             </label>
             <input
               id="provider_type"
@@ -395,13 +461,18 @@ export function ProviderForm({
               placeholder="e.g. Asset-based 3PL"
               value={values.provider_type}
               onChange={(e) => updateField("provider_type", e.target.value)}
-              className={fieldClass}
+              className={
+                isUpdated("provider_type")
+                  ? `${fieldClass} ${updatedFieldClass}`
+                  : fieldClass
+              }
             />
           </div>
 
           <div className="flex flex-col gap-1">
             <label htmlFor="website" className={labelClass}>
               Website
+              {isUpdated("website") && <UpdatedBadge />}
             </label>
             <input
               id="website"
@@ -410,13 +481,18 @@ export function ProviderForm({
               placeholder="e.g. acmelogistics.com"
               value={values.website}
               onChange={(e) => updateField("website", e.target.value)}
-              className={fieldClass}
+              className={
+                isUpdated("website")
+                  ? `${fieldClass} ${updatedFieldClass}`
+                  : fieldClass
+              }
             />
           </div>
 
           <div className="flex flex-col gap-1">
             <label htmlFor="location" className={labelClass}>
               Location
+              {isUpdated("location") && <UpdatedBadge />}
             </label>
             <input
               id="location"
@@ -425,13 +501,18 @@ export function ProviderForm({
               placeholder="e.g. Los Angeles, USA"
               value={values.location}
               onChange={(e) => updateField("location", e.target.value)}
-              className={fieldClass}
+              className={
+                isUpdated("location")
+                  ? `${fieldClass} ${updatedFieldClass}`
+                  : fieldClass
+              }
             />
           </div>
 
           <div className="flex flex-col gap-1">
             <label htmlFor="footprint_source" className={labelClass}>
               Footprint Source
+              {isUpdated("footprint_source") && <UpdatedBadge />}
             </label>
             <input
               id="footprint_source"
@@ -442,13 +523,18 @@ export function ProviderForm({
               onChange={(e) =>
                 updateField("footprint_source", e.target.value)
               }
-              className={fieldClass}
+              className={
+                isUpdated("footprint_source")
+                  ? `${fieldClass} ${updatedFieldClass}`
+                  : fieldClass
+              }
             />
           </div>
 
           <div className="flex flex-col gap-1">
             <label htmlFor="contact_person" className={labelClass}>
               Contact Person
+              {isUpdated("contact_person") && <UpdatedBadge />}
             </label>
             <input
               id="contact_person"
@@ -457,13 +543,18 @@ export function ProviderForm({
               placeholder="e.g. Jane Smith"
               value={values.contact_person}
               onChange={(e) => updateField("contact_person", e.target.value)}
-              className={fieldClass}
+              className={
+                isUpdated("contact_person")
+                  ? `${fieldClass} ${updatedFieldClass}`
+                  : fieldClass
+              }
             />
           </div>
 
           <div className="flex flex-col gap-1">
             <label htmlFor="email" className={labelClass}>
               Email
+              {isUpdated("email") && <UpdatedBadge />}
             </label>
             <input
               id="email"
@@ -472,7 +563,11 @@ export function ProviderForm({
               placeholder="e.g. jane@acmelogistics.com"
               value={values.email}
               onChange={(e) => updateField("email", e.target.value)}
-              className={fieldClass}
+              className={
+                isUpdated("email")
+                  ? `${fieldClass} ${updatedFieldClass}`
+                  : fieldClass
+              }
               onBlur={(e) => {
                 const value = e.target.value.trim();
                 setEmailError(
@@ -488,6 +583,7 @@ export function ProviderForm({
           <div className="flex flex-col gap-1">
             <label htmlFor="phone_number" className={labelClass}>
               Phone
+              {isUpdated("phone") && <UpdatedBadge />}
             </label>
             <div className="flex gap-2">
               <Select
@@ -519,7 +615,11 @@ export function ProviderForm({
                 onChange={(e) =>
                   setPhoneDigits(e.target.value.replace(/\D/g, ""))
                 }
-                className={`${fieldClass} flex-1`}
+                className={
+                  isUpdated("phone")
+                    ? `${fieldClass} ${updatedFieldClass} flex-1`
+                    : `${fieldClass} flex-1`
+                }
               />
             </div>
           </div>
@@ -528,7 +628,10 @@ export function ProviderForm({
 
       <section className="flex flex-col gap-4">
         <h3 className={sectionTitleClass}>Capabilities</h3>
-        <CapabilityChips defaultValues={defaultValues} />
+        <CapabilityChips
+          defaultValues={defaultValues}
+          highlightedFields={highlightedFields}
+        />
       </section>
 
       <section className="flex flex-col gap-4">
@@ -537,6 +640,7 @@ export function ProviderForm({
           <div className="flex flex-col gap-1">
             <label htmlFor="onboarding_period_months" className={labelClass}>
               Onboarding Period (months)
+              {isUpdated("onboarding_period_months") && <UpdatedBadge />}
             </label>
             <input
               id="onboarding_period_months"
@@ -548,13 +652,18 @@ export function ProviderForm({
               onChange={(e) =>
                 updateField("onboarding_period_months", e.target.value)
               }
-              className={fieldClass}
+              className={
+                isUpdated("onboarding_period_months")
+                  ? `${fieldClass} ${updatedFieldClass}`
+                  : fieldClass
+              }
             />
           </div>
 
           <div className="flex flex-col gap-1">
             <label htmlFor="virtual_tour_url" className={labelClass}>
               Virtual Tour URL
+              {isUpdated("virtual_tour_url") && <UpdatedBadge />}
             </label>
             <input
               id="virtual_tour_url"
@@ -565,13 +674,18 @@ export function ProviderForm({
               onChange={(e) =>
                 updateField("virtual_tour_url", e.target.value)
               }
-              className={fieldClass}
+              className={
+                isUpdated("virtual_tour_url")
+                  ? `${fieldClass} ${updatedFieldClass}`
+                  : fieldClass
+              }
             />
           </div>
 
           <div className="flex flex-col gap-1">
             <label htmlFor="billing_terms" className={labelClass}>
               Billing Terms
+              {isUpdated("billing_terms") && <UpdatedBadge />}
             </label>
             <input
               id="billing_terms"
@@ -580,13 +694,18 @@ export function ProviderForm({
               placeholder="e.g. Net 30"
               value={values.billing_terms}
               onChange={(e) => updateField("billing_terms", e.target.value)}
-              className={fieldClass}
+              className={
+                isUpdated("billing_terms")
+                  ? `${fieldClass} ${updatedFieldClass}`
+                  : fieldClass
+              }
             />
           </div>
 
           <div className="flex flex-col gap-1">
             <label htmlFor="other_specialization" className={labelClass}>
               Other Specialization
+              {isUpdated("other_specialization") && <UpdatedBadge />}
             </label>
             <input
               id="other_specialization"
@@ -596,7 +715,11 @@ export function ProviderForm({
               onChange={(e) =>
                 updateField("other_specialization", e.target.value)
               }
-              className={fieldClass}
+              className={
+                isUpdated("other_specialization")
+                  ? `${fieldClass} ${updatedFieldClass}`
+                  : fieldClass
+              }
             />
           </div>
         </div>
@@ -628,6 +751,7 @@ export function ProviderForm({
           <div className="flex flex-col gap-1">
             <label htmlFor="storage_cost" className={labelClass}>
               Storage Cost
+              {isUpdated("storage_cost") && <UpdatedBadge />}
             </label>
             <div className="flex items-center gap-2">
               <span className="text-sm text-neutral-muted">$</span>
@@ -639,7 +763,11 @@ export function ProviderForm({
                 step="0.01"
                 value={values.storage_cost}
                 onChange={(e) => updateField("storage_cost", e.target.value)}
-                className={`${fieldClass} flex-1`}
+                className={
+                  isUpdated("storage_cost")
+                    ? `${fieldClass} ${updatedFieldClass} flex-1`
+                    : `${fieldClass} flex-1`
+                }
               />
             </div>
           </div>
@@ -647,6 +775,7 @@ export function ProviderForm({
           <div className="flex flex-col gap-1">
             <label htmlFor="pick_pack_cost" className={labelClass}>
               Pick &amp; Pack Cost
+              {isUpdated("pick_pack_cost") && <UpdatedBadge />}
             </label>
             <div className="flex items-center gap-2">
               <span className="text-sm text-neutral-muted">$</span>
@@ -660,7 +789,11 @@ export function ProviderForm({
                 onChange={(e) =>
                   updateField("pick_pack_cost", e.target.value)
                 }
-                className={`${fieldClass} flex-1`}
+                className={
+                  isUpdated("pick_pack_cost")
+                    ? `${fieldClass} ${updatedFieldClass} flex-1`
+                    : `${fieldClass} flex-1`
+                }
               />
             </div>
           </div>
@@ -668,6 +801,7 @@ export function ProviderForm({
           <div className="flex flex-col gap-1">
             <label htmlFor="receiving_cost" className={labelClass}>
               Receiving Cost
+              {isUpdated("receiving_cost") && <UpdatedBadge />}
             </label>
             <div className="flex items-center gap-2">
               <span className="text-sm text-neutral-muted">$</span>
@@ -681,7 +815,11 @@ export function ProviderForm({
                 onChange={(e) =>
                   updateField("receiving_cost", e.target.value)
                 }
-                className={`${fieldClass} flex-1`}
+                className={
+                  isUpdated("receiving_cost")
+                    ? `${fieldClass} ${updatedFieldClass} flex-1`
+                    : `${fieldClass} flex-1`
+                }
               />
             </div>
           </div>
@@ -689,6 +827,7 @@ export function ProviderForm({
           <div className="flex flex-col gap-1">
             <label htmlFor="returns_cost" className={labelClass}>
               Returns Cost
+              {isUpdated("returns_cost") && <UpdatedBadge />}
             </label>
             <div className="flex items-center gap-2">
               <span className="text-sm text-neutral-muted">$</span>
@@ -700,7 +839,11 @@ export function ProviderForm({
                 step="0.01"
                 value={values.returns_cost}
                 onChange={(e) => updateField("returns_cost", e.target.value)}
-                className={`${fieldClass} flex-1`}
+                className={
+                  isUpdated("returns_cost")
+                    ? `${fieldClass} ${updatedFieldClass} flex-1`
+                    : `${fieldClass} flex-1`
+                }
               />
             </div>
           </div>

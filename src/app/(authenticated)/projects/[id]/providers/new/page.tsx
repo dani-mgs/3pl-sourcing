@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { NewProviderForm } from "./new-provider-form";
+import { AddProviderEntry } from "./add-provider-entry";
 
 export default async function NewProviderPage({
   params,
@@ -34,7 +34,7 @@ export default async function NewProviderPage({
       </h1>
 
       <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-        <NewProviderForm clientRequirementId={id} />
+        <AddProviderEntry clientRequirementId={id} />
       </div>
     </div>
   );

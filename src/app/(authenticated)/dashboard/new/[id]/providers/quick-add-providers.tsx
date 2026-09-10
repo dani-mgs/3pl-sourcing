@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ProviderForm, type ProviderFormDefaults } from "@/components/provider-form";
+import {
+  BLANK_PROVIDER_DEFAULTS,
+  ProviderForm,
+  type ProviderFormDefaults,
+} from "@/components/provider-form";
 import {
   EXISTING_PROVIDER_STORAGE_KEY,
   type ExtractedExistingProvider,
@@ -16,54 +20,6 @@ import {
   quickAddProvider,
   removeQuickAddedProvider,
 } from "./actions";
-
-const BLANK_PROVIDER_DEFAULTS: ProviderFormDefaults = {
-  company_name: null,
-  provider_type: null,
-  website: null,
-  location: null,
-  footprint_source: null,
-  contact_person: null,
-  email: null,
-  phone: null,
-  receiving: false,
-  storage: false,
-  fulfillment: false,
-  dispatch: false,
-  adhoc_kitting_bundling: false,
-  adhoc_labelling: false,
-  returns: false,
-  annual_inventory_count: false,
-  cycle_count: false,
-  inventory_count_on_request: false,
-  one_time_system_setup: false,
-  lot_batch_expiry_tracking: false,
-  temp_controlled_storage: false,
-  retail_edi_compliance: false,
-  cross_docking: false,
-  b2b: false,
-  b2c: false,
-  onboarding_period_months: null,
-  virtual_tour_url: null,
-  billing_terms: null,
-  other_specialization: null,
-  is_incumbent: false,
-  storage_cost: null,
-  pick_pack_cost: null,
-  receiving_cost: null,
-  returns_cost: null,
-  status: null,
-  assessment_status: null,
-  key_strength: null,
-  key_weakness_risk: null,
-  important_assumption: null,
-  overall_assessment: null,
-  client_decision: null,
-  source_basis: null,
-  next_action: null,
-  key_notes: null,
-  notes: null,
-};
 
 function providerDefaultsFromExtraction(
   extracted: ExtractedExistingProvider,

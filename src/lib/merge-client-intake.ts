@@ -1,4 +1,5 @@
 import { CHIP_SEPARATOR, parseChipValue } from "./chip-value";
+import { mergeScalarField } from "./merge-fields";
 import type { ClientIntakeFields } from "@/components/client-intake-form";
 
 type ChipField = "core_cost_categories" | "key_capability_needs";
@@ -7,21 +8,6 @@ export type MergeResult = {
   merged: ClientIntakeFields;
   changed: Set<string>;
 };
-
-function mergeScalar<K extends keyof ClientIntakeFields>(
-  current: ClientIntakeFields,
-  extracted: ClientIntakeFields,
-  key: K,
-  merged: ClientIntakeFields,
-  changed: Set<string>,
-) {
-  const value = extracted[key];
-  if (value == null) return;
-  if (value !== current[key]) {
-    merged[key] = value;
-    changed.add(key);
-  }
-}
 
 function mergeChips(
   current: ClientIntakeFields,
@@ -64,40 +50,40 @@ export function mergeClientIntakeFields(
   const merged: ClientIntakeFields = { ...current };
   const changed = new Set<string>();
 
-  mergeScalar(current, extracted, "business_model", merged, changed);
-  mergeScalar(current, extracted, "target_geography", merged, changed);
-  mergeScalar(current, extracted, "avg_monthly_orders", merged, changed);
-  mergeScalar(current, extracted, "peak_monthly_orders", merged, changed);
-  mergeScalar(current, extracted, "latest_month_orders", merged, changed);
-  mergeScalar(current, extracted, "avg_monthly_units", merged, changed);
-  mergeScalar(current, extracted, "peak_monthly_units", merged, changed);
-  mergeScalar(current, extracted, "benchmark_period", merged, changed);
+  mergeScalarField(current, extracted, "business_model", merged, changed);
+  mergeScalarField(current, extracted, "target_geography", merged, changed);
+  mergeScalarField(current, extracted, "avg_monthly_orders", merged, changed);
+  mergeScalarField(current, extracted, "peak_monthly_orders", merged, changed);
+  mergeScalarField(current, extracted, "latest_month_orders", merged, changed);
+  mergeScalarField(current, extracted, "avg_monthly_units", merged, changed);
+  mergeScalarField(current, extracted, "peak_monthly_units", merged, changed);
+  mergeScalarField(current, extracted, "benchmark_period", merged, changed);
   mergeChips(current, extracted, "core_cost_categories", merged, changed);
   mergeChips(current, extracted, "key_capability_needs", merged, changed);
-  mergeScalar(current, extracted, "main_decision_focus", merged, changed);
-  mergeScalar(
+  mergeScalarField(current, extracted, "main_decision_focus", merged, changed);
+  mergeScalarField(
     current,
     extracted,
     "tech_integration_requirement",
     merged,
     changed,
   );
-  mergeScalar(
+  mergeScalarField(
     current,
     extracted,
     "special_handling_requirement",
     merged,
     changed,
   );
-  mergeScalar(
+  mergeScalarField(
     current,
     extracted,
     "fixed_comparison_principle",
     merged,
     changed,
   );
-  mergeScalar(current, extracted, "important_limitation", merged, changed);
-  mergeScalar(
+  mergeScalarField(current, extracted, "important_limitation", merged, changed);
+  mergeScalarField(
     current,
     extracted,
     "assumptions_data_limitations",

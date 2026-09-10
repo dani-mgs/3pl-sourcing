@@ -1,13 +1,15 @@
 "use client";
 
 import { useActionState } from "react";
-import { ProviderForm } from "@/components/provider-form";
+import { ProviderForm, type ProviderFormDefaults } from "@/components/provider-form";
 import { createProvider, type CreateProviderState } from "./actions";
 
 export function NewProviderForm({
   clientRequirementId,
+  defaultValues,
 }: {
   clientRequirementId: string;
+  defaultValues?: ProviderFormDefaults;
 }) {
   const [state, formAction, pending] = useActionState<
     CreateProviderState,
@@ -23,6 +25,7 @@ export function NewProviderForm({
       formAction={formAction}
       pending={pending}
       error={state.error}
+      defaultValues={defaultValues}
       submitLabel="Add 3PL"
       pendingLabel="Adding..."
     />
