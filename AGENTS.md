@@ -9,6 +9,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 <!-- END:nextjs-agent-rules -->
 
 
+## Secrets
+Never read, cat, source, print, or load .env or .env.local files, in any way, for any reason. To check whether a variable is configured, check only whether its NAME exists (e.g. grep for the variable name and print only the name, never the value). If a task seems to require a secret's value, stop and ask the user instead.
+
 ## Database Changes
 Never run raw SQL directly against Supabase (dashboard or one-off commands).
 Always follow this flow:
