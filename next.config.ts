@@ -19,6 +19,16 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
+        source: "/3pl-sourcing/projects/:id/providers/:providerId/rates",
+        destination: "/3pl-sourcing/projects/:id/providers/:providerId",
+        permanent: true,
+      },
+      {
+        source: "/projects/:id/providers/:providerId/rates",
+        destination: "/3pl-sourcing/projects/:id/providers/:providerId",
+        permanent: true,
+      },
+      {
         source: "/dashboard/:path*",
         destination: "/3pl-sourcing/:path*",
         permanent: true,

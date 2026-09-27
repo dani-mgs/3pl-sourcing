@@ -2,6 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  RATE_DETAILS_NOT_SAVED_ERROR,
+  rateDetailsFromForm,
+  saveRateDetails,
+} from "@/lib/rate-details";
 
 export type UpdateProviderState = { error?: string };
 
@@ -126,6 +131,16 @@ export async function updateProvider(
 
   if (!data || data.length === 0) {
     return { error: "You don't have permission to make this change." };
+  }
+
+  const ratesSaved = await saveRateDetails(
+    supabase,
+    providerId,
+    rateDetailsFromForm(formData),
+    "update",
+  );
+  if (!ratesSaved) {
+    return { error: RATE_DETAILS_NOT_SAVED_ERROR };
   }
 
   redirect(`/3pl-sourcing/projects/${clientRequirementId}/providers/${providerId}`);

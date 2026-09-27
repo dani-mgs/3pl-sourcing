@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { ProviderForm, type ProviderFormDefaults } from "@/components/provider-form";
+import { updateProvider } from "../[providerId]/edit/actions";
 import { createProvider, type CreateProviderState } from "./actions";
 
 export function NewProviderForm({
@@ -14,11 +15,19 @@ export function NewProviderForm({
   const [state, formAction, pending] = useActionState<
     CreateProviderState,
     FormData
-  >(
-    async (_prevState, formData) =>
-      createProvider(clientRequirementId, formData),
-    {},
-  );
+  >(async (prevState, formData) => {
+    // The 3PL already exists (only its rate details failed last time), so
+    // retry as an update of that row instead of inserting a duplicate.
+    if (prevState.savedProviderId) {
+      const result = await updateProvider(
+        clientRequirementId,
+        prevState.savedProviderId,
+        formData,
+      );
+      return { ...result, savedProviderId: prevState.savedProviderId };
+    }
+    return createProvider(clientRequirementId, formData);
+  }, {});
 
   return (
     <ProviderForm

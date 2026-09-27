@@ -14,6 +14,7 @@ import {
 } from "../status-badge";
 import { DeleteProviderButton } from "./delete-provider-button";
 import { formatCurrency } from "@/lib/currency";
+import { RATE_FIELDS, RATE_SELECT, type RateDetails } from "@/lib/rate-details";
 
 const CAPABILITY_FIELDS: { key: string; label: string }[] = [
   { key: "receiving", label: "Receiving" },
@@ -57,7 +58,11 @@ export default async function ProviderDetailsPage({
 
   const supabase = await createClient();
 
-  const [{ data: provider }, { data: clientRequirement }] = await Promise.all([
+  const [
+    { data: provider },
+    { data: clientRequirement },
+    { data: rateDetailsRow },
+  ] = await Promise.all([
     supabase
       .from("three_pl_providers")
       .select(
@@ -71,7 +76,13 @@ export default async function ProviderDetailsPage({
       .select("client_name")
       .eq("id", id)
       .single(),
+    supabase
+      .from("rate_details")
+      .select(RATE_SELECT)
+      .eq("provider_id", providerId)
+      .maybeSingle(),
   ]);
+  const rateDetails = rateDetailsRow as RateDetails | null;
 
   if (!provider || !clientRequirement) {
     notFound();
@@ -120,13 +131,6 @@ export default async function ProviderDetailsPage({
           </Badge>
         )}
         <div className="ml-auto flex items-center gap-2">
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link href={`/3pl-sourcing/projects/${id}/providers/${providerId}/rates`} />}
-          >
-            Rate Details
-          </Button>
           {canWrite && (
             <>
               <Button
@@ -295,6 +299,26 @@ export default async function ProviderDetailsPage({
               value={formatCurrency(totalCost, provider.currency)}
             />
           </div>
+        </SectionCard>
+
+        <SectionCard title="Rate Details">
+          {rateDetails ? (
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {RATE_FIELDS.map((rate) => (
+                <InfoField
+                  key={rate.name}
+                  label={rate.label}
+                  value={
+                    rateDetails[rate.name] != null
+                      ? formatCurrency(rateDetails[rate.name]!, provider.currency)
+                      : null
+                  }
+                />
+              ))}
+            </dl>
+          ) : (
+            <p className="text-sm text-neutral-muted">No rate details yet.</p>
+          )}
         </SectionCard>
 
         <SectionCard title="Status & Assessment">

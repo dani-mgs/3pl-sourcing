@@ -2,8 +2,15 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  RATE_DETAILS_NOT_SAVED_ERROR,
+  rateDetailsFromForm,
+  saveRateDetails,
+} from "@/lib/rate-details";
 
-export type CreateProviderState = { error?: string };
+// savedProviderId is set when the 3PL row was created but its rate details
+// weren't — the form then retries as an update so it never duplicates the 3PL.
+export type CreateProviderState = { error?: string; savedProviderId?: string };
 
 const UNIQUE_VIOLATION = "23505";
 
@@ -122,6 +129,19 @@ export async function createProvider(
 
   if (!data || data.length === 0) {
     return { error: "You don't have permission to make this change." };
+  }
+
+  const ratesSaved = await saveRateDetails(
+    supabase,
+    data[0].id,
+    rateDetailsFromForm(formData),
+    "create",
+  );
+  if (!ratesSaved) {
+    return {
+      error: RATE_DETAILS_NOT_SAVED_ERROR,
+      savedProviderId: data[0].id,
+    };
   }
 
   redirect(`/3pl-sourcing/projects/${clientRequirementId}`);

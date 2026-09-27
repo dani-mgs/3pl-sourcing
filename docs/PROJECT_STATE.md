@@ -1,6 +1,6 @@
 # MOVE Supply Chain Decision Hub — Project State & Handover
 
-_Last updated: 2026-09-27 by Dani_
+_Last updated: 2026-09-28 by Dani_
 
 ---
 
@@ -41,13 +41,13 @@ Known gotchas:
 ## 4. CURRENT STATE — what's done
 
 - Auth, roles (admin/logistics_expert), RLS: reads open to all authenticated users, writes (insert/update/delete) restricted to owner-or-admin across client_requirements, three_pl_providers, rate_details, recommendation. Every mutation Server Action checks .select() result is non-empty before reporting success (RLS silently returns zero rows on rejection, doesn't throw).
-- Full schema refactor done: client_requirements (was projects, absorbed the old requirements_summary), three_pl_providers (was providers, 40+ fields: 15 capability booleans, 4 cost fields, is_incumbent, status/assessment), rate_details (new, 1:1 per provider, 13 USD rate line items), recommendation (was recommendations). documents/provider_documents dropped — file storage deferred.
+- Full schema refactor done: client_requirements (was projects, absorbed the old requirements_summary), three_pl_providers (was providers, 40+ fields: 15 capability booleans, 4 cost fields, is_incumbent, status/assessment), rate_details (new, 1:1 per provider, 13 rate line items in the 3PL's own currency), recommendation (was recommendations). documents/provider_documents dropped — file storage deferred.
 - Top navy bar (replaced the old sidebar): wordmark to dashboard, randomized time-aware greeting, avatar dropdown (Log Out, Administration for admins).
 - Dashboard: search, "My Projects"/"All Experts" tabs, per-client pipeline visualization, relative "updated" time.
 - 3-step New Project wizard: Client Intake (with an "Upload a Document" choice using AI extraction to pre-fill fields, or "Start from Scratch") then Add 3PLs (full provider form, reused) then Verify Details. Auto-saves in-progress data before navigating forward.
 - Project Summary page: breadcrumb, 3 stat boxes (Sourced/Quotes In/Shortlisted), filter bar (search + Status/Service/Assessment dropdowns with select-all/clear-all, active-state styling), toggleable columns, per-row ellipsis menu (View/Edit/Delete), standalone Notes section, Add 3PL action, and a Cost Comparison panel (see below).
 - Client Info: read-only View (breadcrumb, section cards, non-interactive toggle-chips, no status badge) plus a separate /info/edit route. Delete Client button, blocked if any 3PLs exist.
-- 3PL pages: unified Add/Edit form (toggle-chip capabilities, sectioned), View page (breadcrumb, section cards), Rate Details page, Delete with confirmation.
+- 3PL pages: unified Add/Edit form (toggle-chip capabilities, sectioned), View page (breadcrumb, section cards, including a Rate Details card), Delete with confirmation. Rate details are edited in a Rate Details section of the same form and saved by the same Server Actions (Add 3PL, Edit 3PL, wizard Step 2) via src/lib/rate-details.ts — no empty rate_details rows are created, and clearing every rate nulls the row rather than deleting it. The standalone Rate Details page was removed 2026-09-28; old `/rates` URLs redirect to the 3PL's View page.
 - Cost Comparison panel on Project Summary (replaced the standalone Comparison page, removed 2026-09-28; old `/comparison` URLs redirect to Project Summary): 3PLs ranked by Total Cost (sum of all 9 cost fields, rank 1 = lowest), excluding Unfit / Do not Contact / Withdrawn / No Response except the incumbent, which always shows as the Baseline row. Savings vs Baseline (amount + %, green/red) only when an incumbent is named and flagged with cost data; amber "Pending" note when named but its cost data is incomplete; no savings when no incumbent (N/A); ranking and savings hidden with a warning when 3PLs use different currencies. Sits right of the 3PL table (340px, sticky) from 1,480px, stacked above it below that. All math lives in src/lib/cost-comparison.ts, which Recommendation's Cost Savings ranking also uses.
 - Recommendation page: priority selector — Cost Savings ranks by Total Cost; Quality of Service and Turnaround Time show an unranked list with a disclaimer (no numeric turnaround field exists in the schema). "AI Summary" per provider is still a placeholder, not implemented.
 - Administration page (admin-only): project reassignment, promote/demote user role, create/delete users (blocked if the user owns any clients), edit any user's display name.
@@ -69,7 +69,7 @@ No specific task is queued. Before starting new work, read docs/CHANGELOG.md and
 - Extending AI extraction beyond New Project intake (e.g. pre-filling a 3PL update from a discovery call transcript) — deliberately deferred until intake extraction is proven reliable.
 - CSV structured import — deferred as a separate feature from AI text extraction (different technical approach: column-mapping, not LLM extraction).
 - Whether/when to actually deploy to Vercel — instructions exist, deployment itself hasn't happened yet.
-- rate_details (granular per-service USD rates) isn't wired into the cost comparison math yet — the Cost Comparison panel and Recommendation use the 9 summary cost fields on three_pl_providers directly, not the more granular rate_details breakdown.
+- rate_details (granular per-service rates) isn't wired into the cost comparison math yet — the Cost Comparison panel and Recommendation use the 9 summary cost fields on three_pl_providers directly, not the more granular rate_details breakdown.
 
 ## 8. KEY ARCHITECTURE DECISIONS
 
@@ -94,10 +94,11 @@ No specific task is queued. Before starting new work, read docs/CHANGELOG.md and
 | Hub home (`/`) + top bar/module nav | src/app/(authenticated)/page.tsx, layout.tsx, module-nav.tsx; module list in src/lib/modules.ts |
 | 3PL Sourcing project list (`/3pl-sourcing`) | src/app/(authenticated)/3pl-sourcing/page.tsx, dashboard-content.tsx |
 | Client/project pages (`/3pl-sourcing/projects/[id]/...`) | src/app/(authenticated)/3pl-sourcing/projects/[id]/* (summary + Cost Comparison panel in cost-comparison-panel.tsx, info, info/edit, recommendation) |
-| 3PL pages (`/3pl-sourcing/projects/[id]/providers/...`) | src/app/(authenticated)/3pl-sourcing/projects/[id]/providers/* (new, [providerId], [providerId]/edit, [providerId]/rates) |
+| 3PL pages (`/3pl-sourcing/projects/[id]/providers/...`) | src/app/(authenticated)/3pl-sourcing/projects/[id]/providers/* (new, [providerId] View incl. Rate Details card, [providerId]/edit) |
 | New Project wizard (`/3pl-sourcing/new/...`) | src/app/(authenticated)/3pl-sourcing/new/* |
 | Shared cost math (Total Cost, rank, savings, currency check) | src/lib/cost-comparison.ts |
-| Legacy URL redirects (`/dashboard/*`, `/projects/*`, `.../comparison` → Project Summary) | next.config.ts `redirects()` |
+| Rate Details fields + save logic (shared by all 3PL save actions) | src/lib/rate-details.ts |
+| Legacy URL redirects (`/dashboard/*`, `/projects/*`, `.../comparison` → Project Summary, `.../providers/[providerId]/rates` → 3PL View) | next.config.ts `redirects()` |
 | Admin (`/admin`, hub-level) | src/app/(authenticated)/admin/* |
 | Tests | None automated — manual Playwright MCP verification per feature, matching the project's right-sized testing approach |
 

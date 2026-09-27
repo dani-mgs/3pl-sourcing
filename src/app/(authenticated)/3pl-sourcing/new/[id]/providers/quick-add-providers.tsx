@@ -62,8 +62,34 @@ export function QuickAddProviders({
   const [formDefaults, setFormDefaults] = useState<
     ProviderFormDefaults | undefined
   >(undefined);
+  // Set when the form's 3PL was saved but its rate details weren't, so the
+  // next save updates that 3PL instead of adding it a second time.
+  const [savedProviderId, setSavedProviderId] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
+
+  async function saveForm(formData: FormData): Promise<boolean> {
+    const result = await quickAddProvider(
+      clientRequirementId,
+      formData,
+      savedProviderId ?? undefined,
+    );
+    const saved = result.provider;
+    if (saved) {
+      setProviders((prev) =>
+        prev.some((p) => p.id === saved.id)
+          ? prev.map((p) => (p.id === saved.id ? saved : p))
+          : [...prev, saved],
+      );
+    }
+    if (result.error) {
+      if (result.savedProviderId) setSavedProviderId(result.savedProviderId);
+      setError(result.error);
+      return false;
+    }
+    setSavedProviderId(null);
+    return true;
+  }
 
   useEffect(() => {
     // sessionStorage only exists client-side, so this has to run post-mount rather
@@ -87,14 +113,7 @@ export function QuickAddProviders({
   function handleAddAnother(formData: FormData) {
     setError(null);
     startTransition(async () => {
-      const result = await quickAddProvider(clientRequirementId, formData);
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-      if (result.provider) {
-        setProviders((prev) => [...prev, result.provider!]);
-      }
+      if (!(await saveForm(formData))) return;
       setFormDefaults(undefined);
       setFormKey((k) => k + 1);
     });
@@ -111,6 +130,7 @@ export function QuickAddProviders({
         return;
       }
       setProviders((prev) => prev.filter((p) => p.id !== providerId));
+      if (providerId === savedProviderId) setSavedProviderId(null);
     });
   }
 
@@ -127,14 +147,7 @@ export function QuickAddProviders({
     setError(null);
     startTransition(async () => {
       const formData = new FormData(formRef.current!);
-      const result = await quickAddProvider(clientRequirementId, formData);
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-      if (result.provider) {
-        setProviders((prev) => [...prev, result.provider!]);
-      }
+      if (!(await saveForm(formData))) return;
       router.push(href);
     });
   }

@@ -3,6 +3,11 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { EditProviderForm } from "./edit-provider-form";
 import type { ProviderFormDefaults } from "@/components/provider-form";
+import {
+  BLANK_RATE_DETAILS,
+  RATE_SELECT,
+  type RateDetails,
+} from "@/lib/rate-details";
 
 export default async function EditProviderPage({
   params,
@@ -11,14 +16,21 @@ export default async function EditProviderPage({
 
   const supabase = await createClient();
 
-  const { data: provider } = await supabase
-    .from("three_pl_providers")
-    .select(
-      "id, company_name, provider_type, website, location, footprint_source, contact_person, email, phone, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, onboarding_period_months, virtual_tour_url, billing_terms, other_specialization, b2b, b2c, is_incumbent, currency, storage_cost, pick_pack_cost, receiving_cost, returns_cost, system_setup_cost, inventory_on_request_cost, adhoc_bundling_kitting_cost, adhoc_labelling_cost, b2b_pick_pack_cost, status, assessment_status, key_strength, key_weakness_risk, important_assumption, overall_assessment, client_decision, source_basis, next_action, key_notes, notes",
-    )
-    .eq("id", providerId)
-    .eq("client_requirement_id", id)
-    .single();
+  const [{ data: provider }, { data: rateDetails }] = await Promise.all([
+    supabase
+      .from("three_pl_providers")
+      .select(
+        "id, company_name, provider_type, website, location, footprint_source, contact_person, email, phone, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, onboarding_period_months, virtual_tour_url, billing_terms, other_specialization, b2b, b2c, is_incumbent, currency, storage_cost, pick_pack_cost, receiving_cost, returns_cost, system_setup_cost, inventory_on_request_cost, adhoc_bundling_kitting_cost, adhoc_labelling_cost, b2b_pick_pack_cost, status, assessment_status, key_strength, key_weakness_risk, important_assumption, overall_assessment, client_decision, source_basis, next_action, key_notes, notes",
+      )
+      .eq("id", providerId)
+      .eq("client_requirement_id", id)
+      .single(),
+    supabase
+      .from("rate_details")
+      .select(RATE_SELECT)
+      .eq("provider_id", providerId)
+      .maybeSingle(),
+  ]);
 
   if (!provider) {
     notFound();
@@ -40,7 +52,13 @@ export default async function EditProviderPage({
       <EditProviderForm
         clientRequirementId={id}
         providerId={providerId}
-        defaultValues={provider as ProviderFormDefaults}
+        defaultValues={
+          {
+            ...provider,
+            ...BLANK_RATE_DETAILS,
+            ...(rateDetails as RateDetails | null),
+          } as ProviderFormDefaults
+        }
       />
     </div>
   );

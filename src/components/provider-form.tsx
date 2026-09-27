@@ -16,6 +16,12 @@ import {
   type AssessmentStatus,
 } from "@/app/(authenticated)/3pl-sourcing/projects/[id]/providers/status-badge";
 import { CURRENCY_OPTIONS } from "@/lib/currency";
+import {
+  BLANK_RATE_DETAILS,
+  RATE_FIELDS,
+  type RateDetails,
+  type RateField,
+} from "@/lib/rate-details";
 
 export const STATUS_OPTIONS: ProviderStatus[] = [
   "Potential / Not Contacted",
@@ -167,7 +173,7 @@ export type ProviderFormDefaults = {
   next_action: string | null;
   key_notes: string | null;
   notes: string | null;
-};
+} & RateDetails;
 
 export const BLANK_PROVIDER_DEFAULTS: ProviderFormDefaults = {
   company_name: null,
@@ -221,6 +227,7 @@ export const BLANK_PROVIDER_DEFAULTS: ProviderFormDefaults = {
   next_action: null,
   key_notes: null,
   notes: null,
+  ...BLANK_RATE_DETAILS,
 };
 
 function CapabilityChips({
@@ -330,7 +337,7 @@ type FormFieldValues = {
   next_action: string;
   key_notes: string;
   notes: string;
-};
+} & Record<RateField, string>;
 
 function initialFieldValues(
   defaultValues?: ProviderFormDefaults,
@@ -399,6 +406,14 @@ function initialFieldValues(
     next_action: defaultValues?.next_action ?? "",
     key_notes: defaultValues?.key_notes ?? "",
     notes: defaultValues?.notes ?? "",
+    ...(Object.fromEntries(
+      RATE_FIELDS.map((field) => [
+        field.name,
+        defaultValues?.[field.name] != null
+          ? String(defaultValues[field.name])
+          : "",
+      ]),
+    ) as Record<RateField, string>),
   };
 }
 
@@ -860,6 +875,40 @@ export function ProviderForm({
                       ? `${fieldClass} ${updatedFieldClass} flex-1`
                       : `${fieldClass} flex-1`
                   }
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <div>
+          <h3 className={sectionTitleClass}>Rate Details</h3>
+          <p className="text-xs text-neutral-muted">
+            In {values.currency}, the currency selected under Costs
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {RATE_FIELDS.map((rate) => (
+            <div key={rate.name} className="flex flex-col gap-1">
+              <label htmlFor={rate.name} className={labelClass}>
+                {rate.label}
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-neutral-muted">
+                  {values.currency}
+                </span>
+                <input
+                  id={rate.name}
+                  name={rate.name}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={values[rate.name]}
+                  onChange={(e) => updateField(rate.name, e.target.value)}
+                  className={`${fieldClass} flex-1`}
                 />
               </div>
             </div>
