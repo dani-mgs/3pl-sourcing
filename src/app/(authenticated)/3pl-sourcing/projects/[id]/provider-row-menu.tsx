@@ -89,7 +89,7 @@ export function ProviderRowMenu({
           <DialogHeader>
             <DialogTitle>Delete 3PL</DialogTitle>
             <DialogDescription>
-              Delete {companyName}? This cannot be undone.
+              Delete {companyName}? This also deletes its Rate Details. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
 

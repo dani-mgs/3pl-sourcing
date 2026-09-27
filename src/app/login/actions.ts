@@ -14,7 +14,8 @@ export async function login(formData: FormData) {
   });
 
   if (error) {
-    return { error: error.message };
+    console.error("login error:", error);
+    return { error: "Invalid email or password." };
   }
 
   redirect("/");

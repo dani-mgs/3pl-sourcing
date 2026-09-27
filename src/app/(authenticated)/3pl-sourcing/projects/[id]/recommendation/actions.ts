@@ -40,7 +40,8 @@ export async function saveRecommendation(
     : await supabase.from("recommendation").insert(payload).select();
 
   if (error) {
-    return { error: error.message };
+    console.error("saveRecommendation error:", error);
+    return { error: "An unexpected error occurred." };
   }
 
   if (!data || data.length === 0) {

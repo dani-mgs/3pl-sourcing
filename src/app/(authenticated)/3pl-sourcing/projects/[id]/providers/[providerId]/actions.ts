@@ -18,7 +18,8 @@ export async function deleteProvider(
     .select();
 
   if (error) {
-    return { error: error.message };
+    console.error("deleteProvider error:", error);
+    return { error: "An unexpected error occurred." };
   }
 
   if (!data || data.length === 0) {
