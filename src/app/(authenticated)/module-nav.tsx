@@ -37,10 +37,10 @@ export function ModuleNav() {
                   href={module.href}
                   aria-current={isActive(module.href) ? "page" : undefined}
                   className={
-                    "block rounded-md border-b-2 px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors " +
+                    "relative block rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors " +
                     (isActive(module.href)
-                      ? "border-move-green bg-white/10 text-white"
-                      : "border-transparent text-white/80 hover:bg-white/10 hover:text-white")
+                      ? "bg-white/10 text-white after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-move-green"
+                      : "text-white/80 hover:bg-white/10 hover:text-white")
                   }
                 >
                   {module.name}
@@ -48,7 +48,7 @@ export function ModuleNav() {
               ) : (
                 <span
                   aria-disabled="true"
-                  className="flex cursor-not-allowed items-center gap-1.5 border-b-2 border-transparent px-3 py-1.5 text-sm whitespace-nowrap text-white/40"
+                  className="flex cursor-not-allowed items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap text-white/40"
                 >
                   {module.name}
                   <SoonTag className="bg-white/10 text-white/50" />
