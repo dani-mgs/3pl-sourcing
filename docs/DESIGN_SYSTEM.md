@@ -1,4 +1,4 @@
-# Design System — 3PL Sourcing Platform
+# Design System — MOVE Supply Chain Decision Hub
 
 Subset of Move Supply Chain's actual brand (per their brand guidelines), adapted for a dense internal tool. Same colors and typographic character as their marketing site, calmer proportions — no gradients or hero shapes, this is a data-heavy work tool, not a landing page.
 

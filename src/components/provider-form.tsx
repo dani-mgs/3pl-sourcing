@@ -14,7 +14,7 @@ import {
   ASSESSMENT_DOT_COLORS,
   type ProviderStatus,
   type AssessmentStatus,
-} from "@/app/(authenticated)/projects/[id]/providers/status-badge";
+} from "@/app/(authenticated)/3pl-sourcing/projects/[id]/providers/status-badge";
 import { CURRENCY_OPTIONS } from "@/lib/currency";
 
 export const STATUS_OPTIONS: ProviderStatus[] = [

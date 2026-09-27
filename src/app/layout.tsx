@@ -14,8 +14,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "3PL Sourcing",
-  description: "3PL sourcing and vetting platform",
+  title: "MOVE Supply Chain Decision Hub",
+  description: "Decision tools for MOVE Supply Chain logistics experts",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

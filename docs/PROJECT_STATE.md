@@ -1,4 +1,4 @@
-# 3PL Sourcing Platform — Project State & Handover
+# MOVE Supply Chain Decision Hub — Project State & Handover
 
 _Last updated: 2026-09-27 by Dani_
 
@@ -91,10 +91,13 @@ No specific task is queued. Before starting new work, read docs/CHANGELOG.md and
 | Supabase clients | src/lib/supabase/client.ts (browser), server.ts (server), admin-client.ts (service-role, server-only, bypasses RLS) |
 | Shared form components | src/components/client-intake-form.tsx, provider-form.tsx, wizard-steps.tsx, toggle-chip picker, section-card wrapper, status-badge |
 | Design tokens | src/styles/globals.css (@theme block), docs/DESIGN_SYSTEM.md |
-| Client/project pages | src/app/(authenticated)/projects/[id]/* |
-| 3PL pages | src/app/(authenticated)/projects/[id]/providers/[providerId]/* |
-| New Project wizard | src/app/(authenticated)/dashboard/new/* |
-| Admin | src/app/(authenticated)/admin/* |
+| Hub home (`/`) + top bar/module nav | src/app/(authenticated)/page.tsx, layout.tsx, module-nav.tsx; module list in src/lib/modules.ts |
+| 3PL Sourcing project list (`/3pl-sourcing`) | src/app/(authenticated)/3pl-sourcing/page.tsx, dashboard-content.tsx |
+| Client/project pages (`/3pl-sourcing/projects/[id]/...`) | src/app/(authenticated)/3pl-sourcing/projects/[id]/* (summary, info, info/edit, comparison, recommendation) |
+| 3PL pages (`/3pl-sourcing/projects/[id]/providers/...`) | src/app/(authenticated)/3pl-sourcing/projects/[id]/providers/* (new, [providerId], [providerId]/edit, [providerId]/rates) |
+| New Project wizard (`/3pl-sourcing/new/...`) | src/app/(authenticated)/3pl-sourcing/new/* |
+| Legacy URL redirects (`/dashboard/*`, `/projects/*`) | next.config.ts `redirects()` |
+| Admin (`/admin`, hub-level) | src/app/(authenticated)/admin/* |
 | Tests | None automated — manual Playwright MCP verification per feature, matching the project's right-sized testing approach |
 
 ## 10. DO NOT TOUCH / FRAGILE AREAS

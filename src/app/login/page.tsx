@@ -23,6 +23,10 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutral-bg px-4">
       <div className="w-full max-w-sm rounded-2xl border border-neutral-border bg-white p-8 shadow-sm">
+        <p className="mb-1 flex items-center gap-2 text-sm font-medium text-neutral-muted">
+          <span className="size-2.5 rounded-sm bg-move-green" />
+          MOVE Supply Chain Decision Hub
+        </p>
         <h1 className="mb-6 font-display text-2xl font-semibold text-move-navy">
           Sign in
         </h1>

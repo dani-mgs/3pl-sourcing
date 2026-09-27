@@ -1,6 +1,6 @@
-# 3PL Sourcing
+# MOVE Supply Chain Decision Hub
 
-Internal tool for Move Supply Chain Logistics Experts to manage 3PL sourcing projects end to end.
+Internal tool for Move Supply Chain Logistics Experts, organized as a hub of decision modules. 3PL Sourcing (manage 3PL sourcing projects end to end) is live at `/3pl-sourcing`; Forwarder Sourcing, Tariff Calculator, Landed Cost Calculator, 3PL Audit, and Forwarder Audit are coming soon.
 
 ## Getting Started
 
@@ -14,9 +14,9 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Project Structure
 
-- `src/app/` — routes (Next.js App Router)
+- `src/app/` — routes (Next.js App Router); hub home at `/`, 3PL Sourcing under `src/app/(authenticated)/3pl-sourcing/`
 - `src/components/` — UI pieces
-- `src/lib/` — shared logic, helpers, API clients
+- `src/lib/` — shared logic, helpers, API clients (module list in `src/lib/modules.ts`)
 - `src/styles/` — global styles
 - `public/` — static assets
 - `docs/` — project documentation
