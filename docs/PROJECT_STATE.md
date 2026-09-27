@@ -1,6 +1,6 @@
 # 3PL Sourcing Platform — Project State & Handover
 
-_Last updated: 2026-09-08 by Dani_
+_Last updated: 2026-09-27 by Dani_
 
 ---
 
@@ -54,14 +54,15 @@ Known gotchas:
 - Design system: Move brand colors (Green #44B048, Navy #192E5B, Orange #FF5E43 accent), Plus Jakarta Sans + Inter — documented in docs/DESIGN_SYSTEM.md.
 - shadcn/ui adopted as the component foundation; Playwright MCP configured for Claude Code to self-verify UI work.
 - Supabase CLI + migrations fully set up — all schema changes go through supabase/migrations/, never raw SQL against the live project.
+- Document-upload AI extraction fully built and verified live across all four surfaces: New Project wizard Step 1 (blank-slate client intake pre-fill) and Step 2 (incumbent 3PL pre-fill), Client Info edit (merge-mode, only overwrites explicitly-stated fields), and Add 3PL (blank-slate)/Edit 3PL (merge-mode) covering the full 33-field provider set. Shared plumbing lives in src/lib/document-extraction.ts (file parsing + Anthropic tool-use call) and src/lib/merge-fields.ts (scalar merge diff). A real bug where merge-mode flagged restated-but-unchanged values as updates was fixed by passing the record's current field values into the extraction prompt so the model can distinguish "same" from "genuinely new" (merge-mode only; blank-slate flows unaffected).
 
 ## 5. IN PROGRESS
 
-Document-upload to AI extraction feature (pre-fills the New Project intake form from an uploaded .txt/.pdf/.docx) was just built in the last session — NOT yet tested/confirmed working. This is the actual next thing to verify.
+Nothing in progress — the app is in a stable, caught-up state. No unfinished feature is mid-build; the next session should pick a new task from Section 6 or Section 7's open decisions.
 
 ## 6. NEXT TASK
 
-Before doing anything, read docs/CHANGELOG.md and docs/TECH_DEBT.md to confirm current state, then verify the document-upload AI extraction feature built at the end of the last session: navigate to /dashboard/new, confirm the "Upload a Document" vs "Start from Scratch" choice screen appears, upload a small test .txt file describing a fictional client, and confirm Step 1 pre-fills correctly with only the fields actually present in the text (nothing fabricated). Report the result before any further feature work.
+No specific task is queued. Before starting new work, read docs/CHANGELOG.md and docs/TECH_DEBT.md to confirm current state, then pick up one of the open decisions in Section 7 (extending AI extraction further is the most natural next step, now that the intake/merge extraction flows are proven reliable) or a new request from Dani.
 
 ## 7. OPEN DECISIONS / QUESTIONS
 
@@ -79,6 +80,7 @@ Before doing anything, read docs/CHANGELOG.md and docs/TECH_DEBT.md to confirm c
 - 2026-09-05 — Reads stay open to all authenticated Logistics Experts (matches original POC requirement); only writes are owner-or-admin restricted.
 - 2026-09-06 — Adopted shadcn/ui + Playwright MCP together after repeated UI/contrast bugs from hand-written Tailwind; established the native-input-for-server-hydrated-forms rule after a real Base-UI uncontrolled-state bug.
 - 2026-09-08 — AI document extraction scoped to New Project intake only (v1), transient file processing (no permanent storage), text/PDF/DOCX only (CSV deferred as a separate feature).
+- 2026-09-10 — Merge-mode extraction (Client Info edit, Edit 3PL) passes the record's current field values into the extraction prompt, not just the document text, so a restated-but-unchanged value isn't flagged as an update — the model has no other way to tell a restatement from a genuine change.
 
 ## 9. FILE MAP
 
