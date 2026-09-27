@@ -45,10 +45,10 @@ Known gotchas:
 - Top navy bar (replaced the old sidebar): wordmark to dashboard, randomized time-aware greeting, avatar dropdown (Log Out, Administration for admins).
 - Dashboard: search, "My Projects"/"All Experts" tabs, per-client pipeline visualization, relative "updated" time.
 - 3-step New Project wizard: Client Intake (with an "Upload a Document" choice using AI extraction to pre-fill fields, or "Start from Scratch") then Add 3PLs (full provider form, reused) then Verify Details. Auto-saves in-progress data before navigating forward.
-- Project Summary page: breadcrumb, 3 stat boxes (Sourced/Quotes In/Shortlisted), filter bar (search + Status/Service/Assessment dropdowns with select-all/clear-all, active-state styling), toggleable columns, per-row ellipsis menu (View/Edit/Delete), standalone Notes section, Cost Comparison + Add 3PL actions.
+- Project Summary page: breadcrumb, 3 stat boxes (Sourced/Quotes In/Shortlisted), filter bar (search + Status/Service/Assessment dropdowns with select-all/clear-all, active-state styling), toggleable columns, per-row ellipsis menu (View/Edit/Delete), standalone Notes section, Add 3PL action, and a Cost Comparison panel (see below).
 - Client Info: read-only View (breadcrumb, section cards, non-interactive toggle-chips, no status badge) plus a separate /info/edit route. Delete Client button, blocked if any 3PLs exist.
 - 3PL pages: unified Add/Edit form (toggle-chip capabilities, sectioned), View page (breadcrumb, section cards), Rate Details page, Delete with confirmation.
-- Comparison page: Total Cost (sum of 4 cost fields), Cost Rank (independent of baseline), Savings vs Baseline/Savings %/Cost Position (only computed if a provider is flagged is_incumbent with complete cost data — shows "N/A" if no incumbent set, "Pending" if incumbent set but data incomplete). Filters (search/status/business model/all 15 capabilities) as dropdowns.
+- Cost Comparison panel on Project Summary (replaced the standalone Comparison page, removed 2026-09-28; old `/comparison` URLs redirect to Project Summary): 3PLs ranked by Total Cost (sum of all 9 cost fields, rank 1 = lowest), excluding Unfit / Do not Contact / Withdrawn / No Response except the incumbent, which always shows as the Baseline row. Savings vs Baseline (amount + %, green/red) only when an incumbent is named and flagged with cost data; amber "Pending" note when named but its cost data is incomplete; no savings when no incumbent (N/A); ranking and savings hidden with a warning when 3PLs use different currencies. Sits right of the 3PL table (340px, sticky) from 1,480px, stacked above it below that. All math lives in src/lib/cost-comparison.ts, which Recommendation's Cost Savings ranking also uses.
 - Recommendation page: priority selector — Cost Savings ranks by Total Cost; Quality of Service and Turnaround Time show an unranked list with a disclaimer (no numeric turnaround field exists in the schema). "AI Summary" per provider is still a placeholder, not implemented.
 - Administration page (admin-only): project reassignment, promote/demote user role, create/delete users (blocked if the user owns any clients), edit any user's display name.
 - Design system: Move brand colors (Green #44B048, Navy #192E5B, Orange #FF5E43 accent), Plus Jakarta Sans + Inter — documented in docs/DESIGN_SYSTEM.md.
@@ -69,7 +69,7 @@ No specific task is queued. Before starting new work, read docs/CHANGELOG.md and
 - Extending AI extraction beyond New Project intake (e.g. pre-filling a 3PL update from a discovery call transcript) — deliberately deferred until intake extraction is proven reliable.
 - CSV structured import — deferred as a separate feature from AI text extraction (different technical approach: column-mapping, not LLM extraction).
 - Whether/when to actually deploy to Vercel — instructions exist, deployment itself hasn't happened yet.
-- rate_details (granular per-service USD rates) isn't wired into the Comparison page's cost math yet — Comparison currently only uses the 4 summary cost fields on three_pl_providers directly, not the more granular rate_details breakdown.
+- rate_details (granular per-service USD rates) isn't wired into the cost comparison math yet — the Cost Comparison panel and Recommendation use the 9 summary cost fields on three_pl_providers directly, not the more granular rate_details breakdown.
 
 ## 8. KEY ARCHITECTURE DECISIONS
 
@@ -93,10 +93,11 @@ No specific task is queued. Before starting new work, read docs/CHANGELOG.md and
 | Design tokens | src/styles/globals.css (@theme block), docs/DESIGN_SYSTEM.md |
 | Hub home (`/`) + top bar/module nav | src/app/(authenticated)/page.tsx, layout.tsx, module-nav.tsx; module list in src/lib/modules.ts |
 | 3PL Sourcing project list (`/3pl-sourcing`) | src/app/(authenticated)/3pl-sourcing/page.tsx, dashboard-content.tsx |
-| Client/project pages (`/3pl-sourcing/projects/[id]/...`) | src/app/(authenticated)/3pl-sourcing/projects/[id]/* (summary, info, info/edit, comparison, recommendation) |
+| Client/project pages (`/3pl-sourcing/projects/[id]/...`) | src/app/(authenticated)/3pl-sourcing/projects/[id]/* (summary + Cost Comparison panel in cost-comparison-panel.tsx, info, info/edit, recommendation) |
 | 3PL pages (`/3pl-sourcing/projects/[id]/providers/...`) | src/app/(authenticated)/3pl-sourcing/projects/[id]/providers/* (new, [providerId], [providerId]/edit, [providerId]/rates) |
 | New Project wizard (`/3pl-sourcing/new/...`) | src/app/(authenticated)/3pl-sourcing/new/* |
-| Legacy URL redirects (`/dashboard/*`, `/projects/*`) | next.config.ts `redirects()` |
+| Shared cost math (Total Cost, rank, savings, currency check) | src/lib/cost-comparison.ts |
+| Legacy URL redirects (`/dashboard/*`, `/projects/*`, `.../comparison` → Project Summary) | next.config.ts `redirects()` |
 | Admin (`/admin`, hub-level) | src/app/(authenticated)/admin/* |
 | Tests | None automated — manual Playwright MCP verification per feature, matching the project's right-sized testing approach |
 
@@ -104,6 +105,6 @@ No specific task is queued. Before starting new work, read docs/CHANGELOG.md and
 
 - The storage.objects RLS policy's regex UUID guard — fixes a real bug where casting a non-UUID path segment to uuid threw a runtime error and silently blocked unrelated policies. Don't remove the guard.
 - Every insert/update/delete Server Action MUST chain .select() and check the result isn't empty before reporting success — RLS-blocked writes fail silently (zero rows, no error) otherwise. Any new mutation added without this check will have the same false-success bug found and fixed earlier.
-- The one_incumbent_per_client partial unique index on three_pl_providers — drives all Comparison/Recommendation baseline math. Don't remove without redesigning that logic.
+- The one_incumbent_per_client partial unique index on three_pl_providers — drives all Cost Comparison panel/Recommendation baseline math. Don't remove without redesigning that logic.
 - profiles table is synced ONE-WAY from auth.users via trigger. Never write to profiles.role or profiles.first_name directly — always go through supabase.auth.admin.updateUserById() via the service-role client so the trigger stays the single source of truth.
 - The toggle-chip picker's storage format was fixed to be delimiter-safe (handles preset labels containing commas, e.g. "Fulfillment (Pick, Check, Pack)") — don't revert to a naive comma-join/split.

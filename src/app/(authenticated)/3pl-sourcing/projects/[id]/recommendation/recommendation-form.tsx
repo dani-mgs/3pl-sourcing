@@ -12,6 +12,7 @@ import {
 import { StatusBadge, type ProviderStatus } from "../providers/status-badge";
 import { saveRecommendation, type SaveRecommendationState } from "./actions";
 import { formatCurrency } from "@/lib/currency";
+import { rankByTotalCost, totalCost, type CostInputs } from "@/lib/cost-comparison";
 
 const PRIORITY_OPTIONS = [
   "Cost Savings",
@@ -21,22 +22,12 @@ const PRIORITY_OPTIONS = [
 
 type Priority = (typeof PRIORITY_OPTIONS)[number];
 
-export type VettedProvider = {
+export type VettedProvider = CostInputs & {
   id: string;
   company_name: string;
   location: string | null;
   status: string;
   overall_assessment: string | null;
-  currency: string;
-  storage_cost: number | null;
-  pick_pack_cost: number | null;
-  receiving_cost: number | null;
-  returns_cost: number | null;
-  system_setup_cost: number | null;
-  inventory_on_request_cost: number | null;
-  adhoc_bundling_kitting_cost: number | null;
-  adhoc_labelling_cost: number | null;
-  b2b_pick_pack_cost: number | null;
   created_at: string;
 };
 
@@ -46,51 +37,35 @@ export type RecommendationRow = {
 
 const labelClass = "text-sm font-medium text-move-navy";
 
-function totalCost(provider: VettedProvider): number | null {
-  const costs = [
-    provider.storage_cost,
-    provider.pick_pack_cost,
-    provider.receiving_cost,
-    provider.returns_cost,
-    provider.system_setup_cost,
-    provider.inventory_on_request_cost,
-    provider.adhoc_bundling_kitting_cost,
-    provider.adhoc_labelling_cost,
-    provider.b2b_pick_pack_cost,
-  ];
-  const hasCostData = costs.some((c) => c != null);
-  if (!hasCostData) return null;
-  return costs.reduce((sum: number, c) => sum + (c ?? 0), 0);
-}
-
 function rankProviders(
   providers: VettedProvider[],
   priority: Priority,
-): { provider: VettedProvider; rank: number | null }[] {
+): {
+  ranked: { provider: VettedProvider; rank: number | null }[];
+  mixedCurrencies: boolean;
+  distinctCurrencies: string[];
+} {
   if (priority !== "Cost Savings") {
-    return providers.map((provider) => ({ provider, rank: null }));
+    return {
+      ranked: providers.map((provider) => ({ provider, rank: null })),
+      mixedCurrencies: false,
+      distinctCurrencies: [],
+    };
   }
 
-  const withCost = providers.map((provider) => ({
+  const { rankById, mixedCurrencies, distinctCurrencies } =
+    rankByTotalCost(providers);
+  const withRank = providers.map((provider) => ({
     provider,
-    cost: totalCost(provider),
+    rank: rankById.get(provider.id) ?? null,
   }));
-
-  withCost.sort((a, b) => {
-    if (a.cost === null && b.cost === null) return 0;
-    if (a.cost === null) return 1;
-    if (b.cost === null) return -1;
-    return a.cost - b.cost;
-  });
-
-  let rank = 0;
-  return withCost.map(({ provider, cost }) => {
-    if (cost === null) {
-      return { provider, rank: null };
-    }
-    rank += 1;
-    return { provider, rank };
-  });
+  const ranked = [
+    ...withRank
+      .filter((entry) => entry.rank != null)
+      .sort((a, b) => a.rank! - b.rank!),
+    ...withRank.filter((entry) => entry.rank == null),
+  ];
+  return { ranked, mixedCurrencies, distinctCurrencies };
 }
 
 export function RecommendationForm({
@@ -113,7 +88,7 @@ export function RecommendationForm({
     (recommendation?.priority as Priority | undefined) ?? "Cost Savings",
   );
 
-  const ranked = useMemo(
+  const { ranked, mixedCurrencies, distinctCurrencies } = useMemo(
     () => rankProviders(providers, priority),
     [providers, priority],
   );
@@ -153,6 +128,14 @@ export function RecommendationForm({
             Quality of Service can&apos;t be automatically ranked from
             current data — compare each 3PL&apos;s Overall Assessment
             notes below.
+          </p>
+        )}
+
+        {priority === "Cost Savings" && mixedCurrencies && (
+          <p className="text-sm text-neutral-muted">
+            Vetted 3PLs are quoted in different currencies (
+            {distinctCurrencies.join(" and ")}) — cost ranking is unavailable
+            until all quotes use the same currency.
           </p>
         )}
 
@@ -196,7 +179,7 @@ export function RecommendationForm({
                 <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-move-green text-xs font-semibold text-white">
                   {rank}
                 </span>
-              ) : priority === "Cost Savings" ? (
+              ) : priority === "Cost Savings" && !mixedCurrencies ? (
                 <span className="rounded-full bg-[#F1F2F4] px-2 py-0.5 text-xs font-medium text-neutral-muted">
                   Not enough data to rank
                 </span>

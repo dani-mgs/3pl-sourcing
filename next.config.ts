@@ -9,6 +9,16 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: "/3pl-sourcing/projects/:id/comparison",
+        destination: "/3pl-sourcing/projects/:id",
+        permanent: true,
+      },
+      {
+        source: "/projects/:id/comparison",
+        destination: "/3pl-sourcing/projects/:id",
+        permanent: true,
+      },
+      {
         source: "/dashboard/:path*",
         destination: "/3pl-sourcing/:path*",
         permanent: true,

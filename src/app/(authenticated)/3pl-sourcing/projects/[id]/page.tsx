@@ -5,6 +5,11 @@ import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { Button } from "@/components/ui/button";
 import { NotesCard } from "./notes-card";
 import {
+  CostComparisonPanel,
+  type PanelProvider,
+} from "./cost-comparison-panel";
+import { COST_SELECT } from "@/lib/cost-comparison";
+import {
   ProjectSummaryTable,
   type ProviderRow,
 } from "./project-summary-table";
@@ -24,8 +29,7 @@ const AGGREGATE_CAPABILITIES: { key: keyof ProviderRow; label: string }[] = [
   { key: "returns", label: "Returns" },
 ];
 
-const PROVIDER_SELECT =
-  "id, company_name, location, status, assessment_status, is_incumbent, onboarding_period_months, contact_person, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, lot_batch_expiry_tracking, temp_controlled_storage";
+const PROVIDER_SELECT = `id, company_name, location, status, assessment_status, is_incumbent, onboarding_period_months, contact_person, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, lot_batch_expiry_tracking, temp_controlled_storage, ${COST_SELECT}` as const;
 
 export default async function ProjectSummaryPage({
   params,
@@ -41,7 +45,7 @@ export default async function ProjectSummaryPage({
   const { data: clientRequirement } = await supabase
     .from("client_requirements")
     .select(
-      "id, client_name, target_geography, business_model, owner_id, date_created, summary_notes",
+      "id, client_name, target_geography, business_model, owner_id, date_created, summary_notes, current_incumbent_3pl",
     )
     .eq("id", id)
     .single();
@@ -87,7 +91,7 @@ export default async function ProjectSummaryPage({
   ).map((cap) => cap.label);
 
   return (
-    <div className="mx-auto max-w-6xl px-8 py-10">
+    <div className="mx-auto max-w-[1680px] px-8 py-10">
       <div className="mb-2 text-xs text-neutral-muted">
         <Link href="/3pl-sourcing" className="hover:underline">
           3PL Sourcing
@@ -122,13 +126,6 @@ export default async function ProjectSummaryPage({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link href={`/3pl-sourcing/projects/${id}/comparison`} />}
-          >
-            Cost Comparison
-          </Button>
           {canWrite && (
             <Button
               nativeButton={false}
@@ -181,12 +178,21 @@ export default async function ProjectSummaryPage({
             </div>
           </div>
 
-          <div className="mb-8">
-            <ProjectSummaryTable
-              projectId={id}
-              providers={providerRows}
-              canWrite={canWrite}
-            />
+          <div className="mb-8 grid grid-cols-1 gap-6 min-[1480px]:grid-cols-[minmax(0,1fr)_340px] min-[1480px]:items-start">
+            <aside className="min-[1480px]:sticky min-[1480px]:top-24 min-[1480px]:order-2">
+              <CostComparisonPanel
+                projectId={id}
+                providers={(providers ?? []) as PanelProvider[]}
+                currentIncumbent3pl={clientRequirement.current_incumbent_3pl}
+              />
+            </aside>
+            <div className="min-w-0 min-[1480px]:order-1">
+              <ProjectSummaryTable
+                projectId={id}
+                providers={providerRows}
+                canWrite={canWrite}
+              />
+            </div>
           </div>
         </>
       )}
