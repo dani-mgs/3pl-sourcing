@@ -5,6 +5,7 @@ export type HubModule = {
 };
 
 export const APP_NAME = "MOVE Supply Chain Decision Hub";
+export const APP_SHORT_NAME = "MOVE Decision Hub";
 
 export const HUB_MODULES: HubModule[] = [
   {

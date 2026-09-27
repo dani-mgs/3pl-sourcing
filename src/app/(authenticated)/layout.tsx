@@ -4,7 +4,7 @@ import { getUserRole } from "@/lib/auth/get-user-role";
 import { Greeting } from "./greeting";
 import { UserMenu } from "./user-menu";
 import { ModuleNav } from "./module-nav";
-import { APP_NAME } from "@/lib/modules";
+import { APP_NAME, APP_SHORT_NAME } from "@/lib/modules";
 
 function getDisplayName(user: {
   email?: string | null;
@@ -39,10 +39,18 @@ export default async function AuthenticatedLayout({
   return (
     <div className="min-h-svh bg-neutral-bg">
       <header className="sticky top-0 z-40 flex h-16 items-center gap-6 bg-move-navy px-8">
-        <Link href="/" className="flex shrink-0 items-center gap-2.5">
+        <Link
+          href="/"
+          aria-label={APP_NAME}
+          className="flex shrink-0 items-center gap-2.5"
+        >
           <span className="size-3 rounded-sm bg-move-green" />
-          <span className="font-display text-lg font-semibold whitespace-nowrap text-white">
-            {APP_NAME}
+          <span
+            aria-hidden="true"
+            className="font-display text-lg font-semibold whitespace-nowrap text-white"
+          >
+            <span className="hidden xl:max-[1759px]:inline">{APP_SHORT_NAME}</span>
+            <span className="xl:max-[1759px]:hidden">{APP_NAME}</span>
           </span>
         </Link>
 

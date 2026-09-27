@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { login } from "./actions";
 
@@ -19,6 +19,7 @@ export default function LoginPage() {
     loginAction,
     {},
   );
+  const [email, setEmail] = useState("");
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutral-bg px-4">
@@ -42,6 +43,8 @@ export default function LoginPage() {
               type="email"
               required
               autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green"
             />
           </div>

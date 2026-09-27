@@ -14,7 +14,7 @@ import { HUB_MODULES } from "@/lib/modules";
 function SoonTag({ className }: { className: string }) {
   return (
     <span
-      className={`rounded px-1 py-px text-[10px] font-medium tracking-wide uppercase ${className}`}
+      className={`rounded px-1 py-px text-[11px] leading-none font-medium tracking-wide uppercase ${className}`}
     >
       Soon
     </span>
@@ -28,8 +28,8 @@ export function ModuleNav() {
 
   return (
     <>
-      <nav aria-label="Modules" className="hidden shrink-0 min-[1760px]:block">
-        <ul className="flex items-center gap-1">
+      <nav aria-label="Modules" className="hidden shrink-0 min-[1600px]:block">
+        <ul className="flex items-center">
           {HUB_MODULES.map((module) => (
             <li key={module.name}>
               {module.href ? (
@@ -37,9 +37,9 @@ export function ModuleNav() {
                   href={module.href}
                   aria-current={isActive(module.href) ? "page" : undefined}
                   className={
-                    "relative block rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors " +
+                    "relative block rounded-md px-2 py-1.5 text-[13px] font-medium whitespace-nowrap transition-colors " +
                     (isActive(module.href)
-                      ? "bg-white/10 text-white after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-move-green"
+                      ? "bg-white/10 text-white after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-move-green"
                       : "text-white/80 hover:bg-white/10 hover:text-white")
                   }
                 >
@@ -48,7 +48,7 @@ export function ModuleNav() {
               ) : (
                 <span
                   aria-disabled="true"
-                  className="flex cursor-not-allowed items-center gap-1.5 px-3 py-1.5 text-sm whitespace-nowrap text-white/40"
+                  className="flex cursor-not-allowed items-center gap-1 px-2 py-1.5 text-[13px] whitespace-nowrap text-white/40"
                 >
                   {module.name}
                   <SoonTag className="bg-white/10 text-white/50" />
@@ -59,7 +59,7 @@ export function ModuleNav() {
         </ul>
       </nav>
 
-      <div className="shrink-0 min-[1760px]:hidden">
+      <div className="shrink-0 min-[1600px]:hidden">
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white/80 outline-none hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/40">
             Modules
