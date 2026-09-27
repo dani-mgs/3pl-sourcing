@@ -27,10 +27,16 @@ type ProviderRow = {
   temp_controlled_storage: boolean;
   retail_edi_compliance: boolean;
   cross_docking: boolean;
+  currency: string;
   storage_cost: number | null;
   pick_pack_cost: number | null;
   receiving_cost: number | null;
   returns_cost: number | null;
+  system_setup_cost: number | null;
+  inventory_on_request_cost: number | null;
+  adhoc_bundling_kitting_cost: number | null;
+  adhoc_labelling_cost: number | null;
+  b2b_pick_pack_cost: number | null;
 };
 
 export type BaselineStatus = "N/A" | "Pending" | "Ready";
@@ -38,13 +44,23 @@ export type BaselineStatus = "N/A" | "Pending" | "Ready";
 function buildComparisonRows(
   providers: ProviderRow[],
   currentIncumbent3pl: string | null,
-): { rows: ComparisonRow[]; baselineStatus: BaselineStatus } {
+): {
+  rows: ComparisonRow[];
+  baselineStatus: BaselineStatus;
+  mixedCurrencies: boolean;
+  distinctCurrencies: string[];
+} {
   const withCostFlags = providers.map((p) => {
     const costs = [
       p.storage_cost,
       p.pick_pack_cost,
       p.receiving_cost,
       p.returns_cost,
+      p.system_setup_cost,
+      p.inventory_on_request_cost,
+      p.adhoc_bundling_kitting_cost,
+      p.adhoc_labelling_cost,
+      p.b2b_pick_pack_cost,
     ];
     const has_cost_data = costs.some((c) => c != null);
     const total_cost = has_cost_data
@@ -52,6 +68,11 @@ function buildComparisonRows(
       : null;
     return { ...p, has_cost_data, total_cost };
   });
+
+  const distinctCurrencies = Array.from(
+    new Set(withCostFlags.filter((p) => p.has_cost_data).map((p) => p.currency)),
+  );
+  const mixedCurrencies = distinctCurrencies.length > 1;
 
   let baselineStatus: BaselineStatus;
   const incumbentProvider = withCostFlags.find((p) => p.is_incumbent);
@@ -67,14 +88,16 @@ function buildComparisonRows(
   const baselineTotalCost =
     baselineStatus === "Ready" ? incumbentProvider!.total_cost! : null;
 
-  const rankable = withCostFlags
-    .filter((p) => p.has_cost_data)
-    .sort((a, b) => a.total_cost! - b.total_cost!);
   const rankById = new Map<string, number>();
-  rankable.forEach((p, i) => rankById.set(p.id, i + 1));
+  if (!mixedCurrencies) {
+    const rankable = withCostFlags
+      .filter((p) => p.has_cost_data)
+      .sort((a, b) => a.total_cost! - b.total_cost!);
+    rankable.forEach((p, i) => rankById.set(p.id, i + 1));
+  }
 
   const rows: ComparisonRow[] = withCostFlags.map((p) => {
-    const cost_rank = rankById.get(p.id) ?? null;
+    const cost_rank = mixedCurrencies ? null : (rankById.get(p.id) ?? null);
 
     let savingsState: ComparisonRow["savingsState"];
     let savings_vs_baseline: number | null = null;
@@ -93,6 +116,9 @@ function buildComparisonRows(
     } else if (p.is_incumbent) {
       savingsState = "baseline";
       cost_position = "Baseline";
+    } else if (mixedCurrencies) {
+      savingsState = "currency-mismatch";
+      cost_position = "Currency Mismatch";
     } else {
       const diff = baselineTotalCost! - p.total_cost!;
       savingsState = "value";
@@ -125,13 +151,20 @@ function buildComparisonRows(
       temp_controlled_storage: p.temp_controlled_storage,
       retail_edi_compliance: p.retail_edi_compliance,
       cross_docking: p.cross_docking,
+      currency: p.currency,
       storage_cost: p.storage_cost,
       pick_pack_cost: p.pick_pack_cost,
       receiving_cost: p.receiving_cost,
       returns_cost: p.returns_cost,
+      system_setup_cost: p.system_setup_cost,
+      inventory_on_request_cost: p.inventory_on_request_cost,
+      adhoc_bundling_kitting_cost: p.adhoc_bundling_kitting_cost,
+      adhoc_labelling_cost: p.adhoc_labelling_cost,
+      b2b_pick_pack_cost: p.b2b_pick_pack_cost,
       has_cost_data: p.has_cost_data,
       total_cost: p.total_cost,
       cost_rank,
+      mixed_currencies: mixedCurrencies,
       savingsState,
       savings_vs_baseline,
       savings_pct,
@@ -139,7 +172,7 @@ function buildComparisonRows(
     };
   });
 
-  return { rows, baselineStatus };
+  return { rows, baselineStatus, mixedCurrencies, distinctCurrencies };
 }
 
 export default async function ComparisonPage({
@@ -162,15 +195,16 @@ export default async function ComparisonPage({
   const { data: providers } = await supabase
     .from("three_pl_providers")
     .select(
-      "id, company_name, location, status, is_incumbent, b2b, b2c, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, storage_cost, pick_pack_cost, receiving_cost, returns_cost",
+      "id, company_name, location, status, is_incumbent, b2b, b2c, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, currency, storage_cost, pick_pack_cost, receiving_cost, returns_cost, system_setup_cost, inventory_on_request_cost, adhoc_bundling_kitting_cost, adhoc_labelling_cost, b2b_pick_pack_cost",
     )
     .eq("client_requirement_id", id)
     .order("created_at", { ascending: false });
 
-  const { rows, baselineStatus } = buildComparisonRows(
-    (providers ?? []) as ProviderRow[],
-    clientRequirement.current_incumbent_3pl,
-  );
+  const { rows, baselineStatus, mixedCurrencies, distinctCurrencies } =
+    buildComparisonRows(
+      (providers ?? []) as ProviderRow[],
+      clientRequirement.current_incumbent_3pl,
+    );
 
   return (
     <div className="max-w-5xl px-8 py-10">
@@ -207,6 +241,15 @@ export default async function ComparisonPage({
               Incumbent noted (&quot;{clientRequirement.current_incumbent_3pl}
               &quot;) but cost data isn&apos;t complete yet — Savings and Cost
               Position are provisional until entered.
+            </div>
+          )}
+
+          {mixedCurrencies && (
+            <div className="mb-6 rounded-2xl border border-[#FBBF24] bg-[#FFFBEB] p-4 text-sm text-[#92400E] shadow-sm">
+              Providers are quoted in different currencies (
+              {distinctCurrencies.join(" and ")}) — cost ranking and savings
+              comparisons are unavailable until all quotes use the same
+              currency.
             </div>
           )}
 

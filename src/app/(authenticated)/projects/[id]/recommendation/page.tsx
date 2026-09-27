@@ -28,7 +28,7 @@ export default async function RecommendationPage({
   const { data: vettedProviders } = await supabase
     .from("three_pl_providers")
     .select(
-      "id, company_name, location, status, overall_assessment, storage_cost, pick_pack_cost, receiving_cost, returns_cost, created_at",
+      "id, company_name, location, status, overall_assessment, currency, storage_cost, pick_pack_cost, receiving_cost, returns_cost, system_setup_cost, inventory_on_request_cost, adhoc_bundling_kitting_cost, adhoc_labelling_cost, b2b_pick_pack_cost, created_at",
     )
     .eq("client_requirement_id", id)
     .eq("status", "Vetted")

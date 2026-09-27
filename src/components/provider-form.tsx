@@ -15,6 +15,7 @@ import {
   type ProviderStatus,
   type AssessmentStatus,
 } from "@/app/(authenticated)/projects/[id]/providers/status-badge";
+import { CURRENCY_OPTIONS } from "@/lib/currency";
 
 export const STATUS_OPTIONS: ProviderStatus[] = [
   "Potential / Not Contacted",
@@ -145,10 +146,16 @@ export type ProviderFormDefaults = {
   billing_terms: string | null;
   other_specialization: string | null;
   is_incumbent: boolean;
+  currency: string | null;
   storage_cost: number | null;
   pick_pack_cost: number | null;
   receiving_cost: number | null;
   returns_cost: number | null;
+  system_setup_cost: number | null;
+  inventory_on_request_cost: number | null;
+  adhoc_bundling_kitting_cost: number | null;
+  adhoc_labelling_cost: number | null;
+  b2b_pick_pack_cost: number | null;
   status: string | null;
   assessment_status: string | null;
   key_strength: string | null;
@@ -193,10 +200,16 @@ export const BLANK_PROVIDER_DEFAULTS: ProviderFormDefaults = {
   billing_terms: null,
   other_specialization: null,
   is_incumbent: false,
+  currency: "USD",
   storage_cost: null,
   pick_pack_cost: null,
   receiving_cost: null,
   returns_cost: null,
+  system_setup_cost: null,
+  inventory_on_request_cost: null,
+  adhoc_bundling_kitting_cost: null,
+  adhoc_labelling_cost: null,
+  b2b_pick_pack_cost: null,
   status: null,
   assessment_status: null,
   key_strength: null,
@@ -296,10 +309,16 @@ type FormFieldValues = {
   billing_terms: string;
   other_specialization: string;
   is_incumbent: boolean;
+  currency: string;
   storage_cost: string;
   pick_pack_cost: string;
   receiving_cost: string;
   returns_cost: string;
+  system_setup_cost: string;
+  inventory_on_request_cost: string;
+  adhoc_bundling_kitting_cost: string;
+  adhoc_labelling_cost: string;
+  b2b_pick_pack_cost: string;
   status: string;
   assessment_status: string;
   key_strength: string;
@@ -332,6 +351,7 @@ function initialFieldValues(
     billing_terms: defaultValues?.billing_terms ?? "",
     other_specialization: defaultValues?.other_specialization ?? "",
     is_incumbent: Boolean(defaultValues?.is_incumbent),
+    currency: defaultValues?.currency ?? "USD",
     storage_cost:
       defaultValues?.storage_cost != null
         ? String(defaultValues.storage_cost)
@@ -347,6 +367,26 @@ function initialFieldValues(
     returns_cost:
       defaultValues?.returns_cost != null
         ? String(defaultValues.returns_cost)
+        : "",
+    system_setup_cost:
+      defaultValues?.system_setup_cost != null
+        ? String(defaultValues.system_setup_cost)
+        : "",
+    inventory_on_request_cost:
+      defaultValues?.inventory_on_request_cost != null
+        ? String(defaultValues.inventory_on_request_cost)
+        : "",
+    adhoc_bundling_kitting_cost:
+      defaultValues?.adhoc_bundling_kitting_cost != null
+        ? String(defaultValues.adhoc_bundling_kitting_cost)
+        : "",
+    adhoc_labelling_cost:
+      defaultValues?.adhoc_labelling_cost != null
+        ? String(defaultValues.adhoc_labelling_cost)
+        : "",
+    b2b_pick_pack_cost:
+      defaultValues?.b2b_pick_pack_cost != null
+        ? String(defaultValues.b2b_pick_pack_cost)
         : "",
     status: defaultValues?.status ?? "Potential / Not Contacted",
     assessment_status: defaultValues?.assessment_status ?? "",
@@ -746,107 +786,84 @@ export function ProviderForm({
       </section>
 
       <section className="flex flex-col gap-4">
-        <h3 className={sectionTitleClass}>Costs (USD)</h3>
+        <h3 className={sectionTitleClass}>Costs</h3>
+
+        <div className="flex flex-col gap-1 sm:w-1/2 sm:pr-2">
+          <label htmlFor="currency" className={labelClass}>
+            Currency
+            {isUpdated("currency") && <UpdatedBadge />}
+          </label>
+          <Select
+            name="currency"
+            value={values.currency}
+            onValueChange={(value) => updateField("currency", value as string)}
+          >
+            <SelectTrigger
+              id="currency"
+              className={
+                isUpdated("currency")
+                  ? `w-full rounded-xl border-neutral-border ${updatedFieldClass}`
+                  : "w-full rounded-xl border-neutral-border"
+              }
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CURRENCY_OPTIONS.map((code) => (
+                <SelectItem key={code} value={code}>
+                  {code}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="storage_cost" className={labelClass}>
-              Storage Cost
-              {isUpdated("storage_cost") && <UpdatedBadge />}
-            </label>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-neutral-muted">$</span>
-              <input
-                id="storage_cost"
-                name="storage_cost"
-                type="number"
-                min="0"
-                step="0.01"
-                value={values.storage_cost}
-                onChange={(e) => updateField("storage_cost", e.target.value)}
-                className={
-                  isUpdated("storage_cost")
-                    ? `${fieldClass} ${updatedFieldClass} flex-1`
-                    : `${fieldClass} flex-1`
-                }
-              />
+          {(
+            [
+              { name: "storage_cost", label: "Storage Cost" },
+              { name: "pick_pack_cost", label: "Pick & Pack Cost" },
+              { name: "receiving_cost", label: "Receiving Cost" },
+              { name: "returns_cost", label: "Returns Cost" },
+              { name: "system_setup_cost", label: "System Set-up Cost" },
+              {
+                name: "inventory_on_request_cost",
+                label: "Inventory Upon Request Cost",
+              },
+              {
+                name: "adhoc_bundling_kitting_cost",
+                label: "Adhoc Bundling/Kitting Cost",
+              },
+              { name: "adhoc_labelling_cost", label: "Adhoc Labelling Cost" },
+              { name: "b2b_pick_pack_cost", label: "B2B Pick & Pack Cost" },
+            ] as const
+          ).map((cost) => (
+            <div key={cost.name} className="flex flex-col gap-1">
+              <label htmlFor={cost.name} className={labelClass}>
+                {cost.label}
+                {isUpdated(cost.name) && <UpdatedBadge />}
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-neutral-muted">
+                  {values.currency}
+                </span>
+                <input
+                  id={cost.name}
+                  name={cost.name}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={values[cost.name]}
+                  onChange={(e) => updateField(cost.name, e.target.value)}
+                  className={
+                    isUpdated(cost.name)
+                      ? `${fieldClass} ${updatedFieldClass} flex-1`
+                      : `${fieldClass} flex-1`
+                  }
+                />
+              </div>
             </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="pick_pack_cost" className={labelClass}>
-              Pick &amp; Pack Cost
-              {isUpdated("pick_pack_cost") && <UpdatedBadge />}
-            </label>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-neutral-muted">$</span>
-              <input
-                id="pick_pack_cost"
-                name="pick_pack_cost"
-                type="number"
-                min="0"
-                step="0.01"
-                value={values.pick_pack_cost}
-                onChange={(e) =>
-                  updateField("pick_pack_cost", e.target.value)
-                }
-                className={
-                  isUpdated("pick_pack_cost")
-                    ? `${fieldClass} ${updatedFieldClass} flex-1`
-                    : `${fieldClass} flex-1`
-                }
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="receiving_cost" className={labelClass}>
-              Receiving Cost
-              {isUpdated("receiving_cost") && <UpdatedBadge />}
-            </label>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-neutral-muted">$</span>
-              <input
-                id="receiving_cost"
-                name="receiving_cost"
-                type="number"
-                min="0"
-                step="0.01"
-                value={values.receiving_cost}
-                onChange={(e) =>
-                  updateField("receiving_cost", e.target.value)
-                }
-                className={
-                  isUpdated("receiving_cost")
-                    ? `${fieldClass} ${updatedFieldClass} flex-1`
-                    : `${fieldClass} flex-1`
-                }
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="returns_cost" className={labelClass}>
-              Returns Cost
-              {isUpdated("returns_cost") && <UpdatedBadge />}
-            </label>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-neutral-muted">$</span>
-              <input
-                id="returns_cost"
-                name="returns_cost"
-                type="number"
-                min="0"
-                step="0.01"
-                value={values.returns_cost}
-                onChange={(e) => updateField("returns_cost", e.target.value)}
-                className={
-                  isUpdated("returns_cost")
-                    ? `${fieldClass} ${updatedFieldClass} flex-1`
-                    : `${fieldClass} flex-1`
-                }
-              />
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 

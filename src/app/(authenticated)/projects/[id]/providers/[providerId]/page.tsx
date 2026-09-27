@@ -13,11 +13,7 @@ import {
   type AssessmentStatus,
 } from "../status-badge";
 import { DeleteProviderButton } from "./delete-provider-button";
-
-const USD_FORMATTER = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-});
+import { formatCurrency } from "@/lib/currency";
 
 const CAPABILITY_FIELDS: { key: string; label: string }[] = [
   { key: "receiving", label: "Receiving" },
@@ -65,7 +61,7 @@ export default async function ProviderDetailsPage({
     supabase
       .from("three_pl_providers")
       .select(
-        "id, company_name, provider_type, website, location, footprint_source, contact_person, email, phone, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, onboarding_period_months, virtual_tour_url, billing_terms, other_specialization, b2b, b2c, is_incumbent, storage_cost, pick_pack_cost, receiving_cost, returns_cost, status, assessment_status, key_strength, key_weakness_risk, important_assumption, overall_assessment, client_decision, source_basis, next_action, key_notes, notes, updated_at",
+        "id, company_name, provider_type, website, location, footprint_source, contact_person, email, phone, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, onboarding_period_months, virtual_tour_url, billing_terms, other_specialization, b2b, b2c, is_incumbent, currency, storage_cost, pick_pack_cost, receiving_cost, returns_cost, system_setup_cost, inventory_on_request_cost, adhoc_bundling_kitting_cost, adhoc_labelling_cost, b2b_pick_pack_cost, status, assessment_status, key_strength, key_weakness_risk, important_assumption, overall_assessment, client_decision, source_basis, next_action, key_notes, notes, updated_at",
       )
       .eq("id", providerId)
       .eq("client_requirement_id", id)
@@ -87,7 +83,12 @@ export default async function ProviderDetailsPage({
     (provider.storage_cost ?? 0) +
     (provider.pick_pack_cost ?? 0) +
     (provider.receiving_cost ?? 0) +
-    (provider.returns_cost ?? 0);
+    (provider.returns_cost ?? 0) +
+    (provider.system_setup_cost ?? 0) +
+    (provider.inventory_on_request_cost ?? 0) +
+    (provider.adhoc_bundling_kitting_cost ?? 0) +
+    (provider.adhoc_labelling_cost ?? 0) +
+    (provider.b2b_pick_pack_cost ?? 0);
 
   return (
     <div className="max-w-5xl px-8 py-10">
@@ -200,13 +201,14 @@ export default async function ProviderDetailsPage({
           </dl>
         </SectionCard>
 
-        <SectionCard title="Costs (USD)">
+        <SectionCard title="Costs">
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <InfoField label="Currency" value={provider.currency} />
             <InfoField
               label="Storage Cost"
               value={
                 provider.storage_cost != null
-                  ? USD_FORMATTER.format(provider.storage_cost)
+                  ? formatCurrency(provider.storage_cost, provider.currency)
                   : null
               }
             />
@@ -214,7 +216,7 @@ export default async function ProviderDetailsPage({
               label="Pick & Pack Cost"
               value={
                 provider.pick_pack_cost != null
-                  ? USD_FORMATTER.format(provider.pick_pack_cost)
+                  ? formatCurrency(provider.pick_pack_cost, provider.currency)
                   : null
               }
             />
@@ -222,7 +224,7 @@ export default async function ProviderDetailsPage({
               label="Receiving Cost"
               value={
                 provider.receiving_cost != null
-                  ? USD_FORMATTER.format(provider.receiving_cost)
+                  ? formatCurrency(provider.receiving_cost, provider.currency)
                   : null
               }
             />
@@ -230,7 +232,59 @@ export default async function ProviderDetailsPage({
               label="Returns Cost"
               value={
                 provider.returns_cost != null
-                  ? USD_FORMATTER.format(provider.returns_cost)
+                  ? formatCurrency(provider.returns_cost, provider.currency)
+                  : null
+              }
+            />
+            <InfoField
+              label="System Set-up Cost"
+              value={
+                provider.system_setup_cost != null
+                  ? formatCurrency(provider.system_setup_cost, provider.currency)
+                  : null
+              }
+            />
+            <InfoField
+              label="Inventory Upon Request Cost"
+              value={
+                provider.inventory_on_request_cost != null
+                  ? formatCurrency(
+                      provider.inventory_on_request_cost,
+                      provider.currency,
+                    )
+                  : null
+              }
+            />
+            <InfoField
+              label="Adhoc Bundling/Kitting Cost"
+              value={
+                provider.adhoc_bundling_kitting_cost != null
+                  ? formatCurrency(
+                      provider.adhoc_bundling_kitting_cost,
+                      provider.currency,
+                    )
+                  : null
+              }
+            />
+            <InfoField
+              label="Adhoc Labelling Cost"
+              value={
+                provider.adhoc_labelling_cost != null
+                  ? formatCurrency(
+                      provider.adhoc_labelling_cost,
+                      provider.currency,
+                    )
+                  : null
+              }
+            />
+            <InfoField
+              label="B2B Pick & Pack Cost"
+              value={
+                provider.b2b_pick_pack_cost != null
+                  ? formatCurrency(
+                      provider.b2b_pick_pack_cost,
+                      provider.currency,
+                    )
                   : null
               }
             />
@@ -238,7 +292,7 @@ export default async function ProviderDetailsPage({
           <div className="mt-4 border-t border-neutral-border pt-4">
             <InfoField
               label="Total Cost"
-              value={USD_FORMATTER.format(totalCost)}
+              value={formatCurrency(totalCost, provider.currency)}
             />
           </div>
         </SectionCard>

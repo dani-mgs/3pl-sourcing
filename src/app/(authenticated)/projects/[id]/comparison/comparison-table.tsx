@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatusBadge, type ProviderStatus } from "../providers/status-badge";
+import { formatCurrency } from "@/lib/currency";
 
 const STATUS_OPTIONS: ProviderStatus[] = [
   "Potential / Not Contacted",
@@ -149,23 +150,31 @@ export type ComparisonRow = {
   temp_controlled_storage: boolean;
   retail_edi_compliance: boolean;
   cross_docking: boolean;
+  currency: string;
   storage_cost: number | null;
   pick_pack_cost: number | null;
   receiving_cost: number | null;
   returns_cost: number | null;
+  system_setup_cost: number | null;
+  inventory_on_request_cost: number | null;
+  adhoc_bundling_kitting_cost: number | null;
+  adhoc_labelling_cost: number | null;
+  b2b_pick_pack_cost: number | null;
   has_cost_data: boolean;
   total_cost: number | null;
   cost_rank: number | null;
-  savingsState: "baseline" | "value" | "pending" | "na" | "no-data";
+  mixed_currencies: boolean;
+  savingsState:
+    | "baseline"
+    | "value"
+    | "pending"
+    | "na"
+    | "no-data"
+    | "currency-mismatch";
   savings_vs_baseline: number | null;
   savings_pct: number | null;
   cost_position: string;
 };
-
-const USD_FORMATTER = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-});
 
 function formatSavings(row: ComparisonRow) {
   switch (row.savingsState) {
@@ -173,7 +182,7 @@ function formatSavings(row: ComparisonRow) {
       return "—";
     case "value":
       return row.savings_vs_baseline != null
-        ? USD_FORMATTER.format(row.savings_vs_baseline)
+        ? formatCurrency(row.savings_vs_baseline, row.currency)
         : "—";
     case "pending":
       return "Pending";
@@ -181,6 +190,8 @@ function formatSavings(row: ComparisonRow) {
       return "N/A";
     case "no-data":
       return "Not enough data";
+    case "currency-mismatch":
+      return "Currency Mismatch";
   }
 }
 
@@ -196,7 +207,14 @@ function formatSavingsPct(row: ComparisonRow) {
       return "N/A";
     case "no-data":
       return "Not enough data";
+    case "currency-mismatch":
+      return "Currency Mismatch";
   }
+}
+
+function formatCostRank(row: ComparisonRow) {
+  if (row.mixed_currencies) return "—";
+  return row.cost_rank ?? "Not enough data to rank";
 }
 
 export function ComparisonTable({ rows }: { rows: ComparisonRow[] }) {
@@ -378,6 +396,21 @@ export function ComparisonTable({ rows }: { rows: ComparisonRow[] }) {
                   Returns Cost
                 </TableHead>
                 <TableHead className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
+                  System Set-up Cost
+                </TableHead>
+                <TableHead className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
+                  Inventory Upon Request Cost
+                </TableHead>
+                <TableHead className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
+                  Adhoc Bundling/Kitting Cost
+                </TableHead>
+                <TableHead className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
+                  Adhoc Labelling Cost
+                </TableHead>
+                <TableHead className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
+                  B2B Pick & Pack Cost
+                </TableHead>
+                <TableHead className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
                   Total Cost
                 </TableHead>
                 <TableHead className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-neutral-muted">
@@ -421,31 +454,62 @@ export function ComparisonTable({ rows }: { rows: ComparisonRow[] }) {
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-normal text-move-navy">
                     {row.storage_cost != null
-                      ? USD_FORMATTER.format(row.storage_cost)
+                      ? formatCurrency(row.storage_cost, row.currency)
                       : "—"}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-normal text-move-navy">
                     {row.pick_pack_cost != null
-                      ? USD_FORMATTER.format(row.pick_pack_cost)
+                      ? formatCurrency(row.pick_pack_cost, row.currency)
                       : "—"}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-normal text-move-navy">
                     {row.receiving_cost != null
-                      ? USD_FORMATTER.format(row.receiving_cost)
+                      ? formatCurrency(row.receiving_cost, row.currency)
                       : "—"}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-normal text-move-navy">
                     {row.returns_cost != null
-                      ? USD_FORMATTER.format(row.returns_cost)
+                      ? formatCurrency(row.returns_cost, row.currency)
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-normal text-move-navy">
+                    {row.system_setup_cost != null
+                      ? formatCurrency(row.system_setup_cost, row.currency)
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-normal text-move-navy">
+                    {row.inventory_on_request_cost != null
+                      ? formatCurrency(
+                          row.inventory_on_request_cost,
+                          row.currency,
+                        )
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-normal text-move-navy">
+                    {row.adhoc_bundling_kitting_cost != null
+                      ? formatCurrency(
+                          row.adhoc_bundling_kitting_cost,
+                          row.currency,
+                        )
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-normal text-move-navy">
+                    {row.adhoc_labelling_cost != null
+                      ? formatCurrency(row.adhoc_labelling_cost, row.currency)
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-normal text-move-navy">
+                    {row.b2b_pick_pack_cost != null
+                      ? formatCurrency(row.b2b_pick_pack_cost, row.currency)
                       : "—"}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-normal text-move-navy">
                     {row.has_cost_data && row.total_cost != null
-                      ? USD_FORMATTER.format(row.total_cost)
+                      ? formatCurrency(row.total_cost, row.currency)
                       : "—"}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-normal text-neutral-muted">
-                    {row.cost_rank ?? "Not enough data to rank"}
+                    {formatCostRank(row)}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-normal text-neutral-muted">
                     {formatSavings(row)}

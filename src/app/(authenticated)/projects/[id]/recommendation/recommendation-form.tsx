@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { StatusBadge, type ProviderStatus } from "../providers/status-badge";
 import { saveRecommendation, type SaveRecommendationState } from "./actions";
+import { formatCurrency } from "@/lib/currency";
 
 const PRIORITY_OPTIONS = [
   "Cost Savings",
@@ -26,10 +27,16 @@ export type VettedProvider = {
   location: string | null;
   status: string;
   overall_assessment: string | null;
+  currency: string;
   storage_cost: number | null;
   pick_pack_cost: number | null;
   receiving_cost: number | null;
   returns_cost: number | null;
+  system_setup_cost: number | null;
+  inventory_on_request_cost: number | null;
+  adhoc_bundling_kitting_cost: number | null;
+  adhoc_labelling_cost: number | null;
+  b2b_pick_pack_cost: number | null;
   created_at: string;
 };
 
@@ -39,17 +46,17 @@ export type RecommendationRow = {
 
 const labelClass = "text-sm font-medium text-move-navy";
 
-const USD_FORMATTER = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-});
-
 function totalCost(provider: VettedProvider): number | null {
   const costs = [
     provider.storage_cost,
     provider.pick_pack_cost,
     provider.receiving_cost,
     provider.returns_cost,
+    provider.system_setup_cost,
+    provider.inventory_on_request_cost,
+    provider.adhoc_bundling_kitting_cost,
+    provider.adhoc_labelling_cost,
+    provider.b2b_pick_pack_cost,
   ];
   const hasCostData = costs.some((c) => c != null);
   if (!hasCostData) return null;
@@ -205,7 +212,7 @@ export function RecommendationForm({
                 <dt className="text-xs text-neutral-muted">Total Cost</dt>
                 <dd className="text-sm text-move-navy">
                   {totalCost(provider) != null
-                    ? USD_FORMATTER.format(totalCost(provider)!)
+                    ? formatCurrency(totalCost(provider)!, provider.currency)
                     : "—"}
                 </dd>
               </div>
