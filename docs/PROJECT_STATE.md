@@ -60,11 +60,11 @@ Known gotchas:
 
 ## 5. IN PROGRESS
 
-Forwarder Sourcing (Phase 3A) done: project list (`/forwarder-sourcing`), intake form (create + edit, single page — no wizard yet since forwarders/quotes aren't screens yet), and Project Summary with placeholder Forwarders/Quote Comparison sections. Module enabled in the hub and nav. Ranking rules were also changed from the spreadsheet: rejected-status forwarders (Unfit, Do Not Contact, Withdrawn / No Response) are excluded from ranking, and ties are labelled symmetrically (`RANKING_EXCLUDED_STATUSES` in src/lib/forwarder/cost-comparison.ts). Shared code refactored for reuse across modules: `resolveClientId` moved to src/lib/clients-server.ts, `getOwnershipContext`/`getClientOwner`/`ViewOnlyBanner` take a `table` parameter (default three_pl_projects), `formatRelativeTime` moved to src/lib/relative-time.ts. Admin gained forwarder-project reassignment, and client/user deletion counts now include forwarder projects. Next: Phase 3B (add/edit forwarders on a project) and 3C (quotes + the cost comparison screen, using src/lib/forwarder/cost-comparison.ts).
+Forwarder Sourcing (Phase 3A + 3B) done. **3A:** project list (`/forwarder-sourcing`), intake form (create + edit, single page), Project Summary skeleton. Module enabled in the hub and nav. Ranking rules changed from the spreadsheet: rejected-status forwarders (Unfit, Do Not Contact, Withdrawn / No Response) are excluded from ranking, and ties are labelled symmetrically (`RANKING_EXCLUDED_STATUSES` in src/lib/forwarder/cost-comparison.ts). Shared code refactored for reuse: `resolveClientId` in src/lib/clients-server.ts, `getOwnershipContext`/`getClientOwner`/`ViewOnlyBanner` take a `table` parameter, `formatRelativeTime` in src/lib/relative-time.ts. **3B:** forwarder management — add/edit/view a forwarder, and a real Forwarders table on Project Summary (search, Status/Capability filters, toggleable columns incl. Assessment, row menu View/Edit/Delete) replacing the placeholder. Deleting a forwarder is never blocked (forwarder_quotes.forwarder_id is ON DELETE CASCADE, unlike the project→forwarders RESTRICT), so the confirm dialog says up front that it also deletes the forwarder's quotes. Forwarder status/assessment strings differ from 3PL's (two extra statuses, different capitalization), so they have their own option lists and badge components (src/lib/forwarder/forwarder-fields.ts, forwarder-status-badge.tsx) rather than sharing 3PL's. New Server Actions use Zod (src/lib/forwarder/parse-forwarder-form.ts). Next: Phase 3C (quotes + the cost comparison screen, using src/lib/forwarder/cost-comparison.ts).
 
 ## 6. NEXT TASK
 
-Phase 3B: forwarder screens (add/edit a forwarder on a project, list them on Project Summary in place of the placeholder). Then 3C: quote entry and the freight cost comparison screen, built on src/lib/forwarder/cost-comparison.ts. Before starting, read docs/CHANGELOG.md and docs/TECH_DEBT.md (the forwarder ranking basis is an open decision there).
+Phase 3C: quote entry (add/edit a quote on a forwarder, replacing the "Quotes" placeholder on the forwarder detail page) and the freight cost comparison screen on Project Summary (replacing the "Quote Comparison" placeholder), built on src/lib/forwarder/cost-comparison.ts. Before starting, read docs/CHANGELOG.md and docs/TECH_DEBT.md (the forwarder ranking basis is an open decision there).
 
 ## 7. OPEN DECISIONS / QUESTIONS
 
@@ -113,6 +113,10 @@ Phase 3B: forwarder screens (add/edit a forwarder on a project, list them on Pro
 | Forwarder project form validation (Zod) | src/lib/forwarder/parse-project-form.ts |
 | Forwarder project list (`/forwarder-sourcing`) | src/app/(authenticated)/forwarder-sourcing/page.tsx, forwarder-project-list.tsx |
 | Forwarder project pages (new/edit/summary) | src/app/(authenticated)/forwarder-sourcing/new/, [id]/, [id]/edit/, forwarder-project-form.tsx, actions.ts, form-fields.tsx |
+| Forwarder option lists, capability labels, Zod form validation | src/lib/forwarder/forwarder-fields.ts, parse-forwarder-form.ts |
+| Forwarder status/assessment badges (own colors — status strings differ from 3PL's) | src/app/(authenticated)/forwarder-sourcing/[id]/forwarder-status-badge.tsx |
+| Forwarders table on Project Summary (search/filter/columns/row menu) | src/app/(authenticated)/forwarder-sourcing/[id]/forwarders-table.tsx |
+| Forwarder add/edit/view pages | src/app/(authenticated)/forwarder-sourcing/[id]/forwarders/* (new/, [forwarderId]/, [forwarderId]/edit/, forwarder-form.tsx) |
 | Tests | `npm test` (vitest): src/lib/forwarder/cost-comparison.test.ts checks the forwarder math against a spreadsheet-computed golden fixture (src/lib/forwarder/__fixtures__/). UI is still verified manually with Playwright MCP per feature. |
 
 ## 10. DO NOT TOUCH / FRAGILE AREAS

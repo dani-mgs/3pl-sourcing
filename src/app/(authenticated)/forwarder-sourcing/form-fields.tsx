@@ -121,6 +121,59 @@ export function SelectField({
   );
 }
 
+// Toggle chips for a fixed set of named booleans (e.g. the 11 forwarder
+// capabilities) — each option is its own form field, always posted as
+// "true"/"false", unlike MultiChipField's single array-valued field below.
+export function BooleanChipsField({
+  label,
+  options,
+  defaultValues,
+}: {
+  label: string;
+  options: readonly { name: string; label: string }[];
+  // Loosely typed since callers often pass a wider "all form fields" object
+  // rather than one filtered to just these boolean keys.
+  defaultValues?: Record<string, unknown>;
+}) {
+  const [values, setValues] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(options.map((o) => [o.name, Boolean(defaultValues?.[o.name])])),
+  );
+
+  return (
+    <fieldset className="flex flex-col gap-2 sm:col-span-2">
+      <legend className={`${labelClass} mb-2`}>{label}</legend>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const on = values[option.name];
+          return (
+            <button
+              key={option.name}
+              type="button"
+              aria-pressed={on}
+              onClick={() => setValues((prev) => ({ ...prev, [option.name]: !prev[option.name] }))}
+              className={
+                on
+                  ? "rounded-full border border-move-green bg-move-green px-3 py-1 text-xs font-medium text-white"
+                  : "rounded-full border border-neutral-border bg-white px-3 py-1 text-xs font-medium text-move-navy hover:border-move-green"
+              }
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+      {options.map((option) => (
+        <input
+          key={option.name}
+          type="hidden"
+          name={option.name}
+          value={values[option.name] ? "true" : "false"}
+        />
+      ))}
+    </fieldset>
+  );
+}
+
 // Toggle chips posting one hidden input per selected option.
 export function MultiChipField({
   name,

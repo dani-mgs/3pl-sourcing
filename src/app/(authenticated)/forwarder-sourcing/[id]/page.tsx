@@ -9,11 +9,14 @@ import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/section-card";
 import { ViewOnlyBanner } from "@/components/view-only-banner";
 import { embeddedOne } from "@/lib/clients";
+import { formatRelativeTime } from "@/lib/relative-time";
 import { FORWARDER_PROJECT_FIELDS_SELECT } from "@/lib/forwarder/parse-project-form";
 import { PROJECT_SECTIONS } from "@/lib/forwarder/project-sections";
 import { formatProjectValue, routeLabel } from "@/lib/forwarder/project-display";
+import { CAPABILITY_FIELDS } from "@/lib/forwarder/forwarder-fields";
 import { ProjectStatusBadge } from "../project-status-badge";
 import { DeleteForwarderProjectButton } from "./delete-forwarder-project-button";
+import { ForwardersTable, type ForwarderRow } from "./forwarders-table";
 
 export default async function ForwarderProjectSummaryPage({
   params,
@@ -42,15 +45,29 @@ export default async function ForwarderProjectSummaryPage({
   const clientName = client?.name ?? "—";
   const route = routeLabel(row);
 
-  const [{ canWrite, isOwner }, owner, { count: forwarderCount }] =
+  const capabilitySelect = CAPABILITY_FIELDS.map((c) => c.name).join(", ");
+  const [{ canWrite, isOwner }, owner, { data: forwarderRows }] =
     await Promise.all([
       getOwnershipContext(id, "forwarder_projects"),
       getClientOwner(id, "forwarder_projects"),
       supabase
         .from("forwarders")
-        .select("id", { count: "exact", head: true })
-        .eq("forwarder_project_id", id),
+        .select(`id, company_name, contact_person, status, assessment, updated_at, ${capabilitySelect}`)
+        .eq("forwarder_project_id", id)
+        .order("company_name", { ascending: true }),
     ]);
+
+  // The select string above is built at runtime, so Supabase can't infer its
+  // columns from the literal type.
+  type ForwarderQueryRow = Omit<ForwarderRow, "updatedRelative"> & {
+    updated_at: string;
+  };
+  const forwarders: ForwarderRow[] = (
+    (forwarderRows ?? []) as unknown as ForwarderQueryRow[]
+  ).map((f) => ({
+    ...f,
+    updatedRelative: formatRelativeTime(f.updated_at),
+  }));
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-10">
@@ -93,7 +110,7 @@ export default async function ForwarderProjectSummaryPage({
             <DeleteForwarderProjectButton
               projectId={id}
               clientName={clientName}
-              forwarderCount={forwarderCount ?? 0}
+              forwarderCount={forwarders.length}
             />
           </div>
         )}
@@ -134,9 +151,7 @@ export default async function ForwarderProjectSummaryPage({
         ))}
 
         <SectionCard title="Forwarders">
-          <p className="py-6 text-center text-sm text-neutral-muted">
-            No forwarders yet. Adding forwarders is coming next.
-          </p>
+          <ForwardersTable projectId={id} forwarders={forwarders} canWrite={canWrite} />
         </SectionCard>
 
         <SectionCard title="Quote Comparison">
