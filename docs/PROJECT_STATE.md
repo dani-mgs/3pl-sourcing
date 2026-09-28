@@ -60,17 +60,18 @@ Known gotchas:
 
 ## 5. IN PROGRESS
 
-Nothing in progress. Shared-client refactor Phase 1 (migration 20260928071728_shared_clients_refactor.sql plus the matching app code) was pushed to the live database and browser-verified on 2026-09-28.
+Forwarder Sourcing (Phase 2). Done: the tables (migration 20260928094641_forwarder_sourcing_tables.sql, pushed live 2026-09-28: forwarder_projects, forwarders, forwarder_quotes, with RLS) and the calculation module (src/lib/forwarder/cost-comparison.ts, verified against the original spreadsheet's formulas by a golden-fixture test). Next: the Forwarder Sourcing screens. No UI exists yet, and the hub's Forwarder Sourcing card is still "Coming Soon".
 
 ## 6. NEXT TASK
 
-No specific task is queued. Before starting new work, read docs/CHANGELOG.md and docs/TECH_DEBT.md to confirm current state, then pick up one of the open decisions in Section 7 (extending AI extraction further is the most natural next step, now that the intake/merge extraction flows are proven reliable) or a new request from Dani.
+Forwarder Sourcing screens: project list, project intake, forwarders, quotes and the freight cost comparison, built on the tables and src/lib/forwarder/cost-comparison.ts. Before starting, read docs/CHANGELOG.md and docs/TECH_DEBT.md (the forwarder ranking basis is an open decision there).
 
 ## 7. OPEN DECISIONS / QUESTIONS
 
 - Extending AI extraction beyond New Project intake (e.g. pre-filling a 3PL update from a discovery call transcript) — deliberately deferred until intake extraction is proven reliable.
 - CSV structured import — deferred as a separate feature from AI text extraction (different technical approach: column-mapping, not LLM extraction).
 - Whether/when to actually deploy to Vercel — instructions exist, deployment itself hasn't happened yet.
+- Forwarder ranking basis: Cost Rank and savings use Freight Cost only (as in the spreadsheet); Total Comparable Logistics Cost may be fairer against a DDP baseline. Owner: Dani, revisit before Forwarder Sourcing goes live (docs/TECH_DEBT.md).
 - rate_details (granular per-service rates) isn't wired into the cost comparison math yet — the Cost Comparison panel and Recommendation use the 9 summary cost fields on three_pl_providers directly, not the more granular rate_details breakdown.
 
 ## 8. KEY ARCHITECTURE DECISIONS
@@ -105,7 +106,8 @@ No specific task is queued. Before starting new work, read docs/CHANGELOG.md and
 | Rate Details fields + save logic (shared by all 3PL save actions) | src/lib/rate-details.ts |
 | Legacy URL redirects (`/dashboard/*`, `/projects/*`, `.../comparison` → Project Summary, `.../providers/[providerId]/rates` → 3PL View) | next.config.ts `redirects()` |
 | Admin (`/admin`, hub-level) | src/app/(authenticated)/admin/* (client-actions.ts + delete-client-button.tsx for the Clients section) |
-| Tests | None automated — manual Playwright MCP verification per feature, matching the project's right-sized testing approach |
+| Forwarder cost math (freight in USD, gates, savings, ranking) | src/lib/forwarder/cost-comparison.ts |
+| Tests | `npm test` (vitest): src/lib/forwarder/cost-comparison.test.ts checks the forwarder math against a spreadsheet-computed golden fixture (src/lib/forwarder/__fixtures__/). UI is still verified manually with Playwright MCP per feature. |
 
 ## 10. DO NOT TOUCH / FRAGILE AREAS
 

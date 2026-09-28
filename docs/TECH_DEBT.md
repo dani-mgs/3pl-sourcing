@@ -4,6 +4,12 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### Forwarder ranking basis — open decision
+- **Added:** 2026-09-28
+- **What:** Cost Rank and savings use Freight Cost only, matching the original spreadsheet. Total Comparable Logistics Cost (freight + duties & taxes + other charges) may be the fairer basis against a DDP baseline, where duties are included.
+- **Owner:** Dani. Revisit before Forwarder Sourcing goes live.
+- **Where:** src/lib/forwarder/cost-comparison.ts
+
 ### Header bar spacing feels tight
 - **Added:** 2026-08-19 (Week 1, shared authenticated layout)
 - **What:** The header bar ("3PL Sourcing" / "Log Out") has no vertical padding and both elements sit flush against the edges with little breathing room.

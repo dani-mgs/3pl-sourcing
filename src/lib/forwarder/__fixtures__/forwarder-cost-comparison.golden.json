@@ -1,0 +1,1349 @@
+{
+  "source": "For_Reference.xlsx tab '3 Freight Cost Comparison' formulas, recalculated in LibreOffice with made-up inputs",
+  "configs": {
+    "A_final_terms_set_per_year": {
+      "project": {
+        "current_incoterm": "DDP",
+        "shipment_mode": "Sea",
+        "shipment_type": "FCL",
+        "final_incoterm": "DDP",
+        "final_shipment_mode": "Sea",
+        "final_shipment_type": "FCL",
+        "current_freight_cost_usd": 8000,
+        "shipments_per_month": null,
+        "shipments_per_year": 10,
+        "effective_annual_shipments_expected": 10
+      },
+      "quotes": [
+        {
+          "input": {
+            "provider": "Alpha",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 7000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": 500,
+            "other_charges_usd": 200,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7000,
+            "cost_per_kg": 3.783784,
+            "freight_cost_ratio": 0.25,
+            "total_comparable_logistics_cost": 7700,
+            "cost_difference_vs_baseline": 1000,
+            "cost_saving_pct": 0.125,
+            "estimated_annual_freight_cost": 70000,
+            "estimated_annual_cost_difference": 10000,
+            "estimated_annual_savings_pct": 0.125,
+            "cost_rank": 1,
+            "cost_position": "Lowest Freight Cost"
+          }
+        },
+        {
+          "input": {
+            "provider": "Bravo",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "CNY",
+            "original_amount": 50000,
+            "exchange_rate_to_usd": 0.14,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7000,
+            "cost_per_kg": 3.783784,
+            "freight_cost_ratio": 0.25,
+            "total_comparable_logistics_cost": 7000,
+            "cost_difference_vs_baseline": 1000.0,
+            "cost_saving_pct": 0.125,
+            "estimated_annual_freight_cost": 70000,
+            "estimated_annual_cost_difference": 10000.0,
+            "estimated_annual_savings_pct": 0.125,
+            "cost_rank": 1,
+            "cost_position": "Lowest Freight Cost"
+          }
+        },
+        {
+          "input": {
+            "provider": "Charlie",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 9000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": 300,
+            "other_charges_usd": null,
+            "quote_completeness": "Comparable with Adjustment"
+          },
+          "expected": {
+            "freight_cost_usd": 9000,
+            "cost_per_kg": 4.864865,
+            "freight_cost_ratio": 0.321429,
+            "total_comparable_logistics_cost": 9300,
+            "cost_difference_vs_baseline": -1000,
+            "cost_saving_pct": -0.125,
+            "estimated_annual_freight_cost": 90000,
+            "estimated_annual_cost_difference": -10000,
+            "estimated_annual_savings_pct": -0.125,
+            "cost_rank": 4,
+            "cost_position": "Highest Freight Cost"
+          }
+        },
+        {
+          "input": {
+            "provider": "Delta",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 6000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Incomplete / Needs Clarification"
+          },
+          "expected": {
+            "freight_cost_usd": 6000,
+            "cost_per_kg": 3.243243,
+            "freight_cost_ratio": 0.214286,
+            "total_comparable_logistics_cost": 6000,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 60000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Echo",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDU (legacy term)",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 5000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 5000,
+            "cost_per_kg": 2.702703,
+            "freight_cost_ratio": 0.178571,
+            "total_comparable_logistics_cost": 5000,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 50000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Foxtrot",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "LCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 7500,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7500,
+            "cost_per_kg": 4.054054,
+            "freight_cost_ratio": 0.267857,
+            "total_comparable_logistics_cost": 7500,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 75000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Golf",
+            "scenario_group": "Air – 1,850kg",
+            "shipment_mode": "Air",
+            "shipment_type": "Air Freight",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": 2100,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 8000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": 150,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 8000,
+            "cost_per_kg": 3.809524,
+            "freight_cost_ratio": 0.285714,
+            "total_comparable_logistics_cost": 8150,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 80000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Hotel",
+            "scenario_group": "Air – 1,850kg",
+            "shipment_mode": "Air",
+            "shipment_type": "Air Freight",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "EUR",
+            "original_amount": 6000,
+            "exchange_rate_to_usd": 1.08,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 6480,
+            "cost_per_kg": 3.502703,
+            "freight_cost_ratio": 0.231429,
+            "total_comparable_logistics_cost": 6480,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 64800,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "India",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 8000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 8000,
+            "cost_per_kg": 4.324324,
+            "freight_cost_ratio": 0.285714,
+            "total_comparable_logistics_cost": 8000,
+            "cost_difference_vs_baseline": 0,
+            "cost_saving_pct": 0,
+            "estimated_annual_freight_cost": 80000,
+            "estimated_annual_cost_difference": 0,
+            "estimated_annual_savings_pct": 0,
+            "cost_rank": 3,
+            "cost_position": "Equal to Baseline"
+          }
+        },
+        {
+          "input": {
+            "provider": "Juliet",
+            "scenario_group": "Sea DDP – alt lane",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 7800,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7800,
+            "cost_per_kg": 4.216216,
+            "freight_cost_ratio": 0.278571,
+            "total_comparable_logistics_cost": 7800,
+            "cost_difference_vs_baseline": 200,
+            "cost_saving_pct": 0.025,
+            "estimated_annual_freight_cost": 78000,
+            "estimated_annual_cost_difference": 2000,
+            "estimated_annual_savings_pct": 0.025,
+            "cost_rank": 1,
+            "cost_position": "Only Comparable Quote"
+          }
+        }
+      ]
+    },
+    "B_per_month_only": {
+      "project": {
+        "current_incoterm": "DDP",
+        "shipment_mode": "Sea",
+        "shipment_type": "FCL",
+        "final_incoterm": "DDP",
+        "final_shipment_mode": "Sea",
+        "final_shipment_type": "FCL",
+        "current_freight_cost_usd": 7792.81,
+        "shipments_per_month": 2,
+        "shipments_per_year": null,
+        "effective_annual_shipments_expected": 24
+      },
+      "quotes": [
+        {
+          "input": {
+            "provider": "Alpha",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 7000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": 500,
+            "other_charges_usd": 200,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7000,
+            "cost_per_kg": 3.783784,
+            "freight_cost_ratio": 0.25,
+            "total_comparable_logistics_cost": 7700,
+            "cost_difference_vs_baseline": 792.81,
+            "cost_saving_pct": 0.101736,
+            "estimated_annual_freight_cost": 168000,
+            "estimated_annual_cost_difference": 19027.44,
+            "estimated_annual_savings_pct": 0.101736,
+            "cost_rank": 1,
+            "cost_position": "Lowest Freight Cost"
+          }
+        },
+        {
+          "input": {
+            "provider": "Bravo",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "CNY",
+            "original_amount": 50000,
+            "exchange_rate_to_usd": 0.14,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7000,
+            "cost_per_kg": 3.783784,
+            "freight_cost_ratio": 0.25,
+            "total_comparable_logistics_cost": 7000,
+            "cost_difference_vs_baseline": 792.81,
+            "cost_saving_pct": 0.101736,
+            "estimated_annual_freight_cost": 168000,
+            "estimated_annual_cost_difference": 19027.44,
+            "estimated_annual_savings_pct": 0.101736,
+            "cost_rank": 1,
+            "cost_position": "Lowest Freight Cost"
+          }
+        },
+        {
+          "input": {
+            "provider": "Charlie",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 9000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": 300,
+            "other_charges_usd": null,
+            "quote_completeness": "Comparable with Adjustment"
+          },
+          "expected": {
+            "freight_cost_usd": 9000,
+            "cost_per_kg": 4.864865,
+            "freight_cost_ratio": 0.321429,
+            "total_comparable_logistics_cost": 9300,
+            "cost_difference_vs_baseline": -1207.19,
+            "cost_saving_pct": -0.154911,
+            "estimated_annual_freight_cost": 216000,
+            "estimated_annual_cost_difference": -28972.56,
+            "estimated_annual_savings_pct": -0.154911,
+            "cost_rank": 4,
+            "cost_position": "Highest Freight Cost"
+          }
+        },
+        {
+          "input": {
+            "provider": "Delta",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 6000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Incomplete / Needs Clarification"
+          },
+          "expected": {
+            "freight_cost_usd": 6000,
+            "cost_per_kg": 3.243243,
+            "freight_cost_ratio": 0.214286,
+            "total_comparable_logistics_cost": 6000,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 144000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Echo",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDU (legacy term)",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 5000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 5000,
+            "cost_per_kg": 2.702703,
+            "freight_cost_ratio": 0.178571,
+            "total_comparable_logistics_cost": 5000,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 120000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Foxtrot",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "LCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 7500,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7500,
+            "cost_per_kg": 4.054054,
+            "freight_cost_ratio": 0.267857,
+            "total_comparable_logistics_cost": 7500,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 180000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Golf",
+            "scenario_group": "Air – 1,850kg",
+            "shipment_mode": "Air",
+            "shipment_type": "Air Freight",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": 2100,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 8000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": 150,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 8000,
+            "cost_per_kg": 3.809524,
+            "freight_cost_ratio": 0.285714,
+            "total_comparable_logistics_cost": 8150,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 192000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Hotel",
+            "scenario_group": "Air – 1,850kg",
+            "shipment_mode": "Air",
+            "shipment_type": "Air Freight",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "EUR",
+            "original_amount": 6000,
+            "exchange_rate_to_usd": 1.08,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 6480,
+            "cost_per_kg": 3.502703,
+            "freight_cost_ratio": 0.231429,
+            "total_comparable_logistics_cost": 6480,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 155520,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "India",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 8000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 8000,
+            "cost_per_kg": 4.324324,
+            "freight_cost_ratio": 0.285714,
+            "total_comparable_logistics_cost": 8000,
+            "cost_difference_vs_baseline": -207.19,
+            "cost_saving_pct": -0.026587,
+            "estimated_annual_freight_cost": 192000,
+            "estimated_annual_cost_difference": -4972.56,
+            "estimated_annual_savings_pct": -0.026587,
+            "cost_rank": 3,
+            "cost_position": "Above Baseline"
+          }
+        },
+        {
+          "input": {
+            "provider": "Juliet",
+            "scenario_group": "Sea DDP – alt lane",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 7800,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7800,
+            "cost_per_kg": 4.216216,
+            "freight_cost_ratio": 0.278571,
+            "total_comparable_logistics_cost": 7800,
+            "cost_difference_vs_baseline": -7.19,
+            "cost_saving_pct": -0.000923,
+            "estimated_annual_freight_cost": 187200,
+            "estimated_annual_cost_difference": -172.56,
+            "estimated_annual_savings_pct": -0.000923,
+            "cost_rank": 1,
+            "cost_position": "Only Comparable Quote"
+          }
+        }
+      ]
+    },
+    "C_final_terms_not_agreed": {
+      "project": {
+        "current_incoterm": "DDP",
+        "shipment_mode": "Sea",
+        "shipment_type": "FCL",
+        "final_incoterm": null,
+        "final_shipment_mode": null,
+        "final_shipment_type": null,
+        "current_freight_cost_usd": 8000,
+        "shipments_per_month": null,
+        "shipments_per_year": 12,
+        "effective_annual_shipments_expected": 12
+      },
+      "quotes": [
+        {
+          "input": {
+            "provider": "Alpha",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 7000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": 500,
+            "other_charges_usd": 200,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7000,
+            "cost_per_kg": 3.783784,
+            "freight_cost_ratio": 0.25,
+            "total_comparable_logistics_cost": 7700,
+            "cost_difference_vs_baseline": 1000,
+            "cost_saving_pct": 0.125,
+            "estimated_annual_freight_cost": 84000,
+            "estimated_annual_cost_difference": 12000,
+            "estimated_annual_savings_pct": 0.125,
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Bravo",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "CNY",
+            "original_amount": 50000,
+            "exchange_rate_to_usd": 0.14,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7000,
+            "cost_per_kg": 3.783784,
+            "freight_cost_ratio": 0.25,
+            "total_comparable_logistics_cost": 7000,
+            "cost_difference_vs_baseline": 1000.0,
+            "cost_saving_pct": 0.125,
+            "estimated_annual_freight_cost": 84000,
+            "estimated_annual_cost_difference": 12000,
+            "estimated_annual_savings_pct": 0.125,
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Charlie",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 9000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": 300,
+            "other_charges_usd": null,
+            "quote_completeness": "Comparable with Adjustment"
+          },
+          "expected": {
+            "freight_cost_usd": 9000,
+            "cost_per_kg": 4.864865,
+            "freight_cost_ratio": 0.321429,
+            "total_comparable_logistics_cost": 9300,
+            "cost_difference_vs_baseline": -1000,
+            "cost_saving_pct": -0.125,
+            "estimated_annual_freight_cost": 108000,
+            "estimated_annual_cost_difference": -12000,
+            "estimated_annual_savings_pct": -0.125,
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Delta",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 6000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Incomplete / Needs Clarification"
+          },
+          "expected": {
+            "freight_cost_usd": 6000,
+            "cost_per_kg": 3.243243,
+            "freight_cost_ratio": 0.214286,
+            "total_comparable_logistics_cost": 6000,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 72000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Echo",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDU (legacy term)",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 5000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 5000,
+            "cost_per_kg": 2.702703,
+            "freight_cost_ratio": 0.178571,
+            "total_comparable_logistics_cost": 5000,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 60000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Foxtrot",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "LCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 7500,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7500,
+            "cost_per_kg": 4.054054,
+            "freight_cost_ratio": 0.267857,
+            "total_comparable_logistics_cost": 7500,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 90000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Golf",
+            "scenario_group": "Air – 1,850kg",
+            "shipment_mode": "Air",
+            "shipment_type": "Air Freight",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": 2100,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 8000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": 150,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 8000,
+            "cost_per_kg": 3.809524,
+            "freight_cost_ratio": 0.285714,
+            "total_comparable_logistics_cost": 8150,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 96000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Hotel",
+            "scenario_group": "Air – 1,850kg",
+            "shipment_mode": "Air",
+            "shipment_type": "Air Freight",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "EUR",
+            "original_amount": 6000,
+            "exchange_rate_to_usd": 1.08,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 6480,
+            "cost_per_kg": 3.502703,
+            "freight_cost_ratio": 0.231429,
+            "total_comparable_logistics_cost": 6480,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 77760,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "India",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 8000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 8000,
+            "cost_per_kg": 4.324324,
+            "freight_cost_ratio": 0.285714,
+            "total_comparable_logistics_cost": 8000,
+            "cost_difference_vs_baseline": 0,
+            "cost_saving_pct": 0,
+            "estimated_annual_freight_cost": 96000,
+            "estimated_annual_cost_difference": 0,
+            "estimated_annual_savings_pct": 0,
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Juliet",
+            "scenario_group": "Sea DDP – alt lane",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 7800,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7800,
+            "cost_per_kg": 4.216216,
+            "freight_cost_ratio": 0.278571,
+            "total_comparable_logistics_cost": 7800,
+            "cost_difference_vs_baseline": 200,
+            "cost_saving_pct": 0.025,
+            "estimated_annual_freight_cost": 93600,
+            "estimated_annual_cost_difference": 2400,
+            "estimated_annual_savings_pct": 0.025,
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        }
+      ]
+    },
+    "D_current_terms_differ_from_final": {
+      "project": {
+        "current_incoterm": "DDU (legacy term)",
+        "shipment_mode": "Sea",
+        "shipment_type": "FCL",
+        "final_incoterm": "DDP",
+        "final_shipment_mode": "Sea",
+        "final_shipment_type": "FCL",
+        "current_freight_cost_usd": 6500,
+        "shipments_per_month": 1,
+        "shipments_per_year": null,
+        "effective_annual_shipments_expected": 12
+      },
+      "quotes": [
+        {
+          "input": {
+            "provider": "Alpha",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 7000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": 500,
+            "other_charges_usd": 200,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7000,
+            "cost_per_kg": 3.783784,
+            "freight_cost_ratio": 0.25,
+            "total_comparable_logistics_cost": 7700,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 84000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": 1,
+            "cost_position": "Lowest Freight Cost"
+          }
+        },
+        {
+          "input": {
+            "provider": "Bravo",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "CNY",
+            "original_amount": 50000,
+            "exchange_rate_to_usd": 0.14,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7000,
+            "cost_per_kg": 3.783784,
+            "freight_cost_ratio": 0.25,
+            "total_comparable_logistics_cost": 7000,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 84000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": 1,
+            "cost_position": "Lowest Freight Cost"
+          }
+        },
+        {
+          "input": {
+            "provider": "Charlie",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 9000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": 300,
+            "other_charges_usd": null,
+            "quote_completeness": "Comparable with Adjustment"
+          },
+          "expected": {
+            "freight_cost_usd": 9000,
+            "cost_per_kg": 4.864865,
+            "freight_cost_ratio": 0.321429,
+            "total_comparable_logistics_cost": 9300,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 108000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": 4,
+            "cost_position": "Highest Freight Cost"
+          }
+        },
+        {
+          "input": {
+            "provider": "Delta",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 6000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Incomplete / Needs Clarification"
+          },
+          "expected": {
+            "freight_cost_usd": 6000,
+            "cost_per_kg": 3.243243,
+            "freight_cost_ratio": 0.214286,
+            "total_comparable_logistics_cost": 6000,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 72000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Echo",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDU (legacy term)",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 5000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 5000,
+            "cost_per_kg": 2.702703,
+            "freight_cost_ratio": 0.178571,
+            "total_comparable_logistics_cost": 5000,
+            "cost_difference_vs_baseline": 1500,
+            "cost_saving_pct": 0.230769,
+            "estimated_annual_freight_cost": 60000,
+            "estimated_annual_cost_difference": 18000,
+            "estimated_annual_savings_pct": 0.230769,
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Foxtrot",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "LCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 7500,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7500,
+            "cost_per_kg": 4.054054,
+            "freight_cost_ratio": 0.267857,
+            "total_comparable_logistics_cost": 7500,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 90000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Golf",
+            "scenario_group": "Air – 1,850kg",
+            "shipment_mode": "Air",
+            "shipment_type": "Air Freight",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": 2100,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 8000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": 150,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 8000,
+            "cost_per_kg": 3.809524,
+            "freight_cost_ratio": 0.285714,
+            "total_comparable_logistics_cost": 8150,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 96000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "Hotel",
+            "scenario_group": "Air – 1,850kg",
+            "shipment_mode": "Air",
+            "shipment_type": "Air Freight",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "EUR",
+            "original_amount": 6000,
+            "exchange_rate_to_usd": 1.08,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 6480,
+            "cost_per_kg": 3.502703,
+            "freight_cost_ratio": 0.231429,
+            "total_comparable_logistics_cost": 6480,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 77760,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": "Not Comparable",
+            "cost_position": "Not Comparable"
+          }
+        },
+        {
+          "input": {
+            "provider": "India",
+            "scenario_group": "Sea DDP – 23 CBM",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 8000,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 8000,
+            "cost_per_kg": 4.324324,
+            "freight_cost_ratio": 0.285714,
+            "total_comparable_logistics_cost": 8000,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 96000,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": 3,
+            "cost_position": "Above Baseline"
+          }
+        },
+        {
+          "input": {
+            "provider": "Juliet",
+            "scenario_group": "Sea DDP – alt lane",
+            "shipment_mode": "Sea",
+            "shipment_type": "FCL",
+            "incoterm": "DDP",
+            "actual_weight_kg": 1850,
+            "chargeable_weight_kg": null,
+            "cbm": 23,
+            "cost_of_goods_usd": 28000,
+            "original_currency": "USD",
+            "original_amount": 7800,
+            "exchange_rate_to_usd": 1,
+            "duties_taxes_usd": null,
+            "other_charges_usd": null,
+            "quote_completeness": "Complete / Comparable"
+          },
+          "expected": {
+            "freight_cost_usd": 7800,
+            "cost_per_kg": 4.216216,
+            "freight_cost_ratio": 0.278571,
+            "total_comparable_logistics_cost": 7800,
+            "cost_difference_vs_baseline": "Not Comparable",
+            "cost_saving_pct": "Not Comparable",
+            "estimated_annual_freight_cost": 93600,
+            "estimated_annual_cost_difference": "Not Comparable",
+            "estimated_annual_savings_pct": "Not Comparable",
+            "cost_rank": 1,
+            "cost_position": "Only Comparable Quote"
+          }
+        }
+      ]
+    }
+  }
+}
