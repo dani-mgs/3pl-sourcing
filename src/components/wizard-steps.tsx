@@ -1,5 +1,5 @@
 const STEPS = [
-  { number: 1, label: "Client" },
+  { number: 1, label: "Project Info" },
   { number: 2, label: "Add 3PLs" },
   { number: 3, label: "Verify Details" },
 ];

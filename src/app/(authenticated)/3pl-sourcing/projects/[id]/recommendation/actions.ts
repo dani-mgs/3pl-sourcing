@@ -17,7 +17,7 @@ export async function saveRecommendation(
   };
 
   const payload = {
-    client_requirement_id: clientRequirementId,
+    three_pl_project_id: clientRequirementId,
     priority: formData.get("priority") as string,
     provider_id_1: providerId("provider_id_1"),
     provider_id_2: providerId("provider_id_2"),
@@ -28,7 +28,7 @@ export async function saveRecommendation(
   const { data: existing } = await supabase
     .from("recommendation")
     .select("id")
-    .eq("client_requirement_id", clientRequirementId)
+    .eq("three_pl_project_id", clientRequirementId)
     .maybeSingle();
 
   const { data, error } = existing

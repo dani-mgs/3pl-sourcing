@@ -1,6 +1,6 @@
 import { getClientOwner } from "@/lib/auth/get-ownership-context";
 
-// Shown on every read-only client page (Client Info, Project Summary, 3PL
+// Shown on every read-only client page (Project Info, Project Summary, 3PL
 // View, Recommendation) when the viewer can't write to this client.
 export async function ViewOnlyBanner({
   clientRequirementId,

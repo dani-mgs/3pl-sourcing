@@ -71,7 +71,7 @@ export type ProviderMergeResult = {
 // false -> true (a confirmed capability), never true -> false, since the
 // extraction schema itself never asserts a capability is absent — silence
 // isn't a signal, so removal stays a manual action. company_name is excluded
-// for the same identity reason client_name is in mergeClientIntakeFields.
+// for the same identity reason the client name is never merged into a project.
 export function mergeProviderFields(
   current: ProviderFormDefaults,
   extracted: ExtractedProviderFields,

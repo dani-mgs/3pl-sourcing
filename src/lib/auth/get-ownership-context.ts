@@ -21,7 +21,7 @@ export async function getOwnershipContext(
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase
-      .from("client_requirements")
+      .from("three_pl_projects")
       .select("owner_id")
       .eq("id", clientRequirementId)
       .single(),
@@ -44,7 +44,7 @@ export async function getClientOwner(
   const supabase = await createClient();
 
   const { data: clientRequirement } = await supabase
-    .from("client_requirements")
+    .from("three_pl_projects")
     .select("owner_id")
     .eq("id", clientRequirementId)
     .single();

@@ -5,14 +5,22 @@ import Link from "next/link";
 import { FileText, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ClientIntakeFields } from "@/components/client-intake-form";
+import {
+  defaultClientSelection,
+  type ClientOption,
+  type ClientSelection,
+} from "@/lib/clients";
 import { EXISTING_PROVIDER_STORAGE_KEY } from "@/lib/existing-provider-prefill";
 import { ClientIntakeForm } from "./client-intake-form";
 import { extractClientIntake } from "./extract-actions";
 
 type Mode = "choice" | "upload" | "form";
 
-export function NewProjectEntry() {
+export function NewProjectEntry({ clients }: { clients: ClientOption[] }) {
   const [mode, setMode] = useState<Mode>("choice");
+  const [initialClient, setInitialClient] = useState<ClientSelection>(() =>
+    defaultClientSelection(clients),
+  );
   const [fileName, setFileName] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [prefilled, setPrefilled] = useState<ClientIntakeFields | undefined>(
@@ -31,6 +39,17 @@ export function NewProjectEntry() {
         return;
       }
       setPrefilled(result.fields);
+      // An extracted client name that already exists is preselected; a new
+      // one pre-fills "New client" so no duplicate client gets created.
+      if (result.matchedClient) {
+        setInitialClient({ mode: "existing", clientId: result.matchedClient.id });
+      } else if (result.client) {
+        setInitialClient({
+          mode: "new",
+          name: result.client.name,
+          businessModel: result.client.business_model ?? "",
+        });
+      }
       setWasPrefilled(true);
       try {
         if (result.existingProvider) {
@@ -58,7 +77,9 @@ export function NewProjectEntry() {
           </div>
         )}
         <ClientIntakeForm
-          clientRequirementId={null}
+          projectId={null}
+          clients={clients}
+          initialClient={initialClient}
           defaultValues={prefilled}
           backHref="/3pl-sourcing/new"
           backLabel="← Back"
@@ -181,7 +202,7 @@ export function NewProjectEntry() {
             Start from Scratch
           </span>
           <span className="text-sm text-neutral-muted">
-            Go straight to a blank Client Intake form.
+            Go straight to a blank Project Info form.
           </span>
         </Link>
       </div>

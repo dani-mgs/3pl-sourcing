@@ -24,11 +24,6 @@ export async function updateClientRequirements(
   clientRequirementId: string,
   formData: FormData,
 ): Promise<SaveClientRequirementsState> {
-  const clientName = formData.get("client_name") as string;
-  if (!clientName?.trim()) {
-    return { error: "Client name is required." };
-  }
-
   const { canWrite } = await getOwnershipContext(clientRequirementId);
   if (!canWrite) {
     return { error: "You don't have permission to make this change." };
@@ -37,8 +32,6 @@ export async function updateClientRequirements(
   const supabase = await createClient();
 
   const payload = {
-    client_name: clientName,
-    business_model: optionalText(formData, "business_model"),
     target_geography: optionalText(formData, "target_geography"),
     avg_monthly_orders: optionalInt(formData, "avg_monthly_orders"),
     peak_monthly_orders: optionalInt(formData, "peak_monthly_orders"),
@@ -69,7 +62,7 @@ export async function updateClientRequirements(
   };
 
   const { data, error } = await supabase
-    .from("client_requirements")
+    .from("three_pl_projects")
     .update(payload)
     .eq("id", clientRequirementId)
     .select();

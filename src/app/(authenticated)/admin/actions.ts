@@ -18,7 +18,7 @@ export async function reassignOwner(
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from("client_requirements")
+    .from("three_pl_projects")
     .update({ owner_id: newOwnerId })
     .eq("id", clientRequirementId)
     .select();
@@ -119,13 +119,13 @@ export async function deleteUser(userId: string): Promise<AdminActionState> {
   }
 
   const { count } = await supabase
-    .from("client_requirements")
+    .from("three_pl_projects")
     .select("id", { count: "exact", head: true })
     .eq("owner_id", userId);
 
   if (count && count > 0) {
     return {
-      error: `This user owns ${count} client(s). Reassign ownership before deleting this user.`,
+      error: `This user owns ${count} project(s). Reassign ownership before deleting this user.`,
     };
   }
 

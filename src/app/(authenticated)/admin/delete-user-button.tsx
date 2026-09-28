@@ -54,7 +54,7 @@ export function DeleteUserButton({
             <DialogHeader>
               <DialogTitle>Can&apos;t delete this user</DialogTitle>
               <DialogDescription>
-                This user owns {ownedClientCount} client(s). Reassign
+                This user owns {ownedClientCount} project(s). Reassign
                 ownership before deleting this user.
               </DialogDescription>
             </DialogHeader>

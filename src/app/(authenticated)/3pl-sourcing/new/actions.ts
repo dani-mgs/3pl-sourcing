@@ -2,8 +2,20 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  CLIENT_SELECT,
+  UNIQUE_VIOLATION,
+  duplicateClientMessage,
+  findClientByName,
+  type ClientOption,
+} from "@/lib/clients";
 
-export type SaveClientIntakeState = { error?: string };
+// existingClient is set when a "new client" name turned out to match an
+// existing client, so the form can offer "Use existing client".
+export type SaveClientIntakeState = {
+  error?: string;
+  existingClient?: ClientOption;
+};
 
 function optionalText(formData: FormData, key: string): string | null {
   const value = formData.get(key) as string;
@@ -17,20 +29,100 @@ function optionalInt(formData: FormData, key: string): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+// Returns the id of the client this project belongs to, creating the client
+// first when the form chose "New client". A project being edited can only be
+// moved to another existing client — creating or renaming a client there
+// isn't allowed.
+async function resolveClientId(
+  supabase: SupabaseServerClient,
+  formData: FormData,
+  isEdit: boolean,
+): Promise<{ clientId: string } | SaveClientIntakeState> {
+  const mode = formData.get("client_mode") as string;
+
+  if (mode === "new") {
+    if (isEdit) {
+      return { error: "Choose an existing client for this project." };
+    }
+
+    const name = ((formData.get("new_client_name") as string) ?? "").trim();
+    if (!name) {
+      return { error: "Client name is required." };
+    }
+
+    const existing = await findClientByName(supabase, name);
+    if (existing) {
+      return {
+        error: duplicateClientMessage(existing.name),
+        existingClient: existing,
+      };
+    }
+
+    const businessModel = (
+      (formData.get("new_client_business_model") as string) ?? ""
+    ).trim();
+
+    const { data, error } = await supabase
+      .from("clients")
+      .insert({ name, business_model: businessModel || null })
+      .select(CLIENT_SELECT)
+      .single();
+
+    if (error) {
+      // Another expert created the same client between our check and insert.
+      if (error.code === UNIQUE_VIOLATION) {
+        console.error("saveClientIntake client unique violation:", error);
+        const raced = await findClientByName(supabase, name);
+        return {
+          error: duplicateClientMessage(raced?.name ?? name),
+          existingClient: raced ?? undefined,
+        };
+      }
+      console.error("saveClientIntake client insert error:", error);
+      return { error: "An unexpected error occurred." };
+    }
+    if (!data) {
+      return { error: "You don't have permission to make this change." };
+    }
+    return { clientId: data.id };
+  }
+
+  const clientId = formData.get("client_id") as string;
+  if (!clientId) {
+    return { error: "Choose a client." };
+  }
+
+  const { data, error } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("id", clientId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("saveClientIntake client lookup error:", error);
+    return { error: "An unexpected error occurred." };
+  }
+  if (!data) {
+    return { error: "That client no longer exists — choose another." };
+  }
+  return { clientId: data.id };
+}
+
 export async function saveClientIntake(
-  clientRequirementId: string | null,
+  projectId: string | null,
   formData: FormData,
 ): Promise<SaveClientIntakeState> {
   const supabase = await createClient();
 
-  const clientName = formData.get("client_name") as string;
-  if (!clientName?.trim()) {
-    return { error: "Client name is required." };
+  const resolved = await resolveClientId(supabase, formData, Boolean(projectId));
+  if (!("clientId" in resolved)) {
+    return resolved;
   }
 
   const payload = {
-    client_name: clientName,
-    business_model: optionalText(formData, "business_model"),
+    client_id: resolved.clientId,
     target_geography: optionalText(formData, "target_geography"),
     avg_monthly_orders: optionalInt(formData, "avg_monthly_orders"),
     peak_monthly_orders: optionalInt(formData, "peak_monthly_orders"),
@@ -61,11 +153,11 @@ export async function saveClientIntake(
   };
 
   const intent = formData.get("intent") as string;
-  let id = clientRequirementId;
+  let id = projectId;
 
   if (id) {
     const { data, error } = await supabase
-      .from("client_requirements")
+      .from("three_pl_projects")
       .update(payload)
       .eq("id", id)
       .select();
@@ -83,11 +175,11 @@ export async function saveClientIntake(
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return { error: "You must be signed in to create a client." };
+      return { error: "You must be signed in to create a project." };
     }
 
     const { data, error } = await supabase
-      .from("client_requirements")
+      .from("three_pl_projects")
       .insert({ ...payload, owner_id: user.id, status: "Active" })
       .select("id")
       .single();

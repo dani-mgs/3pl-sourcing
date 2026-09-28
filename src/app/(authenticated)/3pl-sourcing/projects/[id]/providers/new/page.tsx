@@ -17,7 +17,7 @@ export default async function NewProviderPage({
   const supabase = await createClient();
 
   const { data: clientRequirement } = await supabase
-    .from("client_requirements")
+    .from("three_pl_projects")
     .select("id")
     .eq("id", id)
     .single();

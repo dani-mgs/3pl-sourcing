@@ -13,7 +13,7 @@ export async function updateSummaryNotes(
   const summaryNotes = (formData.get("summary_notes") as string) || null;
 
   const { data, error } = await supabase
-    .from("client_requirements")
+    .from("three_pl_projects")
     .update({ summary_notes: summaryNotes })
     .eq("id", clientRequirementId)
     .select();

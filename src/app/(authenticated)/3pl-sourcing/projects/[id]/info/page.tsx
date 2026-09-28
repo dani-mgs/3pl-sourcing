@@ -7,7 +7,9 @@ import { SectionCard } from "@/components/section-card";
 import { ToggleChipDisplay } from "@/components/toggle-chip-display";
 import { parseChipValue } from "@/lib/chip-value";
 import { ViewOnlyBanner } from "@/components/view-only-banner";
-import { DeleteClientButton } from "./delete-client-button";
+import { EditClientDialog } from "@/components/edit-client-dialog";
+import { embeddedOne } from "@/lib/clients";
+import { DeleteProjectButton } from "./delete-project-button";
 
 function InfoField({
   label,
@@ -24,16 +26,16 @@ function InfoField({
   );
 }
 
-export default async function ClientInfoPage({
+export default async function ProjectInfoPage({
   params,
 }: PageProps<"/3pl-sourcing/projects/[id]/info">) {
   const { id } = await params;
 
   const supabase = await createClient();
   const { data: clientRequirement } = await supabase
-    .from("client_requirements")
+    .from("three_pl_projects")
     .select(
-      "client_name, date_created, updated_at, business_model, target_geography, avg_monthly_orders, peak_monthly_orders, latest_month_orders, avg_monthly_units, peak_monthly_units, benchmark_period, core_cost_categories, key_capability_needs, main_decision_focus, tech_integration_requirement, special_handling_requirement, fixed_comparison_principle, important_limitation, assumptions_data_limitations",
+      "date_created, updated_at, clients(id, name, business_model), target_geography, avg_monthly_orders, peak_monthly_orders, latest_month_orders, avg_monthly_units, peak_monthly_units, benchmark_period, core_cost_categories, key_capability_needs, main_decision_focus, tech_integration_requirement, special_handling_requirement, fixed_comparison_principle, important_limitation, assumptions_data_limitations",
     )
     .eq("id", id)
     .single();
@@ -42,13 +44,16 @@ export default async function ClientInfoPage({
     notFound();
   }
 
-  const { canWrite } = await getOwnershipContext(id);
+  const client = embeddedOne(clientRequirement.clients);
+  const clientName = client?.name ?? "—";
+
+  const { canWrite, isAdmin } = await getOwnershipContext(id);
 
   const { count: providerCount } = canWrite
     ? await supabase
         .from("three_pl_providers")
         .select("id", { count: "exact", head: true })
-        .eq("client_requirement_id", id)
+        .eq("three_pl_project_id", id)
     : { count: null };
 
   return (
@@ -58,12 +63,16 @@ export default async function ClientInfoPage({
           3PL Sourcing
         </Link>
         <span className="mx-1.5">/</span>
-        <span>{clientRequirement.client_name}</span>
+        <Link href={`/3pl-sourcing/projects/${id}`} className="hover:underline">
+          {clientName}
+        </Link>
+        <span className="mx-1.5">/</span>
+        <span>Project Info</span>
       </div>
 
       <div className="mt-2 mb-2 flex items-center gap-3">
         <h1 className="font-display text-2xl font-semibold text-move-navy">
-          {clientRequirement.client_name}
+          Project Info
         </h1>
         <div className="ml-auto flex items-center gap-2">
           {canWrite && (
@@ -75,29 +84,39 @@ export default async function ClientInfoPage({
               >
                 Edit
               </Button>
-              <DeleteClientButton
-                clientRequirementId={id}
-                clientName={clientRequirement.client_name}
+              <DeleteProjectButton
+                projectId={id}
+                clientName={clientName}
                 providerCount={providerCount ?? 0}
               />
             </>
           )}
         </div>
       </div>
-      <p className="mb-8 text-xs text-neutral-muted">
+      <p className="mb-6 text-xs text-neutral-muted">
         Last updated{" "}
         {new Date(clientRequirement.updated_at).toLocaleDateString()}
       </p>
 
       <ViewOnlyBanner clientRequirementId={id} canWrite={canWrite} />
 
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-12">
+          <InfoField label="Client" value={clientName} />
+          <InfoField label="Business Model" value={client?.business_model} />
+        </dl>
+        {isAdmin && client && (
+          <EditClientDialog
+            clientId={client.id}
+            currentName={client.name}
+            currentBusinessModel={client.business_model}
+          />
+        )}
+      </div>
+
       <div className="flex flex-col gap-6">
-        <SectionCard title="Client Overview">
+        <SectionCard title="Project Overview">
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <InfoField
-              label="Business Model"
-              value={clientRequirement.business_model}
-            />
             <InfoField
               label="Target Geography"
               value={clientRequirement.target_geography}

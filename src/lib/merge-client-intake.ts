@@ -39,10 +39,9 @@ function mergeChips(
 // stated a new value for it — anything not mentioned keeps the client's existing
 // value. The two chip fields are unioned (adding newly-mentioned selections)
 // rather than replaced, since removal should stay a deliberate manual action.
-// client_name is deliberately excluded: it's the record's identity rather than a
-// mergeable detail, and any casual mention of the client's name in a document
-// (e.g. a shortened form) would otherwise silently overwrite the real one —
-// renaming a client should stay an explicit manual edit.
+// The client's name and business model aren't part of ClientIntakeFields at
+// all: they live on the shared clients record, which only an admin can edit,
+// so a document upload on Project Info can never change them.
 export function mergeClientIntakeFields(
   current: ClientIntakeFields,
   extracted: ClientIntakeFields,
@@ -50,7 +49,6 @@ export function mergeClientIntakeFields(
   const merged: ClientIntakeFields = { ...current };
   const changed = new Set<string>();
 
-  mergeScalarField(current, extracted, "business_model", merged, changed);
   mergeScalarField(current, extracted, "target_geography", merged, changed);
   mergeScalarField(current, extracted, "avg_monthly_orders", merged, changed);
   mergeScalarField(current, extracted, "peak_monthly_orders", merged, changed);

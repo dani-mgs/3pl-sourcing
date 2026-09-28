@@ -226,7 +226,7 @@ export function QuickAddProviders({
           onClick={() => saveThenNavigate(backHref)}
           className="px-4 py-2.5"
         >
-          ← Back to Client Info
+          ← Back to Project Info
         </Button>
 
         <div className="flex items-center gap-3">

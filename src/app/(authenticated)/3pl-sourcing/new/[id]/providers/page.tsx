@@ -17,7 +17,7 @@ export default async function AddProvidersStepPage({
   const supabase = await createClient();
 
   const { data: clientRequirement } = await supabase
-    .from("client_requirements")
+    .from("three_pl_projects")
     .select("id")
     .eq("id", id)
     .single();
@@ -29,7 +29,7 @@ export default async function AddProvidersStepPage({
   const { data: providers } = await supabase
     .from("three_pl_providers")
     .select("id, company_name, location, contact_person, status")
-    .eq("client_requirement_id", id)
+    .eq("three_pl_project_id", id)
     .order("created_at", { ascending: true });
 
   return (

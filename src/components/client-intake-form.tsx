@@ -33,9 +33,9 @@ const KEY_CAPABILITY_PRESETS = [
   "Cross-Docking",
 ];
 
+// A 3PL project's own intake fields. The client's name and business model
+// live on the shared `clients` record and are chosen with ClientPicker.
 export type ClientIntakeFields = {
-  client_name: string | null;
-  business_model: string | null;
   target_geography: string | null;
   avg_monthly_orders: number | null;
   peak_monthly_orders: number | null;
@@ -279,23 +279,6 @@ export function ClientIntakeFormFields({
   return (
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <TextField
-          name="client_name"
-          label="Client Name"
-          defaultValue={defaultValues?.client_name ?? null}
-          placeholder="e.g. Acme Corp"
-          required
-          disabled={disabled}
-          updated={updated("client_name")}
-        />
-        <TextField
-          name="business_model"
-          label="Business Model"
-          defaultValue={defaultValues?.business_model ?? null}
-          placeholder="e.g. B2C DTC"
-          disabled={disabled}
-          updated={updated("business_model")}
-        />
         <TextField
           name="target_geography"
           label="Target Geography"

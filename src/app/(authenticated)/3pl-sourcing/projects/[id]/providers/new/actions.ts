@@ -46,7 +46,7 @@ export async function createProvider(
   const supabase = await createClient();
 
   const { data, error } = await supabase.from("three_pl_providers").insert({
-    client_requirement_id: clientRequirementId,
+    three_pl_project_id: clientRequirementId,
     company_name: formData.get("company_name") as string,
     provider_type: optionalText(formData, "provider_type"),
     website,

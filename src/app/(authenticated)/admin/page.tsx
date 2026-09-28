@@ -6,6 +6,9 @@ import { RoleActionButton } from "./role-action-button";
 import { EditNameButton } from "./edit-name-button";
 import { CreateUserButton } from "./create-user-button";
 import { DeleteUserButton } from "./delete-user-button";
+import { DeleteClientButton } from "./delete-client-button";
+import { EditClientDialog } from "@/components/edit-client-dialog";
+import { embeddedOne, listClients } from "@/lib/clients";
 
 export default async function AdministrationPage() {
   const role = await getUserRole();
@@ -20,10 +23,27 @@ export default async function AdministrationPage() {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
 
-  const { data: clientRequirements } = await supabase
-    .from("client_requirements")
-    .select("id, client_name, owner_id")
-    .order("client_name", { ascending: true });
+  const [{ data: projectRows }, clients] = await Promise.all([
+    supabase
+      .from("three_pl_projects")
+      .select("id, owner_id, client_id, target_geography, clients(name)"),
+    listClients(supabase),
+  ]);
+
+  const projects = (projectRows ?? [])
+    .map((project) => ({
+      ...project,
+      clientName: embeddedOne(project.clients)?.name ?? "—",
+    }))
+    .sort((a, b) => a.clientName.localeCompare(b.clientName));
+
+  const projectCountByClientId = new Map<string, number>();
+  for (const project of projects) {
+    projectCountByClientId.set(
+      project.client_id,
+      (projectCountByClientId.get(project.client_id) ?? 0) + 1,
+    );
+  }
 
   const { data: profiles } = await supabase
     .from("profiles")
@@ -40,11 +60,11 @@ export default async function AdministrationPage() {
     (profiles ?? []).map((p) => [p.id, p.first_name?.trim() || p.email]),
   );
 
-  const ownedClientCountById = new Map<string, number>();
-  for (const clientRequirement of clientRequirements ?? []) {
-    ownedClientCountById.set(
-      clientRequirement.owner_id,
-      (ownedClientCountById.get(clientRequirement.owner_id) ?? 0) + 1,
+  const ownedProjectCountById = new Map<string, number>();
+  for (const project of projects) {
+    ownedProjectCountById.set(
+      project.owner_id,
+      (ownedProjectCountById.get(project.owner_id) ?? 0) + 1,
     );
   }
 
@@ -60,34 +80,93 @@ export default async function AdministrationPage() {
             Project Reassignment
           </h2>
 
-          {!clientRequirements || clientRequirements.length === 0 ? (
+          {projects.length === 0 ? (
             <p className="py-4 text-sm text-neutral-muted">
-              No clients yet.
+              No projects yet.
             </p>
           ) : (
             <div className="flex flex-col gap-4">
-              {clientRequirements.map((clientRequirement) => (
+              {projects.map((project) => (
                 <div
-                  key={clientRequirement.id}
+                  key={project.id}
                   className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-border pb-4 last:border-b-0 last:pb-0"
                 >
                   <div>
                     <p className="text-sm font-medium text-move-navy">
-                      {clientRequirement.client_name}
+                      {project.clientName}
+                      {project.target_geography && (
+                        <span className="font-normal text-neutral-muted">
+                          {" "}
+                          · {project.target_geography}
+                        </span>
+                      )}
                     </p>
                     <p className="text-xs text-neutral-muted">
                       Currently owned by{" "}
-                      {ownerDisplayById.get(clientRequirement.owner_id) ??
-                        "—"}
+                      {ownerDisplayById.get(project.owner_id) ?? "—"}
                     </p>
                   </div>
                   <ReassignOwnerForm
-                    clientRequirementId={clientRequirement.id}
-                    currentOwnerId={clientRequirement.owner_id}
+                    clientRequirementId={project.id}
+                    currentOwnerId={project.owner_id}
                     profiles={profileOptions}
                   />
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+
+        <section
+          aria-labelledby="admin-clients-heading"
+          className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm"
+        >
+          <h2
+            id="admin-clients-heading"
+            className="font-display text-lg font-semibold text-move-navy"
+          >
+            Clients
+          </h2>
+          <p className="mb-4 text-xs text-neutral-muted">
+            Shared across projects. A client can only be deleted once it has
+            no projects.
+          </p>
+
+          {clients.length === 0 ? (
+            <p className="py-4 text-sm text-neutral-muted">No clients yet.</p>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {clients.map((client) => {
+                const projectCount = projectCountByClientId.get(client.id) ?? 0;
+                return (
+                  <div
+                    key={client.id}
+                    className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-border pb-4 last:border-b-0 last:pb-0"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-move-navy">
+                        {client.name}
+                      </p>
+                      <p className="text-xs text-neutral-muted">
+                        {client.business_model || "No business model"} ·{" "}
+                        {projectCount} project{projectCount === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <EditClientDialog
+                        clientId={client.id}
+                        currentName={client.name}
+                        currentBusinessModel={client.business_model}
+                      />
+                      <DeleteClientButton
+                        clientId={client.id}
+                        clientName={client.name}
+                        projectCount={projectCount}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>
@@ -145,7 +224,7 @@ export default async function AdministrationPage() {
                         userId={profile.id}
                         email={profile.email}
                         ownedClientCount={
-                          ownedClientCountById.get(profile.id) ?? 0
+                          ownedProjectCountById.get(profile.id) ?? 0
                         }
                       />
                     )}

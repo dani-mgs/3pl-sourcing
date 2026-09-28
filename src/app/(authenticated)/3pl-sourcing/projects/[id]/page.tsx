@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
+import { embeddedOne } from "@/lib/clients";
 import { ViewOnlyBanner } from "@/components/view-only-banner";
 import { Button } from "@/components/ui/button";
 import { NotesCard } from "./notes-card";
@@ -44,9 +45,9 @@ export default async function ProjectSummaryPage({
   } = await supabase.auth.getUser();
 
   const { data: clientRequirement } = await supabase
-    .from("client_requirements")
+    .from("three_pl_projects")
     .select(
-      "id, client_name, target_geography, business_model, owner_id, date_created, summary_notes",
+      "id, target_geography, owner_id, date_created, summary_notes, clients(name, business_model)",
     )
     .eq("id", id)
     .single();
@@ -54,6 +55,9 @@ export default async function ProjectSummaryPage({
   if (!clientRequirement) {
     notFound();
   }
+
+  const client = embeddedOne(clientRequirement.clients);
+  const clientName = client?.name ?? "—";
 
   const { canWrite } = await getOwnershipContext(id);
 
@@ -74,7 +78,7 @@ export default async function ProjectSummaryPage({
   const { data: providers } = await supabase
     .from("three_pl_providers")
     .select(PROVIDER_SELECT)
-    .eq("client_requirement_id", id)
+    .eq("three_pl_project_id", id)
     .order("created_at", { ascending: false });
 
   const providerRows = (providers ?? []) as ProviderRow[];
@@ -98,7 +102,7 @@ export default async function ProjectSummaryPage({
           3PL Sourcing
         </Link>
         <span className="mx-1.5">/</span>
-        <span>{clientRequirement.client_name}</span>
+        <span>{clientName}</span>
       </div>
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -108,15 +112,15 @@ export default async function ProjectSummaryPage({
               href={`/3pl-sourcing/projects/${id}/info`}
               className="hover:underline"
             >
-              {clientRequirement.client_name}
+              {clientName}
             </Link>
             {clientRequirement.target_geography && (
               <span> · {clientRequirement.target_geography}</span>
             )}
           </h1>
-          {clientRequirement.business_model && (
+          {client?.business_model && (
             <p className="mt-1 text-sm text-neutral-muted">
-              {clientRequirement.business_model}
+              {client?.business_model}
             </p>
           )}
           <p className="mt-1 text-xs text-neutral-muted">

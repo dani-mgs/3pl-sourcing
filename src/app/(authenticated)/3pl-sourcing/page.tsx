@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { embeddedOne } from "@/lib/clients";
 import { DashboardContent, type DashboardRow } from "./dashboard-content";
 import { STATUS_DOT_COLORS, type ProviderStatus } from "./projects/[id]/providers/status-badge";
 
@@ -44,11 +45,9 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: clientRequirements } = await supabase
-    .from("client_requirements")
-    .select(
-      "id, client_name, target_geography, business_model, owner_id, updated_at",
-    )
+  const { data: projects } = await supabase
+    .from("three_pl_projects")
+    .select("id, target_geography, owner_id, updated_at, clients(name, business_model)")
     .order("updated_at", { ascending: false });
 
   const { data: profiles } = await supabase
@@ -57,7 +56,7 @@ export default async function DashboardPage() {
 
   const { data: providers } = await supabase
     .from("three_pl_providers")
-    .select("client_requirement_id, status");
+    .select("three_pl_project_id, status");
 
   const ownerDisplayById = new Map(
     (profiles ?? []).map((profile) => [
@@ -66,17 +65,18 @@ export default async function DashboardPage() {
     ]),
   );
 
-  const statusCountsByClientId = new Map<string, Map<string, number>>();
+  const statusCountsByProjectId = new Map<string, Map<string, number>>();
   for (const provider of providers ?? []) {
     const counts =
-      statusCountsByClientId.get(provider.client_requirement_id) ??
+      statusCountsByProjectId.get(provider.three_pl_project_id) ??
       new Map<string, number>();
     counts.set(provider.status, (counts.get(provider.status) ?? 0) + 1);
-    statusCountsByClientId.set(provider.client_requirement_id, counts);
+    statusCountsByProjectId.set(provider.three_pl_project_id, counts);
   }
 
-  const rows: DashboardRow[] = (clientRequirements ?? []).map((cr) => {
-    const statusCounts = statusCountsByClientId.get(cr.id);
+  const rows: DashboardRow[] = (projects ?? []).map((cr) => {
+    const client = embeddedOne(cr.clients);
+    const statusCounts = statusCountsByProjectId.get(cr.id);
     const providerCount = statusCounts
       ? Array.from(statusCounts.values()).reduce((sum, n) => sum + n, 0)
       : 0;
@@ -98,8 +98,8 @@ export default async function DashboardPage() {
 
     return {
       id: cr.id,
-      clientName: cr.client_name,
-      businessModel: cr.business_model,
+      clientName: client?.name ?? "—",
+      businessModel: client?.business_model ?? null,
       isMine: cr.owner_id === user?.id,
       ownerDisplay:
         cr.owner_id === user?.id

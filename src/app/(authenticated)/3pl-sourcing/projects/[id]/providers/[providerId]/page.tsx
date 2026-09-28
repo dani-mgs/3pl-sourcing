@@ -15,6 +15,7 @@ import {
 } from "../status-badge";
 import { DeleteProviderButton } from "./delete-provider-button";
 import { formatCurrency } from "@/lib/currency";
+import { embeddedOne } from "@/lib/clients";
 import { RATE_FIELDS, RATE_SELECT, type RateDetails } from "@/lib/rate-details";
 
 const CAPABILITY_FIELDS: { key: string; label: string }[] = [
@@ -70,11 +71,11 @@ export default async function ProviderDetailsPage({
         "id, company_name, provider_type, website, location, footprint_source, contact_person, email, phone, receiving, storage, fulfillment, dispatch, adhoc_kitting_bundling, adhoc_labelling, returns, annual_inventory_count, cycle_count, inventory_count_on_request, one_time_system_setup, lot_batch_expiry_tracking, temp_controlled_storage, retail_edi_compliance, cross_docking, onboarding_period_months, virtual_tour_url, billing_terms, other_specialization, b2b, b2c, is_incumbent, currency, storage_cost, pick_pack_cost, receiving_cost, returns_cost, system_setup_cost, inventory_on_request_cost, adhoc_bundling_kitting_cost, adhoc_labelling_cost, b2b_pick_pack_cost, status, assessment_status, key_strength, key_weakness_risk, important_assumption, overall_assessment, client_decision, source_basis, next_action, key_notes, notes, updated_at",
       )
       .eq("id", providerId)
-      .eq("client_requirement_id", id)
+      .eq("three_pl_project_id", id)
       .single(),
     supabase
-      .from("client_requirements")
-      .select("client_name")
+      .from("three_pl_projects")
+      .select("clients(name)")
       .eq("id", id)
       .single(),
     supabase
@@ -110,7 +111,7 @@ export default async function ProviderDetailsPage({
         </Link>
         <span className="mx-1.5">/</span>
         <Link href={`/3pl-sourcing/projects/${id}`} className="hover:underline">
-          {clientRequirement.client_name}
+          {embeddedOne(clientRequirement.clients)?.name ?? "—"}
         </Link>
         <span className="mx-1.5">/</span>
         <span>{provider.company_name}</span>

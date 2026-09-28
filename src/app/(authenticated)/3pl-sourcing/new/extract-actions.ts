@@ -5,9 +5,20 @@ import { extractTextFromFile, runExtractionTool } from "@/lib/document-extractio
 import { pickNonNull } from "@/lib/merge-fields";
 import type { ClientIntakeFields } from "@/components/client-intake-form";
 import type { ExtractedExistingProvider } from "@/lib/existing-provider-prefill";
+import { createClient } from "@/lib/supabase/server";
+import { findClientByName, type ClientOption } from "@/lib/clients";
 
+// `client` is the client the document names (New Project only): matchedClient
+// is set when that name already exists, so the wizard preselects it instead
+// of offering to create a duplicate. Merge mode (Project Info edit) never
+// returns client details — they belong to the shared, admin-only client record.
 export type ExtractIntakeState =
-  | { fields: ClientIntakeFields; existingProvider?: ExtractedExistingProvider }
+  | {
+      fields: ClientIntakeFields;
+      client?: { name: string; business_model: string | null };
+      matchedClient?: ClientOption;
+      existingProvider?: ExtractedExistingProvider;
+    }
   | { error: string };
 
 const CORE_COST_CATEGORY_PRESETS = [
@@ -120,8 +131,6 @@ function toClientIntakeFields(extracted: ExtractedIntake): ClientIntakeFields {
   );
 
   return {
-    client_name: extracted.client_name ?? null,
-    business_model: extracted.business_model ?? null,
     target_geography: extracted.target_geography ?? null,
     avg_monthly_orders: extracted.avg_monthly_orders ?? null,
     peak_monthly_orders: extracted.peak_monthly_orders ?? null,
@@ -160,8 +169,8 @@ function toExistingProvider(
   };
 }
 
-// currentValues, when passed, puts this call in "merge mode" (the Client
-// Info edit page updating an existing client) rather than blank-slate
+// currentValues, when passed, puts this call in "merge mode" (the Project
+// Info edit page updating an existing project) rather than blank-slate
 // prefill (the New Project wizard, which has no existing record to compare
 // against and always omits this argument).
 const MERGE_MODE_INSTRUCTION =
@@ -201,7 +210,6 @@ export async function extractClientIntake(
   if (currentValues) {
     systemPrompt += MERGE_MODE_INSTRUCTION;
     currentValuesForPrompt = pickNonNull(currentValues, [
-      "business_model",
       "target_geography",
       "avg_monthly_orders",
       "peak_monthly_orders",
@@ -233,5 +241,22 @@ export async function extractClientIntake(
 
   const fields = toClientIntakeFields(result.input);
   const existingProvider = toExistingProvider(result.input);
-  return existingProvider ? { fields, existingProvider } : { fields };
+  const extras = existingProvider ? { existingProvider } : {};
+
+  const clientName = result.input.client_name?.trim();
+  if (currentValues || !clientName) {
+    return { fields, ...extras };
+  }
+
+  const supabase = await createClient();
+  const matchedClient = await findClientByName(supabase, clientName);
+  return {
+    fields,
+    client: {
+      name: clientName,
+      business_model: result.input.business_model?.trim() || null,
+    },
+    ...(matchedClient ? { matchedClient } : {}),
+    ...extras,
+  };
 }

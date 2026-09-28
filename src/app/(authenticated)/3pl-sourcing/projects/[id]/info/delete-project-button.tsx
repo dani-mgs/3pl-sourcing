@@ -12,14 +12,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { deleteClientRequirement } from "./delete-client-actions";
+import { deleteProject } from "./delete-project-actions";
 
-export function DeleteClientButton({
-  clientRequirementId,
+export function DeleteProjectButton({
+  projectId,
   clientName,
   providerCount,
 }: {
-  clientRequirementId: string;
+  projectId: string;
   clientName: string;
   providerCount: number;
 }) {
@@ -29,10 +29,11 @@ export function DeleteClientButton({
 
   function handleConfirm() {
     startTransition(async () => {
-      const result = await deleteClientRequirement(clientRequirementId);
+      // On success deleteProject redirects to the project list. On failure
+      // the dialog stays open with the error shown inside it.
+      const result = await deleteProject(projectId);
       if (result?.error) {
         setError(result.error);
-        setOpen(false);
       }
     });
   }
@@ -46,16 +47,16 @@ export function DeleteClientButton({
       }}
     >
       <DialogTrigger render={<Button type="button" variant="destructive" />}>
-        Delete Client
+        Delete Project
       </DialogTrigger>
       <DialogContent>
         {providerCount > 0 ? (
           <>
             <DialogHeader>
-              <DialogTitle>Can&apos;t delete this client</DialogTitle>
+              <DialogTitle>Can&apos;t delete this project</DialogTitle>
               <DialogDescription>
-                This client has {providerCount} 3PL(s) attached. Delete them
-                first, then delete this client.
+                This project has {providerCount} 3PL(s) attached. Delete them
+                first, then delete this project.
               </DialogDescription>
             </DialogHeader>
 
@@ -64,7 +65,7 @@ export function DeleteClientButton({
                 type="button"
                 variant="outline"
                 nativeButton={false}
-                render={<Link href={`/3pl-sourcing/projects/${clientRequirementId}`} />}
+                render={<Link href={`/3pl-sourcing/projects/${projectId}`} />}
                 onClick={() => setOpen(false)}
               >
                 Go to Project
@@ -74,9 +75,10 @@ export function DeleteClientButton({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Delete Client</DialogTitle>
+              <DialogTitle>Delete Project</DialogTitle>
               <DialogDescription>
-                Delete {clientName}? This cannot be undone.
+                Delete this 3PL project for {clientName}? The client itself
+                is kept for other projects. This cannot be undone.
               </DialogDescription>
             </DialogHeader>
 
@@ -98,15 +100,15 @@ export function DeleteClientButton({
                 {isPending ? "Deleting..." : "Delete"}
               </Button>
             </DialogFooter>
+
+            {error && (
+              <p className="text-sm text-danger" role="alert">
+                {error}
+              </p>
+            )}
           </>
         )}
       </DialogContent>
-
-      {error && (
-        <p className="mt-2 text-sm text-danger" role="alert">
-          {error}
-        </p>
-      )}
     </Dialog>
   );
 }

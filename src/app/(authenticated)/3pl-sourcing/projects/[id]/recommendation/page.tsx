@@ -17,7 +17,7 @@ export default async function RecommendationPage({
   const supabase = await createClient();
 
   const { data: clientRequirement } = await supabase
-    .from("client_requirements")
+    .from("three_pl_projects")
     .select("id")
     .eq("id", id)
     .single();
@@ -31,14 +31,14 @@ export default async function RecommendationPage({
     .select(
       "id, company_name, location, status, overall_assessment, currency, storage_cost, pick_pack_cost, receiving_cost, returns_cost, system_setup_cost, inventory_on_request_cost, adhoc_bundling_kitting_cost, adhoc_labelling_cost, b2b_pick_pack_cost, created_at",
     )
-    .eq("client_requirement_id", id)
+    .eq("three_pl_project_id", id)
     .eq("status", "Vetted")
     .order("created_at", { ascending: true });
 
   const { data: recommendation } = await supabase
     .from("recommendation")
     .select("priority")
-    .eq("client_requirement_id", id)
+    .eq("three_pl_project_id", id)
     .maybeSingle();
 
   const { canWrite } = await getOwnershipContext(id);

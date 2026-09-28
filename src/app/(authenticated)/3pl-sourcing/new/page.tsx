@@ -1,7 +1,11 @@
 import { WizardSteps } from "@/components/wizard-steps";
+import { createClient } from "@/lib/supabase/server";
+import { listClients } from "@/lib/clients";
 import { NewProjectEntry } from "./new-project-entry";
 
-export default function NewProjectPage() {
+export default async function NewProjectPage() {
+  const clients = await listClients(await createClient());
+
   return (
     <div className="max-w-5xl px-8 py-10">
       <div className="mb-8">
@@ -9,11 +13,11 @@ export default function NewProjectPage() {
           New Project
         </p>
         <h1 className="mt-1 font-display text-2xl font-semibold text-move-navy">
-          Client Intake
+          Project Info
         </h1>
         <p className="mt-1 text-sm text-neutral-muted">
-          Everything captured here writes to the client record. Fields left
-          blank can be filled in later.
+          Choose the client, then capture this project&apos;s requirements.
+          Fields left blank can be filled in later.
         </p>
       </div>
 
@@ -21,7 +25,7 @@ export default function NewProjectPage() {
         <WizardSteps currentStep={1} />
 
         <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-          <NewProjectEntry />
+          <NewProjectEntry clients={clients} />
         </div>
       </div>
     </div>

@@ -138,7 +138,7 @@ export async function quickAddProvider(
         .maybeSingle()
     : await supabase
         .from("three_pl_providers")
-        .insert({ client_requirement_id: clientRequirementId, ...fields })
+        .insert({ three_pl_project_id: clientRequirementId, ...fields })
         .select("id, company_name, location, contact_person, status")
         .maybeSingle();
 
