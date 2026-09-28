@@ -4,6 +4,12 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### 3PL Server Actions don't use Zod validation
+- **Added:** 2026-09-28 (Forwarder Sourcing Phase 3A)
+- **What:** docs/SECURITY.md requires every Server Action to validate its input with a schema library (Zod). The new forwarder Server Actions do this (src/lib/forwarder/parse-project-form.ts), but the existing 3PL Sourcing Server Actions (project intake, 3PL add/edit, recommendation, notes, admin) still hand-validate field by field, predating that rule.
+- **Why deferred:** Migrating 3PL's actions is a larger, separate change (many actions, many forms) and wasn't part of this task.
+- **Owner:** Dani. Migrate 3PL Server Actions to Zod schemas, matching the forwarder module's pattern.
+
 ### Forwarder ranking basis — open decision
 - **Added:** 2026-09-28
 - **What:** Cost Rank and savings use Freight Cost only, matching the original spreadsheet. Total Comparable Logistics Cost (freight + duties & taxes + other charges) may be the fairer basis against a DDP baseline, where duties are included.

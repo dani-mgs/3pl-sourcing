@@ -9,7 +9,11 @@ const NO_LONGER_EXISTS_ERROR = "This item no longer exists — refresh the page.
 // lookup tells the two apart.
 export async function explainEmptyDelete(
   supabase: SupabaseClient,
-  table: "three_pl_providers" | "three_pl_projects" | "clients",
+  table:
+    | "three_pl_providers"
+    | "three_pl_projects"
+    | "clients"
+    | "forwarder_projects",
   id: string,
 ): Promise<string> {
   const { data, error } = await supabase

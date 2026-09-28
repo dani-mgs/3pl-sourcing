@@ -1,0 +1,150 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import {
+  getClientOwner,
+  getOwnershipContext,
+} from "@/lib/auth/get-ownership-context";
+import { Button } from "@/components/ui/button";
+import { SectionCard } from "@/components/section-card";
+import { ViewOnlyBanner } from "@/components/view-only-banner";
+import { embeddedOne } from "@/lib/clients";
+import { FORWARDER_PROJECT_FIELDS_SELECT } from "@/lib/forwarder/parse-project-form";
+import { PROJECT_SECTIONS } from "@/lib/forwarder/project-sections";
+import { formatProjectValue, routeLabel } from "@/lib/forwarder/project-display";
+import { ProjectStatusBadge } from "../project-status-badge";
+import { DeleteForwarderProjectButton } from "./delete-forwarder-project-button";
+
+export default async function ForwarderProjectSummaryPage({
+  params,
+}: PageProps<"/forwarder-sourcing/[id]">) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: project } = await supabase
+    .from("forwarder_projects")
+    .select(`id, updated_at, clients(name, business_model), ${FORWARDER_PROJECT_FIELDS_SELECT}`)
+    .eq("id", id)
+    .single();
+
+  if (!project) {
+    notFound();
+  }
+
+  const row = project as unknown as Record<string, unknown> & {
+    status: string;
+    updated_at: string;
+    clients: unknown;
+  };
+  const client = embeddedOne(
+    row.clients as { name: string; business_model: string | null } | null,
+  );
+  const clientName = client?.name ?? "—";
+  const route = routeLabel(row);
+
+  const [{ canWrite, isOwner }, owner, { count: forwarderCount }] =
+    await Promise.all([
+      getOwnershipContext(id, "forwarder_projects"),
+      getClientOwner(id, "forwarder_projects"),
+      supabase
+        .from("forwarders")
+        .select("id", { count: "exact", head: true })
+        .eq("forwarder_project_id", id),
+    ]);
+
+  return (
+    <div className="mx-auto max-w-5xl px-8 py-10">
+      <div className="mb-2 text-xs text-neutral-muted">
+        <Link href="/forwarder-sourcing" className="hover:underline">
+          Forwarder Sourcing
+        </Link>
+        <span className="mx-1.5">/</span>
+        <span>{clientName}</span>
+      </div>
+
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="font-display text-2xl font-semibold text-move-navy">
+              {clientName}
+              {route && (
+                <span className="font-normal text-neutral-muted"> · {route}</span>
+              )}
+            </h1>
+            <ProjectStatusBadge status={row.status} />
+          </div>
+          {client?.business_model && (
+            <p className="mt-1 text-sm text-neutral-muted">{client.business_model}</p>
+          )}
+          <p className="mt-1 text-xs text-neutral-muted">
+            Owner {isOwner ? "You" : (owner?.displayName ?? "—")} · Last updated{" "}
+            {new Date(row.updated_at).toLocaleDateString()}
+          </p>
+        </div>
+        {canWrite && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href={`/forwarder-sourcing/${id}/edit`} />}
+            >
+              Edit
+            </Button>
+            <DeleteForwarderProjectButton
+              projectId={id}
+              clientName={clientName}
+              forwarderCount={forwarderCount ?? 0}
+            />
+          </div>
+        )}
+      </div>
+
+      <ViewOnlyBanner
+        clientRequirementId={id}
+        canWrite={canWrite}
+        table="forwarder_projects"
+      />
+
+      <div className="flex flex-col gap-6">
+        {PROJECT_SECTIONS.map((section) => (
+          <SectionCard key={section.title} title={section.title}>
+            {section.description && (
+              <p className="-mt-2 mb-4 text-xs text-neutral-muted">
+                {section.description}
+              </p>
+            )}
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {section.fields.map((field) => (
+                <div
+                  key={field.name}
+                  className={
+                    field.kind === "textarea" || field.kind === "multi"
+                      ? "sm:col-span-2"
+                      : undefined
+                  }
+                >
+                  <dt className="text-xs text-neutral-muted">{field.label}</dt>
+                  <dd className="text-sm whitespace-pre-line text-move-navy">
+                    {formatProjectValue(field, row)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </SectionCard>
+        ))}
+
+        <SectionCard title="Forwarders">
+          <p className="py-6 text-center text-sm text-neutral-muted">
+            No forwarders yet. Adding forwarders is coming next.
+          </p>
+        </SectionCard>
+
+        <SectionCard title="Quote Comparison">
+          <p className="py-6 text-center text-sm text-neutral-muted">
+            Quotes will be compared here once forwarders have quoted.
+          </p>
+        </SectionCard>
+      </div>
+    </div>
+  );
+}

@@ -23,19 +23,48 @@ export default async function AdministrationPage() {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
 
-  const [{ data: projectRows }, clients] = await Promise.all([
-    supabase
-      .from("three_pl_projects")
-      .select("id, owner_id, client_id, target_geography, clients(name)"),
-    listClients(supabase),
-  ]);
+  const [{ data: projectRows }, { data: forwarderRows }, clients] =
+    await Promise.all([
+      supabase
+        .from("three_pl_projects")
+        .select("id, owner_id, client_id, target_geography, clients(name)"),
+      supabase
+        .from("forwarder_projects")
+        .select(
+          "id, owner_id, client_id, origin_country, destination_country, clients(name)",
+        ),
+      listClients(supabase),
+    ]);
 
-  const projects = (projectRows ?? [])
-    .map((project) => ({
-      ...project,
+  // Every module's projects, labelled by module, for reassignment and for
+  // the per-client and per-owner counts that block deletes.
+  const projects = [
+    ...(projectRows ?? []).map((project) => ({
+      id: project.id,
+      owner_id: project.owner_id,
+      client_id: project.client_id,
+      table: "three_pl_projects" as const,
+      moduleName: "3PL Sourcing",
+      detail: project.target_geography,
       clientName: embeddedOne(project.clients)?.name ?? "—",
-    }))
-    .sort((a, b) => a.clientName.localeCompare(b.clientName));
+    })),
+    ...(forwarderRows ?? []).map((project) => ({
+      id: project.id,
+      owner_id: project.owner_id,
+      client_id: project.client_id,
+      table: "forwarder_projects" as const,
+      moduleName: "Forwarder Sourcing",
+      detail:
+        project.origin_country || project.destination_country
+          ? `${project.origin_country ?? "—"} → ${project.destination_country ?? "—"}`
+          : null,
+      clientName: embeddedOne(project.clients)?.name ?? "—",
+    })),
+  ].sort(
+    (a, b) =>
+      a.clientName.localeCompare(b.clientName) ||
+      a.moduleName.localeCompare(b.moduleName),
+  );
 
   const projectCountByClientId = new Map<string, number>();
   for (const project of projects) {
@@ -94,15 +123,15 @@ export default async function AdministrationPage() {
                   <div>
                     <p className="text-sm font-medium text-move-navy">
                       {project.clientName}
-                      {project.target_geography && (
+                      {project.detail && (
                         <span className="font-normal text-neutral-muted">
                           {" "}
-                          · {project.target_geography}
+                          · {project.detail}
                         </span>
                       )}
                     </p>
                     <p className="text-xs text-neutral-muted">
-                      Currently owned by{" "}
+                      {project.moduleName} · Currently owned by{" "}
                       {ownerDisplayById.get(project.owner_id) ?? "—"}
                     </p>
                   </div>
@@ -110,6 +139,7 @@ export default async function AdministrationPage() {
                     clientRequirementId={project.id}
                     currentOwnerId={project.owner_id}
                     profiles={profileOptions}
+                    table={project.table}
                   />
                 </div>
               ))}

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { reassignOwner, type AdminActionState } from "./actions";
+import type { ProjectTable } from "@/lib/auth/get-ownership-context";
 
 const fieldClass =
   "rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green";
@@ -17,10 +18,12 @@ export function ReassignOwnerForm({
   clientRequirementId,
   currentOwnerId,
   profiles,
+  table = "three_pl_projects",
 }: {
   clientRequirementId: string;
   currentOwnerId: string;
   profiles: ProfileOption[];
+  table?: ProjectTable;
 }) {
   const [state, formAction, pending] = useActionState<
     AdminActionState,
@@ -30,6 +33,7 @@ export function ReassignOwnerForm({
       reassignOwner(
         clientRequirementId,
         formData.get("owner_id") as string,
+        table,
       ),
     {},
   );

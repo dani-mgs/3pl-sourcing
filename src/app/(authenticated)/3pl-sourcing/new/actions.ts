@@ -2,13 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import {
-  CLIENT_SELECT,
-  UNIQUE_VIOLATION,
-  duplicateClientMessage,
-  findClientByName,
-  type ClientOption,
-} from "@/lib/clients";
+import type { ClientOption } from "@/lib/clients";
+import { resolveClientId } from "@/lib/clients-server";
 
 // existingClient is set when a "new client" name turned out to match an
 // existing client, so the form can offer "Use existing client".
@@ -27,87 +22,6 @@ function optionalInt(formData: FormData, key: string): number | null {
   if (!value) return null;
   const parsed = parseInt(value, 10);
   return Number.isNaN(parsed) ? null : parsed;
-}
-
-type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
-
-// Returns the id of the client this project belongs to, creating the client
-// first when the form chose "New client". A project being edited can only be
-// moved to another existing client — creating or renaming a client there
-// isn't allowed.
-async function resolveClientId(
-  supabase: SupabaseServerClient,
-  formData: FormData,
-  isEdit: boolean,
-): Promise<{ clientId: string } | SaveClientIntakeState> {
-  const mode = formData.get("client_mode") as string;
-
-  if (mode === "new") {
-    if (isEdit) {
-      return { error: "Choose an existing client for this project." };
-    }
-
-    const name = ((formData.get("new_client_name") as string) ?? "").trim();
-    if (!name) {
-      return { error: "Client name is required." };
-    }
-
-    const existing = await findClientByName(supabase, name);
-    if (existing) {
-      return {
-        error: duplicateClientMessage(existing.name),
-        existingClient: existing,
-      };
-    }
-
-    const businessModel = (
-      (formData.get("new_client_business_model") as string) ?? ""
-    ).trim();
-
-    const { data, error } = await supabase
-      .from("clients")
-      .insert({ name, business_model: businessModel || null })
-      .select(CLIENT_SELECT)
-      .single();
-
-    if (error) {
-      // Another expert created the same client between our check and insert.
-      if (error.code === UNIQUE_VIOLATION) {
-        console.error("saveClientIntake client unique violation:", error);
-        const raced = await findClientByName(supabase, name);
-        return {
-          error: duplicateClientMessage(raced?.name ?? name),
-          existingClient: raced ?? undefined,
-        };
-      }
-      console.error("saveClientIntake client insert error:", error);
-      return { error: "An unexpected error occurred." };
-    }
-    if (!data) {
-      return { error: "You don't have permission to make this change." };
-    }
-    return { clientId: data.id };
-  }
-
-  const clientId = formData.get("client_id") as string;
-  if (!clientId) {
-    return { error: "Choose a client." };
-  }
-
-  const { data, error } = await supabase
-    .from("clients")
-    .select("id")
-    .eq("id", clientId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("saveClientIntake client lookup error:", error);
-    return { error: "An unexpected error occurred." };
-  }
-  if (!data) {
-    return { error: "That client no longer exists — choose another." };
-  }
-  return { clientId: data.id };
 }
 
 export async function saveClientIntake(

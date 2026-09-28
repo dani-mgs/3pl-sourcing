@@ -4,21 +4,32 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { getUserRole } from "@/lib/auth/get-user-role";
+import type { ProjectTable } from "@/lib/auth/get-ownership-context";
 
 export type AdminActionState = { error?: string; success?: boolean };
+
+const PROJECT_TABLES: readonly ProjectTable[] = [
+  "three_pl_projects",
+  "forwarder_projects",
+];
 
 export async function reassignOwner(
   clientRequirementId: string,
   newOwnerId: string,
+  table: ProjectTable = "three_pl_projects",
 ): Promise<AdminActionState> {
   if ((await getUserRole()) !== "admin") {
     return { error: "You don't have permission to make this change." };
+  }
+  // The table name comes from the client, so only accept known ones.
+  if (!PROJECT_TABLES.includes(table)) {
+    return { error: "An unexpected error occurred." };
   }
 
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from("three_pl_projects")
+    .from(table)
     .update({ owner_id: newOwnerId })
     .eq("id", clientRequirementId)
     .select();
@@ -118,12 +129,18 @@ export async function deleteUser(userId: string): Promise<AdminActionState> {
     return { error: "You can't delete your own account." };
   }
 
-  const { count } = await supabase
-    .from("three_pl_projects")
-    .select("id", { count: "exact", head: true })
-    .eq("owner_id", userId);
+  // Projects in every module block the delete (owner_id has no ON DELETE).
+  const counts = await Promise.all(
+    PROJECT_TABLES.map((table) =>
+      supabase
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("owner_id", userId),
+    ),
+  );
+  const count = counts.reduce((sum, { count: n }) => sum + (n ?? 0), 0);
 
-  if (count && count > 0) {
+  if (count > 0) {
     return {
       error: `This user owns ${count} project(s). Reassign ownership before deleting this user.`,
     };

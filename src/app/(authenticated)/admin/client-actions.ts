@@ -63,11 +63,12 @@ export async function updateClient(
 
   revalidatePath("/admin");
   revalidatePath("/3pl-sourcing", "layout");
+  revalidatePath("/forwarder-sourcing", "layout");
   return { success: true };
 }
 
-// A client can only be deleted once no 3PL project uses it; the
-// three_pl_projects.client_id foreign key (ON DELETE RESTRICT) backs this up.
+// A client can only be deleted once no project in any module uses it; the
+// client_id foreign keys (ON DELETE RESTRICT) back this up.
 export async function deleteClient(
   clientId: string,
 ): Promise<ClientActionState> {
@@ -77,16 +78,22 @@ export async function deleteClient(
 
   const supabase = await createClient();
 
-  const { count, error: countError } = await supabase
-    .from("three_pl_projects")
-    .select("id", { count: "exact", head: true })
-    .eq("client_id", clientId);
+  const results = await Promise.all(
+    (["three_pl_projects", "forwarder_projects"] as const).map((table) =>
+      supabase
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("client_id", clientId),
+    ),
+  );
 
+  const countError = results.find((r) => r.error)?.error;
   if (countError) {
     console.error("deleteClient count error:", countError);
     return { error: "An unexpected error occurred." };
   }
-  if (count && count > 0) {
+  const count = results.reduce((sum, r) => sum + (r.count ?? 0), 0);
+  if (count > 0) {
     return {
       error: `This client has ${count} project(s). Delete them first, then delete this client.`,
     };

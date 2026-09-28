@@ -60,11 +60,11 @@ Known gotchas:
 
 ## 5. IN PROGRESS
 
-Forwarder Sourcing (Phase 2). Done: the tables (migration 20260928094641_forwarder_sourcing_tables.sql, pushed live 2026-09-28: forwarder_projects, forwarders, forwarder_quotes, with RLS) and the calculation module (src/lib/forwarder/cost-comparison.ts, verified against the original spreadsheet's formulas by a golden-fixture test). Next: the Forwarder Sourcing screens. No UI exists yet, and the hub's Forwarder Sourcing card is still "Coming Soon".
+Forwarder Sourcing (Phase 3A) done: project list (`/forwarder-sourcing`), intake form (create + edit, single page — no wizard yet since forwarders/quotes aren't screens yet), and Project Summary with placeholder Forwarders/Quote Comparison sections. Module enabled in the hub and nav. Ranking rules were also changed from the spreadsheet: rejected-status forwarders (Unfit, Do Not Contact, Withdrawn / No Response) are excluded from ranking, and ties are labelled symmetrically (`RANKING_EXCLUDED_STATUSES` in src/lib/forwarder/cost-comparison.ts). Shared code refactored for reuse across modules: `resolveClientId` moved to src/lib/clients-server.ts, `getOwnershipContext`/`getClientOwner`/`ViewOnlyBanner` take a `table` parameter (default three_pl_projects), `formatRelativeTime` moved to src/lib/relative-time.ts. Admin gained forwarder-project reassignment, and client/user deletion counts now include forwarder projects. Next: Phase 3B (add/edit forwarders on a project) and 3C (quotes + the cost comparison screen, using src/lib/forwarder/cost-comparison.ts).
 
 ## 6. NEXT TASK
 
-Forwarder Sourcing screens: project list, project intake, forwarders, quotes and the freight cost comparison, built on the tables and src/lib/forwarder/cost-comparison.ts. Before starting, read docs/CHANGELOG.md and docs/TECH_DEBT.md (the forwarder ranking basis is an open decision there).
+Phase 3B: forwarder screens (add/edit a forwarder on a project, list them on Project Summary in place of the placeholder). Then 3C: quote entry and the freight cost comparison screen, built on src/lib/forwarder/cost-comparison.ts. Before starting, read docs/CHANGELOG.md and docs/TECH_DEBT.md (the forwarder ranking basis is an open decision there).
 
 ## 7. OPEN DECISIONS / QUESTIONS
 
@@ -72,6 +72,7 @@ Forwarder Sourcing screens: project list, project intake, forwarders, quotes and
 - CSV structured import — deferred as a separate feature from AI text extraction (different technical approach: column-mapping, not LLM extraction).
 - Whether/when to actually deploy to Vercel — instructions exist, deployment itself hasn't happened yet.
 - Forwarder ranking basis: Cost Rank and savings use Freight Cost only (as in the spreadsheet); Total Comparable Logistics Cost may be fairer against a DDP baseline. Owner: Dani, revisit before Forwarder Sourcing goes live (docs/TECH_DEBT.md).
+- 3PL Server Actions don't use Zod validation yet, unlike the new forwarder actions — docs/TECH_DEBT.md.
 - rate_details (granular per-service rates) isn't wired into the cost comparison math yet — the Cost Comparison panel and Recommendation use the 9 summary cost fields on three_pl_providers directly, not the more granular rate_details breakdown.
 
 ## 8. KEY ARCHITECTURE DECISIONS
@@ -91,11 +92,12 @@ Forwarder Sourcing screens: project list, project intake, forwarders, quotes and
 | Area | Path |
 |---|---|
 | DB schema / migrations | supabase/migrations/ |
-| Auth/role helpers | src/lib/auth/get-user-role.ts, src/lib/auth/get-ownership-context.ts |
+| Auth/role helpers | src/lib/auth/get-user-role.ts, src/lib/auth/get-ownership-context.ts (module-agnostic: takes a `table` param, default three_pl_projects) |
 | Supabase clients | src/lib/supabase/client.ts (browser), server.ts (server), admin-client.ts (service-role, server-only, bypasses RLS) |
 | Shared form components | src/components/client-intake-form.tsx (a project's intake fields), client-picker.tsx ("Which client?"), edit-client-dialog.tsx (admin), provider-form.tsx, wizard-steps.tsx, toggle-chip picker, section-card wrapper, status-badge |
-| Clients helpers (name lookup, duplicate message, join normalizer) | src/lib/clients.ts |
-| View-only banner (non-owners) | src/components/view-only-banner.tsx |
+| Clients helpers (name lookup, duplicate message, join normalizer) | src/lib/clients.ts (client-safe) + src/lib/clients-server.ts (resolveClientId — creates/looks up the client a project save should point at; used by every module's save action) |
+| View-only banner (non-owners) | src/components/view-only-banner.tsx (takes a `table` param) |
+| Relative time formatting ("2h ago") | src/lib/relative-time.ts |
 | Design tokens | src/styles/globals.css (@theme block), docs/DESIGN_SYSTEM.md |
 | Hub home (`/`) + top bar/module nav | src/app/(authenticated)/page.tsx, layout.tsx, module-nav.tsx; module list in src/lib/modules.ts |
 | 3PL Sourcing project list (`/3pl-sourcing`) | src/app/(authenticated)/3pl-sourcing/page.tsx, dashboard-content.tsx |
@@ -105,8 +107,12 @@ Forwarder Sourcing screens: project list, project intake, forwarders, quotes and
 | Shared cost math (Total Cost, rank, savings, currency check) | src/lib/cost-comparison.ts |
 | Rate Details fields + save logic (shared by all 3PL save actions) | src/lib/rate-details.ts |
 | Legacy URL redirects (`/dashboard/*`, `/projects/*`, `.../comparison` → Project Summary, `.../providers/[providerId]/rates` → 3PL View) | next.config.ts `redirects()` |
-| Admin (`/admin`, hub-level) | src/app/(authenticated)/admin/* (client-actions.ts + delete-client-button.tsx for the Clients section) |
+| Admin (`/admin`, hub-level) | src/app/(authenticated)/admin/* (client-actions.ts + delete-client-button.tsx for the Clients section; actions.ts reassigns owners and counts owned/client projects across both three_pl_projects and forwarder_projects) |
 | Forwarder cost math (freight in USD, gates, savings, ranking) | src/lib/forwarder/cost-comparison.ts |
+| Forwarder project option lists, mode→type pairing, section layout | src/lib/forwarder/project-fields.ts, project-sections.ts |
+| Forwarder project form validation (Zod) | src/lib/forwarder/parse-project-form.ts |
+| Forwarder project list (`/forwarder-sourcing`) | src/app/(authenticated)/forwarder-sourcing/page.tsx, forwarder-project-list.tsx |
+| Forwarder project pages (new/edit/summary) | src/app/(authenticated)/forwarder-sourcing/new/, [id]/, [id]/edit/, forwarder-project-form.tsx, actions.ts, form-fields.tsx |
 | Tests | `npm test` (vitest): src/lib/forwarder/cost-comparison.test.ts checks the forwarder math against a spreadsheet-computed golden fixture (src/lib/forwarder/__fixtures__/). UI is still verified manually with Playwright MCP per feature. |
 
 ## 10. DO NOT TOUCH / FRAGILE AREAS

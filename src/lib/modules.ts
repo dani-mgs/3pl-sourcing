@@ -16,7 +16,7 @@ export const HUB_MODULES: HubModule[] = [
   {
     name: "Forwarder Sourcing",
     description: "Source and compare freight forwarders.",
-    href: null,
+    href: "/forwarder-sourcing",
   },
   {
     name: "Tariff Calculator",
