@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
+import { ViewOnlyBanner } from "@/components/view-only-banner";
 import { Button } from "@/components/ui/button";
 import { NotesCard } from "./notes-card";
 import {
@@ -136,6 +137,8 @@ export default async function ProjectSummaryPage({
           )}
         </div>
       </div>
+
+      <ViewOnlyBanner clientRequirementId={id} canWrite={canWrite} />
 
       {sourcedCount === 0 ? (
         <div className="mb-8 rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">

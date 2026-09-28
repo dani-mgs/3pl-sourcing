@@ -41,6 +41,7 @@ Known gotchas:
 ## 4. CURRENT STATE — what's done
 
 - Auth, roles (admin/logistics_expert), RLS: reads open to all authenticated users, writes (insert/update/delete) restricted to owner-or-admin across client_requirements, three_pl_providers, rate_details, recommendation. Every mutation Server Action checks .select() result is non-empty before reporting success (RLS silently returns zero rows on rejection, doesn't throw).
+- Owner-only pages: every page that edits a client or its 3PLs (Client Info edit, 3PL edit, Add 3PL, wizard Steps 1–3 for an existing client) returns 404 unless getOwnershipContext says canWrite; the blank /3pl-sourcing/new stays open. Non-owners see a shared "Owned by {name} — view only" banner (src/components/view-only-banner.tsx) on Project Summary, Client Info, 3PL View and Recommendation. Deletes that remove nothing say "This item no longer exists — refresh the page." when the row is gone, and the permission message only when it still exists (src/lib/delete-errors.ts).
 - Full schema refactor done: client_requirements (was projects, absorbed the old requirements_summary), three_pl_providers (was providers, 40+ fields: 15 capability booleans, 4 cost fields, is_incumbent, status/assessment), rate_details (new, 1:1 per provider, 13 rate line items in the 3PL's own currency), recommendation (was recommendations). documents/provider_documents dropped — file storage deferred.
 - Top navy bar (replaced the old sidebar): wordmark to dashboard, randomized time-aware greeting, avatar dropdown (Log Out, Administration for admins).
 - Dashboard: search, "My Projects"/"All Experts" tabs, per-client pipeline visualization, relative "updated" time.
@@ -90,6 +91,7 @@ No specific task is queued. Before starting new work, read docs/CHANGELOG.md and
 | Auth/role helpers | src/lib/auth/get-user-role.ts, src/lib/auth/get-ownership-context.ts |
 | Supabase clients | src/lib/supabase/client.ts (browser), server.ts (server), admin-client.ts (service-role, server-only, bypasses RLS) |
 | Shared form components | src/components/client-intake-form.tsx, provider-form.tsx, wizard-steps.tsx, toggle-chip picker, section-card wrapper, status-badge |
+| View-only banner (non-owners) | src/components/view-only-banner.tsx |
 | Design tokens | src/styles/globals.css (@theme block), docs/DESIGN_SYSTEM.md |
 | Hub home (`/`) + top bar/module nav | src/app/(authenticated)/page.tsx, layout.tsx, module-nav.tsx; module list in src/lib/modules.ts |
 | 3PL Sourcing project list (`/3pl-sourcing`) | src/app/(authenticated)/3pl-sourcing/page.tsx, dashboard-content.tsx |

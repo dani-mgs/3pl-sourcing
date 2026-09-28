@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { WizardSteps } from "@/components/wizard-steps";
 import {
   ClientIntakeForm,
@@ -10,6 +11,11 @@ export default async function EditClientIntakePage({
   params,
 }: PageProps<"/3pl-sourcing/new/[id]">) {
   const { id } = await params;
+
+  const { canWrite } = await getOwnershipContext(id);
+  if (!canWrite) {
+    notFound();
+  }
 
   const supabase = await createClient();
   const { data: clientRequirement } = await supabase

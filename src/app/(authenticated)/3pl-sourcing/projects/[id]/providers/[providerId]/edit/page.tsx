@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { EditProviderForm } from "./edit-provider-form";
 import type { ProviderFormDefaults } from "@/components/provider-form";
 import {
@@ -13,6 +14,11 @@ export default async function EditProviderPage({
   params,
 }: PageProps<"/3pl-sourcing/projects/[id]/providers/[providerId]/edit">) {
   const { id, providerId } = await params;
+
+  const { canWrite } = await getOwnershipContext(id);
+  if (!canWrite) {
+    notFound();
+  }
 
   const supabase = await createClient();
 

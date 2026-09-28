@@ -370,7 +370,7 @@ export function ProjectSummaryTable({
       {filteredProviders.length === 0 ? (
         <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
           <p className="py-8 text-center text-sm text-neutral-muted">
-            No providers match these filters.
+            No 3PLs match these filters.
           </p>
         </div>
       ) : (

@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import {
-  getClientOwner,
-  getOwnershipContext,
-} from "@/lib/auth/get-ownership-context";
+import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/section-card";
 import { ToggleChipDisplay } from "@/components/toggle-chip-display";
 import { parseChipValue } from "@/lib/chip-value";
-import { ViewOnlyBanner } from "./view-only-banner";
+import { ViewOnlyBanner } from "@/components/view-only-banner";
 import { DeleteClientButton } from "./delete-client-button";
 
 function InfoField({
@@ -46,7 +43,6 @@ export default async function ClientInfoPage({
   }
 
   const { canWrite } = await getOwnershipContext(id);
-  const owner = canWrite ? null : await getClientOwner(id);
 
   const { count: providerCount } = canWrite
     ? await supabase
@@ -93,9 +89,7 @@ export default async function ClientInfoPage({
         {new Date(clientRequirement.updated_at).toLocaleDateString()}
       </p>
 
-      {!canWrite && owner && (
-        <ViewOnlyBanner ownerDisplayName={owner.displayName} />
-      )}
+      <ViewOnlyBanner clientRequirementId={id} canWrite={canWrite} />
 
       <div className="flex flex-col gap-6">
         <SectionCard title="Client Overview">

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { explainEmptyDelete } from "@/lib/delete-errors";
 import {
   RATE_DETAILS_NOT_SAVED_ERROR,
   rateDetailsFromForm,
@@ -195,7 +196,9 @@ export async function removeQuickAddedProvider(
     return { error: "An unexpected error occurred." };
   }
   if (!data || data.length === 0) {
-    return { error: "You don't have permission to make this change." };
+    return {
+      error: await explainEmptyDelete(supabase, "three_pl_providers", providerId),
+    };
   }
 
   revalidatePath(`/3pl-sourcing/new/${clientRequirementId}/providers`);

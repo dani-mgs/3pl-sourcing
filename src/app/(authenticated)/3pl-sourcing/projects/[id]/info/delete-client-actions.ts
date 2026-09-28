@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { explainEmptyDelete } from "@/lib/delete-errors";
 
 export type DeleteClientState = { error?: string };
 
@@ -23,7 +24,7 @@ export async function deleteClientRequirement(
       console.error("deleteClientRequirement foreign key violation:", error);
       return {
         error:
-          "This client has 3PL(s) attached. Delete or reassign them before deleting this client.",
+          "This client has 3PL(s) attached. Delete them first, then delete this client.",
       };
     }
     console.error("deleteClientRequirement error:", error);
@@ -31,7 +32,7 @@ export async function deleteClientRequirement(
   }
 
   if (!data || data.length === 0) {
-    return { error: "You don't have permission to make this change." };
+    return { error: await explainEmptyDelete(supabase, "client_requirements", clientRequirementId) };
   }
 
   redirect("/3pl-sourcing");

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
+import { ViewOnlyBanner } from "@/components/view-only-banner";
 import {
   RecommendationForm,
   type RecommendationRow,
@@ -54,6 +55,8 @@ export default async function RecommendationPage({
       <h1 className="mt-2 mb-8 font-display text-2xl font-semibold text-move-navy">
         Recommendation
       </h1>
+
+      <ViewOnlyBanner clientRequirementId={id} canWrite={canWrite} />
 
       {!vettedProviders || vettedProviders.length === 0 ? (
         <div className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">

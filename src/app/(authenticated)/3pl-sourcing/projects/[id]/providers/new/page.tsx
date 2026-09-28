@@ -1,12 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { AddProviderEntry } from "./add-provider-entry";
 
 export default async function NewProviderPage({
   params,
 }: PageProps<"/3pl-sourcing/projects/[id]/providers/new">) {
   const { id } = await params;
+
+  const { canWrite } = await getOwnershipContext(id);
+  if (!canWrite) {
+    notFound();
+  }
 
   const supabase = await createClient();
 

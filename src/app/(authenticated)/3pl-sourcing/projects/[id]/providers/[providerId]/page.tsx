@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
+import { ViewOnlyBanner } from "@/components/view-only-banner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SectionCard } from "@/components/section-card";
@@ -152,6 +153,8 @@ export default async function ProviderDetailsPage({
       <p className="mb-8 text-xs text-neutral-muted">
         Last updated {new Date(provider.updated_at).toLocaleDateString()}
       </p>
+
+      <ViewOnlyBanner clientRequirementId={id} canWrite={canWrite} />
 
       <div className="flex flex-col gap-6">
         <SectionCard title="Company Info">

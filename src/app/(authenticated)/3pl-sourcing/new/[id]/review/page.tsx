@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { Button } from "@/components/ui/button";
 import { WizardSteps } from "@/components/wizard-steps";
 import {
@@ -41,6 +42,11 @@ export default async function ReviewStepPage({
   params,
 }: PageProps<"/3pl-sourcing/new/[id]/review">) {
   const { id } = await params;
+
+  const { canWrite } = await getOwnershipContext(id);
+  if (!canWrite) {
+    notFound();
+  }
 
   const supabase = await createClient();
 

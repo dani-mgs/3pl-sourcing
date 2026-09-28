@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -55,8 +54,8 @@ export function DeleteClientButton({
             <DialogHeader>
               <DialogTitle>Can&apos;t delete this client</DialogTitle>
               <DialogDescription>
-                This client has {providerCount} 3PL(s) attached. Delete or
-                reassign them before deleting this client.
+                This client has {providerCount} 3PL(s) attached. Delete them
+                first, then delete this client.
               </DialogDescription>
             </DialogHeader>
 
@@ -70,9 +69,6 @@ export function DeleteClientButton({
               >
                 Go to Project
               </Button>
-              <DialogClose render={<Button type="button" />}>
-                Close
-              </DialogClose>
             </DialogFooter>
           </>
         ) : (

@@ -134,7 +134,9 @@ export function QuickAddProviders({
     });
   }
 
-  function handleNavigateForward(href: string) {
+  // Every way out of this step (Back, Skip, Continue) saves a typed-but-unsaved
+  // 3PL first, so nothing typed into the form is silently lost.
+  function saveThenNavigate(href: string) {
     const companyName = (
       formRef.current?.elements.namedItem("company_name") as HTMLInputElement
     )?.value;
@@ -221,7 +223,7 @@ export function QuickAddProviders({
           type="button"
           variant="outline"
           disabled={isPending}
-          onClick={() => router.push(backHref)}
+          onClick={() => saveThenNavigate(backHref)}
           className="px-4 py-2.5"
         >
           ← Back to Client Info
@@ -232,7 +234,7 @@ export function QuickAddProviders({
             type="button"
             variant="outline"
             disabled={isPending}
-            onClick={() => handleNavigateForward(reviewHref)}
+            onClick={() => saveThenNavigate(reviewHref)}
             className="px-4 py-2.5"
           >
             Skip for now →
@@ -240,7 +242,7 @@ export function QuickAddProviders({
           <Button
             type="button"
             disabled={isPending}
-            onClick={() => handleNavigateForward(reviewHref)}
+            onClick={() => saveThenNavigate(reviewHref)}
             className="px-4 py-2.5"
           >
             {isPending ? "Saving..." : "Continue to Verify →"}

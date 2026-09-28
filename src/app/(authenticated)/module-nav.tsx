@@ -25,6 +25,9 @@ export function ModuleNav() {
   const pathname = usePathname();
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
+  const activeModule = HUB_MODULES.find(
+    (module) => module.href && isActive(module.href),
+  );
 
   return (
     <>
@@ -61,8 +64,21 @@ export function ModuleNav() {
 
       <div className="shrink-0 min-[1600px]:hidden">
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white/80 outline-none hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/40">
-            Modules
+          <DropdownMenuTrigger
+            aria-label={
+              activeModule ? `Modules: ${activeModule.name}` : undefined
+            }
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white/80 outline-none hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/40">
+            <span>
+              Modules
+              {/* Hidden below 900px, where the longer label would squeeze the
+                  account name. aria-label keeps the full name at every width. */}
+              {activeModule && (
+                <span className="max-[899px]:hidden">
+                  : {activeModule.name}
+                </span>
+              )}
+            </span>
             <ChevronDown className="size-3.5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-56">
@@ -71,9 +87,10 @@ export function ModuleNav() {
                 <DropdownMenuItem
                   key={module.name}
                   render={<Link href={module.href} />}
+                  aria-current={isActive(module.href) ? "page" : undefined}
                   className={
                     isActive(module.href)
-                      ? "font-medium text-move-navy shadow-[inset_2px_0_0_var(--color-move-green)]"
+                      ? "relative bg-neutral-bg font-medium text-move-navy after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-move-green"
                       : undefined
                   }
                 >

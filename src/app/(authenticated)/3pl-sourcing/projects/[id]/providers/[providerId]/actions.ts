@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { explainEmptyDelete } from "@/lib/delete-errors";
 
 export type DeleteProviderState = { error?: string };
 
@@ -23,7 +24,7 @@ export async function deleteProvider(
   }
 
   if (!data || data.length === 0) {
-    return { error: "You don't have permission to make this change." };
+    return { error: await explainEmptyDelete(supabase, "three_pl_providers", providerId) };
   }
 
   redirect(`/3pl-sourcing/projects/${projectId}`);
