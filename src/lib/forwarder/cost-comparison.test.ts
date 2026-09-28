@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import golden from "./__fixtures__/forwarder-cost-comparison.golden.json";
 import {
   NOT_COMPARABLE,
+  RANKING_EXCLUDED_STATUSES,
   buildForwarderCostComparison,
   type ForwarderProjectTerms,
   type ForwarderQuoteInput,
@@ -225,5 +226,98 @@ describe("hand-written cases", () => {
     ]);
     expect(results[1].costRank).toBe(2);
     expect(results[1].rankPosition).toBeNull();
+  });
+});
+
+// ---- Deliberate deviations from the spreadsheet ----------------------------
+// (a) quotes from rejected forwarders aren't ranked; (b) ties are labelled
+// symmetrically. The golden fixture has no forwarder statuses and no
+// tied-highest group, so none of its expectations change.
+
+describe("deviation: rejected forwarders are excluded from ranking", () => {
+  test("the excluded statuses are exactly the migration's rejected statuses", () => {
+    expect(RANKING_EXCLUDED_STATUSES).toEqual([
+      "Unfit",
+      "Do Not Contact",
+      "Withdrawn / No Response",
+    ]);
+  });
+
+  test("an excluded quote is unranked and the rest re-rank without it", () => {
+    const { results } = buildForwarderCostComparison(project, [
+      quote({ original_amount: 7000 }),
+      quote({ original_amount: 7500, forwarder_status: "Unfit" }),
+      quote({ original_amount: 9000 }),
+    ]);
+    expect(results.map((r) => r.costRank)).toEqual([1, null, 2]);
+    expect(results.map((r) => r.rankPosition)).toEqual([
+      "Lowest Freight Cost",
+      null,
+      "Highest Freight Cost",
+    ]);
+    // Savings are unaffected by the exclusion.
+    expect(results[1].costDifference).toBe(500);
+    expect(results[1].vsBaseline).toBe("Below Baseline");
+    expect(results[1].estimatedAnnualFreightCost).toBe(75000);
+  });
+
+  test("an excluded quote that would have been lowest doesn't take rank 1", () => {
+    const { results } = buildForwarderCostComparison(project, [
+      quote({ original_amount: 5000, forwarder_status: "Do Not Contact" }),
+      quote({ original_amount: 7000 }),
+      quote({ original_amount: 9000 }),
+    ]);
+    expect(results.map((r) => r.costRank)).toEqual([null, 1, 2]);
+    expect(results[1].rankPosition).toBe("Lowest Freight Cost");
+  });
+
+  test("a group reduced to one quote by exclusion is Only Comparable Quote", () => {
+    const { results } = buildForwarderCostComparison(project, [
+      quote({ original_amount: 7000 }),
+      quote({ original_amount: 6000, forwarder_status: "Withdrawn / No Response" }),
+    ]);
+    expect(results[0].costRank).toBe(1);
+    expect(results[0].rankPosition).toBe("Only Comparable Quote");
+  });
+
+  test("the ranking gate wins: an excluded quote on other terms is Not Comparable", () => {
+    const { results } = buildForwarderCostComparison(project, [
+      quote({ incoterm: "FOB", forwarder_status: "Unfit" }),
+    ]);
+    expect(results[0].costRank).toBe(NOT_COMPARABLE);
+    expect(results[0].rankPosition).toBe(NOT_COMPARABLE);
+  });
+
+  test("other statuses (e.g. Vetted) are ranked normally", () => {
+    const { results } = buildForwarderCostComparison(project, [
+      quote({ original_amount: 7000, forwarder_status: "Vetted" }),
+    ]);
+    expect(results[0].rankPosition).toBe("Only Comparable Quote");
+  });
+});
+
+describe("deviation: symmetric tie labels", () => {
+  test("two quotes tied for highest are both Highest Freight Cost", () => {
+    const { results } = buildForwarderCostComparison(project, [
+      quote({ original_amount: 7000 }),
+      quote({ original_amount: 9000 }),
+      quote({ original_amount: 9000 }),
+    ]);
+    expect(results.map((r) => r.costRank)).toEqual([1, 2, 2]);
+    expect(results.map((r) => r.rankPosition)).toEqual([
+      "Lowest Freight Cost",
+      "Highest Freight Cost",
+      "Highest Freight Cost",
+    ]);
+  });
+
+  test("an all-equal group is labelled Lowest Freight Cost throughout", () => {
+    const { results } = buildForwarderCostComparison(project, [
+      quote({ original_amount: 7000 }),
+      quote({ original_currency: "CNY", original_amount: 50000, exchange_rate_to_usd: 0.14 }),
+      quote({ original_amount: 7000 }),
+    ]);
+    expect(results.map((r) => r.costRank)).toEqual([1, 1, 1]);
+    expect(results.every((r) => r.rankPosition === "Lowest Freight Cost")).toBe(true);
   });
 });

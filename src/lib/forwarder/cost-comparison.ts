@@ -12,6 +12,15 @@ export type NotComparable = typeof NOT_COMPARABLE;
 
 const INCOMPLETE = "Incomplete / Needs Clarification";
 
+// Forwarders with these statuses are out of the running, so their quotes are
+// left out of ranking (a deliberate change from the spreadsheet). Exact
+// strings from the forwarders_status_check constraint.
+export const RANKING_EXCLUDED_STATUSES: readonly string[] = [
+  "Unfit",
+  "Do Not Contact",
+  "Withdrawn / No Response",
+];
+
 export type ForwarderProjectTerms = {
   // Current terms: the baseline that savings are measured against.
   current_incoterm: string | null;
@@ -40,7 +49,7 @@ export type ForwarderQuoteInput = {
   duties_taxes_usd: number | null;
   other_charges_usd: number | null;
   quote_completeness: string | null;
-  // Carried through for the screens; no calculation depends on it yet.
+  // A quote from a forwarder in RANKING_EXCLUDED_STATUSES isn't ranked.
   forwarder_status?: string | null;
 };
 
@@ -69,8 +78,9 @@ export type ForwarderQuoteResult<Q extends ForwarderQuoteInput> = {
   annualCostDifference: number | NotComparable | null;
   annualSavingsPct: number | NotComparable | null;
   vsBaseline: VsBaseline | NotComparable | null;
-  // Ranking: NOT_COMPARABLE when the ranking gate fails. rankPosition is
-  // null for a middle rank (shown as "—").
+  // Ranking: NOT_COMPARABLE when the ranking gate fails (this wins over an
+  // excluded status). Both are null when the forwarder's status excludes it
+  // from ranking; rankPosition is also null for a middle rank (shown as "—").
   costRank: number | NotComparable | null;
   rankPosition: RankPosition | NotComparable | null;
 };
@@ -142,6 +152,13 @@ export function passesSavingsGate(
   );
 }
 
+export function isExcludedFromRanking(quote: ForwarderQuoteInput): boolean {
+  return (
+    quote.forwarder_status != null &&
+    RANKING_EXCLUDED_STATUSES.includes(quote.forwarder_status)
+  );
+}
+
 // Ranking gate: same terms as the project's FINAL AGREED shipment. If the
 // final terms aren't set, nothing passes.
 export function passesRankingGate(
@@ -167,18 +184,19 @@ export function buildForwarderCostComparison<Q extends ForwarderQuoteInput>(
     quote,
     freight: freightCostUsd(quote),
     rankable: passesRankingGate(quote, project),
+    excluded: isExcludedFromRanking(quote),
   }));
 
-  // Freight costs (in cents) of every rankable quote, per scenario group.
+  // Freight costs (in cents) of every eligible quote, per scenario group.
   const rankPool = new Map<string, number[]>();
-  for (const { quote, freight, rankable } of priced) {
-    if (!rankable || freight == null) continue;
+  for (const { quote, freight, rankable, excluded } of priced) {
+    if (!rankable || excluded || freight == null) continue;
     const pool = rankPool.get(quote.scenario_group) ?? [];
     pool.push(toCents(freight));
     rankPool.set(quote.scenario_group, pool);
   }
 
-  const results = priced.map(({ quote, freight, rankable }) => {
+  const results = priced.map(({ quote, freight, rankable, excluded }) => {
     const result: ForwarderQuoteResult<Q> = {
       quote,
       freightCostUsd: freight,
@@ -238,17 +256,20 @@ export function buildForwarderCostComparison<Q extends ForwarderQuoteInput>(
     if (!rankable) {
       result.costRank = NOT_COMPARABLE;
       result.rankPosition = NOT_COMPARABLE;
-    } else if (freight != null) {
+    } else if (!excluded && freight != null) {
       const pool = rankPool.get(quote.scenario_group) ?? [];
       const cents = toCents(freight);
-      const rank = 1 + pool.filter((other) => other < cents).length;
-      result.costRank = rank;
+      const cheaper = pool.filter((other) => other < cents).length;
+      const dearer = pool.filter((other) => other > cents).length;
+      result.costRank = 1 + cheaper;
+      // Ties are symmetric: every tied-lowest quote is Lowest and every
+      // tied-highest is Highest. An all-equal group checks Lowest first.
       result.rankPosition =
         pool.length === 1
           ? "Only Comparable Quote"
-          : rank === 1
+          : cheaper === 0
             ? "Lowest Freight Cost"
-            : rank === pool.length
+            : dearer === 0
               ? "Highest Freight Cost"
               : null;
     }
