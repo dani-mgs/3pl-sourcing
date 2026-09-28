@@ -73,7 +73,7 @@ export function rankByTotalCost<T extends CostInputs & { id: string }>(
   return { rankById, mixedCurrencies, distinctCurrencies };
 }
 
-// The baseline is the 3PL flagged is_incumbent (at most one per client):
+// The baseline is the 3PL flagged is_incumbent (at most one per project):
 // none flagged -> N/A, flagged without cost data -> Pending, flagged with
 // cost data -> Ready.
 export function buildCostComparison<

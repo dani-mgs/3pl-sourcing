@@ -795,7 +795,7 @@ export function ProviderForm({
             Incumbent
           </label>
           <p className="text-xs text-neutral-muted">
-            Only one incumbent allowed per client
+            Only one incumbent allowed per project
           </p>
         </div>
       </section>

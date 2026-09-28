@@ -120,7 +120,7 @@ export async function createProvider(
       console.error("createProvider unique violation:", error);
       return {
         error:
-          "Only one 3PL can be marked as incumbent for this client — uncheck the existing incumbent first.",
+          "Only one 3PL can be marked as incumbent for this project — uncheck the existing incumbent first.",
       };
     }
     console.error("createProvider error:", error);

@@ -73,9 +73,9 @@ export function EditProviderForm({
           Upload a Document to Update
         </h2>
         <p className="mt-1 text-sm text-neutral-muted">
-          Accepts .txt, .pdf, or .docx. We&apos;ll find anything new and merge
-          it in — existing fields you&apos;ve already filled in won&apos;t be
-          touched.
+          Accepts .txt, .pdf, or .docx. Fields the document gives a new value
+          for are updated and marked &ldquo;Updated&rdquo; — review them before
+          saving. Fields it doesn&apos;t mention stay as they are.
         </p>
 
         {!uploadOpen ? (

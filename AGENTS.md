@@ -21,5 +21,7 @@ Always follow this flow:
 4. Apply to the live project: `npx supabase db push`
 5. Commit the migration file to git in the same commit/PR as the related feature code
 
+Any migration that backfills or moves existing data must disable updated_at triggers for the affected tables during the backfill (ALTER TABLE ... DISABLE TRIGGER ...; re-enable after), so existing rows keep their real last-updated times.
+
 ## Form Input Conventions
 Always use plain native `<input>`/`<textarea>` elements for any form field holding actual data that gets pre-filled from server data (`defaultValue` driven by a server fetch). Do not use shadcn's `Input` component for these — it's built on Base UI primitives that manage their own internal uncontrolled state and will not pick up updated `defaultValue` after a server-driven revalidation (e.g. after a Server Action + `revalidatePath`), causing stale-looking data and a console warning. shadcn's `Input`/`Select`/`Checkbox` are fine for presentational or purely client-driven inputs (e.g. filter controls, search boxes) where the value isn't being re-hydrated from a server fetch after mount.

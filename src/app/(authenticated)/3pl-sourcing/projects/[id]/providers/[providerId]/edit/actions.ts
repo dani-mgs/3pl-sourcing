@@ -122,7 +122,7 @@ export async function updateProvider(
       console.error("updateProvider unique violation:", error);
       return {
         error:
-          "Only one 3PL can be marked as incumbent for this client — uncheck the existing incumbent first.",
+          "Only one 3PL can be marked as incumbent for this project — uncheck the existing incumbent first.",
       };
     }
     console.error("updateProvider error:", error);

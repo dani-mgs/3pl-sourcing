@@ -230,9 +230,12 @@ export function ClientPicker({
               <span>{duplicateClientMessage(duplicate.name)}</span>
               <button
                 type="button"
-                onClick={() =>
-                  onChange({ mode: "existing", clientId: duplicate.id })
-                }
+                onClick={() => {
+                  // Drop any leftover search so the list shows the chosen
+                  // client rather than "No clients match".
+                  setQuery("");
+                  onChange({ mode: "existing", clientId: duplicate.id });
+                }}
                 className="rounded-lg border border-[#FBBF24] bg-white px-2.5 py-1 text-xs font-medium hover:bg-[#FEF3C7]"
               >
                 Use existing client
