@@ -45,7 +45,7 @@ export default async function ProjectSummaryPage({
   const { data: clientRequirement } = await supabase
     .from("client_requirements")
     .select(
-      "id, client_name, target_geography, business_model, owner_id, date_created, summary_notes, current_incumbent_3pl",
+      "id, client_name, target_geography, business_model, owner_id, date_created, summary_notes",
     )
     .eq("id", id)
     .single();
@@ -183,7 +183,6 @@ export default async function ProjectSummaryPage({
               <CostComparisonPanel
                 projectId={id}
                 providers={(providers ?? []) as PanelProvider[]}
-                currentIncumbent3pl={clientRequirement.current_incumbent_3pl}
               />
             </aside>
             <div className="min-w-0 min-[1480px]:order-1">

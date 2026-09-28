@@ -49,17 +49,15 @@ function SavingsLine({ row }: { row: CostComparisonRow<PanelProvider> }) {
 export function CostComparisonPanel({
   projectId,
   providers,
-  currentIncumbent3pl,
 }: {
   projectId: string;
   providers: PanelProvider[];
-  currentIncumbent3pl: string | null;
 }) {
   const included = providers.filter(
     (p) => p.is_incumbent || !EXCLUDED_STATUSES.has(p.status),
   );
   const { rows, baselineStatus, mixedCurrencies, distinctCurrencies } =
-    buildCostComparison(included, currentIncumbent3pl);
+    buildCostComparison(included);
 
   const costed = rows.filter((r) => r.has_cost_data);
   const uncosted = rows.filter((r) => !r.has_cost_data);
@@ -99,9 +97,8 @@ export function CostComparisonPanel({
         <>
           {baselineStatus === "Pending" && (
             <p className={noteClass}>
-              <span className="font-semibold">Pending:</span> incumbent
-              &quot;{currentIncumbent3pl}&quot; is noted, but its cost data
-              isn&apos;t complete yet, so savings aren&apos;t shown.
+              The incumbent 3PL has no cost data yet — savings will appear
+              once its costs are entered.
             </p>
           )}
           {mixedCurrencies && (

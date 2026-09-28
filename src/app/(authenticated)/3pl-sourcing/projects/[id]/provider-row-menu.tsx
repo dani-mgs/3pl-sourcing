@@ -36,10 +36,12 @@ export function ProviderRowMenu({
 
   function handleConfirmDelete() {
     startTransition(async () => {
+      // On success deleteProvider redirects back to Project Summary and this
+      // row unmounts. On failure keep the dialog open — the error renders
+      // inside it, so closing would hide the failure entirely.
       const result = await deleteProvider(projectId, providerId);
       if (result?.error) {
         setError(result.error);
-        setConfirmOpen(false);
       }
     });
   }
