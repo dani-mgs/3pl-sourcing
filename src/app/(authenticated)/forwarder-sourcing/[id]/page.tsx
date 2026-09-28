@@ -14,9 +14,12 @@ import { FORWARDER_PROJECT_FIELDS_SELECT } from "@/lib/forwarder/parse-project-f
 import { PROJECT_SECTIONS } from "@/lib/forwarder/project-sections";
 import { formatProjectValue, routeLabel } from "@/lib/forwarder/project-display";
 import { CAPABILITY_FIELDS } from "@/lib/forwarder/forwarder-fields";
+import { QUOTE_FIELDS_SELECT } from "@/lib/forwarder/parse-quote-form";
+import type { ForwarderProjectTerms, ForwarderQuoteInput } from "@/lib/forwarder/cost-comparison";
 import { ProjectStatusBadge } from "../project-status-badge";
 import { DeleteForwarderProjectButton } from "./delete-forwarder-project-button";
 import { ForwardersTable, type ForwarderRow } from "./forwarders-table";
+import { QuoteComparisonPanel, type ComparisonQuote } from "./quote-comparison-panel";
 
 export default async function ForwarderProjectSummaryPage({
   params,
@@ -46,7 +49,7 @@ export default async function ForwarderProjectSummaryPage({
   const route = routeLabel(row);
 
   const capabilitySelect = CAPABILITY_FIELDS.map((c) => c.name).join(", ");
-  const [{ canWrite, isOwner }, owner, { data: forwarderRows }] =
+  const [{ canWrite, isOwner }, owner, { data: forwarderRows }, { data: quoteRows }] =
     await Promise.all([
       getOwnershipContext(id, "forwarder_projects"),
       getClientOwner(id, "forwarder_projects"),
@@ -55,6 +58,10 @@ export default async function ForwarderProjectSummaryPage({
         .select(`id, company_name, contact_person, status, assessment, updated_at, ${capabilitySelect}`)
         .eq("forwarder_project_id", id)
         .order("company_name", { ascending: true }),
+      supabase
+        .from("forwarder_quotes")
+        .select(`id, forwarder_id, ${QUOTE_FIELDS_SELECT}, forwarders!inner(company_name, status, forwarder_project_id)`)
+        .eq("forwarders.forwarder_project_id", id),
     ]);
 
   // The select string above is built at runtime, so Supabase can't infer its
@@ -68,6 +75,29 @@ export default async function ForwarderProjectSummaryPage({
     ...f,
     updatedRelative: formatRelativeTime(f.updated_at),
   }));
+
+  // Same runtime-built-select-string typing issue as above; the embedded
+  // `forwarders` relation also needs embeddedOne() since Supabase can return
+  // it as an object or a single-item array depending on the join shape.
+  type QuoteQueryRow = ForwarderQuoteInput & {
+    id: string;
+    forwarder_id: string;
+    forwarders: { company_name: string; status: string } | { company_name: string; status: string }[] | null;
+  };
+  const comparisonQuotes: ComparisonQuote[] = ((quoteRows ?? []) as unknown as QuoteQueryRow[])
+    .map((q): ComparisonQuote | null => {
+      const { forwarders, ...quoteFields } = q;
+      const forwarder = embeddedOne(forwarders);
+      if (!forwarder) return null;
+      return {
+        ...quoteFields,
+        forwarder_name: forwarder.company_name,
+        forwarder_status: forwarder.status,
+      };
+    })
+    .filter((q): q is ComparisonQuote => q !== null);
+
+  const projectTerms = row as unknown as ForwarderProjectTerms;
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-10">
@@ -155,9 +185,7 @@ export default async function ForwarderProjectSummaryPage({
         </SectionCard>
 
         <SectionCard title="Quote Comparison">
-          <p className="py-6 text-center text-sm text-neutral-muted">
-            Quotes will be compared here once forwarders have quoted.
-          </p>
+          <QuoteComparisonPanel projectId={id} project={projectTerms} quotes={comparisonQuotes} />
         </SectionCard>
       </div>
     </div>

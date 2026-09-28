@@ -14,7 +14,8 @@ export async function explainEmptyDelete(
     | "three_pl_projects"
     | "clients"
     | "forwarder_projects"
-    | "forwarders",
+    | "forwarders"
+    | "forwarder_quotes",
   id: string,
 ): Promise<string> {
   const { data, error } = await supabase

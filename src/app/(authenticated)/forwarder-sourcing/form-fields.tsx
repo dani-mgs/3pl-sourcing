@@ -20,7 +20,7 @@ export function InputField({
   name: string;
   label: string;
   defaultValue: Value;
-  type?: "text" | "number";
+  type?: "text" | "number" | "date";
   step?: string;
 }) {
   return (

@@ -11,10 +11,13 @@ import {
   FORWARDER_FIELDS_SELECT,
   type ForwarderFields,
 } from "@/lib/forwarder/parse-forwarder-form";
+import { QUOTE_FIELDS_SELECT, type QuoteFields } from "@/lib/forwarder/parse-quote-form";
+import { formatRelativeTime } from "@/lib/relative-time";
 import {
   ForwarderAssessmentBadge,
   ForwarderStatusBadge,
 } from "../../forwarder-status-badge";
+import { QuotesTable, type QuoteRow } from "./quotes-table";
 import type {
   ForwarderAssessment,
   ForwarderStatus,
@@ -60,6 +63,18 @@ export default async function ForwarderDetailPage({
   };
 
   const { canWrite } = await getOwnershipContext(id, "forwarder_projects");
+
+  const { data: quoteRows } = await supabase
+    .from("forwarder_quotes")
+    .select(`id, updated_at, ${QUOTE_FIELDS_SELECT}`)
+    .eq("forwarder_id", forwarderId)
+    .order("scenario_group", { ascending: true });
+  // The select string above is built at runtime, so Supabase can't infer
+  // its columns from the literal type.
+  type QuoteQueryRow = QuoteFields & { id: string; updated_at: string };
+  const quotes: QuoteRow[] = ((quoteRows ?? []) as unknown as QuoteQueryRow[]).map(
+    (q) => ({ ...q, updatedRelative: formatRelativeTime(q.updated_at) }),
+  );
 
   return (
     <div className="mx-auto max-w-4xl px-8 py-10">
@@ -152,9 +167,7 @@ export default async function ForwarderDetailPage({
         </SectionCard>
 
         <SectionCard title="Quotes">
-          <p className="py-6 text-center text-sm text-neutral-muted">
-            No quotes yet. Adding quotes is coming next.
-          </p>
+          <QuotesTable projectId={id} forwarderId={forwarderId} quotes={quotes} canWrite={canWrite} />
         </SectionCard>
       </div>
     </div>
