@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
-import { ForwarderForm } from "../forwarder-form";
+import { NewForwarderEntry } from "./new-forwarder-entry";
 
 export default async function NewForwarderPage({
   params,
@@ -26,11 +26,7 @@ export default async function NewForwarderPage({
         Add Forwarder
       </h1>
 
-      <ForwarderForm
-        projectId={id}
-        forwarderId={null}
-        cancelHref={`/forwarder-sourcing/${id}`}
-      />
+      <NewForwarderEntry projectId={id} />
     </div>
   );
 }

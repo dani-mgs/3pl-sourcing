@@ -149,12 +149,17 @@ export function BooleanChipsField({
   label,
   options,
   defaultValues,
+  updatedKeys,
 }: {
   label: string;
   options: readonly { name: string; label: string }[];
   // Loosely typed since callers often pass a wider "all form fields" object
   // rather than one filtered to just these boolean keys.
   defaultValues?: Record<string, unknown>;
+  // Which chips an AI-extraction merge just changed — highlighted
+  // individually, matching 3PL's own per-capability highlight treatment,
+  // rather than a single badge for the whole group.
+  updatedKeys?: Set<string>;
 }) {
   const [values, setValues] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(options.map((o) => [o.name, Boolean(defaultValues?.[o.name])])),
@@ -166,6 +171,7 @@ export function BooleanChipsField({
       <div className="flex flex-wrap gap-2">
         {options.map((option) => {
           const on = values[option.name];
+          const updated = updatedKeys?.has(option.name) ?? false;
           return (
             <button
               key={option.name}
@@ -173,9 +179,10 @@ export function BooleanChipsField({
               aria-pressed={on}
               onClick={() => setValues((prev) => ({ ...prev, [option.name]: !prev[option.name] }))}
               className={
-                on
+                (on
                   ? "rounded-full border border-move-green bg-move-green px-3 py-1 text-xs font-medium text-white"
-                  : "rounded-full border border-neutral-border bg-white px-3 py-1 text-xs font-medium text-move-navy hover:border-move-green"
+                  : "rounded-full border border-neutral-border bg-white px-3 py-1 text-xs font-medium text-move-navy hover:border-move-green") +
+                (updated ? " ring-2 ring-offset-1 ring-move-green" : "")
               }
             >
               {option.label}
