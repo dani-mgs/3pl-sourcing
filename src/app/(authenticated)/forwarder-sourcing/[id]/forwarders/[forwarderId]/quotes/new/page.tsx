@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
-import { QuoteForm } from "../quote-form";
+import { NewQuoteEntry } from "./new-quote-entry";
 
 export default async function NewQuotePage({
   params,
@@ -49,10 +49,9 @@ export default async function NewQuotePage({
         Add Quote
       </h1>
 
-      <QuoteForm
+      <NewQuoteEntry
         projectId={id}
         forwarderId={forwarderId}
-        quoteId={null}
         existingScenarioGroups={existingScenarioGroups}
         cancelHref={`/forwarder-sourcing/${id}/forwarders/${forwarderId}`}
       />
