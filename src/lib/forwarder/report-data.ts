@@ -15,10 +15,11 @@ import {
   type ForwarderQuoteResult,
 } from "./cost-comparison";
 
-// Shared by the forwarder sourcing CSV export (export-actions.ts) — the
-// tier-based (client/expert) column definitions, the excluded-status-quote
-// filtering, and the Supabase fetch/cost-comparison build all live here
-// exactly once, so client/expert correctness is defined in one place.
+// Shared by CSV, PDF, and DOCX export (export-actions.ts, render-report-pdf.ts,
+// render-report-docx.ts) — the tier-based (client/expert) column definitions,
+// the excluded-status-quote filtering, and the Supabase fetch/cost-comparison
+// build all live here exactly once, so client/expert correctness is defined
+// in one place regardless of which output format consumes it.
 //
 // Not a "use server" file: these are plain fetch/pure helpers invoked from
 // within Server Actions, not Server Actions themselves.
@@ -276,5 +277,50 @@ export async function fetchForwarderReportData(
       forwarders: (forwarderRows ?? []) as unknown as ForwarderFields[],
       quoteResults: results,
     },
+  };
+}
+
+// ---- Combined report (PDF/DOCX) ---------------------------------------------
+
+export type ReportSection =
+  | { title: string; kind: "keyvalue"; pairs: { label: string; value: CellValue }[] }
+  | { title: string; kind: "table"; headers: string[]; rows: CellValue[][] };
+
+export type ForwarderReport = {
+  clientName: string;
+  route: string | null;
+  versionLabel: "Client Report" | "Expert Report";
+  generatedOn: string;
+  sections: ReportSection[];
+};
+
+export function buildForwarderReport(
+  data: ForwarderReportData,
+  version: ExportVersion,
+): ForwarderReport {
+  const quoteResults = filterQuotesForVersion(data.quoteResults, version);
+
+  const projectTable = buildSectionTable(projectColumns(), version, [data.projectRow]);
+  const projectPairs = projectTable.headers
+    .map((label, i) => ({ label, value: projectTable.rows[0][i] }))
+    .filter((p) => p.value != null && p.value !== "");
+
+  const forwarderTable = buildSectionTable(forwarderColumns(), version, data.forwarders);
+  const quoteTable = buildSectionTable(quoteColumns(), version, quoteResults);
+
+  return {
+    clientName: data.clientName,
+    route: data.route,
+    versionLabel: version === "client" ? "Client Report" : "Expert Report",
+    generatedOn: new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }),
+    sections: [
+      { title: "Project Summary", kind: "keyvalue", pairs: projectPairs },
+      { title: "Forwarders Considered", kind: "table", headers: forwarderTable.headers, rows: forwarderTable.rows },
+      { title: "Quote Comparison", kind: "table", headers: quoteTable.headers, rows: quoteTable.rows },
+    ],
   };
 }
