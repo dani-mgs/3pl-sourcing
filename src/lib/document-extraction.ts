@@ -43,6 +43,36 @@ export async function extractTextFromFile(file: File): Promise<string> {
 
 const EXTRACTION_MODEL = "claude-haiku-4-5-20251001";
 
+// Tokens the model sometimes emits as its own "couldn't extract this" filler
+// instead of just omitting the field, per its tool schema. Compared
+// case-insensitively after trimming and stripping surrounding bracket-style
+// punctuation (e.g. "<UNKNOWN>" -> "unknown"), so callers never let one of
+// these leak into a form field as if it were a real extracted value.
+const PLACEHOLDER_VALUES = new Set([
+  "unknown",
+  "n/a",
+  "na",
+  "none",
+  "null",
+  "undefined",
+  "not specified",
+  "not stated",
+  "not mentioned",
+  "not given",
+  "not applicable",
+  "not provided",
+  "no data",
+  "no information",
+]);
+
+export function cleanExtractedText(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const normalized = trimmed.toLowerCase().replace(/^[<[(]+|[>\])]+$/g, "");
+  return PLACEHOLDER_VALUES.has(normalized) ? undefined : trimmed;
+}
+
 export type ExtractionTool = Anthropic.Tool;
 
 export type ExtractionToolResult<T> = { input: T } | { error: string };

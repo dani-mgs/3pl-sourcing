@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { defaultClientSelection, listClients } from "@/lib/clients";
-import { ForwarderProjectForm } from "../forwarder-project-form";
+import { listClients } from "@/lib/clients";
+import { NewForwarderProjectEntry } from "./new-forwarder-project-entry";
 
 export default async function NewForwarderProjectPage() {
   const clients = await listClients(await createClient());
@@ -20,12 +20,7 @@ export default async function NewForwarderProjectPage() {
         </p>
       </div>
 
-      <ForwarderProjectForm
-        projectId={null}
-        clients={clients}
-        initialClient={defaultClientSelection(clients)}
-        cancelHref="/forwarder-sourcing"
-      />
+      <NewForwarderProjectEntry clients={clients} />
     </div>
   );
 }

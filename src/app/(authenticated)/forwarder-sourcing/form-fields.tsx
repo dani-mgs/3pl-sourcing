@@ -8,6 +8,18 @@ export const fieldClass =
   "w-full rounded-xl border border-neutral-border bg-white px-3 py-2 text-sm text-move-navy placeholder:italic placeholder:text-gray-400 focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green disabled:cursor-not-allowed disabled:bg-neutral-bg disabled:text-neutral-muted";
 export const labelClass = "text-sm font-medium text-move-navy";
 
+// Matches provider-form.tsx's "Updated" highlight styling, used by every
+// field widget below when an AI-extraction merge changed that field.
+export const updatedFieldClass = "ring-2 ring-move-green/40";
+
+export function UpdatedBadge() {
+  return (
+    <span className="ml-1.5 rounded-full bg-move-green/10 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-move-green uppercase">
+      Updated
+    </span>
+  );
+}
+
 type Value = string | number | null | undefined;
 
 export function InputField({
@@ -16,17 +28,20 @@ export function InputField({
   defaultValue,
   type = "text",
   step,
+  updated,
 }: {
   name: string;
   label: string;
   defaultValue: Value;
   type?: "text" | "number" | "date";
   step?: string;
+  updated?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-2">
       <label htmlFor={name} className={labelClass}>
         {label}
+        {updated && <UpdatedBadge />}
       </label>
       <input
         id={name}
@@ -36,7 +51,7 @@ export function InputField({
         step={step}
         inputMode={type === "number" ? "decimal" : undefined}
         defaultValue={defaultValue ?? ""}
-        className={fieldClass}
+        className={updated ? `${fieldClass} ${updatedFieldClass}` : fieldClass}
       />
     </div>
   );
@@ -46,22 +61,25 @@ export function TextAreaField({
   name,
   label,
   defaultValue,
+  updated,
 }: {
   name: string;
   label: string;
   defaultValue: Value;
+  updated?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-2 sm:col-span-2">
       <label htmlFor={name} className={labelClass}>
         {label}
+        {updated && <UpdatedBadge />}
       </label>
       <textarea
         id={name}
         name={name}
         rows={3}
         defaultValue={defaultValue ?? ""}
-        className={fieldClass}
+        className={updated ? `${fieldClass} ${updatedFieldClass}` : fieldClass}
       />
     </div>
   );
@@ -79,6 +97,7 @@ export function SelectField({
   placeholder = "Select…",
   disabled,
   hint,
+  updated,
 }: {
   name: string;
   label: string;
@@ -89,12 +108,14 @@ export function SelectField({
   placeholder?: string;
   disabled?: boolean;
   hint?: string;
+  updated?: boolean;
 }) {
   const controlled = value !== undefined;
   return (
     <div className="flex flex-col gap-2">
       <label htmlFor={name} className={labelClass}>
         {label}
+        {updated && <UpdatedBadge />}
       </label>
       <select
         id={name}
@@ -107,7 +128,7 @@ export function SelectField({
             }
           : { defaultValue: (defaultValue as string | null) ?? "" })}
         disabled={disabled}
-        className={fieldClass}
+        className={updated ? `${fieldClass} ${updatedFieldClass}` : fieldClass}
       >
         <option value="">{placeholder}</option>
         {options.map((option) => (
@@ -180,17 +201,22 @@ export function MultiChipField({
   label,
   options,
   defaultValue,
+  updated,
 }: {
   name: string;
   label: string;
   options: readonly string[];
   defaultValue: readonly string[] | null | undefined;
+  updated?: boolean;
 }) {
   const [selected, setSelected] = useState<string[]>([...(defaultValue ?? [])]);
 
   return (
     <fieldset className="flex flex-col gap-2 sm:col-span-2">
-      <legend className={`${labelClass} mb-2`}>{label}</legend>
+      <legend className={`${labelClass} mb-2`}>
+        {label}
+        {updated && <UpdatedBadge />}
+      </legend>
       <div className="flex flex-wrap gap-2">
         {options.map((option) => {
           const on = selected.includes(option);
