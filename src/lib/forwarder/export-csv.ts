@@ -22,6 +22,15 @@ export function buildCsv(headers: string[], rows: (string | number | null | unde
   return [toCsvRow(headers), ...rows.map(toCsvRow)].join("\r\n") + "\r\n";
 }
 
+// Stacks several already-built section CSVs into one file: a plain title
+// line, that section's header+rows, a blank line, then the next section.
+// Each `csv` is expected to already end in "\r\n" (as buildCsv's output
+// does), so joining with "\r\n" produces exactly one blank line between
+// sections.
+export function buildMultiSectionCsv(sections: { title: string; csv: string }[]): string {
+  return sections.map((s) => `${s.title}\r\n${s.csv}`).join("\r\n");
+}
+
 // Filesystem/download-safe filename: strip characters that upset a Save As
 // dialog on any platform, collapse whitespace, cap length generously.
 export function sanitizeFilename(name: string): string {

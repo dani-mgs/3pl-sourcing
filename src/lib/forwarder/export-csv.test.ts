@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildCsv, escapeCsvField, sanitizeFilename, toCsvRow } from "./export-csv";
+import { buildCsv, buildMultiSectionCsv, escapeCsvField, sanitizeFilename, toCsvRow } from "./export-csv";
 
 describe("escapeCsvField", () => {
   test("passes through a plain value unchanged", () => {
@@ -52,6 +52,27 @@ describe("buildCsv", () => {
 
   test("handles zero data rows (header only)", () => {
     expect(buildCsv(["A", "B"], [])).toBe("A,B\r\n");
+  });
+});
+
+describe("buildMultiSectionCsv", () => {
+  test("stacks sections with a title line and a blank line between them", () => {
+    const section1 = buildCsv(["Name"], [["Acme"]]);
+    const section2 = buildCsv(["Company"], [["Beta"]]);
+    const combined = buildMultiSectionCsv([
+      { title: "PROJECT DETAILS", csv: section1 },
+      { title: "FORWARDERS", csv: section2 },
+    ]);
+    expect(combined).toBe(
+      "PROJECT DETAILS\r\nName\r\nAcme\r\n\r\nFORWARDERS\r\nCompany\r\nBeta\r\n",
+    );
+  });
+
+  test("handles a single section", () => {
+    const section = buildCsv(["A"], [["1"]]);
+    expect(buildMultiSectionCsv([{ title: "ONE", csv: section }])).toBe(
+      "ONE\r\nA\r\n1\r\n",
+    );
   });
 });
 
