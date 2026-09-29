@@ -18,6 +18,7 @@ import { QUOTE_FIELDS_SELECT } from "@/lib/forwarder/parse-quote-form";
 import type { ForwarderProjectTerms, ForwarderQuoteInput } from "@/lib/forwarder/cost-comparison";
 import { ProjectStatusBadge } from "../project-status-badge";
 import { DeleteForwarderProjectButton } from "./delete-forwarder-project-button";
+import { ExportBar } from "./export-bar";
 import { ForwardersTable, type ForwarderRow } from "./forwarders-table";
 import { QuoteComparisonPanel, type ComparisonQuote } from "./quote-comparison-panel";
 
@@ -151,6 +152,8 @@ export default async function ForwarderProjectSummaryPage({
         canWrite={canWrite}
         table="forwarder_projects"
       />
+
+      <ExportBar projectId={id} />
 
       <div className="flex flex-col gap-6">
         {PROJECT_SECTIONS.map((section) => (
