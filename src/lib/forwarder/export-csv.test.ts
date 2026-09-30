@@ -28,6 +28,33 @@ describe("escapeCsvField", () => {
   test("stringifies a number without quoting", () => {
     expect(escapeCsvField(3050)).toBe("3050");
   });
+
+  test("prefixes a value starting with = with a leading apostrophe", () => {
+    expect(escapeCsvField("=SUM(A1:A10)")).toBe("'=SUM(A1:A10)");
+  });
+
+  test("prefixes a value starting with + with a leading apostrophe", () => {
+    expect(escapeCsvField("+1 555 0148")).toBe("'+1 555 0148");
+  });
+
+  test("prefixes a value starting with - with a leading apostrophe", () => {
+    expect(escapeCsvField("-$700.00")).toBe("'-$700.00");
+  });
+
+  test("prefixes a value starting with @ with a leading apostrophe", () => {
+    expect(escapeCsvField("@cmd")).toBe("'@cmd");
+  });
+
+  test("quotes a formula-injection value that also contains a comma", () => {
+    expect(escapeCsvField("+cmd|' /C calc'!A0,extra")).toBe(
+      '"\'+cmd|\' /C calc\'!A0,extra"',
+    );
+  });
+
+  test("does not prefix a value where the trigger character isn't first", () => {
+    expect(escapeCsvField("Acme = Best")).toBe("Acme = Best");
+    expect(escapeCsvField("Cost: -50")).toBe("Cost: -50");
+  });
 });
 
 describe("toCsvRow", () => {
