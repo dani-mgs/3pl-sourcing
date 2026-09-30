@@ -24,6 +24,20 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Why deferred:** Out of scope for the 3PL-actions Zod change (2de070b); admin-only and already role-gated.
 - **Severity:** Low
 
+### Node 20 → 22 upgrade
+- **Added:** 2026-10-01
+- **What:** The project runs on Node 20 (`.nvmrc` is `20`; the Vercel project setting must match), and `@supabase/supabase-js` warns that Node 20 support is deprecated. Upgrade both `.nvmrc` and the Vercel project's Node.js version to 22, then re-run `npm test`, `tsc`, `lint`, and `build`, and smoke-test sign-in plus a 3PL and a Forwarder Sourcing project page.
+- **Why deferred:** Nothing is broken yet; it's a runtime change for the whole app and deserves its own change and verification rather than riding along with feature work.
+- **Severity:** Medium
+- **Where:** `.nvmrc`, Vercel project settings (Node.js Version)
+
+### Migrate `src/middleware.ts` to `proxy.ts` (Next.js 16)
+- **Added:** 2026-10-01
+- **What:** Next.js 16 deprecates the `middleware` file convention in favor of `proxy`; `src/middleware.ts` still works but should move via `npx @next/codemod middleware-to-proxy`. It carries the security headers (CSP, X-Frame-Options, etc., from `src/lib/supabase/middleware.ts`) and the Supabase session refresh, so afterward verify both: curl a page and check the response headers are all still present, and confirm a login persists across navigation and a reload.
+- **Why deferred:** The deprecated file still works in Next.js 16, and because it's security- and auth-critical it should be migrated on its own with that verification, not bundled into another change.
+- **Severity:** Medium
+- **Where:** `src/middleware.ts`, `src/lib/supabase/middleware.ts`
+
 ### Forwarder ranking basis — open decision
 - **Added:** 2026-09-28
 - **What:** Cost Rank and savings use Freight Cost only, matching the original spreadsheet. Total Comparable Logistics Cost (freight + duties & taxes + other charges) may be the fairer basis against a DDP baseline, where duties are included.
