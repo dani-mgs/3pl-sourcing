@@ -115,3 +115,44 @@ export function pipelineCounts(
     excluded: forwarders.filter((f) => RANKING_EXCLUDED_STATUSES.includes(f.status)).length,
   };
 }
+
+export type QuotePosition<Q extends ForwarderQuoteInput> = {
+  rank: number;
+  // Ranked quotes in the same scenario group, across every forwarder.
+  rankedInGroup: number;
+  // Other quotes in the group on the same rank.
+  tiedWith: ForwarderQuoteResult<Q>[];
+};
+
+// Where one quote stands in its scenario group. `all` must be the whole
+// project's results so the count covers every forwarder. Null when the quote
+// isn't ranked.
+export function quotePosition<Q extends ForwarderQuoteInput>(
+  all: ForwarderQuoteResult<Q>[],
+  target: ForwarderQuoteResult<Q>,
+): QuotePosition<Q> | null {
+  if (typeof target.costRank !== "number") return null;
+  const group = all.filter(
+    (r) =>
+      r.quote.scenario_group === target.quote.scenario_group &&
+      typeof r.costRank === "number",
+  );
+  return {
+    rank: target.costRank,
+    rankedInGroup: group.length,
+    tiedWith: group.filter((r) => r !== target && r.costRank === target.costRank),
+  };
+}
+
+// The cheapest priced quote regardless of ranking, for a forwarder whose
+// quotes aren't ranked (excluded, or terms don't match). Null if none priced.
+export function lowestFreightQuote<Q extends ForwarderQuoteInput>(
+  results: ForwarderQuoteResult<Q>[],
+): ForwarderQuoteResult<Q> | null {
+  let lowest: ForwarderQuoteResult<Q> | null = null;
+  for (const r of results) {
+    if (r.freightCostUsd == null) continue;
+    if (lowest == null || r.freightCostUsd < lowest.freightCostUsd!) lowest = r;
+  }
+  return lowest;
+}

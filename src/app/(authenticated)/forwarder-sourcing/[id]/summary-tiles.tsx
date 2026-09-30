@@ -6,6 +6,7 @@ import {
   type PipelineCounts,
 } from "@/lib/forwarder/project-summary";
 import type { ComparisonResult } from "./quote-comparison-panel";
+import { Detail, Empty, Tile, Value } from "./summary-tile";
 
 export type SummaryProject = {
   current_freight_cost_usd: number | null;
@@ -30,41 +31,6 @@ function pct(value: number): string {
 function terms(...parts: (string | null)[]): string | null {
   const filled = parts.filter(Boolean);
   return filled.length ? filled.join(" · ") : null;
-}
-
-function Tile({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex min-w-0 flex-col rounded-2xl border border-neutral-border bg-white p-4 shadow-sm">
-      <p className="text-xs font-medium tracking-wide text-neutral-muted uppercase">{label}</p>
-      <div className="mt-1.5 flex min-w-0 flex-col gap-0.5">{children}</div>
-    </div>
-  );
-}
-
-function Value({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <p className={`font-display text-xl font-semibold tabular-nums ${className ?? "text-move-navy"}`}>
-      {children}
-    </p>
-  );
-}
-
-function Detail({ children, title }: { children: React.ReactNode; title?: string }) {
-  return (
-    <p className="truncate text-xs text-neutral-muted" title={title}>
-      {children}
-    </p>
-  );
-}
-
-function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="py-1 text-sm text-neutral-muted">{children}</p>;
 }
 
 function bestNames(best: ComparisonResult[]): string {

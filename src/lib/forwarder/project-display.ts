@@ -19,6 +19,20 @@ export function routeLabel(row: Row): string | null {
   return `${origin ?? "—"} → ${destination ?? "—"}`;
 }
 
+function text(value: unknown): string | null {
+  return typeof value === "string" && value.trim() !== "" ? value : null;
+}
+
+// "Ho Chi Minh City → Long Beach" for page headers and breadcrumbs; falls
+// back to the country when a city isn't set. routeLabel above is the longer
+// "city, country" version.
+export function shortRouteLabel(row: Row): string | null {
+  const origin = text(row.origin_city) ?? text(row.origin_country);
+  const destination = text(row.destination_city) ?? text(row.destination_country);
+  if (!origin && !destination) return null;
+  return `${origin ?? "—"} → ${destination ?? "—"}`;
+}
+
 const numberFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 6 });
 
 // Display text for one field on the Project Summary; "—" when empty.

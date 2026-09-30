@@ -9,8 +9,10 @@ import {
   exceedsTargetLeadTime,
   freightInvoiceRatio,
   leadTimeRange,
+  lowestFreightQuote,
   pickBestQuotes,
   pipelineCounts,
+  quotePosition,
   rateValidity,
 } from "./project-summary";
 
@@ -177,5 +179,82 @@ describe("pipelineCounts", () => {
         [{ forwarder_id: "a" }, { forwarder_id: "a" }, { forwarder_id: "b" }],
       ),
     ).toEqual({ total: 3, quoted: 2, excluded: 1 });
+  });
+});
+
+describe("quotePosition", () => {
+  function positionOf(quotes: Q[], name: string) {
+    const { results } = buildForwarderCostComparison(project, quotes);
+    const target = results.find((r) => r.quote.name === name)!;
+    const position = quotePosition(results, target);
+    return position && {
+      rank: position.rank,
+      of: position.rankedInGroup,
+      tied: position.tiedWith.map((r) => r.quote.name),
+    };
+  }
+
+  test("ranks against every quote in the group, not just one forwarder's", () => {
+    expect(
+      positionOf(
+        [
+          quote({ name: "Mine", original_amount: 2650 }),
+          quote({ name: "Other", original_amount: 2400 }),
+          quote({ name: "Third", original_amount: 2900 }),
+        ],
+        "Mine",
+      ),
+    ).toEqual({ rank: 2, of: 3, tied: [] });
+  });
+
+  test("reports ties on the same rank", () => {
+    expect(
+      positionOf(
+        [
+          quote({ name: "Coastal", original_amount: 2400 }),
+          quote({ name: "Riverside", original_amount: 2400 }),
+          quote({ name: "Third", original_amount: 2900 }),
+        ],
+        "Coastal",
+      ),
+    ).toEqual({ rank: 1, of: 3, tied: ["Riverside"] });
+  });
+
+  test("counts only ranked quotes in the same group", () => {
+    expect(
+      positionOf(
+        [
+          quote({ name: "Mine", original_amount: 2650 }),
+          quote({ name: "Excluded", original_amount: 2000, forwarder_status: "Unfit" }),
+          quote({ name: "OtherGroup", original_amount: 2000, scenario_group: "G2" }),
+          quote({ name: "Unpriced", original_amount: null }),
+        ],
+        "Mine",
+      ),
+    ).toEqual({ rank: 1, of: 1, tied: [] });
+  });
+
+  test("null for an unranked quote", () => {
+    expect(
+      positionOf([quote({ name: "Excluded", forwarder_status: "Unfit" })], "Excluded"),
+    ).toBeNull();
+    expect(positionOf([quote({ name: "CIF", incoterm: "CIF" })], "CIF")).toBeNull();
+  });
+});
+
+describe("lowestFreightQuote", () => {
+  test("picks the cheapest priced quote whether or not it's ranked", () => {
+    const { results } = buildForwarderCostComparison(project, [
+      quote({ name: "A", original_amount: 2650, forwarder_status: "Unfit" }),
+      quote({ name: "B", original_amount: 2400, incoterm: "CIF" }),
+      quote({ name: "C", original_amount: null }),
+    ]);
+    expect(lowestFreightQuote(results)?.quote.name).toBe("B");
+  });
+
+  test("null when nothing is priced", () => {
+    const { results } = buildForwarderCostComparison(project, [quote({ original_amount: null })]);
+    expect(lowestFreightQuote(results)).toBeNull();
+    expect(lowestFreightQuote([])).toBeNull();
   });
 });

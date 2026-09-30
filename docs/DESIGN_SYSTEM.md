@@ -82,6 +82,7 @@ General rule: nothing should visually touch another element's edge or the viewpo
 
 ### Documented exceptions
 - **Forwarder Sourcing Project Summary** (`forwarder-sourcing/[id]/page.tsx`, 2026-09-30): container is `max-w-[1680px] px-8 py-6` (not `max-w-6xl py-10`), matching the 3PL Project Summary's width, so the header, summary tiles, and top of the Quote Comparison fit above the fold on a 1440×900 laptop. On the same page, summary tiles use `p-4` and Quote Comparison table cells use `px-2.5 py-2.5` (not `px-4 py-3`) so its 7 columns fit beside the 280–300px Shipment Profile column at 1280px wide. Applies to this page only — don't copy it to pages without the same density need.
+- **Forwarder detail page** (`forwarder-sourcing/[id]/forwarders/[forwarderId]/page.tsx`, 2026-10-01): same exception as the Project Summary above — `max-w-[1680px] px-8 py-6`, `p-4` summary tiles, `px-2.5 py-2.5` Quotes table cells — and the same 280–300px side column, so the two pages line up and share components. Lead time and rate validity stack in one column there so the table fits at 1280px.
 
 ## Component conventions
 - Primary button: bg Move Green, hover Move Green Hover, white text, text-sm font-medium, px-4 py-2.5, rounded-xl, shadow-sm

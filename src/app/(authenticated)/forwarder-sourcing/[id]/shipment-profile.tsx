@@ -22,7 +22,7 @@ function joined(parts: (string | null)[], separator = " · "): string | null {
   return filled.length ? filled.join(separator) : null;
 }
 
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+export function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="border-t border-neutral-border pt-3 first:border-t-0 first:pt-0">
       <h3 className="mb-1.5 text-xs font-medium tracking-wide text-neutral-muted uppercase">
@@ -33,7 +33,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function Line({ label, children }: { label: string; children: React.ReactNode }) {
+export function Line({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-2">
       <dt className="text-xs leading-5 text-neutral-muted">{label}</dt>

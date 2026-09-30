@@ -1,19 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import { Filter, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -33,7 +25,7 @@ import {
   ForwarderAssessmentBadge,
   ForwarderStatusBadge,
 } from "./forwarder-status-badge";
-import { deleteForwarder } from "./forwarders/[forwarderId]/actions";
+import { DeleteForwarderDialog } from "./delete-forwarder-dialog";
 
 export type ForwarderRow = {
   id: string;
@@ -99,20 +91,6 @@ function ForwarderRowMenu({
   canWrite: boolean;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function handleConfirmDelete() {
-    startTransition(async () => {
-      // On success deleteForwarder redirects back to Project Summary and this
-      // row unmounts. On failure keep the dialog open — the error renders
-      // inside it, so closing would hide the failure entirely.
-      const result = await deleteForwarder(projectId, forwarder.id);
-      if (result?.error) {
-        setError(result.error);
-      }
-    });
-  }
 
   return (
     <>
@@ -140,10 +118,7 @@ function ForwarderRowMenu({
               </DropdownMenuItem>
               <DropdownMenuItem
                 variant="destructive"
-                onClick={() => {
-                  setError(null);
-                  setConfirmOpen(true);
-                }}
+                onClick={() => setConfirmOpen(true)}
               >
                 Delete
               </DropdownMenuItem>
@@ -152,32 +127,13 @@ function ForwarderRowMenu({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Forwarder</DialogTitle>
-            <DialogDescription>
-              Delete {forwarder.company_name}? This also deletes all of its
-              quotes. This can&apos;t be undone.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)} disabled={isPending}>
-              Cancel
-            </Button>
-            <Button type="button" variant="destructive" onClick={handleConfirmDelete} disabled={isPending}>
-              {isPending ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-
-          {error && (
-            <p className="text-sm text-danger" role="alert">
-              {error}
-            </p>
-          )}
-        </DialogContent>
-      </Dialog>
+      <DeleteForwarderDialog
+        projectId={projectId}
+        forwarderId={forwarder.id}
+        companyName={forwarder.company_name}
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+      />
     </>
   );
 }

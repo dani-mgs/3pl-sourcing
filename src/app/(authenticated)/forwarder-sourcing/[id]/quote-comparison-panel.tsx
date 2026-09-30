@@ -3,186 +3,22 @@
 import Link from "next/link";
 import { useState } from "react";
 import { formatCurrency } from "@/lib/currency";
+import { costBarScale } from "@/lib/forwarder/project-summary";
 import {
-  NOT_COMPARABLE,
-  isExcludedFromRanking,
-  type ForwarderQuoteInput,
-  type ForwarderQuoteResult,
-} from "@/lib/forwarder/cost-comparison";
-import {
-  costBarScale,
-  exceedsTargetLeadTime,
-  leadTimeRange,
-  rateValidity,
-} from "@/lib/forwarder/project-summary";
+  AnnualSavingsCell,
+  FreightCell,
+  LeadTimeCell,
+  ValidUntilCell,
+  VsBaselineCell,
+  rankLabel,
+  type ComparisonResult,
+} from "./quote-cells";
 
-export type ComparisonQuote = ForwarderQuoteInput & {
-  id: string;
-  forwarder_id: string;
-  forwarder_name: string;
-  lead_time_min_days: number | null;
-  lead_time_max_days: number | null;
-  rate_valid_until: string | null;
-};
-
-export type ComparisonResult = ForwarderQuoteResult<ComparisonQuote>;
+export type { ComparisonQuote, ComparisonResult } from "./quote-cells";
 
 const headClass =
   "px-2.5 py-2.5 text-xs font-medium uppercase tracking-wide whitespace-nowrap text-neutral-muted";
 const cellClass = "px-2.5 py-2.5";
-
-// Accessible text on white for "attention" states; Move Orange itself is too
-// light for text, so it's used only for the small indicator dot.
-const ATTENTION_TEXT = "text-[#B15400]";
-
-function rankLabel(quote: ComparisonQuote, result: ComparisonResult): string {
-  if (result.rankPosition === NOT_COMPARABLE) return "Not Comparable";
-  if (isExcludedFromRanking(quote)) return "Excluded from ranking";
-  return result.rankPosition ?? "—";
-}
-
-function VsBaselineCell({ result }: { result: ComparisonResult }) {
-  if (result.vsBaseline === NOT_COMPARABLE) {
-    return <span className="text-neutral-muted">Not Comparable</span>;
-  }
-  if (result.vsBaseline == null || typeof result.costDifference !== "number") {
-    return <span className="text-neutral-muted">—</span>;
-  }
-  const color =
-    result.costDifference > 0
-      ? "text-move-green"
-      : result.costDifference < 0
-        ? "text-danger"
-        : "text-neutral-muted";
-  const pct =
-    typeof result.savingPct === "number" ? ` (${(result.savingPct * 100).toFixed(1)}%)` : "";
-  return (
-    <span className={`block whitespace-nowrap ${color}`}>
-      {result.vsBaseline}{" "}
-      <span className="block tabular-nums">
-        {formatCurrency(result.costDifference, "USD")}
-        {pct}
-      </span>
-    </span>
-  );
-}
-
-function AnnualSavingsCell({ result }: { result: ComparisonResult }) {
-  if (result.annualCostDifference === NOT_COMPARABLE) {
-    return <span className="text-neutral-muted">Not Comparable</span>;
-  }
-  if (typeof result.annualCostDifference !== "number") {
-    return <span className="text-neutral-muted">—</span>;
-  }
-  return <span>{formatCurrency(result.annualCostDifference, "USD")}</span>;
-}
-
-function barColor(result: ComparisonResult): string {
-  if (isExcludedFromRanking(result.quote)) return "bg-neutral-muted/30";
-  switch (result.vsBaseline) {
-    case "Below Baseline":
-      return "bg-move-green/70";
-    case "Above Baseline":
-      return "bg-danger/60";
-    case "Equal to Baseline":
-      return "bg-move-navy/40";
-    default:
-      return "bg-neutral-muted/30";
-  }
-}
-
-// Freight cost with a bar scaled to the group's dearest quote or the
-// baseline, and a marker at the baseline. Plain CSS, no chart library.
-function FreightCell({
-  result,
-  scale,
-  baseline,
-}: {
-  result: ComparisonResult;
-  scale: number | null;
-  baseline: number | null;
-}) {
-  if (result.freightCostUsd == null) {
-    return <span className="text-neutral-muted">—</span>;
-  }
-  const width = scale ? Math.max(2, (result.freightCostUsd / scale) * 100) : 0;
-  const marker = scale && baseline != null ? (baseline / scale) * 100 : null;
-  return (
-    <div className="min-w-28">
-      <span className="whitespace-nowrap tabular-nums text-move-navy">
-        {formatCurrency(result.freightCostUsd, "USD")}
-      </span>
-      {scale && (
-        <div className="relative mt-1.5 h-1.5 rounded-full bg-neutral-bg" aria-hidden="true">
-          <div className={`h-full rounded-full ${barColor(result)}`} style={{ width: `${width}%` }} />
-          {marker != null && (
-            <div
-              className="absolute -top-1 -bottom-1 w-px bg-move-navy"
-              style={{ left: `${marker}%` }}
-            />
-          )}
-        </div>
-      )}
-      {result.costPerKg != null && (
-        <span className="mt-1 block text-xs whitespace-nowrap tabular-nums text-neutral-muted">
-          {formatCurrency(result.costPerKg, "USD")} / kg
-        </span>
-      )}
-    </div>
-  );
-}
-
-function LeadTimeCell({ quote, target }: { quote: ComparisonQuote; target: number | null }) {
-  const label = leadTimeRange(quote.lead_time_min_days, quote.lead_time_max_days);
-  if (!label) return <span className="text-neutral-muted">—</span>;
-  const over = exceedsTargetLeadTime(quote.lead_time_min_days, quote.lead_time_max_days, target);
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap tabular-nums ${over ? ATTENTION_TEXT : "text-move-navy"}`}
-      title={over ? `Over the ${target} d target lead time` : undefined}
-    >
-      {label}
-      {over && (
-        <>
-          <span className="size-1.5 rounded-full bg-move-orange" aria-hidden="true" />
-          <span className="sr-only">(over target)</span>
-        </>
-      )}
-    </span>
-  );
-}
-
-const dateFormat = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-  timeZone: "UTC",
-});
-
-function ValidUntilCell({ validUntil, today }: { validUntil: string | null; today: string }) {
-  const validity = rateValidity(validUntil, today);
-  if (validity.kind === "none" || !validUntil) {
-    return <span className="text-neutral-muted">—</span>;
-  }
-  const date = dateFormat.format(new Date(`${validUntil}T00:00:00Z`));
-  if (validity.kind === "expired") {
-    return (
-      <span className="whitespace-nowrap text-danger" title={`Expired ${date}`}>
-        Expired
-        <span className="block text-xs text-neutral-muted">{date}</span>
-      </span>
-    );
-  }
-  if (validity.kind === "soon") {
-    return (
-      <span className={`whitespace-nowrap ${ATTENTION_TEXT}`}>
-        {validity.daysLeft === 0 ? "Expires today" : `Expires in ${validity.daysLeft} d`}
-        <span className="block text-xs text-neutral-muted">{date}</span>
-      </span>
-    );
-  }
-  return <span className="whitespace-nowrap text-neutral-muted">{date}</span>;
-}
 
 function groupResults(results: ComparisonResult[]): Map<string, ComparisonResult[]> {
   const groups = new Map<string, ComparisonResult[]>();
