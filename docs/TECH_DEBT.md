@@ -38,6 +38,20 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Medium
 - **Where:** `src/middleware.ts`, `src/lib/supabase/middleware.ts`
 
+### Forwarder exports show capabilities as Yes / No
+- **Added:** 2026-10-01 (found while writing /help)
+- **What:** CSV/PDF/DOCX exports write each forwarder capability as "Yes" or "No" (`forwarderColumns` in `report-data.ts`), but a false capability means "not yet confirmed", not "no" — the app itself says "Not confirmed". A client reading "No" could wrongly conclude the forwarder can't do it. Client exports should say "Not confirmed" (or leave the cell blank) instead of "No".
+- **Why deferred:** Export output change, separate from the help/nav work; /help notes the meaning in the meantime.
+- **Severity:** Medium
+- **Where:** `src/lib/forwarder/report-data.ts` (`forwarderColumns`)
+
+### 3PL cost comparison has no tie handling
+- **Added:** 2026-10-01 (found while writing /help)
+- **What:** `rankByTotalCost` sorts by total cost and numbers the result 1, 2, 3…, so 3PLs with equal totals get consecutive ranks in whatever order the sort leaves them, and one of them looks cheaper than the other. Forwarder ranking already shares a rank across ties.
+- **Why deferred:** Changes ranking output on existing 3PL projects and the Recommendation's top three, so it needs its own decision and tests.
+- **Severity:** Low
+- **Where:** `src/lib/cost-comparison.ts` (`rankByTotalCost`)
+
 ### Forwarder ranking basis — open decision
 - **Added:** 2026-09-28
 - **What:** Cost Rank and savings use Freight Cost only, matching the original spreadsheet. Total Comparable Logistics Cost (freight + duties & taxes + other charges) may be the fairer basis against a DDP baseline, where duties are included.

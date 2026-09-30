@@ -22,11 +22,14 @@ export function UserMenu({
 }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2 rounded-full px-2 py-1 text-sm font-medium text-white outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/40">
+      <DropdownMenuTrigger
+        aria-label={`Account menu for ${displayName}`}
+        className="flex items-center gap-2 rounded-full px-2 py-1 text-sm font-medium text-white outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/40">
         <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-move-green text-xs font-semibold text-white">
           {getInitial(displayName)}
         </span>
-        <span>{displayName}</span>
+        {/* Initial only below sm, so the header fits a phone. */}
+        <span className="max-sm:hidden">{displayName}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-40">
         {isAdmin && (

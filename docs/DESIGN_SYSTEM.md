@@ -89,6 +89,8 @@ General rule: nothing should visually touch another element's edge or the viewpo
 - Secondary button: border Neutral Border, hover bg Neutral Background, Move Navy text, text-sm font-medium, px-4 py-2.5, rounded-xl
 - Danger button: bg Danger, hover darker red, white text, same sizing as primary
 - Header bar: bg Move Navy, white text, app name in Plus Jakarta Sans, "Log Out" as an outlined white button
+- Header bar below 640px: `px-4 gap-4`, brand mark without the name, and the avatar initial without the name, so the bar fits a phone
+- "Soon" badge: rounded-full, 10px semibold uppercase, bg #FBBF24 with Move Navy text (7.95:1), used on the navy header and in white menus alike
 - Card: bg white, rounded-2xl, shadow-sm, border Neutral Border, p-6
 - Table: header row text-xs text-slate-500 uppercase tracking-wide border-b Neutral Border; body rows border-b Neutral Border, hover bg Neutral Background; always per-cell Links for row navigation, never absolute-overlay on <tr>
 - Status pipeline (signature element, 3PL detail page): horizontal connected nodes — filled Move Green for completed steps, Move Orange ring for current step, empty outline for upcoming steps, connected by a thin line

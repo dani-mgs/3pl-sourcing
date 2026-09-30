@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth/get-user-role";
-import { Greeting } from "./greeting";
 import { UserMenu } from "./user-menu";
+import { HelpLink } from "./help-link";
 import { ModuleNav } from "./module-nav";
 import { APP_NAME, APP_SHORT_NAME } from "@/lib/modules";
 
@@ -38,26 +38,28 @@ export default async function AuthenticatedLayout({
 
   return (
     <div className="min-h-svh bg-neutral-bg">
-      <header className="sticky top-0 z-40 flex h-16 items-center gap-6 bg-move-navy px-8">
+      <header className="sticky top-0 z-40 flex h-16 items-center gap-6 bg-move-navy px-8 max-sm:gap-4 max-sm:px-4">
         <Link
           href="/"
           aria-label={APP_NAME}
           className="flex shrink-0 items-center gap-2.5"
         >
           <span className="size-3 rounded-sm bg-move-green" />
+          {/* Mark only below sm (the link keeps its aria-label), the short
+              name up to 1759px, the full name above. */}
           <span
             aria-hidden="true"
-            className="font-display text-lg font-semibold whitespace-nowrap text-white"
+            className="font-display text-lg font-semibold whitespace-nowrap text-white max-sm:hidden"
           >
-            <span className="hidden xl:max-[1759px]:inline">{APP_SHORT_NAME}</span>
-            <span className="xl:max-[1759px]:hidden">{APP_NAME}</span>
+            <span className="min-[1760px]:hidden">{APP_SHORT_NAME}</span>
+            <span className="hidden min-[1760px]:inline">{APP_NAME}</span>
           </span>
         </Link>
 
         <ModuleNav />
 
-        <div className="ml-auto flex min-w-0 items-center gap-3">
-          <Greeting displayName={displayName} />
+        <div className="ml-auto flex min-w-0 items-center gap-2">
+          <HelpLink />
           <UserMenu displayName={displayName} isAdmin={role === "admin"} />
         </div>
       </header>
