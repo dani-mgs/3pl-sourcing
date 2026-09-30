@@ -4,6 +4,20 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### No timeout around document parsing (pdf-parse / mammoth)
+- **Added:** 2026-09-30 (security audit)
+- **What:** `src/lib/document-extraction.ts` parses uploaded .pdf/.docx files with pdf-parse and mammoth with no time limit; a pathological file (deeply nested or malformed PDF, zip-bomb-style DOCX) could tie up a server instance until the platform's function timeout. The only upload bound today is the 10mb Server Action body limit in `next.config.ts`.
+- **Why deferred:** Uploads come only from signed-in experts, and there's no sign of problem files in real use yet; adding a timeout/abort wrapper is worth doing once we see actual usage patterns.
+- **Severity:** Medium
+- **Where:** `src/lib/document-extraction.ts` (the `PDFParse` and `mammoth.extractRawText` calls)
+
+### No rate limiting on AI-extraction Server Actions
+- **Added:** 2026-09-30 (security audit)
+- **What:** The five document-extraction Server Actions (3PL project intake, 3PL provider, forwarder project, forwarder, quote) each make a paid Anthropic API call per invocation with no per-user rate limit, so a buggy client loop or a misused account could run up cost. docs/SECURITY.md flags side-effecting actions for rate-limiting review.
+- **Why deferred:** Only authenticated internal users can reach these, and usage volume is unknown; pick a limit once real usage gives a baseline.
+- **Severity:** Medium
+- **Where:** `extract-actions.ts` / `extract-provider-actions.ts` under `src/app/(authenticated)/3pl-sourcing/` and `src/app/(authenticated)/forwarder-sourcing/`
+
 ### 3PL Server Actions don't use Zod validation
 - **Added:** 2026-09-28 (Forwarder Sourcing Phase 3A)
 - **What:** docs/SECURITY.md requires every Server Action to validate its input with a schema library (Zod). The new forwarder Server Actions do this (src/lib/forwarder/parse-project-form.ts), but the existing 3PL Sourcing Server Actions (project intake, 3PL add/edit, recommendation, notes, admin) still hand-validate field by field, predating that rule.
