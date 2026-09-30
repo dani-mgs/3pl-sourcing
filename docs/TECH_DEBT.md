@@ -18,11 +18,11 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Medium
 - **Where:** `extract-actions.ts` / `extract-provider-actions.ts` under `src/app/(authenticated)/3pl-sourcing/` and `src/app/(authenticated)/forwarder-sourcing/`
 
-### 3PL Server Actions don't use Zod validation
-- **Added:** 2026-09-28 (Forwarder Sourcing Phase 3A)
-- **What:** docs/SECURITY.md requires every Server Action to validate its input with a schema library (Zod). The new forwarder Server Actions do this (src/lib/forwarder/parse-project-form.ts), but the existing 3PL Sourcing Server Actions (project intake, 3PL add/edit, recommendation, notes, admin) still hand-validate field by field, predating that rule.
-- **Why deferred:** Migrating 3PL's actions is a larger, separate change (many actions, many forms) and wasn't part of this task.
-- **Owner:** Dani. Migrate 3PL Server Actions to Zod schemas, matching the forwarder module's pattern.
+### Admin Server Actions don't use Zod validation
+- **Added:** 2026-09-30 (split out of the resolved 3PL Zod item)
+- **What:** The admin actions (`reassignOwner`, `updateUserDisplayName`, `createUser`, `deleteUser`, `updateUserRole` in `admin/actions.ts`; `updateClient`, `deleteClient` in `admin/client-actions.ts`) take typed arguments but don't validate them with a schema, which docs/SECURITY.md requires for every Server Action.
+- **Why deferred:** Out of scope for the 3PL-actions Zod change (2de070b); admin-only and already role-gated.
+- **Severity:** Low
 
 ### Forwarder ranking basis — open decision
 - **Added:** 2026-09-28
@@ -49,6 +49,12 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 
 ## Resolved
+
+### 3PL Server Actions don't use Zod validation
+- **Added:** 2026-09-28 (Forwarder Sourcing Phase 3A)
+- **What:** docs/SECURITY.md requires every Server Action to validate its input with a schema library (Zod). The new forwarder Server Actions do this (src/lib/forwarder/parse-project-form.ts), but the existing 3PL Sourcing Server Actions (project intake, 3PL add/edit, recommendation, notes, admin) still hand-validate field by field, predating that rule.
+- **Why deferred:** Migrating 3PL's actions is a larger, separate change (many actions, many forms) and wasn't part of this task.
+- **Resolved:** 2026-09-30 (commit 2de070b) — 3PL project, provider (incl. rate details), recommendation, and notes actions now validate via Zod schemas in `src/lib/three-pl/parse-*-form.ts`, bounded to the DB column limits. Admin actions weren't part of that change.
 
 ### Missing table GRANTs on new Supabase project
 - **Added:** 2026-08-19 (Week 1, feature 4)
