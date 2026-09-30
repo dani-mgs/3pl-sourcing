@@ -30,6 +30,11 @@ import { updateQuote } from "./[quoteId]/edit/actions";
 
 export type QuoteFormDefaults = Partial<QuoteFields>;
 
+// A blank currency is saved as USD (parse-quote-form.ts), so it needs no rate.
+function isUsd(currency: string): boolean {
+  return currency === "" || currency === "USD";
+}
+
 // Same amber-warning convention used by the 3PL Cost Comparison panel for
 // currency-mismatch/pending-baseline notes.
 const warningClass =
@@ -65,10 +70,10 @@ export function QuoteForm({
   const [type, setType] = useState(defaultValues.shipment_type ?? "");
 
   // Currency and rate are controlled so the "1 {currency} = __ USD" label
-  // can update live as the user types. An empty rate (as opposed to the "1"
-  // default) specifically means "AI extraction found a non-USD currency but
-  // no stated exchange rate" — never silently guessed — and blocks submit
-  // below until the user enters one.
+  // can update live as the user types. An empty rate on a non-USD quote means
+  // no rate has been entered yet — AI extraction found none, or the currency
+  // was just changed — and blocks submit below until the user enters one; a
+  // rate is never guessed or carried over from another currency.
   const [currency, setCurrency] = useState<string>(defaultValues.original_currency ?? "USD");
   const [rate, setRate] = useState(() => {
     if (defaultValues.exchange_rate_to_usd != null) {
@@ -107,7 +112,7 @@ export function QuoteForm({
     rate.trim() !== "" && !Number.isNaN(rateNumber)
       ? `1 ${currency} = ${rateNumber} USD`
       : null;
-  const rateNeedsManualEntry = currency !== "USD" && rate.trim() === "";
+  const rateNeedsManualEntry = !isUsd(currency) && rate.trim() === "";
 
   function handleUpload(formData: FormData) {
     setUploadError(null);
@@ -247,7 +252,7 @@ export function QuoteForm({
         setLocalError(null);
         if (rateNeedsManualEntry) {
           setLocalError(
-            `Enter an exchange rate for ${currency} before saving — one wasn't found in the uploaded document.`,
+            `Enter an exchange rate for ${currency} before saving.`,
           );
           return;
         }
@@ -339,9 +344,12 @@ export function QuoteForm({
             value={currency}
             updated={highlighted.has("original_currency")}
             onChange={(next) => {
+              if (next === currency) return;
               setCurrency(next);
-              // Switching back to USD makes any manual-entry warning moot.
-              if (next === "USD" && rate.trim() === "") setRate("1");
+              // A USD rate is always 1. Any other currency starts blank, so a
+              // leftover rate (the USD default of 1, or another currency's
+              // rate) can't be saved against it by accident.
+              setRate(isUsd(next) ? "1" : "");
             }}
           />
           <InputField name="original_amount" label="Amount" type="number" step="0.01" defaultValue={values.original_amount} updated={highlighted.has("original_amount")} />
@@ -370,7 +378,7 @@ export function QuoteForm({
             {rateLabel && <p className="text-xs text-neutral-muted">{rateLabel}</p>}
             {rateNeedsManualEntry && (
               <p className={warningClass}>
-                Rate not found in document — enter manually before saving.
+                No exchange rate yet — enter the {currency} to USD rate before saving.
               </p>
             )}
           </div>

@@ -111,6 +111,18 @@ export function parseQuoteForm(formData: FormData): ParseQuoteResult {
     raw[name] = formData.get(name);
   }
 
+  // A non-USD quote needs a rate the user actually entered: the schema's
+  // blank → 1 default is only right for USD, and a non-USD amount at rate 1
+  // would silently skew freight cost, ranking, and savings. Checked on the raw
+  // value so a deliberately entered rate of 1 is still accepted.
+  const currency = blankToNull(raw.original_currency) ?? "USD";
+  if (currency !== "USD" && blankToNull(raw.exchange_rate_to_usd) == null) {
+    return {
+      ok: false,
+      error: `Enter an exchange rate to USD for this ${currency} quote.`,
+    };
+  }
+
   const parsed = quoteSchema.safeParse(raw);
   if (!parsed.success) {
     // Field-level schema detail stays server-side (docs/SECURITY.md).
