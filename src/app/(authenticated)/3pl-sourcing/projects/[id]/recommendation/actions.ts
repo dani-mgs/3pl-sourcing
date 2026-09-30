@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { parseRecommendationForm } from "@/lib/three-pl/parse-recommendation-form";
 
 export type SaveRecommendationState = { error?: string; success?: boolean };
 
@@ -9,19 +10,16 @@ export async function saveRecommendation(
   clientRequirementId: string,
   formData: FormData,
 ): Promise<SaveRecommendationState> {
-  const supabase = await createClient();
+  const parsed = parseRecommendationForm(formData);
+  if (!parsed.ok) {
+    return { error: parsed.error };
+  }
 
-  const providerId = (name: string) => {
-    const value = formData.get(name) as string;
-    return value ? value : null;
-  };
+  const supabase = await createClient();
 
   const payload = {
     three_pl_project_id: clientRequirementId,
-    priority: formData.get("priority") as string,
-    provider_id_1: providerId("provider_id_1"),
-    provider_id_2: providerId("provider_id_2"),
-    provider_id_3: providerId("provider_id_3"),
+    ...parsed.data,
     generated_at: new Date().toISOString(),
   };
 

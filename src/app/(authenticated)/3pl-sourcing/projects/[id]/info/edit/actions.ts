@@ -3,22 +3,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
+import { parseProjectForm } from "@/lib/three-pl/parse-project-form";
 
 export type SaveClientRequirementsState = {
   error?: string;
 };
-
-function optionalText(formData: FormData, key: string): string | null {
-  const value = formData.get(key) as string;
-  return value ? value : null;
-}
-
-function optionalInt(formData: FormData, key: string): number | null {
-  const value = formData.get(key) as string;
-  if (!value) return null;
-  const parsed = parseInt(value, 10);
-  return Number.isNaN(parsed) ? null : parsed;
-}
 
 export async function updateClientRequirements(
   clientRequirementId: string,
@@ -29,41 +18,16 @@ export async function updateClientRequirements(
     return { error: "You don't have permission to make this change." };
   }
 
-  const supabase = await createClient();
+  const parsed = parseProjectForm(formData);
+  if (!parsed.ok) {
+    return { error: parsed.error };
+  }
 
-  const payload = {
-    target_geography: optionalText(formData, "target_geography"),
-    avg_monthly_orders: optionalInt(formData, "avg_monthly_orders"),
-    peak_monthly_orders: optionalInt(formData, "peak_monthly_orders"),
-    latest_month_orders: optionalInt(formData, "latest_month_orders"),
-    avg_monthly_units: optionalInt(formData, "avg_monthly_units"),
-    peak_monthly_units: optionalInt(formData, "peak_monthly_units"),
-    benchmark_period: optionalText(formData, "benchmark_period"),
-    core_cost_categories: optionalText(formData, "core_cost_categories"),
-    key_capability_needs: optionalText(formData, "key_capability_needs"),
-    main_decision_focus: optionalText(formData, "main_decision_focus"),
-    tech_integration_requirement: optionalText(
-      formData,
-      "tech_integration_requirement",
-    ),
-    special_handling_requirement: optionalText(
-      formData,
-      "special_handling_requirement",
-    ),
-    fixed_comparison_principle: optionalText(
-      formData,
-      "fixed_comparison_principle",
-    ),
-    important_limitation: optionalText(formData, "important_limitation"),
-    assumptions_data_limitations: optionalText(
-      formData,
-      "assumptions_data_limitations",
-    ),
-  };
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("three_pl_projects")
-    .update(payload)
+    .update(parsed.data)
     .eq("id", clientRequirementId)
     .select();
 

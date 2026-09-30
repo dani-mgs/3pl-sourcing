@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { parseSummaryNotesForm } from "@/lib/three-pl/parse-project-form";
 
 export type SaveNotesState = { error?: string; success?: boolean };
 
@@ -9,12 +10,16 @@ export async function updateSummaryNotes(
   clientRequirementId: string,
   formData: FormData,
 ): Promise<SaveNotesState> {
+  const parsed = parseSummaryNotesForm(formData);
+  if (!parsed.ok) {
+    return { error: parsed.error };
+  }
+
   const supabase = await createClient();
-  const summaryNotes = (formData.get("summary_notes") as string) || null;
 
   const { data, error } = await supabase
     .from("three_pl_projects")
-    .update({ summary_notes: summaryNotes })
+    .update(parsed.data)
     .eq("id", clientRequirementId)
     .select();
 

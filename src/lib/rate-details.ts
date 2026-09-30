@@ -36,17 +36,6 @@ export const BLANK_RATE_DETAILS: RateDetails = Object.fromEntries(
 export const RATE_DETAILS_NOT_SAVED_ERROR =
   "The 3PL was saved, but its rate details weren't. Your entries are still below — try saving again.";
 
-export function rateDetailsFromForm(formData: FormData): RateDetails {
-  const rates = { ...BLANK_RATE_DETAILS };
-  for (const field of RATE_FIELDS) {
-    const value = formData.get(field.name) as string | null;
-    if (!value) continue;
-    const parsed = Number(value);
-    rates[field.name] = Number.isNaN(parsed) ? null : parsed;
-  }
-  return rates;
-}
-
 function hasAnyRate(rates: RateDetails): boolean {
   return RATE_FIELDS.some((field) => rates[field.name] != null);
 }

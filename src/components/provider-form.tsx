@@ -12,8 +12,6 @@ import {
 import {
   STATUS_DOT_COLORS,
   ASSESSMENT_DOT_COLORS,
-  type ProviderStatus,
-  type AssessmentStatus,
 } from "@/app/(authenticated)/3pl-sourcing/projects/[id]/providers/status-badge";
 import { CURRENCY_OPTIONS } from "@/lib/currency";
 import {
@@ -22,32 +20,15 @@ import {
   type RateDetails,
   type RateField,
 } from "@/lib/rate-details";
+import {
+  STATUS_OPTIONS,
+  ASSESSMENT_OPTIONS,
+} from "@/lib/three-pl/three-pl-fields";
 
-export const STATUS_OPTIONS: ProviderStatus[] = [
-  "Potential / Not Contacted",
-  "Baseline",
-  "Contacted",
-  "Client Requirements Sent",
-  "Scheduled for Discovery Call",
-  "Waiting for Quotation",
-  "Reviewing Quotation",
-  "Clarifications",
-  "Negotiation",
-  "Shortlisted",
-  "Vetted",
-  "Unfit",
-  "Do not Contact",
-  "Withdrawn / No Response",
-  "Completed / Closed",
-];
-
-export const ASSESSMENT_OPTIONS: AssessmentStatus[] = [
-  "Under Assessment",
-  "Move Recommended",
-  "Fit",
-  "Unfit",
-  "Awarded/Approved",
-];
+// Re-exported so existing importers (e.g. project-summary-table.tsx) don't
+// need to change paths; three-pl-fields.ts is the single source of truth,
+// shared with the Zod validation schema in parse-provider-form.ts.
+export { STATUS_OPTIONS, ASSESSMENT_OPTIONS };
 
 export const COUNTRY_CODES = [
   { code: "+1", label: "+1 (US/CA)" },
