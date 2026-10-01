@@ -12,15 +12,12 @@ import {
 import { StatusBadge, type ProviderStatus } from "../providers/status-badge";
 import { saveRecommendation, type SaveRecommendationState } from "./actions";
 import { formatCurrency } from "@/lib/currency";
-import { rankByTotalCost, totalCost, type CostInputs } from "@/lib/cost-comparison";
-
-const PRIORITY_OPTIONS = [
-  "Cost Savings",
-  "Quality of Service",
-  "Turnaround Time",
-] as const;
-
-type Priority = (typeof PRIORITY_OPTIONS)[number];
+import { totalCost, type CostInputs } from "@/lib/cost-comparison";
+import {
+  PRIORITY_OPTIONS,
+  rankProviders,
+  type Priority,
+} from "@/lib/three-pl/recommendation-ranking";
 
 export type VettedProvider = CostInputs & {
   id: string;
@@ -36,37 +33,6 @@ export type RecommendationRow = {
 };
 
 const labelClass = "text-sm font-medium text-move-navy";
-
-function rankProviders(
-  providers: VettedProvider[],
-  priority: Priority,
-): {
-  ranked: { provider: VettedProvider; rank: number | null }[];
-  mixedCurrencies: boolean;
-  distinctCurrencies: string[];
-} {
-  if (priority !== "Cost Savings") {
-    return {
-      ranked: providers.map((provider) => ({ provider, rank: null })),
-      mixedCurrencies: false,
-      distinctCurrencies: [],
-    };
-  }
-
-  const { rankById, mixedCurrencies, distinctCurrencies } =
-    rankByTotalCost(providers);
-  const withRank = providers.map((provider) => ({
-    provider,
-    rank: rankById.get(provider.id) ?? null,
-  }));
-  const ranked = [
-    ...withRank
-      .filter((entry) => entry.rank != null)
-      .sort((a, b) => a.rank! - b.rank!),
-    ...withRank.filter((entry) => entry.rank == null),
-  ];
-  return { ranked, mixedCurrencies, distinctCurrencies };
-}
 
 export function RecommendationForm({
   projectId,

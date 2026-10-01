@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { embeddedOne } from "@/lib/clients";
 import { formatCurrency } from "@/lib/currency";
+import { buildCsv, buildMultiSectionCsv, toCsvRow } from "./export-csv";
 import { FORWARDER_PROJECT_FIELDS_SELECT } from "./parse-project-form";
 import { PROJECT_SECTIONS } from "./project-sections";
 import { formatProjectValue, routeLabel } from "./project-display";
@@ -379,4 +380,33 @@ export function buildForwarderReport(
     ],
     notes: reportNotes(quoteResults),
   };
+}
+
+// ---- Combined CSV -------------------------------------------------------------
+
+// A trailing NOTES section, one line per note; none when there are no notes.
+function notesSection(notes: string[]): { title: string; csv: string }[] {
+  return notes.length > 0
+    ? [{ title: "NOTES", csv: notes.map((note) => toCsvRow([note])).join("\r\n") + "\r\n" }]
+    : [];
+}
+
+// The whole CSV export for one version: project details, forwarders, the
+// quote comparison, and any notes, filtered exactly like the PDF/DOCX report.
+export function buildForwarderReportCsv(data: ForwarderReportData, version: ExportVersion): string {
+  const quoteResults = filterQuotesForVersion(data.quoteResults, version);
+  const projectTable = buildSectionTable(projectColumns(), version, [data.projectRow]);
+  const forwarderTable = buildSectionTable(
+    forwarderColumns(),
+    version,
+    filterForwardersForVersion(data.forwarders, version),
+  );
+  const quoteTable = buildSectionTable(quoteColumns(), version, quoteResults);
+
+  return buildMultiSectionCsv([
+    { title: "PROJECT DETAILS", csv: buildCsv(projectTable.headers, projectTable.rows) },
+    { title: "FORWARDERS", csv: buildCsv(forwarderTable.headers, forwarderTable.rows) },
+    { title: "QUOTE COMPARISON", csv: buildCsv(quoteTable.headers, quoteTable.rows) },
+    ...notesSection(reportNotes(quoteResults)),
+  ]);
 }

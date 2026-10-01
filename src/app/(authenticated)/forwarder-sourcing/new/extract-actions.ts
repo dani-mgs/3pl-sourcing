@@ -20,6 +20,10 @@ import {
   STACKABLE_OPTIONS,
   YES_NO,
 } from "@/lib/forwarder/project-fields";
+import {
+  toForwarderProjectFields,
+  type ExtractedProjectIntake,
+} from "@/lib/forwarder/extraction-mapping";
 import { createClient } from "@/lib/supabase/server";
 import { findClientByName, type ClientOption } from "@/lib/clients";
 
@@ -107,116 +111,6 @@ const EXTRACT_TOOL = {
   },
 };
 
-type ExtractedIntake = {
-  client_name?: string;
-  business_model?: string;
-  origin_country?: string;
-  origin_city?: string;
-  origin_port?: string;
-  destination_country?: string;
-  destination_city?: string;
-  destination_port?: string;
-  final_delivery_address?: string;
-  cargo_description?: string;
-  packaging_type?: string;
-  units?: number;
-  cartons?: number;
-  pallets?: number;
-  weight_kg?: number;
-  cbm?: number;
-  stackable?: string;
-  dangerous_goods?: string;
-  temperature_controlled?: string;
-  special_handling?: string;
-  packing_list_available?: string;
-  packing_list_reference?: string;
-  packing_list_notes?: string;
-  current_incoterm?: string;
-  shipment_mode?: string;
-  shipment_type?: string;
-  current_freight_cost_usd?: number;
-  current_freight_forwarder?: string;
-  current_lead_time_days?: number;
-  shipments_per_month?: number;
-  shipments_per_year?: number;
-  incoterms_to_compare?: string[];
-  final_incoterm?: string;
-  final_shipment_mode?: string;
-  final_shipment_type?: string;
-  target_lead_time_days?: number;
-  hs_code?: string;
-  invoice_value?: number;
-  invoice_currency?: string;
-  insurance_required?: string;
-  brokerage_needed?: string;
-};
-
-function pickEnum<T extends string>(
-  value: string | undefined,
-  options: readonly T[],
-): T | null {
-  return value !== undefined && (options as readonly string[]).includes(value)
-    ? (value as T)
-    : null;
-}
-
-function toForwarderProjectFields(
-  extracted: ExtractedIntake,
-): ExtractedForwarderProjectFields {
-  return {
-    origin_country: cleanExtractedText(extracted.origin_country) ?? null,
-    origin_city: cleanExtractedText(extracted.origin_city) ?? null,
-    origin_port: cleanExtractedText(extracted.origin_port) ?? null,
-    destination_country: cleanExtractedText(extracted.destination_country) ?? null,
-    destination_city: cleanExtractedText(extracted.destination_city) ?? null,
-    destination_port: cleanExtractedText(extracted.destination_port) ?? null,
-    final_delivery_address:
-      cleanExtractedText(extracted.final_delivery_address) ?? null,
-
-    cargo_description: cleanExtractedText(extracted.cargo_description) ?? null,
-    packaging_type: cleanExtractedText(extracted.packaging_type) ?? null,
-    units: extracted.units ?? null,
-    cartons: extracted.cartons ?? null,
-    pallets: extracted.pallets ?? null,
-    weight_kg: extracted.weight_kg ?? null,
-    cbm: extracted.cbm ?? null,
-    stackable: pickEnum(extracted.stackable, STACKABLE_OPTIONS),
-    dangerous_goods: pickEnum(extracted.dangerous_goods, YES_NO),
-    temperature_controlled: pickEnum(extracted.temperature_controlled, YES_NO),
-    special_handling: cleanExtractedText(extracted.special_handling) ?? null,
-
-    packing_list_available: pickEnum(extracted.packing_list_available, YES_NO),
-    packing_list_reference:
-      cleanExtractedText(extracted.packing_list_reference) ?? null,
-    packing_list_notes: cleanExtractedText(extracted.packing_list_notes) ?? null,
-
-    current_incoterm: pickEnum(extracted.current_incoterm, INCOTERMS),
-    shipment_mode: pickEnum(extracted.shipment_mode, SHIPMENT_MODES),
-    shipment_type: pickEnum(extracted.shipment_type, SHIPMENT_TYPES),
-    current_freight_cost_usd: extracted.current_freight_cost_usd ?? null,
-    current_freight_forwarder:
-      cleanExtractedText(extracted.current_freight_forwarder) ?? null,
-    current_lead_time_days: extracted.current_lead_time_days ?? null,
-
-    shipments_per_month: extracted.shipments_per_month ?? null,
-    shipments_per_year: extracted.shipments_per_year ?? null,
-
-    incoterms_to_compare: extracted.incoterms_to_compare
-      ? INCOTERMS.filter((term) => extracted.incoterms_to_compare!.includes(term))
-      : undefined,
-    final_incoterm: pickEnum(extracted.final_incoterm, INCOTERMS),
-    final_shipment_mode: pickEnum(extracted.final_shipment_mode, SHIPMENT_MODES),
-    final_shipment_type: pickEnum(extracted.final_shipment_type, SHIPMENT_TYPES),
-    target_lead_time_days: extracted.target_lead_time_days ?? null,
-
-    hs_code: cleanExtractedText(extracted.hs_code) ?? null,
-    invoice_value: extracted.invoice_value ?? null,
-    invoice_currency: pickEnum(extracted.invoice_currency, CURRENCIES),
-    insurance_required: pickEnum(extracted.insurance_required, INSURANCE_OPTIONS),
-    brokerage_needed: pickEnum(extracted.brokerage_needed, BROKERAGE_OPTIONS),
-  };
-}
-
 // currentValues, when passed, puts this call in "merge mode" (editing an
 // existing forwarder project) rather than blank-slate prefill (a brand new
 // project, which has no existing record to compare against).
@@ -259,7 +153,7 @@ export async function extractForwarderProjectIntake(
     currentValuesForPrompt = pickNonNull(currentValues, EXTRACTABLE_FIELD_KEYS);
   }
 
-  const result = await runExtractionTool<ExtractedIntake>(
+  const result = await runExtractionTool<ExtractedProjectIntake>(
     text,
     EXTRACT_TOOL,
     systemPrompt,

@@ -101,6 +101,11 @@ Small projects don't need full test suites to be "doing it right." Prioritize:
 - Automated tests only for logic that's easy to get subtly wrong (calculations, data transforms, auth rules) — not for simple UI rendering.
 - If you don't have automated tests yet, that's fine — just be honest about it in the docs rather than pretending coverage exists.
 
+What this project has:
+
+- `npm test` — Vitest unit tests, pure: no network, no database, no production. Covers the cost comparisons (3PL and forwarder), client/expert export filtering (including `export-leak.test.ts`, which renders the Client CSV/PDF/DOCX and fails if any expert-only value or excluded forwarder appears), AI-upload cleaning and merge rules, the Zod form parsers, and the FX feed, cron job, and rate provenance.
+- `npm run test:db` — pgTAP permission tests in `supabase/tests/database/` (RLS and grants: owner-only writes, no access for signed-out requests, read-only `fx_rates`, locked `profiles`, quote rate provenance). Needs the local stack (`npx supabase start`; run `npx supabase db reset` first if migrations changed). It's pinned to `--local` and each file rolls back, so it never touches production or leaves data behind. Not part of `npm test`, since it needs Docker. Add a pgTAP case with any new table or policy.
+
 ## 10. When in Doubt
 
 Pick the boring, obvious solution over the clever one. Small projects are maintained by future-you (or someone else) reading the code cold — optimize for that person's ability to understand it in five minutes, not for elegance.

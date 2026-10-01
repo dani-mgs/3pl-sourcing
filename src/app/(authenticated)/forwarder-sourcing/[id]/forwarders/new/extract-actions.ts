@@ -5,6 +5,10 @@ import {
   extractTextFromFile,
   runExtractionTool,
 } from "@/lib/document-extraction";
+import {
+  toExtractedForwarderFields,
+  type ExtractedForwarderIntake,
+} from "@/lib/forwarder/extraction-mapping";
 import { pickNonNull } from "@/lib/merge-fields";
 import {
   EXTRACTABLE_FIELD_KEYS,
@@ -49,47 +53,6 @@ const EXTRACT_TOOL = {
   },
 };
 
-type ExtractedIntake = {
-  company_name?: string;
-  website?: string;
-  headquarters?: string;
-  footprint?: string;
-  contact_person?: string;
-  contact_position?: string;
-  email?: string;
-  phone?: string;
-  origin_coverage?: string;
-  destination_coverage?: string;
-  other_services?: string;
-} & Partial<Record<(typeof CAPABILITY_FIELDS)[number]["name"], boolean>>;
-
-function toExtractedForwarderFields(
-  extracted: ExtractedIntake,
-): ExtractedForwarderFields {
-  const fields: ExtractedForwarderFields = {
-    website: cleanExtractedText(extracted.website) ?? null,
-    headquarters: cleanExtractedText(extracted.headquarters) ?? null,
-    footprint: cleanExtractedText(extracted.footprint) ?? null,
-    contact_person: cleanExtractedText(extracted.contact_person) ?? null,
-    contact_position: cleanExtractedText(extracted.contact_position) ?? null,
-    email: cleanExtractedText(extracted.email) ?? null,
-    phone: cleanExtractedText(extracted.phone) ?? null,
-    origin_coverage: cleanExtractedText(extracted.origin_coverage) ?? null,
-    destination_coverage:
-      cleanExtractedText(extracted.destination_coverage) ?? null,
-    other_services: cleanExtractedText(extracted.other_services) ?? null,
-  };
-
-  for (const capability of CAPABILITY_FIELDS) {
-    const value = extracted[capability.name];
-    if (typeof value === "boolean") {
-      fields[capability.name] = value;
-    }
-  }
-
-  return fields;
-}
-
 // currentValues, when passed, puts this call in "merge mode" (editing an
 // existing forwarder) rather than blank-slate prefill (Add Forwarder, which
 // has no existing record to compare against).
@@ -132,7 +95,7 @@ export async function extractForwarderDetails(
     currentValuesForPrompt = pickNonNull(currentValues, EXTRACTABLE_FIELD_KEYS);
   }
 
-  const result = await runExtractionTool<ExtractedIntake>(
+  const result = await runExtractionTool<ExtractedForwarderIntake>(
     text,
     EXTRACT_TOOL,
     systemPrompt,

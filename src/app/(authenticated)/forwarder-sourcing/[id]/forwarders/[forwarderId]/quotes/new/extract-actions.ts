@@ -1,16 +1,15 @@
 "use server";
 
-import {
-  cleanExtractedText,
-  extractTextFromFile,
-  runExtractionTool,
-} from "@/lib/document-extraction";
+import { extractTextFromFile, runExtractionTool } from "@/lib/document-extraction";
 import { pickNonNull } from "@/lib/merge-fields";
 import {
   EXTRACTABLE_FIELD_KEYS,
   type ExtractedQuoteFields,
 } from "@/lib/forwarder/merge-quote-fields";
-import { canonicalizeScenarioGroup, pickDate } from "@/lib/forwarder/quote-extraction";
+import {
+  toExtractedQuoteFields,
+  type ExtractedQuoteIntake,
+} from "@/lib/forwarder/extraction-mapping";
 import {
   CURRENCIES,
   INCOTERMS,
@@ -66,88 +65,6 @@ const EXTRACT_TOOL = {
   },
 };
 
-type ExtractedIntake = {
-  scenario_group?: string;
-  shipment_mode?: string;
-  shipment_type?: string;
-  origin?: string;
-  destination?: string;
-  incoterm?: string;
-  actual_weight_kg?: number;
-  chargeable_weight_kg?: number;
-  cbm?: number;
-  cost_of_goods_usd?: number;
-  original_currency?: string;
-  original_amount?: number;
-  exchange_rate_to_usd?: number;
-  duties_taxes_usd?: number;
-  other_charges_usd?: number;
-  other_charges_description?: string;
-  lead_time_min_days?: number;
-  lead_time_max_days?: number;
-  quote_date?: string;
-  rate_valid_until?: string;
-  quote_reference?: string;
-};
-
-function pickEnum<T extends string>(
-  value: string | undefined,
-  options: readonly T[],
-): T | null {
-  return value !== undefined && (options as readonly string[]).includes(value)
-    ? (value as T)
-    : null;
-}
-
-function toExtractedQuoteFields(
-  extracted: ExtractedIntake,
-  existingScenarioGroups: string[],
-): ExtractedQuoteFields {
-  // original_currency/exchange_rate_to_usd are non-nullable columns (the
-  // schema defaults them to "USD"/1 when blank), so Partial<QuoteFields>
-  // types them as `| undefined`, not `| null` — undefined is what
-  // mergeScalarField treats as "no info" either way.
-  const originalCurrency = pickEnum(extracted.original_currency, CURRENCIES) ?? undefined;
-
-  return {
-    scenario_group: canonicalizeScenarioGroup(
-      extracted.scenario_group,
-      existingScenarioGroups,
-    ),
-    shipment_mode: pickEnum(extracted.shipment_mode, SHIPMENT_MODES),
-    shipment_type: pickEnum(extracted.shipment_type, SHIPMENT_TYPES),
-    origin: cleanExtractedText(extracted.origin) ?? null,
-    destination: cleanExtractedText(extracted.destination) ?? null,
-    incoterm: pickEnum(extracted.incoterm, INCOTERMS),
-
-    actual_weight_kg: extracted.actual_weight_kg ?? null,
-    chargeable_weight_kg: extracted.chargeable_weight_kg ?? null,
-    cbm: extracted.cbm ?? null,
-    cost_of_goods_usd: extracted.cost_of_goods_usd ?? null,
-
-    original_currency: originalCurrency,
-    original_amount: extracted.original_amount ?? null,
-    // USD short-circuit: a USD quote's rate is definitionally 1, so any rate
-    // the model attached to a USD quote is discarded outright rather than
-    // shown — there is no legitimate non-1 rate for a USD-denominated quote,
-    // and this removes a whole class of hallucination deterministically
-    // rather than relying on the prompt alone.
-    exchange_rate_to_usd:
-      originalCurrency === "USD" ? undefined : extracted.exchange_rate_to_usd ?? undefined,
-
-    duties_taxes_usd: extracted.duties_taxes_usd ?? null,
-    other_charges_usd: extracted.other_charges_usd ?? null,
-    other_charges_description:
-      cleanExtractedText(extracted.other_charges_description) ?? null,
-
-    lead_time_min_days: extracted.lead_time_min_days ?? null,
-    lead_time_max_days: extracted.lead_time_max_days ?? null,
-    quote_date: pickDate(extracted.quote_date),
-    rate_valid_until: pickDate(extracted.rate_valid_until),
-    quote_reference: cleanExtractedText(extracted.quote_reference) ?? null,
-  };
-}
-
 // currentValues, when passed, puts this call in "merge mode" (editing an
 // existing quote) rather than blank-slate prefill (Add Quote, which has no
 // existing record to compare against).
@@ -195,7 +112,7 @@ export async function extractQuoteDetails(
     currentValuesForPrompt = pickNonNull(currentValues, EXTRACTABLE_FIELD_KEYS);
   }
 
-  const result = await runExtractionTool<ExtractedIntake>(
+  const result = await runExtractionTool<ExtractedQuoteIntake>(
     text,
     EXTRACT_TOOL,
     systemPrompt,
