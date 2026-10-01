@@ -4,6 +4,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### PGRST303 is only retried in the FX cron job
+- **Added:** 2026-10-01
+- **What:** PostgREST's PGRST303 (JWT claims couldn't be validated — with Supabase's signing keys, usually brief clock skew between the server and the API) is retried with backoff only around the FX job's Supabase calls (`retryOnPgrst303` in `src/lib/supabase/pgrst303-retry.ts`). Every other server-side Supabase call (pages, Server Actions, exports, admin actions) would surface it as a one-off error ("An unexpected error occurred" or an empty page) that a reload fixes.
+- **Why deferred:** It's only been seen on the unattended cron run, which has no user to retry and no second chance until the next day; interactive calls have a person who can reload. Wrapping every call is a wider change than the cron fix. Not to be "fixed" by switching back to the legacy JWT keys.
+- **Severity:** Low
+- **Where:** server-side `createClient()` / `createAdminClient()` callers; reuse `retryOnPgrst303` if it shows up there.
+
 ### No timeout around document parsing (pdf-parse / mammoth)
 - **Added:** 2026-09-30 (security audit)
 - **What:** `src/lib/document-extraction.ts` parses uploaded .pdf/.docx files with pdf-parse and mammoth with no time limit; a pathological file (deeply nested or malformed PDF, zip-bomb-style DOCX) could tie up a server instance until the platform's function timeout. The only upload bound today is the 10mb Server Action body limit in `next.config.ts`.

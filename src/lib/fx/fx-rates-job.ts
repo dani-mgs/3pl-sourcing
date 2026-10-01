@@ -7,15 +7,19 @@ import {
   type FxCurrency,
   type PreviousRate,
 } from "./frankfurter";
+import { retryOnPgrst303, type Sleep } from "@/lib/supabase/pgrst303-retry";
 
 // The daily FX job: fetch → validate → invert → sanity-check → upsert.
 // Data access is passed in so the steps are testable without a network or
-// database; the cron route supplies the real fetch and Supabase calls.
+// database; the cron route supplies the real fetch and Supabase calls. Each
+// Supabase call (loadLatest, upsert) is retried on PGRST303 only.
 
 export type FxJobDeps = {
   fetchJson: (url: string) => Promise<unknown>;
   loadLatest: (currency: FxCurrency) => Promise<PreviousRate | null>;
   upsert: (rates: FetchedRate[]) => Promise<void>;
+  // Waits between PGRST303 retries; tests pass a no-op.
+  sleep?: Sleep;
 };
 
 export type FxJobResult =
@@ -50,7 +54,17 @@ export async function runFxRatesJob(deps: FxJobDeps): Promise<FxJobResult> {
   let previous: Map<FxCurrency, PreviousRate>;
   try {
     const latest = await Promise.all(
-      FX_CURRENCIES.map(async (currency) => [currency, await deps.loadLatest(currency)] as const),
+      FX_CURRENCIES.map(
+        async (currency) =>
+          [
+            currency,
+            await retryOnPgrst303(
+              `FX job: loading the previous ${currency} rate`,
+              () => deps.loadLatest(currency),
+              deps.sleep,
+            ),
+          ] as const,
+      ),
     );
     previous = new Map(
       latest.filter((entry): entry is readonly [FxCurrency, PreviousRate] => entry[1] != null),
@@ -71,7 +85,7 @@ export async function runFxRatesJob(deps: FxJobDeps): Promise<FxJobResult> {
 
   if (accept.length > 0) {
     try {
-      await deps.upsert(accept);
+      await retryOnPgrst303("FX job: storing rates", () => deps.upsert(accept), deps.sleep);
     } catch (error) {
       console.error("FX job: storing rates failed:", error);
       return { ok: false, error: "Couldn't store rates." };

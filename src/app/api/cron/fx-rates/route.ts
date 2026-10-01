@@ -6,6 +6,13 @@ import { runFxRatesJob } from "@/lib/fx/fx-rates-job";
 // ONLY place the service-role client is used without an admin check: it's
 // protected by CRON_SECRET instead, and only upserts fx_rates (see
 // docs/SECURITY.md, "Service-role exception: cron routes").
+
+// Worst case: the 15 s feed timeout, then two rounds of PGRST303 retries (the
+// parallel previous-rate reads, then the upsert) at about 15.5 s of backoff
+// each, plus the calls themselves — under a minute. Vercel Hobby allows up to
+// 300 s; 60 s leaves headroom without letting a hung run linger.
+export const maxDuration = 60;
+
 export async function GET(request: Request) {
   if (!isAuthorizedCronRequest(request.headers.get("authorization"), process.env.CRON_SECRET)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
