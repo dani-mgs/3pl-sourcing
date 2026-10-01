@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { parseQuoteForm } from "./parse-quote-form";
+import { isRealIsoDate, parseQuoteForm } from "./parse-quote-form";
 
 function form(fields: Record<string, string>): FormData {
   const data = new FormData();
@@ -114,5 +114,48 @@ describe("parseQuoteForm fields", () => {
 
   test("values just inside the column limits are accepted", () => {
     expect(parseQuoteForm(form({ original_amount: "99999999999999.99", lead_time_max_days: "99999.9" })).ok).toBe(true);
+  });
+});
+
+describe("parseQuoteForm dates", () => {
+  test("real YYYY-MM-DD dates are accepted, including Feb 29 in a leap year; blank is null", () => {
+    const result = parseQuoteForm(
+      form({ quote_date: "2026-10-01", rate_valid_until: "2028-02-29", exchange_rate_date: "" }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toMatchObject({
+      quote_date: "2026-10-01",
+      rate_valid_until: "2028-02-29",
+      exchange_rate_date: null,
+    });
+  });
+
+  test.each([
+    ["quote_date", "30/09/2026", "Quote date"],
+    ["quote_date", "2026-9-30", "Quote date"],
+    ["rate_valid_until", "2026-02-30", "Rate valid until"],
+    ["rate_valid_until", "2027-02-29", "Rate valid until"],
+    ["exchange_rate_date", "2026-13-01", "Exchange rate date"],
+    ["exchange_rate_date", "yesterday", "Exchange rate date"],
+  ])("%s = %j is refused with a message naming the field", (field, value, label) => {
+    quietErrors();
+    const extra: Record<string, string> = field === "exchange_rate_date"
+      ? { original_currency: "EUR", exchange_rate_to_usd: "1.1", exchange_rate_source: "manual" }
+      : {};
+    expect(parseQuoteForm(form({ ...extra, [field]: value }))).toEqual({
+      ok: false,
+      error: `${label} isn't a valid date. Use the date picker, or enter it as YYYY-MM-DD.`,
+    });
+  });
+});
+
+describe("isRealIsoDate", () => {
+  test("checks the format and that the day exists", () => {
+    expect(isRealIsoDate("2026-12-31")).toBe(true);
+    expect(isRealIsoDate("2026-04-31")).toBe(false);
+    expect(isRealIsoDate("2026-00-10")).toBe(false);
+    expect(isRealIsoDate("2026-01-01T00:00:00Z")).toBe(false);
+    expect(isRealIsoDate(" 2026-01-01")).toBe(false);
   });
 });

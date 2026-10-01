@@ -29,8 +29,28 @@ const text = (max = 2000) =>
 const requiredText = (max = 500) =>
   z.preprocess(blankToNull, z.string().max(max)).pipe(z.string().min(1));
 
-// Native <input type="date"> posts "" or "YYYY-MM-DD"; stored as-is.
-const date = z.preprocess(blankToNull, z.string().nullable());
+// Native <input type="date"> posts "" or "YYYY-MM-DD". Anything else, or a
+// date that doesn't exist (2026-02-30), is refused here with a friendly
+// message rather than left for the database to reject.
+export function isRealIsoDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const [year, month, day] = match.slice(1).map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+  );
+}
+
+const date = z.preprocess(blankToNull, z.string().refine(isRealIsoDate).nullable());
+
+const DATE_FIELD_LABELS: Record<string, string> = {
+  quote_date: "Quote date",
+  rate_valid_until: "Rate valid until",
+  exchange_rate_date: "Exchange rate date",
+};
 
 const option = <T extends readonly [string, ...string[]]>(values: T) =>
   z.preprocess(blankToNull, z.enum(values).nullable());
@@ -134,6 +154,13 @@ export function parseQuoteForm(formData: FormData): ParseQuoteResult {
     console.error("parseQuoteForm validation failed:", parsed.error.issues);
     if (parsed.error.issues.some((issue) => issue.path[0] === "scenario_group")) {
       return { ok: false, error: "Scenario group is required." };
+    }
+    const badDate = parsed.error.issues.find((issue) => String(issue.path[0]) in DATE_FIELD_LABELS);
+    if (badDate) {
+      return {
+        ok: false,
+        error: `${DATE_FIELD_LABELS[String(badDate.path[0])]} isn't a valid date. Use the date picker, or enter it as YYYY-MM-DD.`,
+      };
     }
     return {
       ok: false,
