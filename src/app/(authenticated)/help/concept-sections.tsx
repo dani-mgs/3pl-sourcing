@@ -196,7 +196,8 @@ export function ExportSection() {
         manually (date not recorded)), with a source note at the end when daily rates are used.
       </p>
       <Note>
-        In exports, capabilities read Yes / No, where No means &ldquo;not yet confirmed&rdquo;.
+        In exports, each capability reads Yes or Not confirmed, as in the app. Not confirmed
+        means nobody has confirmed it yet, not that the forwarder can&apos;t do it.
       </Note>
     </HelpSection>
   );

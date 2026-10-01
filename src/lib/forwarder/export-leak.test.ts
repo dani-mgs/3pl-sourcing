@@ -232,4 +232,16 @@ describe.each(Object.keys(renderers) as (keyof typeof renderers)[])("%s export",
     const missing = MUST_NOT_REACH_CLIENT.filter((sentinel) => !text.includes(sentinel));
     expect(missing).toEqual([]);
   }, 15000);
+
+  // An unticked capability means "not yet confirmed"; a "No" would read to a
+  // client as "can't do it".
+  test.each(["client", "expert"] as const)(
+    "%s version shows unconfirmed capabilities as Not confirmed",
+    async (version) => {
+      const text = await renderers[format](version);
+      expect(squash(text)).toContain("Notconfirmed");
+      if (format === "CSV") expect(text).not.toMatch(/(^|,)No(,|\r?$)/m);
+    },
+    15000,
+  );
 });

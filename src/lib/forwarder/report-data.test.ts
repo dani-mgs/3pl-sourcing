@@ -133,6 +133,20 @@ describe("buildSectionTable", () => {
   });
 });
 
+describe("forwarderColumns capabilities", () => {
+  test.each(["client", "expert"] as const)(
+    "%s version shows a confirmed capability as Yes and an unconfirmed one as Not confirmed, never No",
+    (version) => {
+      const table = buildSectionTable(forwarderColumns(), version, [forwarder()]);
+      const cell = (header: string) => table.rows[0][table.headers.indexOf(header)];
+      expect(cell("Air Freight")).toBe("Yes");
+      expect(cell("Sea Freight")).toBe("Not confirmed");
+      expect(cell("Customs Brokerage")).toBe("Not confirmed");
+      expect(table.rows[0]).not.toContain("No");
+    },
+  );
+});
+
 describe("filterQuotesForVersion", () => {
   test("drops an excluded-status forwarder's quote for the client version", () => {
     const results = [

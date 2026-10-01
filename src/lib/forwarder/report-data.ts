@@ -100,11 +100,14 @@ export function forwarderColumns(): Column<ForwarderFields>[] {
     { header: "Destination Coverage", tier: "client", value: (r) => r.destination_coverage },
     { header: "Other Services", tier: "client", value: (r) => r.other_services },
   ];
+  // false means "not yet confirmed", not "no" (see forwarder-fields.ts), so
+  // say so in the same words the app uses, rather than a "No" a client could
+  // read as "can't do it".
   for (const capability of CAPABILITY_FIELDS) {
     columns.push({
       header: capability.label,
       tier: "client",
-      value: (r) => (r[capability.name] ? "Yes" : "No"),
+      value: (r) => (r[capability.name] ? "Yes" : "Not confirmed"),
     });
   }
   columns.push(
