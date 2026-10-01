@@ -1,12 +1,13 @@
 "use server";
 
 import { z } from "zod";
-import { buildCsv, buildMultiSectionCsv, sanitizeFilename } from "@/lib/forwarder/export-csv";
+import { buildCsv, buildMultiSectionCsv, sanitizeFilename, toCsvRow } from "@/lib/forwarder/export-csv";
 import {
   buildForwarderReport,
   buildSectionTable,
   fetchForwarderReportData,
   filterQuotesForVersion,
+  reportNotes,
   forwarderColumns,
   projectColumns,
   quoteColumns,
@@ -27,6 +28,13 @@ export type ExportCsvState = { csv: string; filename: string } | { error: string
 export type ExportBinaryState = { base64: string; filename: string } | { error: string };
 
 const uuid = z.string().uuid();
+
+// A trailing NOTES section, one line per note; none when there are no notes.
+function notesSection(notes: string[]): { title: string; csv: string }[] {
+  return notes.length > 0
+    ? [{ title: "NOTES", csv: notes.map((note) => toCsvRow([note])).join("\r\n") + "\r\n" }]
+    : [];
+}
 const UNEXPECTED = "An unexpected error occurred.";
 
 export async function exportForwarderReportCsv(
@@ -48,6 +56,7 @@ export async function exportForwarderReportCsv(
     { title: "PROJECT DETAILS", csv: buildCsv(projectTable.headers, projectTable.rows) },
     { title: "FORWARDERS", csv: buildCsv(forwarderTable.headers, forwarderTable.rows) },
     { title: "QUOTE COMPARISON", csv: buildCsv(quoteTable.headers, quoteTable.rows) },
+    ...notesSection(reportNotes(quoteResults)),
   ]);
 
   return { csv, filename: `${sanitizeFilename(data.clientName)}-forwarder-sourcing-${version}.csv` };

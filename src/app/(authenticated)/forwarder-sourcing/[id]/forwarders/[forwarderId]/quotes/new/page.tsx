@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
+import { loadLatestFxRates, todayUtc } from "@/lib/fx/server-rates";
 import { NewQuoteEntry } from "./new-quote-entry";
 
 export default async function NewQuotePage({
@@ -32,6 +33,8 @@ export default async function NewQuotePage({
     .from("forwarder_quotes")
     .select("scenario_group, forwarders!inner(forwarder_project_id)")
     .eq("forwarders.forwarder_project_id", id);
+  const latestRates = await loadLatestFxRates(supabase);
+
   const existingScenarioGroups = [
     ...new Set((existingQuotes ?? []).map((q) => q.scenario_group)),
   ].sort();
@@ -54,6 +57,8 @@ export default async function NewQuotePage({
         forwarderId={forwarderId}
         existingScenarioGroups={existingScenarioGroups}
         cancelHref={`/forwarder-sourcing/${id}/forwarders/${forwarderId}`}
+        latestRates={latestRates}
+        today={todayUtc()}
       />
     </div>
   );

@@ -129,13 +129,33 @@ export function UploadSection() {
         </li>
       </Bullets>
 
-      <SubHeading>Exchange rates are never guessed</SubHeading>
+      <SubHeading>Exchange rates: locked per quote, never guessed</SubHeading>
       <Bullets>
-        <li>A USD quote&apos;s rate is always 1.</li>
+        <li>A USD quote&apos;s rate is always 1 and needs no source or date.</li>
         <li>
-          Any other currency needs a rate you enter or the document states. If the document
-          doesn&apos;t state one, or you change the currency yourself, the rate is left blank
-          and the quote can&apos;t be saved until you fill it in.
+          Any other currency starts from, in order: a rate stated in the uploaded document
+          (<Ui>Forwarder&apos;s quoted rate</Ui>), else the latest daily rate (
+          <Ui>Daily reference rate</Ui>, from Frankfurter&apos;s blended central-bank rates,
+          updated once a day), else blank for you to enter (<Ui>Entered manually</Ui>). It&apos;s
+          never 1 and never guessed; if there&apos;s no rate the quote can&apos;t be saved.
+        </li>
+        <li>
+          The caption under the rate says where it came from and its date. Typing over a
+          pre-filled rate makes it <Ui>Entered manually</Ui>; <Ui>Refresh to latest rate</Ui>{" "}
+          switches back to the latest daily rate.
+        </li>
+        <li>
+          The rate is locked when you save: the quote&apos;s USD figures never change when
+          newer daily rates arrive. Wherever a converted USD amount appears, a short
+          &ldquo;rate locked Oct 1, 2026&rdquo; note shows which rate was used.
+        </li>
+        <li>
+          If the daily rate is more than 3 business days old (the feed may be behind), the
+          form warns you to check it. Weekend and holiday dates show the last business day.
+        </li>
+        <li>
+          Quotes entered before rates were tracked say{" "}
+          <Ui>Entered manually (date not recorded)</Ui>. Editing other fields keeps their rate.
         </li>
       </Bullets>
     </HelpSection>
@@ -165,6 +185,11 @@ export function ExportSection() {
           Response). The forwarder itself is still listed under forwarders considered.
         </li>
       </Bullets>
+      <p>
+        Both versions show each non-USD quote&apos;s Exchange Rate, Rate Date, and Rate Source
+        (Daily reference rate, Forwarder&apos;s quoted rate, Entered manually, or Entered
+        manually (date not recorded)), with a source note at the end when daily rates are used.
+      </p>
       <Note>
         In exports, capabilities read Yes / No, where No means &ldquo;not yet confirmed&rdquo;.
       </Note>

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { parseQuoteForm } from "@/lib/forwarder/parse-quote-form";
+import { withVerifiedRateProvenance } from "@/lib/fx/server-rates";
 
 export type SaveQuoteState = { error?: string };
 
@@ -47,9 +48,11 @@ export async function createQuote(
     return { error: parsed.error };
   }
 
+  const quote = await withVerifiedRateProvenance(supabase, parsed.data, null);
+
   const { data, error } = await supabase
     .from("forwarder_quotes")
-    .insert({ ...parsed.data, forwarder_id: forwarderId })
+    .insert({ ...quote, forwarder_id: forwarderId })
     .select("id")
     .single();
 

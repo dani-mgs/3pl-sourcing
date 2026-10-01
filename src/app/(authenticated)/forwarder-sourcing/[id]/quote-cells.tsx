@@ -4,6 +4,7 @@ import type {
   ComparisonQuote,
   ComparisonResult,
 } from "@/lib/forwarder/load-project-comparison";
+import { rateLockedNote } from "@/lib/fx/rate-provenance";
 import {
   exceedsTargetLeadTime,
   leadTimeRange,
@@ -116,12 +117,30 @@ export function FreightCell({
           Quoted {formatCurrency(quote.original_amount, quote.original_currency)}
         </span>
       )}
+      <RateLockedNote quote={quote} />
       {result.costPerKg != null && (
         <span className="mt-1 block text-xs whitespace-nowrap tabular-nums text-neutral-muted">
           {formatCurrency(result.costPerKg, "USD")} / kg
         </span>
       )}
     </div>
+  );
+}
+
+// "rate locked Oct 1, 2026" under a converted USD amount; nothing for USD.
+export function RateLockedNote({
+  quote,
+  className = "mt-1 block text-xs whitespace-nowrap text-neutral-muted",
+}: {
+  quote: Pick<ComparisonQuote, "original_currency" | "exchange_rate_source" | "exchange_rate_date">;
+  className?: string;
+}) {
+  const note = rateLockedNote(quote.original_currency, quote.exchange_rate_source, quote.exchange_rate_date);
+  if (!note) return null;
+  return (
+    <span className={className} title={note.title}>
+      {note.text}
+    </span>
   );
 }
 

@@ -144,6 +144,14 @@ export async function renderForwarderReportPdf(report: ForwarderReport): Promise
     }
   }
 
+  if (report.notes.length > 0) {
+    doc.y += 12;
+    doc.font("Helvetica").fontSize(8).fillColor(MUTED);
+    for (const note of report.notes) {
+      doc.text(pdfSafeText(note), MARGIN, doc.y, { width: doc.page.width - MARGIN * 2 });
+    }
+  }
+
   doc.end();
   return done;
 }

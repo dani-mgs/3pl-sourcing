@@ -14,6 +14,14 @@ import {
   type ForwarderProjectTerms,
   type ForwarderQuoteResult,
 } from "./cost-comparison";
+import {
+  DAILY_FEED_ATTRIBUTION,
+  RATE_SOURCE_LABELS,
+  formatRate,
+  formatRateDate,
+  isUsd,
+  type RateSource,
+} from "@/lib/fx/rate-provenance";
 
 // Shared by CSV, PDF, and DOCX export (export-actions.ts, render-report-pdf.ts,
 // render-report-docx.ts) — the tier-based (client/expert) column definitions,
@@ -148,6 +156,30 @@ export function annualSavingsText(result: ForwarderQuoteResult<QuoteExportFields
   return formatCurrency(result.annualCostDifference, "USD");
 }
 
+// How a non-USD quote's USD figures were converted; blank for USD quotes.
+// Human-readable labels only, never the stored source codes.
+export function exchangeRateText(quote: QuoteExportFields): string | null {
+  return isUsd(quote.original_currency) ? null : formatRate(quote.original_currency, quote.exchange_rate_to_usd);
+}
+
+export function rateDateText(quote: QuoteExportFields): string | null {
+  if (isUsd(quote.original_currency)) return null;
+  return quote.exchange_rate_date ? formatRateDate(quote.exchange_rate_date) : "Not recorded";
+}
+
+export function rateSourceText(quote: QuoteExportFields): string | null {
+  if (isUsd(quote.original_currency) || !quote.exchange_rate_source) return null;
+  return RATE_SOURCE_LABELS[quote.exchange_rate_source as RateSource] ?? null;
+}
+
+// Notes printed after the report body: the daily-feed attribution, when any
+// exported quote's rate came from it.
+export function reportNotes(results: ForwarderQuoteResult<QuoteExportFields>[]): string[] {
+  return results.some((r) => r.quote.exchange_rate_source === "daily_feed" && !isUsd(r.quote.original_currency))
+    ? [DAILY_FEED_ATTRIBUTION]
+    : [];
+}
+
 export function quoteColumns(): Column<ForwarderQuoteResult<QuoteExportFields>>[] {
   return [
     { header: "Scenario Group", tier: "client", value: (r) => r.quote.scenario_group },
@@ -164,6 +196,9 @@ export function quoteColumns(): Column<ForwarderQuoteResult<QuoteExportFields>>[
       tier: "client",
       value: (r) => (r.freightCostUsd != null ? formatCurrency(r.freightCostUsd, "USD") : null),
     },
+    { header: "Exchange Rate", tier: "client", value: (r) => exchangeRateText(r.quote) },
+    { header: "Rate Date", tier: "client", value: (r) => rateDateText(r.quote) },
+    { header: "Rate Source", tier: "client", value: (r) => rateSourceText(r.quote) },
     {
       header: "Cost / kg (USD)",
       tier: "client",
@@ -292,6 +327,8 @@ export type ForwarderReport = {
   versionLabel: "Client Report" | "Expert Report";
   generatedOn: string;
   sections: ReportSection[];
+  // Printed after the sections (e.g. the FX source attribution).
+  notes: string[];
 };
 
 export function buildForwarderReport(
@@ -322,5 +359,6 @@ export function buildForwarderReport(
       { title: "Forwarders Considered", kind: "table", headers: forwarderTable.headers, rows: forwarderTable.rows },
       { title: "Quote Comparison", kind: "table", headers: quoteTable.headers, rows: quoteTable.rows },
     ],
+    notes: reportNotes(quoteResults),
   };
 }

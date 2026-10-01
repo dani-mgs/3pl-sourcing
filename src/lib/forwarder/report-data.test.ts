@@ -4,8 +4,10 @@ import {
   filterQuotesForVersion,
   forwarderColumns,
   quoteColumns,
+  reportNotes,
   type QuoteExportFields,
 } from "./report-data";
+import { DAILY_FEED_ATTRIBUTION } from "@/lib/fx/rate-provenance";
 import type { ForwarderFields } from "./parse-forwarder-form";
 import type { ForwarderQuoteResult } from "./cost-comparison";
 
@@ -67,6 +69,8 @@ function quoteResult(
     original_currency: "USD",
     original_amount: 1000,
     exchange_rate_to_usd: 1,
+    exchange_rate_source: null,
+    exchange_rate_date: null,
     duties_taxes_usd: null,
     other_charges_usd: null,
     other_charges_description: null,
@@ -160,5 +164,50 @@ describe("quoteColumns tier filtering", () => {
     const table = buildSectionTable(quoteColumns(), "expert", [quoteResult()]);
     expect(table.headers).toContain("Key Strength");
     expect(table.headers).toContain("Forwarder Status");
+  });
+});
+
+describe("exchange rate columns", () => {
+  function rateCells(overrides: Partial<QuoteExportFields>, version: "client" | "expert" = "client") {
+    const table = buildSectionTable(quoteColumns(), version, [quoteResult(overrides)]);
+    const at = (h: string) => table.rows[0][table.headers.indexOf(h)];
+    return { rate: at("Exchange Rate"), date: at("Rate Date"), source: at("Rate Source"), headers: table.headers };
+  }
+
+  test("appear in both client and expert versions", () => {
+    for (const version of ["client", "expert"] as const) {
+      const { headers } = rateCells({}, version);
+      expect(headers).toEqual(expect.arrayContaining(["Exchange Rate", "Rate Date", "Rate Source"]));
+    }
+  });
+
+  test("blank for USD quotes", () => {
+    expect(rateCells({})).toMatchObject({ rate: null, date: null, source: null });
+  });
+
+  test("readable rate, date, and source label for each source — never the stored code", () => {
+    const base = { original_currency: "KRW", exchange_rate_to_usd: 0.000738 } as Partial<QuoteExportFields>;
+    expect(rateCells({ ...base, exchange_rate_source: "daily_feed", exchange_rate_date: "2026-10-01" })).toMatchObject({
+      rate: "1 KRW = 0.000738 USD",
+      date: "Oct 1, 2026",
+      source: "Daily reference rate",
+    });
+    expect(rateCells({ ...base, exchange_rate_source: "forwarder_document", exchange_rate_date: "2026-09-25" }).source).toBe(
+      "Forwarder's quoted rate",
+    );
+    expect(rateCells({ ...base, exchange_rate_source: "manual", exchange_rate_date: "2026-10-01" }).source).toBe("Entered manually");
+    expect(rateCells({ ...base, exchange_rate_source: "manual_legacy", exchange_rate_date: null })).toMatchObject({
+      date: "Not recorded",
+      source: "Entered manually (date not recorded)",
+    });
+  });
+});
+
+describe("reportNotes", () => {
+  test("adds the daily-feed attribution only when an exported quote uses it", () => {
+    const daily = quoteResult({ original_currency: "KRW", exchange_rate_source: "daily_feed", exchange_rate_date: "2026-10-01" } as Partial<QuoteExportFields>);
+    const manual = quoteResult({ original_currency: "KRW", exchange_rate_source: "manual", exchange_rate_date: "2026-10-01" } as Partial<QuoteExportFields>);
+    expect(reportNotes([daily, manual])).toEqual([DAILY_FEED_ATTRIBUTION]);
+    expect(reportNotes([manual, quoteResult()])).toEqual([]);
   });
 });

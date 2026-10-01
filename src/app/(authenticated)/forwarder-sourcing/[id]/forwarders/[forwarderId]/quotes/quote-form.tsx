@@ -16,6 +16,16 @@ import { OVERALL_ASSESSMENT_OPTIONS, CLIENT_DECISION_OPTIONS, QUOTE_COMPLETENESS
 import type { QuoteFields } from "@/lib/forwarder/parse-quote-form";
 import { mergeQuoteFields } from "@/lib/forwarder/merge-quote-fields";
 import {
+  formatRateDate,
+  isRateStale,
+  isUsd,
+  rateCaption,
+  resolveInitialRate,
+  type LatestRates,
+  type RateSource,
+  type RateState,
+} from "@/lib/fx/rate-provenance";
+import {
   InputField,
   SelectField,
   TextAreaField,
@@ -30,11 +40,6 @@ import { updateQuote } from "./[quoteId]/edit/actions";
 
 export type QuoteFormDefaults = Partial<QuoteFields>;
 
-// A blank currency is saved as USD (parse-quote-form.ts), so it needs no rate.
-function isUsd(currency: string): boolean {
-  return currency === "" || currency === "USD";
-}
-
 // Same amber-warning convention used by the 3PL Cost Comparison panel for
 // currency-mismatch/pending-baseline notes.
 const warningClass =
@@ -47,6 +52,8 @@ export function QuoteForm({
   defaultValues = {},
   existingScenarioGroups,
   cancelHref,
+  latestRates,
+  today,
 }: {
   projectId: string;
   forwarderId: string;
@@ -54,6 +61,10 @@ export function QuoteForm({
   defaultValues?: QuoteFormDefaults;
   existingScenarioGroups: string[];
   cancelHref: string;
+  // Latest daily rate per currency, loaded with the page.
+  latestRates: LatestRates;
+  // Server date (UTC), for rate dates and the stale check.
+  today: string;
 }) {
   const isEdit = quoteId !== null;
 
@@ -69,24 +80,33 @@ export function QuoteForm({
   const [mode, setMode] = useState(defaultValues.shipment_mode ?? "");
   const [type, setType] = useState(defaultValues.shipment_type ?? "");
 
-  // Currency and rate are controlled so the "1 {currency} = __ USD" label
-  // can update live as the user types. An empty rate on a non-USD quote means
-  // no rate has been entered yet — AI extraction found none, or the currency
-  // was just changed — and blocks submit below until the user enters one; a
-  // rate is never guessed or carried over from another currency.
+  // Currency, rate, and the rate's source/date are controlled so the caption
+  // updates live. A non-USD rate starts from the forwarder's document, else
+  // the latest daily rate, else blank for the user to enter — never 1, never
+  // guessed. On edit, the saved rate and its provenance are kept until the
+  // user changes the currency or rate, or refreshes it.
   const [currency, setCurrency] = useState<string>(defaultValues.original_currency ?? "USD");
-  const [rate, setRate] = useState(() => {
-    if (defaultValues.exchange_rate_to_usd != null) {
-      return String(defaultValues.exchange_rate_to_usd);
-    }
-    // A create-mode AI prefill that found a non-USD currency but no stated
-    // rate must start genuinely blank (never a silent "1") — this also
-    // covers a plain manual Add Quote, where original_currency is unset and
-    // this branch is skipped.
-    return defaultValues.original_currency && defaultValues.original_currency !== "USD"
-      ? ""
-      : "1";
-  });
+  const [rateState, setRateState] = useState<RateState>(() =>
+    isEdit
+      ? {
+          rate:
+            defaultValues.exchange_rate_to_usd != null
+              ? String(defaultValues.exchange_rate_to_usd)
+              : "1",
+          source: (defaultValues.exchange_rate_source as RateSource | null | undefined) ?? null,
+          date: defaultValues.exchange_rate_date ?? null,
+        }
+      : resolveInitialRate({
+          currency: defaultValues.original_currency,
+          // On a new quote, a pre-filled rate can only have come from an
+          // uploaded document.
+          documentRate: defaultValues.exchange_rate_to_usd,
+          documentDate: defaultValues.quote_date,
+          latest: latestRates,
+          today,
+        }),
+  );
+  const rate = rateState.rate;
   const [localError, setLocalError] = useState<string | null>(null);
 
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -108,11 +128,38 @@ export function QuoteForm({
   );
 
   const rateNumber = Number(rate);
-  const rateLabel =
-    rate.trim() !== "" && !Number.isNaN(rateNumber)
-      ? `1 ${currency} = ${rateNumber} USD`
-      : null;
+  const rateIsNumber = rate.trim() !== "" && Number.isFinite(rateNumber) && rateNumber > 0;
   const rateNeedsManualEntry = !isUsd(currency) && rate.trim() === "";
+  const latestForCurrency = isUsd(currency) ? undefined : latestRates[currency];
+  const showsLatest =
+    latestForCurrency != null &&
+    rateState.source === "daily_feed" &&
+    rateState.date === latestForCurrency.rateDate &&
+    rateIsNumber &&
+    rateNumber === latestForCurrency.rateToUsd;
+  const rateIsStale =
+    rateState.source === "daily_feed" && rateState.date != null && isRateStale(rateState.date, today);
+
+  function changeCurrency(next: string) {
+    if (next === currency) return;
+    setCurrency(next);
+    // A rate never carries over to another currency.
+    setRateState(resolveInitialRate({ currency: next, latest: latestRates, today }));
+  }
+
+  function typeRate(value: string) {
+    // Anything typed over a pre-filled rate is the user's own rate.
+    setRateState({ rate: value, source: "manual", date: today });
+  }
+
+  function refreshRate() {
+    if (!latestForCurrency) return;
+    setRateState({
+      rate: String(latestForCurrency.rateToUsd),
+      source: "daily_feed",
+      date: latestForCurrency.rateDate,
+    });
+  }
 
   function handleUpload(formData: FormData) {
     setUploadError(null);
@@ -142,14 +189,23 @@ export function QuoteForm({
       setHighlighted(changed);
       setMode(merged.shipment_mode ?? "");
       setType(merged.shipment_type ?? "");
-      setCurrency(merged.original_currency ?? "USD");
-      setRate(
-        merged.exchange_rate_to_usd != null
-          ? String(merged.exchange_rate_to_usd)
-          : merged.original_currency && merged.original_currency !== "USD"
-            ? "" // non-USD with no stated rate: leave genuinely blank, never guess
-            : "1",
-      );
+      const nextCurrency = merged.original_currency ?? "USD";
+      const documentRate = result.fields.exchange_rate_to_usd;
+      setCurrency(nextCurrency);
+      // Precedence: a rate stated in the document; else, if the currency
+      // changed (or there's no rate yet), the latest daily rate; else keep
+      // the quote's current rate and its provenance.
+      if (isUsd(nextCurrency) || documentRate != null || nextCurrency !== currency || rate.trim() === "") {
+        setRateState(
+          resolveInitialRate({
+            currency: nextCurrency,
+            documentRate,
+            documentDate: merged.quote_date,
+            latest: latestRates,
+            today,
+          }),
+        );
+      }
       setFormKey((k) => k + 1);
       setUploadOpen(false);
       setUploadNotice(
@@ -343,14 +399,7 @@ export function QuoteForm({
             options={CURRENCIES}
             value={currency}
             updated={highlighted.has("original_currency")}
-            onChange={(next) => {
-              if (next === currency) return;
-              setCurrency(next);
-              // A USD rate is always 1. Any other currency starts blank, so a
-              // leftover rate (the USD default of 1, or another currency's
-              // rate) can't be saved against it by accident.
-              setRate(isUsd(next) ? "1" : "");
-            }}
+            onChange={changeCurrency}
           />
           <InputField name="original_amount" label="Amount" type="number" step="0.01" defaultValue={values.original_amount} updated={highlighted.has("original_amount")} />
           <div className="flex flex-col gap-2">
@@ -366,7 +415,7 @@ export function QuoteForm({
               step="0.0000000001"
               inputMode="decimal"
               value={rate}
-              onChange={(e) => setRate(e.target.value)}
+              onChange={(e) => typeRate(e.target.value)}
               className={
                 rateNeedsManualEntry
                   ? `${fieldClass} border-[#FBBF24]`
@@ -375,10 +424,38 @@ export function QuoteForm({
                     : fieldClass
               }
             />
-            {rateLabel && <p className="text-xs text-neutral-muted">{rateLabel}</p>}
+            <input type="hidden" name="exchange_rate_source" value={rateState.source ?? ""} />
+            <input type="hidden" name="exchange_rate_date" value={rateState.date ?? ""} />
+            {!isUsd(currency) && rateIsNumber && rateState.source && (
+              <p className="text-xs text-neutral-muted" data-testid="rate-caption">
+                {rateCaption(currency, rateNumber, rateState.source, rateState.date)}
+              </p>
+            )}
+            {!isUsd(currency) && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-muted">
+                <span>Rate is locked when the quote is saved. Use Refresh to update.</span>
+                {latestForCurrency && (
+                  <button
+                    type="button"
+                    onClick={refreshRate}
+                    disabled={showsLatest}
+                    className="rounded font-medium text-move-green outline-none hover:underline focus-visible:ring-2 focus-visible:ring-move-green disabled:cursor-default disabled:text-neutral-muted disabled:no-underline"
+                  >
+                    {showsLatest ? "Latest rate in use" : "Refresh to latest rate"}
+                  </button>
+                )}
+              </div>
+            )}
+            {rateIsStale && rateState.date && (
+              <p className={warningClass}>
+                This daily rate is from {formatRateDate(rateState.date)}, more than 3 business
+                days ago — the feed may be behind. Check it before saving.
+              </p>
+            )}
             {rateNeedsManualEntry && (
               <p className={warningClass}>
-                No exchange rate yet — enter the {currency} to USD rate before saving.
+                No exchange rate yet — enter the {currency} to USD rate before saving
+                {latestForCurrency ? "" : " (no daily rate is available for it)"}.
               </p>
             )}
           </div>

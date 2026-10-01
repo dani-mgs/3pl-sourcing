@@ -91,6 +91,15 @@ export async function renderForwarderReportDocx(report: ForwarderReport): Promis
     }
   }
 
+  for (const note of report.notes) {
+    children.push(
+      new Paragraph({
+        spacing: { before: 200 },
+        children: [new TextRun({ text: note, color: MUTED, size: 16 })],
+      }),
+    );
+  }
+
   const doc = new Document({
     sections: [
       {

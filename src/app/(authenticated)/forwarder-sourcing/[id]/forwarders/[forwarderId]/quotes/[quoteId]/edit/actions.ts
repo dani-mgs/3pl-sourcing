@@ -6,6 +6,8 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { parseQuoteForm } from "@/lib/forwarder/parse-quote-form";
+import { withVerifiedRateProvenance } from "@/lib/fx/server-rates";
+import type { SavedRate } from "@/lib/fx/rate-provenance";
 
 export type SaveQuoteState = { error?: string };
 
@@ -38,9 +40,25 @@ export async function updateQuote(
   }
 
   const supabase = await createClient();
+
+  // The saved rate, so an unchanged rate keeps its original source and date.
+  const { data: existing } = await supabase
+    .from("forwarder_quotes")
+    .select("original_currency, exchange_rate_to_usd, exchange_rate_source, exchange_rate_date")
+    .eq("id", quoteId)
+    .eq("forwarder_id", forwarderId)
+    .maybeSingle();
+  if (!existing) {
+    return { error: NO_PERMISSION };
+  }
+  const quote = await withVerifiedRateProvenance(supabase, parsed.data, {
+    ...existing,
+    exchange_rate_to_usd: Number(existing.exchange_rate_to_usd),
+  } as SavedRate);
+
   const { data, error } = await supabase
     .from("forwarder_quotes")
-    .update(parsed.data)
+    .update(quote)
     .eq("id", quoteId)
     // Belt and braces: the row must also belong to this forwarder, so an id
     // for a quote on a different forwarder can never be edited this way.

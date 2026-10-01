@@ -5,6 +5,7 @@ import type { RequirementFit } from "@/lib/forwarder/requirement-fit";
 import {
   ATTENTION_TEXT,
   LeadTimeCell,
+  RateLockedNote,
   rankLabel,
   type ComparisonResult,
 } from "../../quote-cells";
@@ -82,6 +83,7 @@ export function ForwarderSummaryTiles({
         {headline && ranked && headline.freightCostUsd != null ? (
           <>
             <Value>{formatCurrency(headline.freightCostUsd, "USD")}</Value>
+            <RateLockedNote quote={headline.quote} className="truncate text-xs text-neutral-muted" />
             <Detail title={headline.quote.scenario_group}>
               {headline.quote.scenario_group}
               {summary.rankedGroupCount > 1 && (
@@ -96,10 +98,13 @@ export function ForwarderSummaryTiles({
           <>
             <Empty>{unrankedReason}</Empty>
             {headline?.freightCostUsd != null && (
-              <p className="line-clamp-2 text-xs text-neutral-muted" title={headline.quote.scenario_group}>
-                Lowest quote {formatCurrency(headline.freightCostUsd, "USD")} (unranked) ·{" "}
-                {headline.quote.scenario_group}
-              </p>
+              <>
+                <p className="line-clamp-2 text-xs text-neutral-muted" title={headline.quote.scenario_group}>
+                  Lowest quote {formatCurrency(headline.freightCostUsd, "USD")} (unranked) ·{" "}
+                  {headline.quote.scenario_group}
+                </p>
+                <RateLockedNote quote={headline.quote} className="truncate text-xs text-neutral-muted" />
+              </>
             )}
           </>
         )}

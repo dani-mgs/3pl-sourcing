@@ -8,6 +8,7 @@ import {
   type ForwarderQuoteInput,
   type ForwarderQuoteResult,
 } from "./cost-comparison";
+import type { RateSource } from "@/lib/fx/rate-provenance";
 
 // One place that loads a forwarder project and ranks ALL of its quotes, used
 // by both the Project Summary and the forwarder detail page. Rank and savings
@@ -22,6 +23,9 @@ export type ComparisonQuote = ForwarderQuoteInput & {
   lead_time_min_days: number | null;
   lead_time_max_days: number | null;
   rate_valid_until: string | null;
+  // How the converted USD figures were locked (null for USD quotes).
+  exchange_rate_source: RateSource | null;
+  exchange_rate_date: string | null;
 };
 
 export type ComparisonResult = ForwarderQuoteResult<ComparisonQuote>;
@@ -118,6 +122,8 @@ export async function loadProjectComparison(
       lead_time_min_days: q.lead_time_min_days,
       lead_time_max_days: q.lead_time_max_days,
       rate_valid_until: q.rate_valid_until,
+      exchange_rate_source: (q.exchange_rate_source as RateSource | null) ?? null,
+      exchange_rate_date: q.exchange_rate_date,
     });
     if (detailsForForwarderId && q.forwarder_id === detailsForForwarderId) {
       details.set(q.id, {

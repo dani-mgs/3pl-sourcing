@@ -21,6 +21,8 @@ Always follow this flow:
 4. Apply to the live project: `npx supabase db push`
 5. Commit the migration file to git in the same commit/PR as the related feature code
 
+After committing a migration, always remind the user to run `npx supabase db push` before (or alongside) `git push`. Code that expects a schema the live DB doesn't have will break, and security policies won't apply.
+
 Any migration that backfills or moves existing data must disable updated_at triggers for the affected tables during the backfill (ALTER TABLE ... DISABLE TRIGGER ...; re-enable after), so existing rows keep their real last-updated times.
 
 ## Cron Routes

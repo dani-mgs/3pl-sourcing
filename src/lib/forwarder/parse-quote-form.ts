@@ -11,6 +11,7 @@ import {
   OVERALL_ASSESSMENT_OPTIONS,
   QUOTE_COMPLETENESS_OPTIONS,
 } from "./quote-fields";
+import { RATE_SOURCES } from "@/lib/fx/rate-provenance";
 
 // Turns the add/edit quote form into a validated `forwarder_quotes` row
 // (everything except forwarder_id, which the action sets). Field names in
@@ -72,6 +73,10 @@ const quoteSchema = z.object({
     },
     z.number().gt(0).lt(1e10), // numeric(20,10)
   ),
+  // Where the rate came from and its date. Only a claim here: the save
+  // actions re-check it (withVerifiedRateProvenance) before storing.
+  exchange_rate_source: option(RATE_SOURCES),
+  exchange_rate_date: date,
 
   duties_taxes_usd: decimal(1e12), // numeric(14,2)
   other_charges_usd: decimal(1e12), // numeric(14,2)

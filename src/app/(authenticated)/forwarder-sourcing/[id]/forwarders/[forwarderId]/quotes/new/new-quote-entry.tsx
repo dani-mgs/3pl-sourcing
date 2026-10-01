@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { FileText, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { mergeQuoteFields } from "@/lib/forwarder/merge-quote-fields";
+import type { LatestRates } from "@/lib/fx/rate-provenance";
 import { QuoteForm, type QuoteFormDefaults } from "../quote-form";
 import { extractQuoteDetails } from "./extract-actions";
 
@@ -14,11 +15,15 @@ export function NewQuoteEntry({
   forwarderId,
   existingScenarioGroups,
   cancelHref,
+  latestRates,
+  today,
 }: {
   projectId: string;
   forwarderId: string;
   existingScenarioGroups: string[];
   cancelHref: string;
+  latestRates: LatestRates;
+  today: string;
 }) {
   const [mode, setMode] = useState<Mode>("choice");
   const [fileName, setFileName] = useState<string | null>(null);
@@ -62,6 +67,8 @@ export function NewQuoteEntry({
           defaultValues={prefilled}
           existingScenarioGroups={existingScenarioGroups}
           cancelHref={cancelHref}
+          latestRates={latestRates}
+          today={today}
         />
       </div>
     );

@@ -7,6 +7,7 @@ import {
 } from "@/lib/forwarder/project-summary";
 import type { ComparisonResult } from "./quote-comparison-panel";
 import { Detail, Empty, Tile, Value } from "./summary-tile";
+import { RateLockedNote } from "./quote-cells";
 
 export type SummaryProject = {
   current_freight_cost_usd: number | null;
@@ -124,6 +125,7 @@ export function SummaryTiles({
         ) : (
           <>
             <Value>{formatCurrency(top.freightCostUsd, "USD")}</Value>
+            <RateLockedNote quote={top.quote} className="truncate text-xs text-neutral-muted" />
             <p className="line-clamp-2 text-xs text-neutral-muted" title={bestNames(best)}>
               <span className="font-medium text-move-navy">{bestNames(best)}</span>
               {topLead && (

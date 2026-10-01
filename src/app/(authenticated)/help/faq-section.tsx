@@ -35,9 +35,21 @@ export function FaqSection() {
         </Faq>
         <Faq question="Why is my exchange rate blank?">
           <p>
-            The quote isn&apos;t in USD and no rate has been entered yet: either the uploaded
-            document didn&apos;t state one, or the currency was changed. Enter the rate (USD per
-            1 unit of the quote&apos;s currency) to save.
+            The quote isn&apos;t in USD, the document didn&apos;t state a rate, and there&apos;s no
+            daily rate for that currency yet. Enter the rate (USD per 1 unit of the quote&apos;s
+            currency) to save.
+          </p>
+        </Faq>
+        <Faq question="Why didn't my quote's USD cost change when exchange rates moved?">
+          <p>
+            Rates are locked when a quote is saved, so comparisons don&apos;t shift under you.
+            To use today&apos;s rate, edit the quote, click Refresh to latest rate, and save.
+          </p>
+        </Faq>
+        <Faq question={'What does "Entered manually (date not recorded)" mean?'}>
+          <p>
+            The quote was entered before the app recorded where rates came from. Its rate is
+            unchanged; refresh it or type a new one if you want a dated rate.
           </p>
         </Faq>
         <Faq question={'Why does requirement fit say "Not confirmed" when the forwarder offers it?'}>

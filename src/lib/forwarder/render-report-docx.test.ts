@@ -142,3 +142,23 @@ describe("renderForwarderReportDocx", () => {
     expect(text).toContain("Excluded Freight Co");
   });
 });
+
+describe("exchange rate provenance in the DOCX (client version)", () => {
+  test("shows readable rate, date, and source labels plus the daily-feed note", async () => {
+    const withRates: ForwarderReportData = {
+      ...data,
+      quoteResults: [
+        quoteResult({ original_currency: "KRW", exchange_rate_to_usd: 0.000738, exchange_rate_source: "daily_feed", exchange_rate_date: "2026-10-01" } as Partial<QuoteExportFields>),
+        quoteResult({ forwarder_name: "Legacy Freight", original_currency: "EUR", exchange_rate_to_usd: 1.1, exchange_rate_source: "manual_legacy", exchange_rate_date: null } as Partial<QuoteExportFields>),
+      ],
+    };
+    const text = await extractText(await renderForwarderReportDocx(buildForwarderReport(withRates, "client")));
+    expect(text).toContain("1 KRW = 0.000738 USD");
+    expect(text).toContain("Oct 1, 2026");
+    expect(text).toContain("Daily reference rate");
+    expect(text).toContain("Entered manually (date not recorded)");
+    expect(text).toContain("Daily reference rates: Frankfurter");
+    expect(text).not.toContain("daily_feed");
+    expect(text).not.toContain("manual_legacy");
+  }, 15000);
+});
