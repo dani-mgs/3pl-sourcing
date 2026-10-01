@@ -14,7 +14,7 @@ Internal tool for Move Supply Chain Logistics Experts to manage 3PL sourcing eng
 - Auth: Supabase Auth (email/password, invite-only, no public signup). Roles (admin / logistics_expert) stored in auth.users.raw_app_meta_data.role, synced one-way into a public profiles table via trigger.
 - Infra/hosting: Vercel — walkthrough was given, NOT yet confirmed deployed. Still local-dev only as of last session.
 - Repo: github.com/dani-mgs/3pl-sourcing
-- Package manager/runtime: npm, Node 20 via nvm (.nvmrc)
+- Package manager/runtime: npm, Node 22 via nvm (.nvmrc)
 - AI: @anthropic-ai/sdk for document extraction, pdf-parse + mammoth for PDF/DOCX text extraction
 - Dev tooling: Playwright MCP (Claude Code self-verifies UI changes via real browser screenshots before reporting done)
 

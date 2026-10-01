@@ -25,13 +25,6 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Medium
 - **Where:** `extract-actions.ts` / `extract-provider-actions.ts` under `src/app/(authenticated)/3pl-sourcing/` and `src/app/(authenticated)/forwarder-sourcing/`
 
-### Node 20 → 22 upgrade
-- **Added:** 2026-10-01
-- **What:** The project runs on Node 20 (`.nvmrc` is `20`; the Vercel project setting must match), and `@supabase/supabase-js` warns that Node 20 support is deprecated. Upgrade both `.nvmrc` and the Vercel project's Node.js version to 22, then re-run `npm test`, `tsc`, `lint`, and `build`, and smoke-test sign-in plus a 3PL and a Forwarder Sourcing project page.
-- **Why deferred:** Nothing is broken yet; it's a runtime change for the whole app and deserves its own change and verification rather than riding along with feature work.
-- **Severity:** Medium
-- **Where:** `.nvmrc`, Vercel project settings (Node.js Version)
-
 ### Migrate `src/middleware.ts` to `proxy.ts` (Next.js 16)
 - **Added:** 2026-10-01
 - **What:** Next.js 16 deprecates the `middleware` file convention in favor of `proxy`; `src/middleware.ts` still works but should move via `npx @next/codemod middleware-to-proxy`. It carries the security headers (CSP, X-Frame-Options, etc., from `src/lib/supabase/middleware.ts`) and the Supabase session refresh, so afterward verify both: curl a page and check the response headers are all still present, and confirm a login persists across navigation and a reload.
@@ -67,6 +60,14 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 
 ## Resolved
+
+### Node 20 → 22 upgrade
+- **Added:** 2026-10-01
+- **What:** The project runs on Node 20 (`.nvmrc` is `20`; the Vercel project setting must match), and `@supabase/supabase-js` warns that Node 20 support is deprecated. Upgrade both `.nvmrc` and the Vercel project's Node.js version to 22, then re-run `npm test`, `tsc`, `lint`, and `build`, and smoke-test sign-in plus a 3PL and a Forwarder Sourcing project page.
+- **Why deferred:** Nothing is broken yet; it's a runtime change for the whole app and deserves its own change and verification rather than riding along with feature work.
+- **Severity:** Medium
+- **Where:** `.nvmrc`, Vercel project settings (Node.js Version)
+- **Resolved:** 2026-10-01 — `.nvmrc` is now `22` (package.json has no `engines` field). On Node 22.23.3: `npm ci` (lockfile unchanged, no dependency upgrades), `npm test` (432), `tsc`, `lint`, `build`, and `npm run test:db` (81) all pass, the same as on Node 20.20.2. The npm `EBADENGINE` warnings (supabase-js 2.112.3 needs Node ≥22, nanoid 6 needs ^22/^24) and supabase-js's Node 20 deprecation notice are gone, with no new warnings. Smoke-tested a Node 22 build against local Supabase: sign-in, login held across page loads, a 3PL and a Forwarder Sourcing project page, security headers present, no console errors. **Still to do by hand:** set the Vercel project's Node.js Version to 22.x before the next deploy.
 
 ### Header bar spacing feels tight
 - **Added:** 2026-08-19 (Week 1, shared authenticated layout)
