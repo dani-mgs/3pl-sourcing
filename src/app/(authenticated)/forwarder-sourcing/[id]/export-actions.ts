@@ -6,6 +6,7 @@ import {
   buildForwarderReport,
   buildSectionTable,
   fetchForwarderReportData,
+  filterForwardersForVersion,
   filterQuotesForVersion,
   reportNotes,
   forwarderColumns,
@@ -49,7 +50,11 @@ export async function exportForwarderReportCsv(
 
   const quoteResults = filterQuotesForVersion(data.quoteResults, version);
   const projectTable = buildSectionTable(projectColumns(), version, [data.projectRow]);
-  const forwarderTable = buildSectionTable(forwarderColumns(), version, data.forwarders);
+  const forwarderTable = buildSectionTable(
+    forwarderColumns(),
+    version,
+    filterForwardersForVersion(data.forwarders, version),
+  );
   const quoteTable = buildSectionTable(quoteColumns(), version, quoteResults);
 
   const csv = buildMultiSectionCsv([

@@ -185,8 +185,9 @@ export function ExportSection() {
           Overall Assessment, Client Decision, and Notes.
         </li>
         <li>
-          Every quote from an excluded forwarder (Unfit, Do Not Contact, Withdrawn / No
-          Response). The forwarder itself is still listed under forwarders considered.
+          Excluded forwarders (Unfit, Do Not Contact, Withdrawn / No Response) entirely: they
+          aren&apos;t listed under forwarders considered, and none of their quotes appear. The
+          Client version shows finalists only.
         </li>
       </Bullets>
       <p>

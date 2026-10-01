@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   buildSectionTable,
+  filterForwardersForVersion,
   filterQuotesForVersion,
   forwarderColumns,
   quoteColumns,
@@ -149,6 +150,27 @@ describe("filterQuotesForVersion", () => {
       quoteResult({ forwarder_status: "Do Not Contact" }),
     ];
     expect(filterQuotesForVersion(results, "expert")).toHaveLength(2);
+  });
+});
+
+describe("filterForwardersForVersion", () => {
+  const forwarders = [
+    forwarder({ company_name: "Vetted Co", status: "Vetted" }),
+    forwarder({ company_name: "Unfit Co", status: "Unfit" }),
+    forwarder({ company_name: "DNC Co", status: "Do Not Contact" }),
+    forwarder({ company_name: "Gone Co", status: "Withdrawn / No Response" }),
+    forwarder({ company_name: "New Co", status: "Potential / Not Contacted" }),
+  ];
+
+  test("client version is finalists only: every excluded status is left out", () => {
+    expect(filterForwardersForVersion(forwarders, "client").map((f) => f.company_name)).toEqual([
+      "Vetted Co",
+      "New Co",
+    ]);
+  });
+
+  test("expert version keeps every forwarder", () => {
+    expect(filterForwardersForVersion(forwarders, "expert")).toHaveLength(5);
   });
 });
 

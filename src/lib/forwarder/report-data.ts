@@ -9,6 +9,7 @@ import { FORWARDER_FIELDS_SELECT, type ForwarderFields } from "./parse-forwarder
 import { QUOTE_FIELDS_SELECT, type QuoteFields } from "./parse-quote-form";
 import {
   NOT_COMPARABLE,
+  RANKING_EXCLUDED_STATUSES,
   buildForwarderCostComparison,
   isExcludedFromRanking,
   type ForwarderProjectTerms,
@@ -229,6 +230,18 @@ export function filterQuotesForVersion(
   return version === "client" ? results.filter((r) => !isExcludedFromRanking(r.quote)) : results;
 }
 
+// The client version is finalists only: a forwarder that's Unfit, Do Not
+// Contact, or Withdrawn / No Response is left out entirely, not just its
+// quotes (filterQuotesForVersion). The expert version keeps everyone.
+export function filterForwardersForVersion(
+  forwarders: ForwarderFields[],
+  version: ExportVersion,
+): ForwarderFields[] {
+  return version === "client"
+    ? forwarders.filter((f) => !RANKING_EXCLUDED_STATUSES.includes(f.status))
+    : forwarders;
+}
+
 // ---- Fetch ------------------------------------------------------------------
 
 export type ForwarderReportData = {
@@ -236,7 +249,8 @@ export type ForwarderReportData = {
   route: string | null;
   projectRow: ProjectExportRow;
   forwarders: ForwarderFields[];
-  // Full expert set, unfiltered — callers apply filterQuotesForVersion.
+  // Full expert sets, unfiltered — callers apply filterForwardersForVersion
+  // and filterQuotesForVersion.
   quoteResults: ForwarderQuoteResult<QuoteExportFields>[];
 };
 
@@ -342,7 +356,11 @@ export function buildForwarderReport(
     .map((label, i) => ({ label, value: projectTable.rows[0][i] }))
     .filter((p) => p.value != null && p.value !== "");
 
-  const forwarderTable = buildSectionTable(forwarderColumns(), version, data.forwarders);
+  const forwarderTable = buildSectionTable(
+    forwarderColumns(),
+    version,
+    filterForwardersForVersion(data.forwarders, version),
+  );
   const quoteTable = buildSectionTable(quoteColumns(), version, quoteResults);
 
   return {
