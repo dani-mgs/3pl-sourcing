@@ -25,13 +25,6 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Medium
 - **Where:** `extract-actions.ts` / `extract-provider-actions.ts` under `src/app/(authenticated)/3pl-sourcing/` and `src/app/(authenticated)/forwarder-sourcing/`
 
-### Migrate `src/middleware.ts` to `proxy.ts` (Next.js 16)
-- **Added:** 2026-10-01
-- **What:** Next.js 16 deprecates the `middleware` file convention in favor of `proxy`; `src/middleware.ts` still works but should move via `npx @next/codemod middleware-to-proxy`. It carries the security headers (CSP, X-Frame-Options, etc., from `src/lib/supabase/middleware.ts`) and the Supabase session refresh, so afterward verify both: curl a page and check the response headers are all still present, and confirm a login persists across navigation and a reload.
-- **Why deferred:** The deprecated file still works in Next.js 16, and because it's security- and auth-critical it should be migrated on its own with that verification, not bundled into another change.
-- **Severity:** Medium
-- **Where:** `src/middleware.ts`, `src/lib/supabase/middleware.ts`
-
 ### 3PL cost comparison has no tie handling
 - **Added:** 2026-10-01 (found while writing /help)
 - **What:** `rankByTotalCost` sorts by total cost and numbers the result 1, 2, 3…, so 3PLs with equal totals get consecutive ranks in whatever order the sort leaves them, and one of them looks cheaper than the other. Forwarder ranking already shares a rank across ties.
@@ -60,6 +53,14 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 
 ## Resolved
+
+### Migrate `src/middleware.ts` to `proxy.ts` (Next.js 16)
+- **Added:** 2026-10-01
+- **What:** Next.js 16 deprecates the `middleware` file convention in favor of `proxy`; `src/middleware.ts` still works but should move via `npx @next/codemod middleware-to-proxy`. It carries the security headers (CSP, X-Frame-Options, etc., from `src/lib/supabase/middleware.ts`) and the Supabase session refresh, so afterward verify both: curl a page and check the response headers are all still present, and confirm a login persists across navigation and a reload.
+- **Why deferred:** The deprecated file still works in Next.js 16, and because it's security- and auth-critical it should be migrated on its own with that verification, not bundled into another change.
+- **Severity:** Medium
+- **Where:** `src/middleware.ts`, `src/lib/supabase/middleware.ts`
+- **Resolved:** 2026-10-01 — `npx @next/codemod middleware-to-proxy` renamed `src/middleware.ts` to `src/proxy.ts` and its export to `proxy`; the matcher and `src/lib/supabase/middleware.ts` (`updateSession`: session refresh, login redirect with the `/api/cron/` exemption, security headers) are unchanged. Verified on a production build (`next start`): every response, including the /login redirect and the cron 401, carries CSP (with the Supabase URL in `connect-src`), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and HSTS; signed-out `/` and `/forwarder-sourcing` 307 to /login; `/api/cron/fx-rates` with no or a wrong secret returns 401 JSON, not a redirect; a login survived client-side navigation, a direct page load, and a reload with no console errors; the build no longer prints the middleware deprecation warning.
 
 ### Node 20 → 22 upgrade
 - **Added:** 2026-10-01

@@ -1,3 +1,5 @@
+// Run on every request by src/proxy.ts (Next.js 16's replacement for
+// middleware.ts): session refresh, the login redirect, and security headers.
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
