@@ -5,7 +5,7 @@
 -- the row afterwards. Rolled back at the end.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(38);
+select plan(42);
 
 create function pg_temp.act_as(uid uuid, app_role text default 'logistics_expert')
 returns void language plpgsql as $$
@@ -81,6 +81,17 @@ select isnt_empty($$ update forwarder_projects set cargo_description = 'by owner
 select isnt_empty($$ update forwarders set headquarters = 'by owner' where id = '00000000-0000-4000-8000-000000000402' returning id $$, 'owner can update their forwarder');
 select isnt_empty($$ update forwarder_quotes set notes = 'by owner' where id = '00000000-0000-4000-8000-000000000403' returning id $$, 'owner can update their forwarder quote');
 
+-- Only an admin can reassign ownership: an owner can't give their project
+-- away, on either module.
+select throws_ok(
+  $$ update three_pl_projects set owner_id = '00000000-0000-4000-8000-0000000000b1' where id = '00000000-0000-4000-8000-000000000301' $$,
+  '42501', null, 'owner cannot reassign their 3PL project to another user'
+);
+select throws_ok(
+  $$ update forwarder_projects set owner_id = '00000000-0000-4000-8000-0000000000b1' where id = '00000000-0000-4000-8000-000000000401' $$,
+  '42501', null, 'owner cannot reassign their forwarder project to another user'
+);
+
 -- ---- An admin can update anyone's -----------------------------------------
 reset role;
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000ad', 'admin');
@@ -93,10 +104,14 @@ select isnt_empty($$ update forwarder_projects set cargo_description = 'by admin
 select isnt_empty($$ update forwarders set headquarters = 'by admin' where id = '00000000-0000-4000-8000-000000000402' returning id $$, 'admin can update any forwarder');
 select isnt_empty($$ update forwarder_quotes set notes = 'by admin' where id = '00000000-0000-4000-8000-000000000403' returning id $$, 'admin can update any forwarder quote');
 
--- ---- And the owner can delete (deepest row first) --------------------------
+-- Admin reassignment (what /admin does): the project moves to b1.
+select isnt_empty($$ update three_pl_projects set owner_id = '00000000-0000-4000-8000-0000000000b1' where id = '00000000-0000-4000-8000-000000000301' returning id $$, 'admin can reassign a 3PL project');
+select isnt_empty($$ update forwarder_projects set owner_id = '00000000-0000-4000-8000-0000000000b1' where id = '00000000-0000-4000-8000-000000000401' returning id $$, 'admin can reassign a forwarder project');
+
+-- ---- And the (new) owner can delete -----------------------------------------
 reset role;
-select pg_temp.act_as('00000000-0000-4000-8000-0000000000a1');
-select isnt_empty($$ delete from forwarder_quotes where id = '00000000-0000-4000-8000-000000000403' returning id $$, 'owner can delete their forwarder quote');
+select pg_temp.act_as('00000000-0000-4000-8000-0000000000b1');
+select isnt_empty($$ delete from forwarder_quotes where id = '00000000-0000-4000-8000-000000000403' returning id $$, 'the new owner can delete a quote on the reassigned project');
 
 reset role;
 select * from finish();
