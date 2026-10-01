@@ -23,6 +23,8 @@ Always follow this flow:
 
 After committing a migration, always remind the user to run `npx supabase db push` before (or alongside) `git push`. Code that expects a schema the live DB doesn't have will break, and security policies won't apply.
 
+Every migration that creates a table must revoke all privileges from anon unless the table is meant to be public. The strict pgTAP anon check enforces this.
+
 Any migration that backfills or moves existing data must disable updated_at triggers for the affected tables during the backfill (ALTER TABLE ... DISABLE TRIGGER ...; re-enable after), so existing rows keep their real last-updated times.
 
 ## Cron Routes
