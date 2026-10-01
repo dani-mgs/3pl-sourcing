@@ -3,6 +3,7 @@
 import { extractTextFromFile, runExtractionTool } from "@/lib/document-extraction";
 import { pickNonNull } from "@/lib/merge-fields";
 import type { ExtractedProviderFields } from "@/lib/merge-provider-fields";
+import { cleanProviderExtraction } from "@/lib/three-pl/clean-extraction";
 import type { ProviderFormDefaults } from "@/components/provider-form";
 
 export type ExtractProviderState =
@@ -211,5 +212,5 @@ export async function extractProviderIntake(
     return { error: result.error };
   }
 
-  return { fields: result.input };
+  return { fields: cleanProviderExtraction(result.input) };
 }

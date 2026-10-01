@@ -2,7 +2,8 @@
 // flow (client intake, 3PL): only overwrites `merged[key]` when `extracted`
 // has an explicit, different value — anything the document didn't mention
 // stays untouched, and every overwritten key gets recorded in `changed` so
-// the UI can highlight it.
+// the UI can highlight it. A blank string counts as "not mentioned", so an
+// upload can never blank out a value the record already has.
 export function mergeScalarField<T extends object, K extends keyof T>(
   current: T,
   extracted: Partial<T>,
@@ -11,7 +12,7 @@ export function mergeScalarField<T extends object, K extends keyof T>(
   changed: Set<string>,
 ) {
   const value = extracted[key];
-  if (value == null) return;
+  if (value == null || (typeof value === "string" && value.trim() === "")) return;
   if (value !== current[key]) {
     merged[key] = value as T[K];
     changed.add(key as string);

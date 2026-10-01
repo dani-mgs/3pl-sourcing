@@ -1,10 +1,20 @@
 "use server";
 
-import { CHIP_SEPARATOR } from "@/lib/chip-value";
-import { extractTextFromFile, runExtractionTool } from "@/lib/document-extraction";
+import {
+  cleanExtractedText,
+  extractTextFromFile,
+  runExtractionTool,
+} from "@/lib/document-extraction";
 import { pickNonNull } from "@/lib/merge-fields";
 import type { ClientIntakeFields } from "@/components/client-intake-form";
 import type { ExtractedExistingProvider } from "@/lib/existing-provider-prefill";
+import {
+  CORE_COST_CATEGORY_PRESETS,
+  KEY_CAPABILITY_PRESETS,
+  toClientIntakeFields,
+  toExistingProvider,
+  type ExtractedIntake,
+} from "@/lib/three-pl/clean-extraction";
 import { createClient } from "@/lib/supabase/server";
 import { findClientByName, type ClientOption } from "@/lib/clients";
 
@@ -20,32 +30,6 @@ export type ExtractIntakeState =
       existingProvider?: ExtractedExistingProvider;
     }
   | { error: string };
-
-const CORE_COST_CATEGORY_PRESETS = [
-  "Storage",
-  "Pick & Pack",
-  "Receiving",
-  "Returns",
-  "Kitting",
-];
-
-const KEY_CAPABILITY_PRESETS = [
-  "Receiving",
-  "Storage",
-  "Fulfillment (Pick, Check, Pack)",
-  "Dispatch",
-  "Adhoc Kitting / Bundling",
-  "Adhoc Labelling",
-  "Returns",
-  "Annual Inventory Count",
-  "Cycle Count",
-  "Inventory Count upon Request",
-  "One Time System Set-up",
-  "Lot / Batch / Expiry Tracking",
-  "Temperature-Controlled Storage",
-  "Retail / EDI Compliance",
-  "Cross-Docking",
-];
 
 const EXTRACT_TOOL = {
   name: "record_client_intake",
@@ -93,81 +77,6 @@ const EXTRACT_TOOL = {
     },
   },
 };
-
-type ExtractedIntake = {
-  client_name?: string;
-  business_model?: string;
-  target_geography?: string;
-  avg_monthly_orders?: number;
-  peak_monthly_orders?: number;
-  latest_month_orders?: number;
-  avg_monthly_units?: number;
-  peak_monthly_units?: number;
-  benchmark_period?: string;
-  core_cost_categories?: string[];
-  key_capability_needs?: string[];
-  main_decision_focus?: string;
-  tech_integration_requirement?: string;
-  special_handling_requirement?: string;
-  fixed_comparison_principle?: string;
-  important_limitation?: string;
-  assumptions_data_limitations?: string;
-  existing_provider?: {
-    company_name?: string;
-    location?: string;
-    storage_cost?: number;
-    pick_pack_cost?: number;
-    receiving_cost?: number;
-    returns_cost?: number;
-  };
-};
-
-function toClientIntakeFields(extracted: ExtractedIntake): ClientIntakeFields {
-  const costCategories = (extracted.core_cost_categories ?? []).filter((v) =>
-    CORE_COST_CATEGORY_PRESETS.includes(v),
-  );
-  const capabilities = (extracted.key_capability_needs ?? []).filter((v) =>
-    KEY_CAPABILITY_PRESETS.includes(v),
-  );
-
-  return {
-    target_geography: extracted.target_geography ?? null,
-    avg_monthly_orders: extracted.avg_monthly_orders ?? null,
-    peak_monthly_orders: extracted.peak_monthly_orders ?? null,
-    latest_month_orders: extracted.latest_month_orders ?? null,
-    avg_monthly_units: extracted.avg_monthly_units ?? null,
-    peak_monthly_units: extracted.peak_monthly_units ?? null,
-    benchmark_period: extracted.benchmark_period ?? null,
-    core_cost_categories:
-      costCategories.length > 0 ? costCategories.join(CHIP_SEPARATOR) : null,
-    key_capability_needs:
-      capabilities.length > 0 ? capabilities.join(CHIP_SEPARATOR) : null,
-    main_decision_focus: extracted.main_decision_focus ?? null,
-    tech_integration_requirement: extracted.tech_integration_requirement ?? null,
-    special_handling_requirement: extracted.special_handling_requirement ?? null,
-    fixed_comparison_principle: extracted.fixed_comparison_principle ?? null,
-    important_limitation: extracted.important_limitation ?? null,
-    assumptions_data_limitations: extracted.assumptions_data_limitations ?? null,
-  };
-}
-
-function toExistingProvider(
-  extracted: ExtractedIntake,
-): ExtractedExistingProvider | undefined {
-  const provider = extracted.existing_provider;
-  if (!provider?.company_name?.trim()) {
-    return undefined;
-  }
-
-  return {
-    company_name: provider.company_name,
-    location: provider.location ?? null,
-    storage_cost: provider.storage_cost ?? null,
-    pick_pack_cost: provider.pick_pack_cost ?? null,
-    receiving_cost: provider.receiving_cost ?? null,
-    returns_cost: provider.returns_cost ?? null,
-  };
-}
 
 // currentValues, when passed, puts this call in "merge mode" (the Project
 // Info edit page updating an existing project) rather than blank-slate
@@ -243,7 +152,7 @@ export async function extractClientIntake(
   const existingProvider = toExistingProvider(result.input);
   const extras = existingProvider ? { existingProvider } : {};
 
-  const clientName = result.input.client_name?.trim();
+  const clientName = cleanExtractedText(result.input.client_name);
   if (currentValues || !clientName) {
     return { fields, ...extras };
   }
@@ -254,7 +163,7 @@ export async function extractClientIntake(
     fields,
     client: {
       name: clientName,
-      business_model: result.input.business_model?.trim() || null,
+      business_model: cleanExtractedText(result.input.business_model) ?? null,
     },
     ...(matchedClient ? { matchedClient } : {}),
     ...extras,

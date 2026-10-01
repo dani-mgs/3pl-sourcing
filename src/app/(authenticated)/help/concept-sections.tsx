@@ -115,6 +115,10 @@ export function UploadSection() {
           is marked <Ui>Updated</Ui>. Anything it doesn&apos;t mention keeps its value.
         </li>
         <li>
+          Filler such as &ldquo;N/A&rdquo;, &ldquo;Unknown&rdquo;, or &ldquo;Not specified&rdquo;
+          is ignored, and a document never blanks out a field that already has a value.
+        </li>
+        <li>
           Never filled from a document: status, assessment, next action, key notes, the 3PL
           Incumbent flag, a quote&apos;s completeness, overall assessment, and client decision,
           or an existing record&apos;s company or client name.
