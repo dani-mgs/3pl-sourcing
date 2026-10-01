@@ -1,0 +1,86 @@
+[
+    {
+        "date": "2026-10-01",
+        "base": "USD",
+        "quote": "AUD",
+        "rate": 1.4331
+    },
+    {
+        "date": "2026-10-01",
+        "base": "USD",
+        "quote": "CAD",
+        "rate": 1.4175
+    },
+    {
+        "date": "2026-10-01",
+        "base": "USD",
+        "quote": "CNY",
+        "rate": 6.7
+    },
+    {
+        "date": "2026-10-01",
+        "base": "USD",
+        "quote": "EUR",
+        "rate": 0.88086
+    },
+    {
+        "date": "2026-10-01",
+        "base": "USD",
+        "quote": "GBP",
+        "rate": 0.75401
+    },
+    {
+        "date": "2026-10-01",
+        "base": "USD",
+        "quote": "HKD",
+        "rate": 7.852
+    },
+    {
+        "date": "2026-10-01",
+        "base": "USD",
+        "quote": "INR",
+        "rate": 95.85
+    },
+    {
+        "date": "2026-10-01",
+        "base": "USD",
+        "quote": "JPY",
+        "rate": 157.28
+    },
+    {
+        "date": "2026-10-01",
+        "base": "USD",
+        "quote": "KRW",
+        "rate": 1354.71
+    },
+    {
+        "date": "2026-10-01",
+        "base": "USD",
+        "quote": "MXN",
+        "rate": 18.0566
+    },
+    {
+        "date": "2026-10-01",
+        "base": "USD",
+        "quote": "PHP",
+        "rate": 62.644
+    },
+    {
+        "date": "2026-10-01",
+        "base": "USD",
+        "quote": "SGD",
+        "rate": 1.2774
+    },
+    {
+        "date": "2026-10-01",
+        "base": "USD",
+        "quote": "THB",
+        "rate": 33.555
+    },
+    {
+        "date": "2026-10-01",
+        "base": "USD",
+        "quote": "VND",
+        "rate": 25923
+    }
+]

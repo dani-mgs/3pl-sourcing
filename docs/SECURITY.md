@@ -15,6 +15,13 @@
 - **Policy Verification (Required):** A policy is not considered complete on creation alone. Every new or modified RLS policy must be tested by attempting the same operation as a non-owner authenticated user before merge, to catch logic errors (e.g., conditions that unintentionally match on `NULL`, or overly permissive `USING`/`WITH CHECK` clauses).
 - **No Hardcoded Tokens:** All interactions must pass through the typed Supabase Client context. Never expose or hardcode the Service Role key anywhere in the client code bundle.
 
+### Service-role exception: cron routes
+
+- The service-role client (`src/lib/supabase/admin-client.ts`) bypasses RLS and is otherwise only used after an explicit admin-role check. The single exception is **cron routes under `/api/cron/`** (currently only `/api/cron/fx-rates`), which run with no user.
+- Each cron route must call `isAuthorizedCronRequest()` (`src/lib/cron-auth.ts`) before anything else: it requires `Authorization: Bearer <CRON_SECRET>`, compares in constant time, and fails closed when `CRON_SECRET` isn't set. Vercel Cron sends this header automatically.
+- The middleware's login redirect skips exactly the `/api/cron/` prefix (`CRON_ROUTE_PREFIX` in `src/lib/supabase/middleware.ts`) and nothing else; security headers still apply.
+- Keep each cron route's service-role use to the one table it maintains (`/api/cron/fx-rates` only upserts `fx_rates`). Treat the external data it fetches as untrusted: validate it (Zod) before writing.
+
 ### Secrets Management
 
 - All keys (`NEXT_PUBLIC_SUPABASE_URL`, etc.) must be read exclusively from environment variables.

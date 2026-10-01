@@ -1,5 +1,8 @@
 // SERVER-ONLY. Bypasses RLS. Never expose to the client. Every function
-// using this must independently verify admin role first.
+// using this must independently verify admin role first — with one
+// documented exception: cron routes under /api/cron/ (currently only
+// /api/cron/fx-rates), which have no user and verify CRON_SECRET instead
+// (docs/SECURITY.md, "Service-role exception: cron routes").
 import { createClient } from "@supabase/supabase-js";
 
 export function createAdminClient() {

@@ -3,6 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const isDev = process.env.NODE_ENV === "development";
 
+// Trailing slash included so "/api/cronjob" or "/api/cron" itself don't match.
+export const CRON_ROUTE_PREFIX = "/api/cron/";
+
 // Evidence-based, not a generic template — see docs/SECURITY.md and the CSP
 // plan in the security-headers commit. script-src/style-src need
 // 'unsafe-inline' because this app doesn't use nonce-based CSP (that would
@@ -79,7 +82,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && request.nextUrl.pathname !== "/login") {
+  // Cron routes are called by Vercel Cron, never by a signed-in user, so they
+  // skip the login redirect. Exactly this prefix and nothing else: every
+  // route under it must verify CRON_SECRET itself (isAuthorizedCronRequest).
+  const isCronRoute = request.nextUrl.pathname.startsWith(CRON_ROUTE_PREFIX);
+
+  if (!user && request.nextUrl.pathname !== "/login" && !isCronRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return applySecurityHeaders(NextResponse.redirect(url));

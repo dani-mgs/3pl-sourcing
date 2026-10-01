@@ -23,6 +23,9 @@ Always follow this flow:
 
 Any migration that backfills or moves existing data must disable updated_at triggers for the affected tables during the backfill (ALTER TABLE ... DISABLE TRIGGER ...; re-enable after), so existing rows keep their real last-updated times.
 
+## Cron Routes
+Routes under `/api/cron/` skip the login redirect in the middleware, so **any route under that prefix must verify `CRON_SECRET` itself** by calling `isAuthorizedCronRequest()` (`src/lib/cron-auth.ts`) before doing anything else. They're the only place the service-role client may be used without an admin check (see docs/SECURITY.md, "Service-role exception: cron routes"). Schedules live in `vercel.json`. Reference `CRON_SECRET` by name only; never read its value.
+
 ## Form Input Conventions
 Always use plain native `<input>`/`<textarea>` elements for any form field holding actual data that gets pre-filled from server data (`defaultValue` driven by a server fetch). Do not use shadcn's `Input` component for these — it's built on Base UI primitives that manage their own internal uncontrolled state and will not pick up updated `defaultValue` after a server-driven revalidation (e.g. after a Server Action + `revalidatePath`), causing stale-looking data and a console warning. shadcn's `Input`/`Select`/`Checkbox` are fine for presentational or purely client-driven inputs (e.g. filter controls, search boxes) where the value isn't being re-hydrated from a server fetch after mount.
 ## Help Page
