@@ -5,13 +5,17 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { getUserRole } from "@/lib/auth/get-user-role";
 import type { ProjectTable } from "@/lib/auth/get-ownership-context";
+import type { UserRole } from "@/lib/auth/get-user-role";
+import {
+  PROJECT_TABLES,
+  parseCreateUser,
+  parseDeleteUser,
+  parseReassignOwner,
+  parseUpdateUserDisplayName,
+  parseUpdateUserRole,
+} from "@/lib/admin/parse-admin-input";
 
 export type AdminActionState = { error?: string; success?: boolean };
-
-const PROJECT_TABLES: readonly ProjectTable[] = [
-  "three_pl_projects",
-  "forwarder_projects",
-];
 
 export async function reassignOwner(
   clientRequirementId: string,
@@ -21,17 +25,19 @@ export async function reassignOwner(
   if ((await getUserRole()) !== "admin") {
     return { error: "You don't have permission to make this change." };
   }
-  // The table name comes from the client, so only accept known ones.
-  if (!PROJECT_TABLES.includes(table)) {
-    return { error: "An unexpected error occurred." };
+  // The table name comes from the client, so only known ones are accepted.
+  const parsed = parseReassignOwner({ projectId: clientRequirementId, newOwnerId, table });
+  if (!parsed.ok) {
+    return { error: parsed.error };
   }
+  const { projectId, newOwnerId: ownerId, table: projectTable } = parsed.data;
 
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from(table)
-    .update({ owner_id: newOwnerId })
-    .eq("id", clientRequirementId)
+    .from(projectTable)
+    .update({ owner_id: ownerId })
+    .eq("id", projectId)
     .select();
 
   if (error) {
@@ -55,14 +61,14 @@ export async function updateUserDisplayName(
     return { error: "You don't have permission to make this change." };
   }
 
-  const trimmed = newName.trim();
-  if (!trimmed) {
-    return { error: "Name is required." };
+  const parsed = parseUpdateUserDisplayName({ userId, name: newName });
+  if (!parsed.ok) {
+    return { error: parsed.error };
   }
 
   const adminClient = createAdminClient();
-  const { error } = await adminClient.auth.admin.updateUserById(userId, {
-    user_metadata: { first_name: trimmed },
+  const { error } = await adminClient.auth.admin.updateUserById(parsed.data.userId, {
+    user_metadata: { first_name: parsed.data.name },
   });
 
   if (error) {
@@ -78,29 +84,25 @@ export async function createUser(
   email: string,
   password: string,
   firstName: string,
-  role: "admin" | "logistics_expert",
+  role: UserRole,
 ): Promise<AdminActionState> {
   if ((await getUserRole()) !== "admin") {
     return { error: "You don't have permission to make this change." };
   }
 
-  const trimmedEmail = email.trim();
-  if (!trimmedEmail) {
-    return { error: "Email is required." };
+  const parsed = parseCreateUser({ email, password, firstName, role });
+  if (!parsed.ok) {
+    return { error: parsed.error };
   }
-  if (!password || password.length < 8) {
-    return { error: "Password must be at least 8 characters." };
-  }
-
-  const trimmedFirstName = firstName.trim();
+  const input = parsed.data;
 
   const adminClient = createAdminClient();
   const { error } = await adminClient.auth.admin.createUser({
-    email: trimmedEmail,
-    password,
+    email: input.email,
+    password: input.password,
     email_confirm: true,
-    user_metadata: trimmedFirstName ? { first_name: trimmedFirstName } : {},
-    app_metadata: { role },
+    user_metadata: input.firstName ? { first_name: input.firstName } : {},
+    app_metadata: { role: input.role },
   });
 
   if (error) {
@@ -115,10 +117,16 @@ export async function createUser(
   return { success: true };
 }
 
-export async function deleteUser(userId: string): Promise<AdminActionState> {
+export async function deleteUser(rawUserId: string): Promise<AdminActionState> {
   if ((await getUserRole()) !== "admin") {
     return { error: "You don't have permission to make this change." };
   }
+
+  const parsed = parseDeleteUser({ userId: rawUserId });
+  if (!parsed.ok) {
+    return { error: parsed.error };
+  }
+  const { userId } = parsed.data;
 
   const supabase = await createClient();
   const {
@@ -159,12 +167,18 @@ export async function deleteUser(userId: string): Promise<AdminActionState> {
 }
 
 export async function updateUserRole(
-  userId: string,
-  newRole: "admin" | "logistics_expert",
+  rawUserId: string,
+  rawRole: UserRole,
 ): Promise<AdminActionState> {
   if ((await getUserRole()) !== "admin") {
     return { error: "You don't have permission to make this change." };
   }
+
+  const parsed = parseUpdateUserRole({ userId: rawUserId, newRole: rawRole });
+  if (!parsed.ok) {
+    return { error: parsed.error };
+  }
+  const { userId, newRole } = parsed.data;
 
   const supabase = await createClient();
   const {

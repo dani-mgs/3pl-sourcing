@@ -9,6 +9,7 @@ import {
   findClientByName,
 } from "@/lib/clients";
 import { explainEmptyDelete } from "@/lib/delete-errors";
+import { parseDeleteClient, parseUpdateClient } from "@/lib/admin/parse-admin-input";
 
 export type ClientActionState = { error?: string; success?: boolean };
 
@@ -18,18 +19,23 @@ const NO_PERMISSION = "You don't have permission to make this change.";
 // Client names and business models are shared by every project for that
 // client, so only admins can change them (RLS enforces the same rule).
 export async function updateClient(
-  clientId: string,
-  name: string,
-  businessModel: string,
+  rawClientId: string,
+  rawName: string,
+  rawBusinessModel: string,
 ): Promise<ClientActionState> {
   if ((await getUserRole()) !== "admin") {
     return { error: NO_PERMISSION };
   }
 
-  const trimmedName = name.trim();
-  if (!trimmedName) {
-    return { error: "Client name is required." };
+  const parsed = parseUpdateClient({
+    clientId: rawClientId,
+    name: rawName,
+    businessModel: rawBusinessModel,
+  });
+  if (!parsed.ok) {
+    return { error: parsed.error };
   }
+  const { clientId, name: trimmedName, businessModel } = parsed.data;
 
   const supabase = await createClient();
 
@@ -42,7 +48,7 @@ export async function updateClient(
     .from("clients")
     .update({
       name: trimmedName,
-      business_model: businessModel.trim() || null,
+      business_model: businessModel,
     })
     .eq("id", clientId)
     .select("id");
@@ -70,11 +76,17 @@ export async function updateClient(
 // A client can only be deleted once no project in any module uses it; the
 // client_id foreign keys (ON DELETE RESTRICT) back this up.
 export async function deleteClient(
-  clientId: string,
+  rawClientId: string,
 ): Promise<ClientActionState> {
   if ((await getUserRole()) !== "admin") {
     return { error: NO_PERMISSION };
   }
+
+  const parsed = parseDeleteClient({ clientId: rawClientId });
+  if (!parsed.ok) {
+    return { error: parsed.error };
+  }
+  const { clientId } = parsed.data;
 
   const supabase = await createClient();
 

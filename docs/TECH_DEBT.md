@@ -25,12 +25,6 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Medium
 - **Where:** `extract-actions.ts` / `extract-provider-actions.ts` under `src/app/(authenticated)/3pl-sourcing/` and `src/app/(authenticated)/forwarder-sourcing/`
 
-### Admin Server Actions don't use Zod validation
-- **Added:** 2026-09-30 (split out of the resolved 3PL Zod item)
-- **What:** The admin actions (`reassignOwner`, `updateUserDisplayName`, `createUser`, `deleteUser`, `updateUserRole` in `admin/actions.ts`; `updateClient`, `deleteClient` in `admin/client-actions.ts`) take typed arguments but don't validate them with a schema, which docs/SECURITY.md requires for every Server Action.
-- **Why deferred:** Out of scope for the 3PL-actions Zod change (2de070b); admin-only and already role-gated.
-- **Severity:** Low
-
 ### Node 20 → 22 upgrade
 - **Added:** 2026-10-01
 - **What:** The project runs on Node 20 (`.nvmrc` is `20`; the Vercel project setting must match), and `@supabase/supabase-js` warns that Node 20 support is deprecated. Upgrade both `.nvmrc` and the Vercel project's Node.js version to 22, then re-run `npm test`, `tsc`, `lint`, and `build`, and smoke-test sign-in plus a 3PL and a Forwarder Sourcing project page.
@@ -77,6 +71,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 
 ## Resolved
+
+### Admin Server Actions don't use Zod validation
+- **Added:** 2026-09-30 (split out of the resolved 3PL Zod item)
+- **What:** The admin actions (`reassignOwner`, `updateUserDisplayName`, `createUser`, `deleteUser`, `updateUserRole` in `admin/actions.ts`; `updateClient`, `deleteClient` in `admin/client-actions.ts`) take typed arguments but don't validate them with a schema, which docs/SECURITY.md requires for every Server Action.
+- **Why deferred:** Out of scope for the 3PL-actions Zod change (2de070b); admin-only and already role-gated.
+- **Severity:** Low
+- **Resolved:** 2026-10-01 — each admin action now validates its arguments with a Zod schema in `src/lib/admin/parse-admin-input.ts` (uuid ids, role/table enums, length caps on names, email, password and business model), after the existing admin-role check. Failures return a friendly message and log the raw issues server-side; valid input behaves as before.
 
 ### Forwarder exports show capabilities as Yes / No
 - **Added:** 2026-10-01 (found while writing /help)
