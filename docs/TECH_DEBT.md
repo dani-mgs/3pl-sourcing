@@ -49,20 +49,16 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 ### Forwarder ranking basis — open decision
 - **Added:** 2026-09-28
 - **What:** Cost Rank and savings use Freight Cost only, matching the original spreadsheet. Total Comparable Logistics Cost (freight + duties & taxes + other charges) may be the fairer basis against a DDP baseline, where duties are included.
+- **Status:** Still pending Dani's decision; no code change until then.
 - **Owner:** Dani. Revisit before Forwarder Sourcing goes live.
 - **Where:** src/lib/forwarder/cost-comparison.ts
 
-### Header bar spacing feels tight
-- **Added:** 2026-08-19 (Week 1, shared authenticated layout)
-- **What:** The header bar ("3PL Sourcing" / "Log Out") has no vertical padding and both elements sit flush against the edges with little breathing room.
-- **Why deferred:** Cosmetic only, doesn't block any functionality. Fixing now would be premature polish before more pages exist to calibrate spacing against.
+### New Project button clipped on project lists at phone width
+- **Added:** 2026-10-01 (found while checking the 390px header)
+- **What:** At 390px wide, the 3PL and Forwarder Sourcing project lists keep the search box and the New Project button on one row, so the button runs off the right edge and reads "New Proje". The page doesn't scroll sideways, so the button is cut off rather than reachable. The header above it is fine.
+- **Why deferred:** Found during a docs-only tidy; the fix (letting the row wrap, or stacking search under the title on small screens) is a layout change for its own commit.
 - **Severity:** Low
-
-### "New Project" button overlaps header border
-- **Added:** 2026-08-19 (Week 1, shared authenticated layout)
-- **What:** The "New Project" button on the dashboard page visually overlaps the header's bottom border line slightly.
-- **Why deferred:** Cosmetic alignment issue, doesn't block functionality.
-- **Severity:** Low
+- **Where:** `src/app/(authenticated)/3pl-sourcing/dashboard-content.tsx`, `src/app/(authenticated)/forwarder-sourcing/forwarder-project-list.tsx`
 
 ### Inconsistent timestamp column naming across tables
 - **Added:** 2026-08-19 (Week 2 review/cleanup)
@@ -71,6 +67,20 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 
 ## Resolved
+
+### Header bar spacing feels tight
+- **Added:** 2026-08-19 (Week 1, shared authenticated layout)
+- **What:** The header bar ("3PL Sourcing" / "Log Out") has no vertical padding and both elements sit flush against the edges with little breathing room.
+- **Why deferred:** Cosmetic only, doesn't block any functionality. Fixing now would be premature polish before more pages exist to calibrate spacing against.
+- **Severity:** Low
+- **Resolved:** 2026-10-01 — no longer applies after the nav redesign (5c3eb08). Checked at 1440×900 against a local build: the header is a fixed 64px navy bar with 32px side padding, brand and modules vertically centered on the left, Help and the avatar on the right with room to spare.
+
+### "New Project" button overlaps header border
+- **Added:** 2026-08-19 (Week 1, shared authenticated layout)
+- **What:** The "New Project" button on the dashboard page visually overlaps the header's bottom border line slightly.
+- **Why deferred:** Cosmetic alignment issue, doesn't block functionality.
+- **Severity:** Low
+- **Resolved:** 2026-10-01 — no longer applies. Checked at 1440×900 on the 3PL project list: the header ends at 64px and New Project starts at 104px, a 40px gap with no overlap.
 
 ### Admin Server Actions don't use Zod validation
 - **Added:** 2026-09-30 (split out of the resolved 3PL Zod item)
