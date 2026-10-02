@@ -1,7 +1,7 @@
 import { Faq, HelpSection } from "./help-parts";
 
-// Each answer restates a rule from concept-sections.tsx / workflow-sections.tsx;
-// keep them in step.
+// Each answer restates a rule from concept-sections.tsx / workflow-sections.tsx
+// / tariff-section.tsx; keep them in step.
 
 export function FaqSection() {
   return (
@@ -66,6 +66,41 @@ export function FaqSection() {
         </Faq>
         <Faq question="Why can't I delete this forwarder project?">
           <p>A forwarder project can only be deleted once it has no forwarders. Delete them first.</p>
+        </Faq>
+        <Faq question="Why does the Tariff Calculator ask for a quantity?">
+          <p>
+            The line&apos;s duty is charged per unit (per kg, liter, pair…), not only as a
+            percentage of value. Enter the quantity in the unit the message names. HTS weights
+            are net weights, not the shipment&apos;s gross weight.
+          </p>
+        </Faq>
+        <Faq question="Why can't the Tariff Calculator estimate my HTS code?">
+          <p>
+            Either the code isn&apos;t in the current HTS release (check it, and enter all 10
+            digits if asked), or its rate depends on details the calculator can&apos;t evaluate,
+            such as metal content or the value of a watch case. Ask your customs broker for those.
+          </p>
+        </Faq>
+        <Faq question="Why aren't Section 301 or Section 232 duties in my estimate?">
+          <p>
+            Additional duties aren&apos;t calculated yet. When any may apply to your origin or
+            HTS code, the total says it EXCLUDES them and names them right under it, so
+            it never reads as complete. Check them with your customs broker.
+          </p>
+        </Faq>
+        <Faq question="Why is my customs broker's figure different?">
+          <p>
+            The estimate leaves out additional duties, AD/CVD and trade-agreement savings, uses
+            the exchange rate shown rather than CBP&apos;s certified rate, and treats the line
+            as a whole entry for the MPF minimum and maximum. Your broker&apos;s entry is the
+            one that counts.
+          </p>
+        </Faq>
+        <Faq question="Why didn't my saved estimate change when rates changed?">
+          <p>
+            Saved estimates are locked with the rates and dates they used. Calculate again and
+            save a new estimate to use the current rates.
+          </p>
         </Faq>
       </div>
     </HelpSection>

@@ -4,9 +4,23 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
-### PGRST303 is only retried in the FX cron job
-- **Added:** 2026-10-01
-- **What:** PostgREST's PGRST303 (JWT claims couldn't be validated — with Supabase's signing keys, usually brief clock skew between the server and the API) is retried with backoff only around the FX job's Supabase calls (`retryOnPgrst303` in `src/lib/supabase/pgrst303-retry.ts`). Every other server-side Supabase call (pages, Server Actions, exports, admin actions) would surface it as a one-off error ("An unexpected error occurred" or an empty page) that a reload fixes.
+### Tariff Calculator: rounding and single-line MPF are assumptions
+- **Added:** 2026-10-02
+- **What:** Each estimate line rounds once, half up to the cent, and the MPF minimum/maximum are applied to the one line as if it were the whole entry. CBP's exact per-line rounding in ACE wasn't confirmed against a primary source; differences should be cents, but a multi-line entry's MPF can differ a lot. Both are stated on every estimate and in /help.
+- **Why deferred:** v1 estimates one line; confirming ACE rounding needs a broker or CBP reference.
+- **Severity:** Low
+- **Where:** `src/lib/tariff/calculate.ts`, `src/lib/tariff/caveats.ts`
+
+### Tariff Calculator: saved estimates trust RLS for who can insert
+- **Added:** 2026-10-02
+- **What:** The save action recalculates on the server, but RLS lets any signed-in user insert a `duty_estimates` row directly through the API (with their own `created_by`), so a determined user could store numbers the calculator never produced. Rows are still locked afterwards and attributed to that user.
+- **Why deferred:** Users are internal staff, and the same holds for quotes. **Must be closed before any client-facing use** (an export, a client report, or the Landed Cost Calculator showing estimates to clients): replace the insert policy with a security-definer function that builds the row from the server-side calculation, or insert via a server-only path.
+- **Severity:** Low (internal only); High before client-facing use
+- **Where:** `supabase/migrations/20261002135142_tariff_duty_estimates.sql` (insert policy)
+
+### PGRST303 is only retried in the cron jobs
+- **Added:** 2026-10-01 (HTS import cron added 2026-10-02)
+- **What:** PostgREST's PGRST303 (JWT claims couldn't be validated — with Supabase's signing keys, usually brief clock skew between the server and the API) is retried with backoff only around the FX and HTS import jobs' Supabase calls (`retryOnPgrst303` in `src/lib/supabase/pgrst303-retry.ts`). Every other server-side Supabase call (pages, Server Actions, exports, admin actions) would surface it as a one-off error ("An unexpected error occurred" or an empty page) that a reload fixes.
 - **Why deferred:** It's only been seen on the unattended cron run, which has no user to retry and no second chance until the next day; interactive calls have a person who can reload. Wrapping every call is a wider change than the cron fix. Not to be "fixed" by switching back to the legacy JWT keys.
 - **Severity:** Low
 - **Where:** server-side `createClient()` / `createAdminClient()` callers; reuse `retryOnPgrst303` if it shows up there.

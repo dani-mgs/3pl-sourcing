@@ -5,12 +5,14 @@ import {
   UploadSection,
 } from "./concept-sections";
 import { FaqSection } from "./faq-section";
+import { TariffSection } from "./tariff-section";
 import { ForwarderSection, OverviewSection, ThreePlSection } from "./workflow-sections";
 
 const CONTENTS = [
   { id: "overview", label: "What it's for" },
   { id: "three-pl", label: "3PL Sourcing" },
   { id: "forwarder", label: "Forwarder Sourcing" },
+  { id: "tariff", label: "Tariff Calculator" },
   { id: "concepts", label: "Key concepts" },
   { id: "upload", label: "AI document upload" },
   { id: "exports", label: "Exports" },
@@ -52,6 +54,7 @@ export default function HelpPage() {
           <OverviewSection />
           <ThreePlSection />
           <ForwarderSection />
+          <TariffSection />
           <ConceptsSection />
           <UploadSection />
           <ExportSection />
