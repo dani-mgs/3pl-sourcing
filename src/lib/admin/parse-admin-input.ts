@@ -67,6 +67,11 @@ const updateUserRoleSchema = z.object({
   newRole: z.enum(USER_ROLES, { error: "Choose a valid role." }),
 });
 
+const updateTariffEditorSchema = z.object({
+  userId: id,
+  grant: z.boolean({ error: INVALID_REQUEST }),
+});
+
 const updateClientSchema = z.object({
   clientId: id,
   name: requiredName("Client name"),
@@ -117,6 +122,10 @@ export function parseDeleteUser(raw: { userId: unknown }) {
 
 export function parseUpdateUserRole(raw: { userId: unknown; newRole: unknown }) {
   return parse(updateUserRoleSchema, raw, "updateUserRole");
+}
+
+export function parseUpdateTariffEditor(raw: { userId: unknown; grant: unknown }) {
+  return parse(updateTariffEditorSchema, raw, "updateTariffEditor");
 }
 
 export function parseUpdateClient(raw: { clientId: unknown; name: unknown; businessModel: unknown }) {
