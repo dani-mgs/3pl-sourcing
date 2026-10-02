@@ -21,7 +21,7 @@ export const HUB_MODULES: HubModule[] = [
   {
     name: "Tariff Calculator",
     description: "Estimate duties and tariffs on imported goods.",
-    href: null,
+    href: "/tariff-calculator",
   },
   {
     name: "Landed Cost Calculator",
