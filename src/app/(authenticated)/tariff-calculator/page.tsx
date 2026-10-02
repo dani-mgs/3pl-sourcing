@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getTariffPermissions } from "@/lib/auth/get-tariff-permissions";
 import { formatCurrency } from "@/lib/currency";
 import { formatRateDate } from "@/lib/fx/rate-provenance";
 import { loadLatestFxRates, todayUtc } from "@/lib/fx/server-rates";
@@ -14,7 +15,7 @@ import { EstimateForm } from "./estimate-form";
 // and the list of saved (locked) estimates. Any signed-in user can use it.
 export default async function TariffCalculatorPage() {
   const supabase = await createClient();
-  const [latestRates, releaseResult, estimatesResult] = await Promise.all([
+  const [latestRates, releaseResult, estimatesResult, permissions] = await Promise.all([
     loadLatestFxRates(supabase),
     supabase
       .from("hts_releases")
@@ -26,6 +27,7 @@ export default async function TariffCalculatorPage() {
       .select("id, created_at, created_by, label, hts_code, origin_country, total_usd, warnings")
       .order("created_at", { ascending: false })
       .limit(20),
+    getTariffPermissions(),
   ]);
   if (releaseResult.error) console.error("TariffCalculatorPage release error:", releaseResult.error);
   if (estimatesResult.error) console.error("TariffCalculatorPage estimates error:", estimatesResult.error);
@@ -39,7 +41,17 @@ export default async function TariffCalculatorPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-8 py-10 max-sm:px-4">
-      <h1 className="font-display text-2xl font-semibold text-move-navy">Tariff Calculator</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl font-semibold text-move-navy">Tariff Calculator</h1>
+        {permissions.canEditTariffData && (
+          <Link
+            href="/tariff-calculator/duty-data"
+            className="rounded text-sm font-medium text-move-navy hover:text-move-green hover:underline focus-visible:ring-2 focus-visible:ring-move-green focus-visible:outline-none"
+          >
+            Duty data →
+          </Link>
+        )}
+      </div>
       <p className="mt-1 text-sm text-neutral-muted">
         Estimate US import duty and fees for one HTS line. Estimates only — verify with your customs broker.
       </p>
