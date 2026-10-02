@@ -4,6 +4,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### Tariff duty data: gaps left for experts (not machine-readable or not decidable)
+- **Added:** 2026-10-02
+- **What:** The PR 2a seed took only what the primary sources state as text. Left out, for tariff editors to add from the sources: forced-labour note 52(b) product list and Annex II Part A (9903.05.86), (d) civil aircraft list (9903.05.88), (e) pharmaceutical-use list (9903.05.89), the (j)(1)-(13)(i) country product lists (9903.05.96-.99, 9903.06.02/.04/.06/.07/.09/.10/.12/.14/.16/.18/.20) — all published only as images in FR 2026-15181; donations and informational materials (9903.05.91/.92, 9903.05.08/.09), which an HTS code can't decide; the expired in-transit windows (9903.05.85, 9903.05.02). Legal status is seeded `in_force` for every row: the forced-labour action is challenged at the CIT (argued 2026-09-30, per press reports), but no primary source was loaded, so an editor should set `in_force_under_litigation` with a court source. Section 232, China/Nicaragua 301 and Canada 338 aren't loaded (PR 2b and later), so Section 232 goods show "exempt if Section 232 applies".
+- **Why deferred:** Primary-source-only rule; image tables need manual transcription and a second check.
+- **Severity:** Medium (estimates name the gap; nothing is silently zero)
+- **Where:** Tariff Calculator → Duty data; `supabase/migrations/20261002151203_tariff_seed_origin_duties.sql` header
+
 ### Tariff Calculator: rounding and single-line MPF are assumptions
 - **Added:** 2026-10-02
 - **What:** Each estimate line rounds once, half up to the cent, and the MPF minimum/maximum are applied to the one line as if it were the whole entry. CBP's exact per-line rounding in ACE wasn't confirmed against a primary source; differences should be cents, but a multi-line entry's MPF can differ a lot. Both are stated on every estimate and in /help.

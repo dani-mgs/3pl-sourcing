@@ -8,7 +8,8 @@ export const ESTIMATE_DISCLAIMER_DETAIL =
 
 // What the estimate leaves out or assumes, in the order shown.
 export const ESTIMATE_CAVEATS: readonly string[] = [
-  "Additional duties (Section 301, Section 232, Section 338 and others) aren't included yet. Any that may apply are named under the total and listed as warnings above.",
+  "Additional duties are included only for programs a tariff editor has reviewed. Any other program that may apply (not loaded yet, or pending expert review) is named under the total and listed as a warning.",
+  "Conditional exemptions (a USMCA or CAFTA-DR claim, a particular article within a subheading, an end use) are noted on the duty line but not applied.",
   "Antidumping and countervailing duties (AD/CVD), quotas and tariff-rate quotas aren't included.",
   "Free trade agreement and preference programs (USMCA, GSP, AGOA and others) aren't applied, even if your goods qualify. The HTS special-rate column is shown for information only.",
   "The customs value should be the transaction value: the price paid for the goods, excluding international freight, insurance and US duties. If your price is CIF, CFR, DAP or DDP, deduct those costs first.",

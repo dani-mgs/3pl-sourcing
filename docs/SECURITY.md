@@ -24,6 +24,11 @@
 - The proxy's login redirect (`src/proxy.ts`, Next.js 16's replacement for `middleware.ts`) skips exactly the `/api/cron/` prefix (`CRON_ROUTE_PREFIX` in `src/lib/supabase/middleware.ts`) and nothing else; security headers still apply.
 - Keep each cron route's service-role use to the tables it maintains (listed above). Treat the external data it fetches as untrusted: validate it (Zod) before writing. The HTS import validates every exported row, strips markup from descriptions, and rejects a chapter whole if any row is malformed.
 
+### Tariff editor permission
+
+- `app_metadata.tariff_editor = true` (set only by admins through `updateTariffEditor` in /admin, via the service role after an admin check; users can't edit app_metadata) lets a user maintain duty and fee data. SQL `is_tariff_editor()` (editor or admin) gates writes to `customs_fees`, `additional_duties`, `additional_duty_scope` and `duty_program_reviews`, and nothing else. The duty-data server actions check the same permission (`getTariffPermissions`, using `getUser`) before writing.
+- Rates in `additional_duties` can't be edited in place (trigger); every change to duties, scope and fees is written to `tariff_data_history` by a security-definer trigger that nobody can write to directly.
+
 ### Secrets Management
 
 - All keys (`NEXT_PUBLIC_SUPABASE_URL`, etc.) must be read exclusively from environment variables.

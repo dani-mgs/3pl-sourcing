@@ -63,15 +63,56 @@ export function TariffSection() {
       </Bullets>
 
       <SubHeading>Additional duties</SubHeading>
-      <p>
-        Section 301, Section 232, Section 338 and other additional duties aren&apos;t calculated
-        yet. When one may apply to the origin or HTS code you entered, the total is labelled{" "}
-        <Ui>Base duty + fees — EXCLUDES N additional duty program(s) that may apply</Ui>, and
-        each program is named right under it. Where a program adds a single flat percentage for
-        that origin (for example the forced-labour Section 301 rate for Vietnam), it shows a
-        rough &ldquo;could add up to X%&rdquo;; otherwise the program is only named. The same
-        label appears on saved estimates and in the saved list.
-      </p>
+      <Bullets>
+        <li>
+          Additional duties (so far the forced-labour Section 301 and the Brazil Section 301
+          programs) are added to the total only once a <Ui>tariff editor</Ui> has reviewed the
+          program&apos;s data against its primary sources. Each one shows its Chapter 99 heading,
+          rate, legal status (e.g. <Ui>In force — under litigation</Ui>), effective dates, source and
+          the date the source was checked.
+        </li>
+        <li>
+          <Ui>Pending expert review</Ui> means the program&apos;s data is loaded but nobody has
+          reviewed it since it was added or last changed. Pending programs never count toward the
+          total: the estimate names them and says what they could add.
+        </li>
+        <li>
+          When any program that may apply isn&apos;t counted (not loaded yet, or pending review),
+          the total is labelled <Ui>Base duty + fees — EXCLUDES N additional duty program(s) that may apply</Ui>{" "}
+          (or <Ui>Duties + fees</Ui> when some duties are included), with each program named right
+          under it. Programs with no data yet show the rate read from the HTS, marked as indicative.
+        </li>
+        <li>
+          Programs stack. Some don&apos;t apply to goods covered by another program: forced-labour and
+          Brazil Section 301 duties don&apos;t apply to Section 232 goods. Until Section 232 is
+          loaded, such goods show &ldquo;exempt if Section 232 applies&rdquo;, without a percentage.
+        </li>
+        <li>
+          Where the base rate is low, some origins (EU, Japan, South Korea, Switzerland, Taiwan) pay a
+          minimum total rate instead of a flat add-on; per-unit rates are compared as duty divided by
+          customs value.
+        </li>
+        <li>
+          Every estimate shows <Ui>Duty data last reviewed {"{date}"} by {"{name}"}</Ui> for each
+          program it uses, and a warning when that review is over 30 days old or Chapter 99 headings
+          changed in the HTS since.
+        </li>
+      </Bullets>
+
+      <SubHeading>Who maintains duty data</SubHeading>
+      <Bullets>
+        <li>
+          <Ui>Tariff editors</Ui> and admins maintain duty and fee data in <Ui>Tariff Calculator</Ui> →{" "}
+          <Ui>Duty data</Ui>: add rows from primary sources, end-date rows, edit legal status and
+          sources, and mark programs reviewed. Admins grant or revoke the tariff editor permission in{" "}
+          <Ui>Administration</Ui>.
+        </li>
+        <li>
+          Rates are never edited in place: to change one, end-date the row and add a new one from the
+          next day. Every change is recorded with who made it, and puts the program back to pending
+          review.
+        </li>
+      </Bullets>
 
       <SubHeading>What an estimate doesn&apos;t include</SubHeading>
       <Bullets>
