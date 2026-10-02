@@ -43,3 +43,6 @@ next-env.d.ts
 .playwright-mcp/
 docs/REGRESSION_REPORT_*.md
 docs/regression-*/
+
+# tariff source downloads (scripts/tariff)
+/.cache/

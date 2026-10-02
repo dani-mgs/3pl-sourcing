@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:db": "npx supabase test db --local"
+    "test:db": "npx supabase test db --local",
+    "tariff:fetch": "node scripts/tariff/fetch-sources.mjs",
+    "tariff:extract": "node scripts/tariff/extract-2a.mjs",
+    "tariff:seed": "node scripts/tariff/generate-seeds.mjs",
+    "tariff:verify": "npm run tariff:fetch && npm run tariff:extract && npm run tariff:seed -- --check && git diff --exit-code -- data/tariff"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

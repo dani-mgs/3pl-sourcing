@@ -1,0 +1,113 @@
+{
+  "note": "Official sources for the tariff seeds. sha256/bytes/retrieved_on are written by `npm run tariff:fetch -- --update`; a changed hash means the published source changed and the seed must be regenerated and re-reviewed.",
+  "sources": {
+    "hts_ch99_export": {
+      "title": "HTS 2026 Revision 20, chapter 99 (USITC REST export, JSON)",
+      "url": "https://hts.usitc.gov/reststop/exportList?from=9900&to=9999&format=JSON&styles=false",
+      "file": "hts-2026-rev20-ch99.json",
+      "used_for": "2a: forced-labour rate per origin (9903.05.20-.84). 2b: rate and wording of 9903.82, 9903.85, 9903.88, 9903.91, 9903.92 headings.",
+      "sha256": "b0258341a73830b490251ddeadcc1f376d149732210c35e95ec467efd835a65f",
+      "bytes": 2003181,
+      "retrieved_on": "2026-10-02"
+    },
+    "fr_2026_15181": {
+      "title": "USTR, Notice of Actions in Section 301 Investigations ... Forced Labor (FR 2026-15181, 91 FR 47318), full text",
+      "url": "https://www.federalregister.gov/documents/full_text/text/2026/07/28/2026-15181.txt",
+      "file": "fr-2026-15181.txt",
+      "used_for": "2a: U.S. note 52 (forced-labour Section 301).",
+      "sha256": "19addcaf235d695d06663dddc1dd27e637e9504b8020ae55514a011134004fc0",
+      "bytes": 175783,
+      "retrieved_on": "2026-10-02"
+    },
+    "fr_2026_14542": {
+      "title": "USTR, Notice of Action: Brazil's Acts, Policies, and Practices (FR 2026-14542), full text",
+      "url": "https://www.federalregister.gov/documents/full_text/text/2026/07/20/2026-14542.txt",
+      "file": "fr-2026-14542.txt",
+      "used_for": "2a: U.S. note 50 (Brazil Section 301).",
+      "sha256": "915cc49ba053de2506e9c67f3117337001ce3e5d8c2204b5eb7082f128061d0a",
+      "bytes": 111349,
+      "retrieved_on": "2026-10-02"
+    },
+    "hts_ch99_pdf": {
+      "title": "HTS 2026 Revision 20, chapter 99 (USITC, PDF, 818 pages)",
+      "url": "https://hts.usitc.gov/reststop/file?release=2026HTSRev20&filename=Chapter%2099",
+      "file": "hts-2026-rev20-ch99.pdf",
+      "used_for": "2b primary: U.S. notes 16 (Section 232 metals), 20 (China 301 Lists 1-4A and exclusions (vvv)/(www)) and 31 (China 301 four-year review).",
+      "sha256": "53c7858d3c70583537684f7e78b9fc1bd222a51a857d5f331f67d2468d48986c",
+      "bytes": 14004064,
+      "retrieved_on": "2026-10-02"
+    },
+    "usitc_china_tariffs": {
+      "title": "USITC, China Tariffs reference table (last updated January 1, 2026)",
+      "url": "https://learning.usitc.gov/hts-docs/documents/China%20Tariffs.pdf",
+      "file": "usitc-china-tariffs.pdf",
+      "used_for": "2b cross-check A: every chapter 1-97 code covered by China Section 301 and its chapter 99 heading.",
+      "sha256": "4c1643216e56c4547205d06b89e53ebfbd617e0b7d3360b4850312ae4a428002",
+      "bytes": 397769,
+      "retrieved_on": "2026-10-02"
+    },
+    "fr_2024_21217": {
+      "title": "USTR, Notice of Modification (four-year review), FR 2024-21217, 89 FR 76581 (XML)",
+      "url": "https://www.federalregister.gov/documents/full_text/xml/2024/09/18/2024-21217.xml",
+      "file": "fr-2024-21217.xml",
+      "used_for": "2b cross-check B: U.S. note 31 subdivisions (b)-(e), (h), (i) as implemented.",
+      "sha256": "34efbe41b51ae62f81a951932059b134124bf5a7b9a65d4056cec029305e192a",
+      "bytes": 357627,
+      "retrieved_on": "2026-10-02"
+    },
+    "fr_2024_29462": {
+      "title": "USTR, Notice of Modification, FR 2024-29462, 89 FR 101682 (XML)",
+      "url": "https://www.federalregister.gov/documents/full_text/xml/2024/12/16/2024-29462.xml",
+      "file": "fr-2024-29462.xml",
+      "used_for": "2b cross-check B: U.S. note 31 subdivisions (f), (g), (j).",
+      "sha256": "028ff3427a2aa097055296f5a225eeecebe68423dec19b36bc11ba3440cc464e",
+      "bytes": 23631,
+      "retrieved_on": "2026-10-02"
+    },
+    "fr_2025_21671": {
+      "title": "USTR, Notice of Product Exclusion Extensions, FR 2025-21671, 90 FR 55232 (full text)",
+      "url": "https://www.federalregister.gov/documents/full_text/text/2025/12/01/2025-21671.txt",
+      "file": "fr-2025-21671.txt",
+      "used_for": "2b: exclusion count (178) and end date (before 11:59 p.m. EDT, November 9, 2026).",
+      "sha256": "56ffbe6c752760b932330cdce00060ef873f2aee2f981f74b440558da1799147",
+      "bytes": 9676,
+      "retrieved_on": "2026-10-02"
+    },
+    "fr_2026_17925": {
+      "title": "USTR, Notice of Conforming Amendments to Product Exclusions, FR 2026-17925, 91 FR 56538 (full text)",
+      "url": "https://www.federalregister.gov/documents/full_text/text/2026/09/02/2026-17925.txt",
+      "file": "fr-2026-17925.txt",
+      "used_for": "2b: checks the four exclusion items renumbered from July 1, 2026 read as amended in the note text.",
+      "sha256": "831a7de0ad8e87df0f89c23d0d9087d22893424d16b190b826f7e8e7be6fe163",
+      "bytes": 5409,
+      "retrieved_on": "2026-10-02"
+    },
+    "cbp_metals_list": {
+      "title": "CBP CSMS #68855869 (June 5, 2026) attachment: Metals HTS LIST 6426FINAL.docx",
+      "url": "https://content.govdelivery.com/attachments/USDHSCBP/2026/06/05/file_attachments/3675566/Metals%20HTS%20LIST%206426FINAL.docx",
+      "file": "cbp-metals-hts-list-2026-06-05.docx",
+      "used_for": "2b cross-check: U.S. note 16 lists, by chapter 99 heading and subdivision.",
+      "sha256": "d06cb5707a3a45440de78c38e119a70ecfa222677aa7637fbbfd2639cd62a017",
+      "bytes": 100310,
+      "retrieved_on": "2026-10-02"
+    },
+    "fr_2026_06960": {
+      "title": "Proclamation 11021, Strengthening Actions Taken To Adjust Imports of Aluminum, Steel, and Copper (FR 2026-06960, 91 FR 18201), full text",
+      "url": "https://www.federalregister.gov/documents/full_text/text/2026/04/09/2026-06960.txt",
+      "file": "fr-2026-06960.txt",
+      "used_for": "2b: Section 232 rules (full customs value, one metal duty per article, 15% metal content, Russian aluminium). Its annexes are images.",
+      "sha256": "d234468f296d06bc142753abe86f75dc8e361bdf6c9111cb0f116747c8b3b106",
+      "bytes": 41521,
+      "retrieved_on": "2026-10-02"
+    },
+    "fr_2026_11314": {
+      "title": "Proclamation, Further Adjusting the Tariff Regimes for Imports of Aluminum, Steel, and Copper (FR 2026-11314), full text",
+      "url": "https://www.federalregister.gov/documents/full_text/text/2026/06/04/2026-11314.txt",
+      "file": "fr-2026-11314.txt",
+      "used_for": "2b: June 8, 2026 changes (85% U.S. content). Its annexes are images.",
+      "sha256": "69c2312b0b0576b0661290df0dee1a702b855184e60cef1868267cfbfeda9575",
+      "bytes": 25880,
+      "retrieved_on": "2026-10-02"
+    }
+  }
+}
