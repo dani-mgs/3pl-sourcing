@@ -5,6 +5,7 @@ import {
   parseDeleteUser,
   parseReassignOwner,
   parseUpdateClient,
+  parseUpdateTariffEditor,
   parseUpdateUserDisplayName,
   parseUpdateUserRole,
 } from "./parse-admin-input";
@@ -188,5 +189,26 @@ describe("parseDeleteClient", () => {
   test("accepts a uuid and rejects anything else", () => {
     expect(parseDeleteClient({ clientId: VALID_UUID })).toEqual({ ok: true, data: { clientId: VALID_UUID } });
     expect(errorOf(parseDeleteClient({ clientId: 42 }))).toBe(INVALID_REQUEST);
+  });
+});
+
+describe("parseUpdateTariffEditor", () => {
+  const userId = "00000000-0000-4000-8000-0000000000e1";
+
+  test("accepts a user id and a boolean", () => {
+    expect(parseUpdateTariffEditor({ userId, grant: true })).toEqual({ ok: true, data: { userId, grant: true } });
+    expect(parseUpdateTariffEditor({ userId, grant: false })).toEqual({ ok: true, data: { userId, grant: false } });
+  });
+
+  test("refuses anything else with a safe message", () => {
+    for (const raw of [
+      { userId, grant: "true" },
+      { userId, grant: 1 },
+      { userId: "not-a-uuid", grant: true },
+    ]) {
+      const result = parseUpdateTariffEditor(raw);
+      expect(result.ok).toBe(false);
+      expect(!result.ok && result.error).toBe("Something went wrong with that request. Reload the page and try again.");
+    }
   });
 });

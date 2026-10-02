@@ -10,8 +10,10 @@ import {
   type ShipmentMode,
 } from "./calculate";
 import { formatHtsCode } from "./hts-code";
-import { matchProgramWarnings, type DutyProgramRow, type ProgramWarning } from "./programs";
+import { evaluateAdditionalDuties, type DutyReviewNote } from "./additional-duties";
+import type { DutyProgramRow, ProgramWarning } from "./programs";
 import { centsToNumber, parseDecimal, toCents } from "./rational";
+import { loadAdditionalDutyData } from "./server-duty-data";
 import type { EstimateFormData } from "./parse-estimate-form";
 
 // Builds an estimate on the server from validated form data: the current
@@ -45,10 +47,16 @@ export type EstimateResult = {
   rateText: string;
   quantityUsed: { value: number; unit: string; unitLabel: string } | null;
   baseDutyUsd: number;
+  // Reviewed additional duties only.
+  additionalDutiesUsd: number;
   feesUsd: number;
   totalUsd: number;
+  // Base duty, then additional duties, then fees.
   lines: EstimateLine[];
+  // Programs that may apply but aren't in the total, and pending notes.
   warnings: ProgramWarning[];
+  // Review state of each program that bears on this line.
+  dutyReviews: DutyReviewNote[];
 };
 
 export type BuildEstimateResult = { ok: true; estimate: EstimateResult } | { ok: false; error: string };
@@ -157,11 +165,7 @@ export async function buildEstimate(
 
     const fees = ((feesResult.data ?? []) as (FeeRow & DatedRow)[]).filter((f) => inForce(f, asOfDate));
     const originIsColumn2 = ((column2Result.data ?? []) as DatedRow[]).some((r) => inForce(r, asOfDate));
-    const warnings = matchProgramWarnings(
-      (programsResult.data ?? []) as DutyProgramRow[],
-      input.originCountry,
-      line.hts_code,
-    );
+    const programs = (programsResult.data ?? []) as DutyProgramRow[];
 
     let exchangeRateSource: EstimateResult["exchangeRateSource"] = null;
     let exchangeRateDate: string | null = null;
@@ -232,6 +236,24 @@ export async function buildEstimate(
       }
     }
 
+    const dutyData = await loadAdditionalDutyData(supabase, line.hts_code, asOfDate);
+    const additional = evaluateAdditionalDuties({
+      programs,
+      rows: dutyData.rows,
+      reviews: dutyData.reviews,
+      originCountry: input.originCountry,
+      htsCode: line.hts_code,
+      customsValueUsd,
+      baseDutyUsd: parseDecimal(calculation.baseDutyUsd),
+      asOfDate,
+    });
+    const [baseLine, ...feeLines] = calculation.lines;
+    // Sum in cents so the total equals its parts exactly.
+    const totalCents =
+      toCents(parseDecimal(calculation.baseDutyUsd)) +
+      toCents(parseDecimal(additional.additionalDutiesUsd)) +
+      toCents(parseDecimal(calculation.feesUsd));
+
     return {
       ok: true,
       estimate: {
@@ -255,10 +277,12 @@ export async function buildEstimate(
         rateText: calculation.rateText,
         quantityUsed: calculation.quantityUsed,
         baseDutyUsd: calculation.baseDutyUsd,
+        additionalDutiesUsd: additional.additionalDutiesUsd,
         feesUsd: calculation.feesUsd,
-        totalUsd: calculation.totalUsd,
-        lines: calculation.lines,
-        warnings,
+        totalUsd: centsToNumber(totalCents),
+        lines: [baseLine, ...additional.lines, ...feeLines],
+        warnings: additional.warnings,
+        dutyReviews: additional.dutyReviews,
       },
     };
   } catch (error) {
@@ -293,9 +317,11 @@ export function estimateToRow(estimate: EstimateResult, label: string | null) {
     quantity: estimate.quantityUsed?.value ?? null,
     quantity_unit: estimate.quantityUsed?.unitLabel ?? null,
     base_duty_usd: estimate.baseDutyUsd,
+    additional_duties_usd: estimate.additionalDutiesUsd,
     fees_usd: estimate.feesUsd,
     total_usd: estimate.totalUsd,
     lines: estimate.lines,
     warnings: estimate.warnings,
+    duty_reviews: estimate.dutyReviews,
   };
 }

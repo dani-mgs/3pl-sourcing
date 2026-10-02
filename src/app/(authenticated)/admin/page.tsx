@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth/get-user-role";
 import { ReassignOwnerForm, type ProfileOption } from "./reassign-owner-form";
 import { RoleActionButton } from "./role-action-button";
+import { TariffEditorButton } from "./tariff-editor-button";
 import { EditNameButton } from "./edit-name-button";
 import { CreateUserButton } from "./create-user-button";
 import { DeleteUserButton } from "./delete-user-button";
@@ -76,7 +77,7 @@ export default async function AdministrationPage() {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, email, first_name, role")
+    .select("id, email, first_name, role, tariff_editor")
     .order("email", { ascending: true });
 
   const profileOptions: ProfileOption[] = (profiles ?? []).map((p) => ({
@@ -225,6 +226,7 @@ export default async function AdministrationPage() {
                       </p>
                       <p className="text-xs text-neutral-muted">
                         {profile.email} · {profile.role}
+                        {profile.role !== "admin" && profile.tariff_editor && " · tariff editor"}
                       </p>
                     </div>
                     <EditNameButton
@@ -234,6 +236,10 @@ export default async function AdministrationPage() {
                     />
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* Admins can already edit duty data; the flag only matters for others. */}
+                    {profile.role !== "admin" && (
+                      <TariffEditorButton userId={profile.id} isEditor={profile.tariff_editor === true} />
+                    )}
                     {profile.role === "admin" ? (
                       profile.id !== currentUser?.id && (
                         <RoleActionButton

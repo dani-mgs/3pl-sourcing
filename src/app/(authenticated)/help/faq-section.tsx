@@ -81,11 +81,32 @@ export function FaqSection() {
             such as metal content or the value of a watch case. Ask your customs broker for those.
           </p>
         </Faq>
-        <Faq question="Why aren't Section 301 or Section 232 duties in my estimate?">
+        <Faq question="Why isn't a Section 301 or Section 232 duty in my estimate?">
           <p>
-            Additional duties aren&apos;t calculated yet. When any may apply to your origin or
-            HTS code, the total says it EXCLUDES them and names them right under it, so
-            it never reads as complete. Check them with your customs broker.
+            Only programs a tariff editor has reviewed are counted. Others that may apply to your
+            origin or HTS code are named under the total, which says it EXCLUDES them, so it never
+            reads as complete. Section 232 and China Section 301 aren&apos;t loaded yet.
+          </p>
+        </Faq>
+        <Faq question={'What does "pending expert review" mean?'}>
+          <p>
+            The program&apos;s duty data is loaded but hasn&apos;t been reviewed since it was added or
+            last changed, so it isn&apos;t counted in totals yet. A tariff editor reviews it against
+            the Federal Register and HTS notes and marks it reviewed.
+          </p>
+        </Faq>
+        <Faq question={'Why does it say "exempt if Section 232 applies"?'}>
+          <p>
+            Forced-labour and Brazil Section 301 duties don&apos;t apply to goods subject to Section
+            232 (steel, aluminium, copper, vehicles, wood products, semiconductors, patented
+            pharmaceuticals). Section 232 isn&apos;t calculated yet, so the calculator can&apos;t tell
+            which applies and names both instead of guessing.
+          </p>
+        </Faq>
+        <Faq question="Who can change duty rates or fees?">
+          <p>
+            Tariff editors and admins, in Tariff Calculator → Duty data. Ask an admin for the tariff
+            editor permission. Changes put the program back to pending review until someone reviews it.
           </p>
         </Faq>
         <Faq question="Why is my customs broker's figure different?">

@@ -223,7 +223,8 @@ export function PermissionsSection() {
         <li>
           <Ui>Tariff Calculator</Ui>: everyone signed in can calculate, save, and view saved
           estimates. Only whoever saved an estimate, or an admin, can delete it; nobody can
-          change one.
+          change one. Duty and fee data can only be changed by <Ui>tariff editors</Ui> and admins;
+          admins grant the tariff editor permission in Administration.
         </li>
         <li>
           <Ui>View only</Ui>: on anyone else&apos;s project you&apos;ll see &ldquo;Owned by

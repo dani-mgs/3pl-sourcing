@@ -12,6 +12,7 @@ import {
   parseDeleteUser,
   parseReassignOwner,
   parseUpdateUserDisplayName,
+  parseUpdateTariffEditor,
   parseUpdateUserRole,
 } from "@/lib/admin/parse-admin-input";
 
@@ -196,6 +197,38 @@ export async function updateUserRole(
 
   if (error) {
     console.error("updateUserRole error:", error);
+    return { error: "An unexpected error occurred." };
+  }
+
+  revalidatePath("/admin");
+  return { success: true };
+}
+
+// Grants or revokes the narrow tariff-editor permission (maintains duty and
+// fee data in the Tariff Calculator). Stored in app_metadata, which users
+// can't edit; GoTrue merges app_metadata keys, so the role is untouched, and
+// null removes the key. Takes effect on the user's next token refresh.
+export async function updateTariffEditor(
+  rawUserId: string,
+  rawGrant: boolean,
+): Promise<AdminActionState> {
+  if ((await getUserRole()) !== "admin") {
+    return { error: "You don't have permission to make this change." };
+  }
+
+  const parsed = parseUpdateTariffEditor({ userId: rawUserId, grant: rawGrant });
+  if (!parsed.ok) {
+    return { error: parsed.error };
+  }
+  const { userId, grant } = parsed.data;
+
+  const adminClient = createAdminClient();
+  const { error } = await adminClient.auth.admin.updateUserById(userId, {
+    app_metadata: { tariff_editor: grant ? true : null },
+  });
+
+  if (error) {
+    console.error("updateTariffEditor error:", error);
     return { error: "An unexpected error occurred." };
   }
 

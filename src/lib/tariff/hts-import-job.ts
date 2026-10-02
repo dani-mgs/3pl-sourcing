@@ -18,7 +18,9 @@ import { retryOnPgrst303, type Sleep } from "@/lib/supabase/pgrst303-retry";
 // chapter is in and the counts look sane, the release is activated in one
 // database transaction. A failed or partial import never replaces the current
 // release. Data access is passed in so this is testable without a network or
-// database.
+// database. Every store call is retried on PGRST303 only (retryOnPgrst303),
+// with the FX job's backoff and logging; each store call is safe to repeat
+// (a chapter is deleted and re-inserted whole).
 
 export type HtsReleaseStatus = "importing" | "current" | "superseded" | "failed";
 

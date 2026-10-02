@@ -2,7 +2,14 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import { ORIGIN_COUNTRY_CODES } from "./countries";
-import { excludedPrograms, matchProgramWarnings, totalLabel, type DutyProgramRow } from "./programs";
+import {
+  excludedCount,
+  excludedPrograms,
+  matchesProgramTrigger,
+  totalLabel,
+  type DutyProgramRow,
+  type ProgramWarning,
+} from "./programs";
 
 const program = (overrides: Partial<DutyProgramRow>): DutyProgramRow => ({
   key: "x",
@@ -32,63 +39,62 @@ const PROGRAMS: DutyProgramRow[] = [
   program({ key: "expired", status: "inactive", trigger_origins: ["CN"], sort_order: 5 }),
 ];
 
-const keys = (origin: string, code: string) => matchProgramWarnings(PROGRAMS, origin, code).map((w) => w.programKey);
-
-describe("matchProgramWarnings", () => {
-  test("China-origin steel warns for every program that may apply, in order", () => {
-    expect(keys("CN", "7208101500")).toEqual(["section_301_forced_labor", "section_301_china", "section_232_metals"]);
-  });
-
-  test("Canada-origin vehicles", () => {
-    expect(keys("CA", "8703230190")).toEqual(["section_301_forced_labor", "section_232_vehicles", "section_338_canada"]);
-  });
-
-  test("no warning when nothing matches; inactive programs never warn", () => {
-    expect(keys("KE", "6402993110")).toEqual([]);
-    expect(keys("CN", "6402993110")).not.toContain("expired");
-  });
-
-  test("a prefix must match from the start of the code", () => {
-    expect(keys("KE", "0872000000")).toEqual([]);
+describe("matchesProgramTrigger", () => {
+  const forcedLabour = PROGRAMS[0];
+  const metals = PROGRAMS[2];
+  test("origin and HTS triggers (NULL = any)", () => {
+    expect(matchesProgramTrigger(forcedLabour, "VN", "6402993110")).toBe(true);
+    expect(matchesProgramTrigger(forcedLabour, "KE", "6402993110")).toBe(false);
+    expect(matchesProgramTrigger(metals, "KE", "7208101500")).toBe(true);
+    // A prefix must match from the start of the code.
+    expect(matchesProgramTrigger(metals, "KE", "0872000000")).toBe(false);
   });
 });
 
-describe("indicative rates and the excluded-programs label", () => {
-  test("a program carries its flat rate for the origin, or null to just name it", () => {
-    const vn = matchProgramWarnings(PROGRAMS, "VN", "6402993110");
-    expect(vn).toEqual([expect.objectContaining({ programKey: "section_301_forced_labor", indicativePct: 12.5 })]);
-    // Germany is a minimum-total origin: named, no percentage.
-    const de = matchProgramWarnings(PROGRAMS, "DE", "6402993110");
-    expect(de[0].indicativePct).toBeNull();
-    // China steel: forced labour has a flat 12.5%; China 301 and 232 vary by product.
-    expect(matchProgramWarnings(PROGRAMS, "CN", "7208101500").map((w) => [w.programKey, w.indicativePct])).toEqual([
-      ["section_301_forced_labor", 12.5],
-      ["section_301_china", null],
-      ["section_232_metals", null],
-    ]);
+describe("the excluded-programs summary and label", () => {
+  const warning = (overrides: Partial<ProgramWarning>): ProgramWarning => ({
+    programKey: "k",
+    name: "K",
+    text: "",
+    sourceLabel: "",
+    sourceUrl: "",
+    ...overrides,
   });
 
-  test("Vietnam footwear, $10,000: forced labour could add up to 12.5% (about $1,250)", () => {
-    const excluded = excludedPrograms(matchProgramWarnings(PROGRAMS, "VN", "6402993110"), 10000);
+  test("uses each warning's hint; exempt-pending notes don't count", () => {
+    const excluded = excludedPrograms(
+      [
+        warning({ programKey: "a", name: "A", hint: "could add 10% (about $1,000.00, 9903.05.44); pending expert review" }),
+        warning({ programKey: "b", name: "B", hint: null }),
+        warning({ programKey: "c", name: "C", hint: "appears exempt", counted: false }),
+      ],
+      10000,
+    );
     expect(excluded).toEqual([
-      { programKey: "section_301_forced_labor", name: "X", indicativePct: 12.5, indicativeUsd: 1250 },
+      { programKey: "a", name: "A", hint: "could add 10% (about $1,000.00, 9903.05.44); pending expert review" },
+      { programKey: "b", name: "B", hint: null },
     ]);
   });
 
-  test("rough amounts round to the cent", () => {
-    const [first] = excludedPrograms([{ programKey: "k", name: "K", text: "", sourceLabel: "", sourceUrl: "", indicativePct: 12.5 }], 10001.25);
-    expect(first.indicativeUsd).toBe(1250.16);
+  test("warnings saved by PR 1 (indicativePct only) still read the same", () => {
+    expect(excludedPrograms([warning({ indicativePct: 12.5 })], 10000)[0].hint).toBe(
+      "could add up to 12.5% (about $1,250.00)",
+    );
+    expect(excludedPrograms([warning({ indicativePct: 12.5 })], 10001.25)[0].hint).toBe(
+      "could add up to 12.5% (about $1,250.16)",
+    );
+    expect(excludedPrograms([warning({})], 10000)[0].hint).toBeNull();
   });
 
-  test("warnings saved before indicative rates existed are just named", () => {
-    const [first] = excludedPrograms([{ programKey: "k", name: "K", text: "", sourceLabel: "", sourceUrl: "" }], 10000);
-    expect(first).toMatchObject({ indicativePct: null, indicativeUsd: null });
+  test("excludedCount reads a saved warnings snapshot", () => {
+    expect(excludedCount([warning({}), warning({ counted: false })])).toBe(1);
+    expect(excludedCount(null)).toBe(0);
   });
 
   test("the total's label says what it excludes", () => {
     expect(totalLabel(0)).toBe("Estimated duties and fees (USD)");
     expect(totalLabel(1)).toBe("Base duty + fees (USD) — EXCLUDES 1 additional duty program that may apply");
-    expect(totalLabel(3)).toBe("Base duty + fees (USD) — EXCLUDES 3 additional duty programs that may apply");
+    expect(totalLabel(3, true)).toBe("Duties + fees (USD) — EXCLUDES 3 additional duty programs that may apply");
   });
 });
 

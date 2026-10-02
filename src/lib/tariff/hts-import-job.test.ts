@@ -274,3 +274,82 @@ describe("runHtsImportJob", () => {
     expect(releases).toHaveLength(1);
   });
 });
+
+describe("PGRST303 retry around each Supabase call (same rules as the FX job)", () => {
+  const pgrst303 = () =>
+    Object.assign(new Error("JWT issued at future: token-detail-do-not-log"), { code: "PGRST303" });
+  const noSleep = async () => {};
+
+  test("retries a read that hits PGRST303, then carries on", async () => {
+    const { store } = memoryStore([currentRelease("2026HTSRev20")]);
+    const loadCurrent = store.loadCurrent;
+    let calls = 0;
+    store.loadCurrent = async () => {
+      calls += 1;
+      if (calls <= 2) throw pgrst303();
+      return loadCurrent();
+    };
+    const result = await runHtsImportJob(
+      { fetchJson: fakeApi("2026HTSRev20").fetchJson, store, now: clock(), sleep: noSleep },
+      OPTIONS,
+    );
+    expect(result).toEqual({ ok: true, status: "up_to_date", release: "2026HTSRev20" });
+    expect(calls).toBe(3);
+    const retryLogs = vi.mocked(console.warn).mock.calls.map((c) => String(c[0])).filter((m) => m.includes("PGRST303"));
+    expect(retryLogs).toEqual([
+      "HTS import: loading the current release: Supabase returned PGRST303 (attempt 1 of 6); retrying in 500 ms.",
+      "HTS import: loading the current release: Supabase returned PGRST303 (attempt 2 of 6); retrying in 1000 ms.",
+    ]);
+    // Only the label, attempt and code are logged, never the error's message.
+    expect(retryLogs.join(" ")).not.toContain("token-detail-do-not-log");
+  });
+
+  test("retries a chapter write that hits PGRST303; the chapter is stored once", async () => {
+    const { store, releases } = memoryStore([currentRelease("2026HTSRev19")]);
+    const replace = store.replaceChapter;
+    let failedOnce = false;
+    store.replaceChapter = async (id, chapter, lines) => {
+      if (chapter === "42" && !failedOnce) {
+        failedOnce = true;
+        throw pgrst303();
+      }
+      return replace(id, chapter, lines);
+    };
+    const result = await runHtsImportJob(
+      { fetchJson: fakeApi("2026HTSRev20").fetchJson, store, now: clock(), sleep: noSleep },
+      OPTIONS,
+    );
+    expect(result).toMatchObject({ ok: true, status: "activated", rows: LINES_PER_CHAPTER * 98 });
+    expect(failedOnce).toBe(true);
+    expect(releases.find((r) => r.name === "2026HTSRev20")!.lines.get("42")).toHaveLength(LINES_PER_CHAPTER);
+  });
+
+  test("other database errors are not retried", async () => {
+    const { store } = memoryStore([currentRelease("2026HTSRev20")]);
+    let calls = 0;
+    store.loadCurrent = async () => {
+      calls += 1;
+      throw Object.assign(new Error("permission denied"), { code: "42501" });
+    };
+    const result = await runHtsImportJob(
+      { fetchJson: fakeApi("2026HTSRev20").fetchJson, store, now: clock(), sleep: noSleep },
+      OPTIONS,
+    );
+    expect(result).toEqual({ ok: false, error: "HTS import database step failed.", release: "2026HTSRev20" });
+    expect(calls).toBe(1);
+  });
+
+  test("activates nothing when a write keeps failing with PGRST303", async () => {
+    const { store, releases } = memoryStore([currentRelease("2026HTSRev19")]);
+    store.replaceChapter = async () => {
+      throw pgrst303();
+    };
+    const result = await runHtsImportJob(
+      { fetchJson: fakeApi("2026HTSRev20").fetchJson, store, now: clock(), sleep: noSleep },
+      OPTIONS,
+    );
+    expect(result).toMatchObject({ ok: false, release: "2026HTSRev20" });
+    expect(releases.find((r) => r.name === "2026HTSRev19")!.status).toBe("current");
+    expect(releases.find((r) => r.name === "2026HTSRev20")!.status).toBe("importing");
+  });
+});

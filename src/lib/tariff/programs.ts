@@ -1,7 +1,7 @@
-// Additional-duty programs whose duties aren't in the calculator yet. Rather
-// than leave them out silently, each one whose trigger matches the origin and
-// HTS code is shown as a warning ("may apply — not included"), and the total
-// is labelled as excluding them.
+// Additional-duty programs and the warnings shown for those not (yet)
+// counted in an estimate's total. Which programs count is decided in
+// additional-duties.ts; this file holds the program rows, their warning
+// triggers and the "EXCLUDES" summary every total shows.
 
 export type DutyProgramRow = {
   key: string;
@@ -10,12 +10,23 @@ export type DutyProgramRow = {
   warning_text: string;
   trigger_origins: string[] | null;
   trigger_hts_prefixes: string[] | null;
-  // Origin → single known flat percent, where there is one (see migration).
+  // Origin → single known flat percent, read from the HTS and not
+  // expert-reviewed; only used while a program has no duty rows.
   indicative_rates: Record<string, unknown> | null;
   source_label: string;
   source_url: string;
   sort_order: number;
 };
+
+export type ProgramWarningKind =
+  // No duty rows yet.
+  | "not_loaded"
+  // Rows loaded, not yet reviewed by a tariff editor.
+  | "pending_review"
+  // Exempt if another program (not loaded yet) applies.
+  | "depends_on"
+  // Pending rows say it's exempt; shown, not counted.
+  | "exempt_pending";
 
 export type ProgramWarning = {
   programKey: string;
@@ -23,61 +34,66 @@ export type ProgramWarning = {
   text: string;
   sourceLabel: string;
   sourceUrl: string;
-  // The program's flat additional percent for this origin, when it has a
-  // single known one; null when the rate depends on the product, is a
-  // minimum-total rate, or isn't verified. Missing on rows saved before it existed.
+  // Rows saved before PR 2a have none of the fields below.
+  kind?: ProgramWarningKind;
+  // A flat percent the program could add, when there's a single one.
   indicativePct?: number | null;
+  // What's shown next to the program under the total, e.g. "could add up to
+  // 12.5% (about $1,250.00) — indicative rate from the HTS, not
+  // expert-reviewed". Null to just name it.
+  hint?: string | null;
+  // Whether the total excludes it (an exempt-pending note doesn't).
+  counted?: boolean;
 };
 
-function flatRate(rates: Record<string, unknown> | null, origin: string): number | null {
-  const value = rates?.[origin];
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
-}
-
-export function matchProgramWarnings(
-  programs: DutyProgramRow[],
+// Origin and HTS triggers (NULL = any). Deliberately broad: a warning that
+// may not apply beats a duty silently left out.
+export function matchesProgramTrigger(
+  program: Pick<DutyProgramRow, "trigger_origins" | "trigger_hts_prefixes">,
   originCountry: string,
   htsCode: string,
-): ProgramWarning[] {
-  return programs
-    .filter((p) => p.status === "not_loaded")
-    .filter((p) => !p.trigger_origins || p.trigger_origins.includes(originCountry))
-    .filter((p) => !p.trigger_hts_prefixes || p.trigger_hts_prefixes.some((prefix) => htsCode.startsWith(prefix)))
-    .sort((a, b) => a.sort_order - b.sort_order)
-    .map((p) => ({
-      programKey: p.key,
-      name: p.name,
-      text: p.warning_text,
-      sourceLabel: p.source_label,
-      sourceUrl: p.source_url,
-      indicativePct: flatRate(p.indicative_rates, originCountry),
-    }));
+): boolean {
+  return (
+    (!program.trigger_origins || program.trigger_origins.includes(originCountry)) &&
+    (!program.trigger_hts_prefixes || program.trigger_hts_prefixes.some((p) => htsCode.startsWith(p)))
+  );
 }
 
 export type ExcludedProgram = {
   programKey: string;
   name: string;
-  // "could add up to 12.5% (about $1,250.00)", or null to just name it.
-  indicativePct: number | null;
-  indicativeUsd: number | null;
+  hint: string | null;
 };
 
-// What the total leaves out. Used everywhere an estimate's total is shown,
-// so the label reads the same on the live, saved and listed estimates.
-export function excludedPrograms(warnings: ProgramWarning[], customsValueUsd: number): ExcludedProgram[] {
-  return warnings.map((w) => {
-    const pct = w.indicativePct ?? null;
-    return {
-      programKey: w.programKey,
-      name: w.name,
-      indicativePct: pct,
-      indicativeUsd: pct == null ? null : Math.round(customsValueUsd * pct) / 100,
-    };
-  });
+function legacyHint(w: ProgramWarning, customsValueUsd: number): string | null {
+  const pct = w.indicativePct ?? null;
+  if (pct == null) return null;
+  const about = Math.round(customsValueUsd * pct) / 100;
+  const amount = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(about);
+  return `could add up to ${pct}% (about ${amount})`;
 }
 
-export function totalLabel(excludedCount: number): string {
+// What the total leaves out. Used everywhere an estimate's total is shown,
+// so the label reads the same on live, saved and listed estimates.
+export function excludedPrograms(warnings: ProgramWarning[], customsValueUsd: number): ExcludedProgram[] {
+  return warnings
+    .filter((w) => w.counted !== false)
+    .map((w) => ({
+      programKey: w.programKey,
+      name: w.name,
+      hint: w.hint !== undefined ? w.hint : legacyHint(w, customsValueUsd),
+    }));
+}
+
+export function excludedCount(warnings: unknown): number {
+  return Array.isArray(warnings)
+    ? warnings.filter((w) => !(w && typeof w === "object" && (w as ProgramWarning).counted === false)).length
+    : 0;
+}
+
+export function totalLabel(excludedCount: number, includesAdditional = false): string {
+  const what = includesAdditional ? "Duties + fees (USD)" : "Base duty + fees (USD)";
   if (excludedCount === 0) return "Estimated duties and fees (USD)";
   const programs = excludedCount === 1 ? "program" : "programs";
-  return `Base duty + fees (USD) — EXCLUDES ${excludedCount} additional duty ${programs} that may apply`;
+  return `${what} — EXCLUDES ${excludedCount} additional duty ${programs} that may apply`;
 }

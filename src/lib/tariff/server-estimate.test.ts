@@ -18,6 +18,14 @@ function stubSupabase(tables: Record<string, Row[]>) {
           filters.push((r) => r[column] === value);
           return chain;
         },
+        in: (column: string, values: unknown[]) => {
+          filters.push((r) => values.includes(r[column]));
+          return chain;
+        },
+        gt: (column: string, value: string) => {
+          filters.push((r) => String(r[column]) > value);
+          return chain;
+        },
         like: (column: string, pattern: string) => {
           const regex = new RegExp(`^${pattern.replace(/%/g, ".*").replace(/_/g, ".")}$`);
           filters.push((r) => regex.test(String(r[column])));
@@ -74,6 +82,11 @@ function tables(extra: Partial<Record<string, Row[]>> = {}) {
     hts_column2_countries: [{ country_code: "RU", effective_from: "2022-04-09", effective_to: null }],
     duty_programs: PROGRAMS,
     fx_rates: [{ currency: "EUR", rate_date: "2026-10-01", rate_to_usd: "1.08" }],
+    additional_duties: [],
+    additional_duty_scope: [],
+    duty_program_review_status: [],
+    hts_chapter99_changes: [],
+    profiles: [],
     ...extra,
   } as Record<string, Row[]>;
 }
@@ -116,10 +129,51 @@ describe("buildEstimate", () => {
       release: { name: "2026HTSRev20", release_start_date: "2026-09-28" },
     });
     expect(result.estimate.lines[1]).toMatchObject({ code: "mpf_formal", rateText: "0.3464% (min $34.58, max $670.86)" });
-    expect(result.estimate.warnings.map((w) => [w.programKey, w.indicativePct])).toEqual([
-      ["section_301_forced_labor", 12.5],
-      ["section_301_china", null],
+    expect(result.estimate.warnings.map((w) => [w.programKey, w.kind, w.indicativePct])).toEqual([
+      ["section_301_forced_labor", "not_loaded", 12.5],
+      ["section_301_china", "not_loaded", null],
     ]);
+    expect(result.estimate.additionalDutiesUsd).toBe(0);
+  });
+
+  test("reviewed duties in force are added to the total, with who reviewed them", async () => {
+    const duty = {
+      id: "d1", program_key: "section_301_forced_labor", chapter99_heading: "9903.05.84", chapter99_heading_at_minimum: null,
+      label: "Vietnam", rate_type: "add", rate_pct: 12.5, origin_countries: ["VN"], hts_scope: "all", condition_text: null,
+      excludes_programs: ["section_232_metals"], exclusion_heading: "9903.05.90", filing_order: 10,
+      effective_from: "2026-07-24", effective_to: null, legal_status: "in_force_under_litigation",
+      source_label: "FR 2026-15181", source_url: "https://www.federalregister.gov/", source_checked_on: "2026-10-02",
+    };
+    const ended = { ...duty, id: "d0", chapter99_heading: "9903.05.99", rate_pct: 50, effective_to: "2026-09-30" };
+    const result = await buildEstimate(
+      stubSupabase(
+        tables({
+          additional_duties: [duty, ended],
+          duty_program_review_status: [
+            { program_key: "section_301_forced_labor", review_status: "reviewed", last_reviewed_at: "2026-10-01T10:00:00Z", last_reviewed_by: "u1" },
+          ],
+          profiles: [{ id: "u1", email: "dani@test.local", first_name: "Dani" }],
+          hts_chapter99_changes: [{ hts_code: "99030584", detected_at: "2026-10-01T12:00:00Z" }],
+        }),
+      ),
+      input({ originCountry: "VN" }),
+    );
+    if (!result.ok) throw new Error(result.error);
+    expect(result.estimate).toMatchObject({ baseDutyUsd: 600, additionalDutiesUsd: 1250, totalUsd: 1897.14 });
+    expect(result.estimate.lines.map((l) => [l.kind, l.code, l.amountUsd])).toEqual([
+      ["duty", "general", 600],
+      ["additional", "section_301_forced_labor", 1250],
+      ["fee", "mpf_formal", 34.64],
+      ["fee", "hmf", 12.5],
+    ]);
+    expect(result.estimate.lines[1]).toMatchObject({ legalStatus: "In force — under litigation", heading: "9903.05.84" });
+    expect(result.estimate.dutyReviews).toEqual([
+      expect.objectContaining({
+        reviewedByName: "Dani",
+        staleReason: "1 Chapter 99 heading changed in the HTS since",
+      }),
+    ]);
+    expect(estimateToRow(result.estimate, null)).toMatchObject({ additional_duties_usd: 1250, total_usd: 1897.14 });
   });
 
   test("a column 2 origin uses the column 2 rate", async () => {
@@ -224,7 +278,7 @@ describe("estimateToRow", () => {
       total_usd: 427.14,
       exchange_rate_source: null,
     });
-    expect(row.total_usd).toBe(row.base_duty_usd + row.fees_usd);
+    expect(row.total_usd).toBe(row.base_duty_usd + row.additional_duties_usd + row.fees_usd);
   });
 });
 
