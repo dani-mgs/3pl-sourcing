@@ -2,7 +2,7 @@
 -- on any table or view in public, and every read is refused outright.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(26);
 
 -- Strict: anon holds no privilege at all on any public table or view. Lists
 -- the offending table and privilege if one creeps back in (e.g. a new table
@@ -22,29 +22,36 @@ select is_empty(
 select set_eq(
   $$ select c.relname::text from pg_class c join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relkind in ('r', 'v') $$,
-  array['clients', 'customs_fees', 'duty_estimates', 'duty_programs', 'forwarder_projects',
-        'forwarder_quotes', 'forwarders', 'fx_rates', 'fx_rates_latest', 'hts_column2_countries',
-        'hts_lines', 'hts_releases', 'profiles', 'rate_details', 'recommendation',
-        'three_pl_projects', 'three_pl_providers'],
+  array['additional_duties', 'additional_duty_scope', 'clients', 'customs_fees', 'duty_estimates',
+        'duty_program_review_status', 'duty_program_reviews', 'duty_programs', 'forwarder_projects',
+        'forwarder_quotes', 'forwarders', 'fx_rates', 'fx_rates_latest', 'hts_chapter99_changes',
+        'hts_column2_countries', 'hts_lines', 'hts_releases', 'profiles', 'rate_details',
+        'recommendation', 'tariff_data_history', 'three_pl_projects', 'three_pl_providers'],
   'the read checks below cover every public table and view'
 );
 
 set local role anon;
+select throws_ok('select * from additional_duties', '42501', null, 'anon cannot read additional_duties');
+select throws_ok('select * from additional_duty_scope', '42501', null, 'anon cannot read additional_duty_scope');
 select throws_ok('select * from clients', '42501', null, 'anon cannot read clients');
 select throws_ok('select * from customs_fees', '42501', null, 'anon cannot read customs_fees');
 select throws_ok('select * from duty_estimates', '42501', null, 'anon cannot read duty_estimates');
+select throws_ok('select * from duty_program_review_status', '42501', null, 'anon cannot read duty_program_review_status');
+select throws_ok('select * from duty_program_reviews', '42501', null, 'anon cannot read duty_program_reviews');
 select throws_ok('select * from duty_programs', '42501', null, 'anon cannot read duty_programs');
 select throws_ok('select * from forwarder_projects', '42501', null, 'anon cannot read forwarder_projects');
 select throws_ok('select * from forwarder_quotes', '42501', null, 'anon cannot read forwarder_quotes');
 select throws_ok('select * from forwarders', '42501', null, 'anon cannot read forwarders');
 select throws_ok('select * from fx_rates', '42501', null, 'anon cannot read fx_rates');
 select throws_ok('select * from fx_rates_latest', '42501', null, 'anon cannot read fx_rates_latest');
+select throws_ok('select * from hts_chapter99_changes', '42501', null, 'anon cannot read hts_chapter99_changes');
 select throws_ok('select * from hts_column2_countries', '42501', null, 'anon cannot read hts_column2_countries');
 select throws_ok('select * from hts_lines', '42501', null, 'anon cannot read hts_lines');
 select throws_ok('select * from hts_releases', '42501', null, 'anon cannot read hts_releases');
 select throws_ok('select * from profiles', '42501', null, 'anon cannot read profiles');
 select throws_ok('select * from rate_details', '42501', null, 'anon cannot read rate_details');
 select throws_ok('select * from recommendation', '42501', null, 'anon cannot read recommendation');
+select throws_ok('select * from tariff_data_history', '42501', null, 'anon cannot read tariff_data_history');
 select throws_ok('select * from three_pl_projects', '42501', null, 'anon cannot read three_pl_projects');
 select throws_ok('select * from three_pl_providers', '42501', null, 'anon cannot read three_pl_providers');
 select throws_ok(
