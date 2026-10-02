@@ -1,0 +1,1591 @@
+{
+ "source": "USITC HTS REST API exportList, release 2026HTSRev20, fetched 2026-10-02 (headings 0805, 7208 and 8471 only)",
+ "08": [
+  {
+   "htsno": "0805",
+   "indent": "0",
+   "description": "Citrus fruit, fresh or dried:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.10.00",
+   "indent": "1",
+   "description": "Oranges",
+   "units": [],
+   "general": "1.9¢/kg",
+   "special": "Free (AU,BH, CL,CO,D,E,IL, JO,KR,MA, OM,P,PA,PE,S,SG)",
+   "other": "2.2¢/kg",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.10.00.20",
+   "indent": "2",
+   "description": "Temple oranges",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "2",
+   "description": "Other:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "0805.10.00.50",
+   "indent": "3",
+   "description": "Certified organic",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.10.00.60",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "1",
+   "description": "Mandarins (including tangerines and satsumas); clementines, wilkings and similar citrus hybrids:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "0805.21.00",
+   "indent": "2",
+   "description": "Mandarins (including tangerines and satsumas)",
+   "units": [],
+   "general": "1.9¢/kg",
+   "special": "Free (AU,BH, CL,CO,D,E,IL, JO,KR,MA, OM,P,PA,PE,S,SG)",
+   "other": "2.2¢/kg ",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.21.00.10",
+   "indent": "3",
+   "description": "Tangerines",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.21.00.90",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.22.00.00",
+   "indent": "2",
+   "description": "Clementines",
+   "units": [
+    "kg"
+   ],
+   "general": "1.9¢/kg",
+   "special": "Free (AU,BH, CL,CO,D,E,IL, JO,KR,MA, OM,P,PA,PE,S,SG)",
+   "other": "2.2¢/kg ",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.29.00.00",
+   "indent": "2",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "1.9¢/kg",
+   "special": "Free (AU,BH, CL,CO,D,E,IL,JO,KR,MA, OM,P,PA,PE,S,SG)",
+   "other": "2.2¢/kg ",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.40",
+   "indent": "1",
+   "description": "Grapefruit and pomelos:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.40.40",
+   "indent": "2",
+   "description": "If entered during the period from August 1 to September 30, inclusive, in any year",
+   "units": [],
+   "general": "1.9¢/kg",
+   "special": "Free (AU,BH,CL,CO,D,E,IL,JO,KR,MA,OM,P,PA,PE,S,SG)",
+   "other": "3.3¢/kg",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.40.40.10",
+   "indent": "3",
+   "description": "Grapefruit",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.40.40.90",
+   "indent": "3",
+   "description": "Pomelo",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.40.60",
+   "indent": "2",
+   "description": "If entered during the month of October",
+   "units": [],
+   "general": "1.5¢/kg",
+   "special": "Free (AU,BH,CL,CO,D,E,IL,JO,KR,MA,OM,P,PA,PE,S,SG)",
+   "other": "3.3¢/kg",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.40.60.10",
+   "indent": "3",
+   "description": "Grapefruit",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.40.60.90",
+   "indent": "3",
+   "description": "Pomelo",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.40.80",
+   "indent": "2",
+   "description": "If entered at any other time",
+   "units": [],
+   "general": "2.5¢/kg",
+   "special": "Free (AU,BH,CL,CO,D,E,IL,JO,KR,MA,OM,P,PA,PE,S,SG)",
+   "other": "3.3¢/kg",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.40.80.10",
+   "indent": "3",
+   "description": "Grapefruit",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.40.80.90",
+   "indent": "3",
+   "description": "Pomelo",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.50",
+   "indent": "1",
+   "description": "Lemons (Citrus limon, Citrus limonum) and limes (Citrus aurantifolia, Citrus latifolia):",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.50.20",
+   "indent": "2",
+   "description": "Lemons",
+   "units": [],
+   "general": "2.2¢/kg",
+   "special": "Free (A+,AU,BH,CL,CO,D,E, IL,JO,KR,MA,OM,P,PA,PE,S, SG)",
+   "other": "5.5¢/kg",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.50.20.10",
+   "indent": "3",
+   "description": "Certified organic",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.50.20.50",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "2",
+   "description": "Limes:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "0805.50.30",
+   "indent": "3",
+   "description": "Tahitian limes, Persian limes and other limes of the Citrus latifolia variety",
+   "units": [
+    "kg"
+   ],
+   "general": "0.8%",
+   "special": "Free (A*,AU,BH,CL,CO,D,E,IL,JO,KR,MA,OM,P,PA,PE,S,SG)",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.50.30.20",
+   "indent": "4",
+   "description": "Certified organic",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.50.30.40",
+   "indent": "4",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.50.40.00",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "1.8¢/kg",
+   "special": "Free (A,AU,BH,CL,CO,D,E,IL,JO,KR,MA,OM,P,PA,PE,S,SG)",
+   "other": "4.4¢/kg",
+   "footnotes": []
+  },
+  {
+   "htsno": "0805.90.01.00",
+   "indent": "1",
+   "description": "Other, including kumquats, citrons and bergamots",
+   "units": [
+    "kg"
+   ],
+   "general": "0.8%",
+   "special": "Free (A*,AU,BH,CL,CO,D,E,IL,JO,KR,MA,OM,P,PA,PE,S,SG)",
+   "other": "35%",
+   "footnotes": []
+  }
+ ],
+ "72": [
+  {
+   "htsno": "7208",
+   "indent": "0",
+   "description": "Flat-rolled products of iron or nonalloy steel, of a width of 600 mm or more, hot-rolled, not clad, plated or coated:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.10",
+   "indent": "1",
+   "description": "In coils, not further worked than hot-rolled, with patterns in relief:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.10.15.00",
+   "indent": "2",
+   "description": "Pickled",
+   "units": [
+    "kg"
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "0.4¢/kg + 20%",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "2",
+   "description": "Other:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "7208.10.30.00",
+   "indent": "3",
+   "description": "Of a thickness of 4.75 mm or more",
+   "units": [
+    "kg"
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "20%",
+   "footnotes": [
+    {
+     "columns": [
+      "other"
+     ],
+     "value": "See 9903.90.09. ",
+     "type": "endnote"
+    }
+   ]
+  },
+  {
+   "htsno": "7208.10.60.00",
+   "indent": "3",
+   "description": "Of a thickness of less than 4.75 mm",
+   "units": [
+    "kg"
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "20%",
+   "footnotes": [
+    {
+     "columns": [
+      "other"
+     ],
+     "value": "See 9903.90.09. ",
+     "type": "endnote"
+    }
+   ]
+  },
+  {
+   "htsno": "",
+   "indent": "1",
+   "description": "Other, in coils, not further worked than hot-rolled, pickled:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "7208.25",
+   "indent": "2",
+   "description": "Of a thickness of 4.75 mm or more:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.25.30.00",
+   "indent": "3",
+   "description": "Of high-strength steel",
+   "units": [
+    "kg"
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "20%",
+   "footnotes": [
+    {
+     "columns": [
+      "other"
+     ],
+     "value": "See 9903.90.09. ",
+     "type": "endnote"
+    }
+   ]
+  },
+  {
+   "htsno": "7208.25.60.00",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "0.4¢/kg + 20%",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.26.00",
+   "indent": "2",
+   "description": "Of a thickness of 3 mm or more but less than 4.75 mm",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "0.4¢/kg + 20%",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.26.00.30",
+   "indent": "3",
+   "description": "High-strength steel",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.26.00.60",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.27.00",
+   "indent": "2",
+   "description": "Of a thickness of less than 3 mm",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "0.4¢/kg + 20%",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "3",
+   "description": "High-strength steel:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "7208.27.00.40",
+   "indent": "4",
+   "description": "“Advanced” or “ultra” of a kind described in statistical note 4 to this chapter",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.27.00.45",
+   "indent": "4",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.27.00.60",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "1",
+   "description": "Other, in coils, not further worked than hot-rolled:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "7208.36.00",
+   "indent": "2",
+   "description": "Of a thickness exceeding 10 mm",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "20%",
+   "footnotes": [
+    {
+     "columns": [
+      "other"
+     ],
+     "value": "See 9903.90.09. ",
+     "type": "endnote"
+    }
+   ]
+  },
+  {
+   "htsno": "7208.36.00.30",
+   "indent": "3",
+   "description": "High-strength steel",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.36.00.60",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.37.00",
+   "indent": "2",
+   "description": "Of a thickness of 4.75 mm or more but not exceeding 10 mm",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "20%",
+   "footnotes": [
+    {
+     "columns": [
+      "other"
+     ],
+     "value": "See 9903.90.09. ",
+     "type": "endnote"
+    }
+   ]
+  },
+  {
+   "htsno": "7208.37.00.30",
+   "indent": "3",
+   "description": "High-strength steel",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.37.00.60",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.38.00",
+   "indent": "2",
+   "description": "Of a thickness of 3 mm or more but less than 4.75 mm",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "20%",
+   "footnotes": [
+    {
+     "columns": [
+      "other"
+     ],
+     "value": "See 9903.90.09. ",
+     "type": "endnote"
+    }
+   ]
+  },
+  {
+   "htsno": "7208.38.00.15",
+   "indent": "3",
+   "description": "High-strength steel",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "3",
+   "description": "Other:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "7208.38.00.30",
+   "indent": "4",
+   "description": "With untrimmed edges",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.38.00.90",
+   "indent": "4",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.39.00",
+   "indent": "2",
+   "description": "Of a thickness of less than 3 mm",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "20%",
+   "footnotes": [
+    {
+     "columns": [
+      "other"
+     ],
+     "value": "See 9903.90.09. ",
+     "type": "endnote"
+    }
+   ]
+  },
+  {
+   "htsno": "",
+   "indent": "3",
+   "description": "High-strength steel:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "7208.39.00.20",
+   "indent": "4",
+   "description": "“Advanced” or “ultra” of a kind described in statistical note 4 to this chapter",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.39.00.25",
+   "indent": "4",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "3",
+   "description": "Other:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "7208.39.00.30",
+   "indent": "4",
+   "description": "With untrimmed edges",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.39.00.90",
+   "indent": "4",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.40",
+   "indent": "1",
+   "description": "Not in coils, not further worked than hot-rolled, with patterns in relief:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.40.30",
+   "indent": "2",
+   "description": "Of a thickness of 4.75 mm or more",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "20%",
+   "footnotes": [
+    {
+     "columns": [
+      "other"
+     ],
+     "value": "See 9903.90.09. ",
+     "type": "endnote"
+    }
+   ]
+  },
+  {
+   "htsno": "7208.40.30.30",
+   "indent": "3",
+   "description": "Of a thickness exceeding 10 mm",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.40.30.60",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.40.60",
+   "indent": "2",
+   "description": "Of a thickness of less than 4.75 mm",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "20%",
+   "footnotes": [
+    {
+     "columns": [
+      "other"
+     ],
+     "value": "See 9903.90.09. ",
+     "type": "endnote"
+    }
+   ]
+  },
+  {
+   "htsno": "7208.40.60.30",
+   "indent": "3",
+   "description": "Of a thickness less than 3 mm",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.40.60.60",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "1",
+   "description": "Other, not in coils, not further worked than hot-rolled:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "7208.51.00",
+   "indent": "2",
+   "description": "Of a thickness exceeding 10 mm",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "20%",
+   "footnotes": [
+    {
+     "columns": [
+      "other"
+     ],
+     "value": "See 9903.90.09. ",
+     "type": "endnote"
+    }
+   ]
+  },
+  {
+   "htsno": "7208.51.00.30",
+   "indent": "3",
+   "description": "Universal mill plate",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "3",
+   "description": "Other:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "7208.51.00.45",
+   "indent": "4",
+   "description": "Of high-strength steel",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.51.00.60",
+   "indent": "4",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "7208.52.00.00",
+   "indent": "2",
+   "description": "Of a thickness of 4.75 mm or more but not exceeding 10 mm",
+   "units": [
+    "kg"
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "20%",
+   "footnotes": [
+    {
+     "columns": [
+      "other"
+     ],
+     "value": "See 9903.90.09. ",
+     "type": "endnote"
+    }
+   ]
+  },
+  {
+   "htsno": "7208.53.00.00",
+   "indent": "2",
+   "description": "Of a thickness of 3 mm or more but less than 4.75 mm",
+   "units": [
+    "kg"
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "20%",
+   "footnotes": [
+    {
+     "columns": [
+      "other"
+     ],
+     "value": "See 9903.90.09. ",
+     "type": "endnote"
+    }
+   ]
+  },
+  {
+   "htsno": "7208.54.00.00",
+   "indent": "2",
+   "description": "Of a thickness of less than 3 mm",
+   "units": [
+    "kg"
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "20%",
+   "footnotes": [
+    {
+     "columns": [
+      "other"
+     ],
+     "value": "See 9903.90.09. ",
+     "type": "endnote"
+    }
+   ]
+  },
+  {
+   "htsno": "7208.90.00.00",
+   "indent": "1",
+   "description": "Other",
+   "units": [
+    "kg"
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "20%",
+   "footnotes": [
+    {
+     "columns": [
+      "other"
+     ],
+     "value": "See 9903.90.09. ",
+     "type": "endnote"
+    }
+   ]
+  }
+ ],
+ "84": [
+  {
+   "htsno": "8471",
+   "indent": "0",
+   "description": "Automatic data processing machines and units thereof; magnetic or optical readers, machines for transcribing data onto data media in coded form and machines for processing such data, not elsewhere specified or included:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.30.01.00",
+   "indent": "1",
+   "description": "Portable automatic data processing machines, weighing not more than 10 kg, consisting of at least a central processing unit, a keyboard and a display",
+   "units": [
+    "No."
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "1",
+   "description": "Other automatic data processing machines:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "8471.41.01",
+   "indent": "2",
+   "description": "Comprising in the same housing at least a central processing unit and an input and output unit, whether or not combined",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.41.01.10",
+   "indent": "3",
+   "description": "With cathode-ray tube (CRT)",
+   "units": [
+    "No."
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.41.01.50",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "No."
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.49.00.00",
+   "indent": "2",
+   "description": "Other, entered in the form of systems",
+   "units": [
+    "No."
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.50.01",
+   "indent": "1",
+   "description": "Processing units other than those of subheading 8471.41 or 8471.49, whether or not containing in the same housing one or two of the following types of unit: storage units, input units, output units",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.50.01.10",
+   "indent": "2",
+   "description": "With cathode-ray tube (CRT)",
+   "units": [
+    "No."
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.50.01.50",
+   "indent": "2",
+   "description": "Other",
+   "units": [
+    "No."
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.60",
+   "indent": "1",
+   "description": "Input or output units, whether or not containing storage units in the same housing:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.60.10",
+   "indent": "2",
+   "description": "Combined input/output units",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.60.10.10",
+   "indent": "3",
+   "description": "With cathode-ray tube (CRT)",
+   "units": [
+    "No."
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.60.10.50",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "No."
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "2",
+   "description": "Other:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "8471.60.20.00",
+   "indent": "3",
+   "description": "Keyboards",
+   "units": [
+    "No."
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.60.70.00",
+   "indent": "3",
+   "description": "Units suitable for physical incorporation into automatic data processing machines or units thereof",
+   "units": [
+    "No."
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.60.80.00",
+   "indent": "3",
+   "description": "Optical scanners and magnetic ink recognition devices",
+   "units": [
+    "No."
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.60.90",
+   "indent": "3",
+   "description": "Other",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.60.90.30",
+   "indent": "4",
+   "description": "Card key and magnetic media entry devices",
+   "units": [
+    "No."
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.60.90.50",
+   "indent": "4",
+   "description": "Other",
+   "units": [
+    "No."
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.70",
+   "indent": "1",
+   "description": "Storage units:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "2",
+   "description": "Magnetic disk drive units:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "",
+   "indent": "3",
+   "description": "For a disk of a diameter exceeding 21 cm:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "8471.70.10.00",
+   "indent": "4",
+   "description": "Without read-write unit assembled therein; read-write units entered separately",
+   "units": [
+    "No."
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.70.20.00",
+   "indent": "4",
+   "description": "Units for physical incorporation into automatic data processing machines or units thereof",
+   "units": [
+    "No."
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.70.30.00",
+   "indent": "4",
+   "description": "Other",
+   "units": [
+    "No."
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "3",
+   "description": "Other:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "8471.70.40",
+   "indent": "4",
+   "description": "Not assembled in cabinets, and without attached external power supply",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.70.40.35",
+   "indent": "5",
+   "description": "Flexible (floppy) magnetic disk drive units",
+   "units": [
+    "No."
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.70.40.65",
+   "indent": "5",
+   "description": "Hard magnetic disk drive units",
+   "units": [
+    "No."
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.70.40.95",
+   "indent": "5",
+   "description": "Other",
+   "units": [
+    "No."
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.70.50",
+   "indent": "4",
+   "description": "Other",
+   "units": [],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.70.50.35",
+   "indent": "5",
+   "description": "Flexible (floppy) magnetic disk drive units",
+   "units": [
+    "No."
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.70.50.65",
+   "indent": "5",
+   "description": "Hard magnetic disk drive units",
+   "units": [
+    "No."
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.70.50.95",
+   "indent": "5",
+   "description": "Other",
+   "units": [
+    "No."
+   ],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "2",
+   "description": "Other storage units:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "8471.70.60.00",
+   "indent": "3",
+   "description": "Not assembled in cabinets for placing on a table, desk, wall, floor or similar place",
+   "units": [
+    "No."
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.70.90.00",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "No."
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.80",
+   "indent": "1",
+   "description": "Other units of automatic data processing machines:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.80.10.00",
+   "indent": "2",
+   "description": "Control or adapter units",
+   "units": [
+    "No."
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "",
+   "indent": "2",
+   "description": "Other:",
+   "units": [],
+   "general": "",
+   "special": "",
+   "other": "",
+   "footnotes": null
+  },
+  {
+   "htsno": "8471.80.40.00",
+   "indent": "3",
+   "description": "Units suitable for physical incorporation into automatic data processing machines",
+   "units": [
+    "No."
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.80.90.00",
+   "indent": "3",
+   "description": "Other",
+   "units": [
+    "No."
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  },
+  {
+   "htsno": "8471.90.00.00",
+   "indent": "1",
+   "description": "Other",
+   "units": [
+    "No."
+   ],
+   "general": "Free",
+   "special": "",
+   "other": "35%",
+   "footnotes": []
+  }
+ ]
+}

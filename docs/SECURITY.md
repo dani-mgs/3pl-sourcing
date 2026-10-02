@@ -17,10 +17,12 @@
 
 ### Service-role exception: cron routes
 
-- The service-role client (`src/lib/supabase/admin-client.ts`) bypasses RLS and is otherwise only used after an explicit admin-role check. The single exception is **cron routes under `/api/cron/`** (currently only `/api/cron/fx-rates`), which run with no user.
+- The service-role client (`src/lib/supabase/admin-client.ts`) bypasses RLS and is otherwise only used after an explicit admin-role check. The exception is **cron routes under `/api/cron/`**, which run with no user. There are two:
+  - `/api/cron/fx-rates` — upserts `fx_rates` only.
+  - `/api/cron/hts-release` — imports the USITC HTS for the Tariff Calculator. Touches only `hts_releases`, `hts_lines`, and the `activate_hts_release()` function (executable by `service_role` only; refuses to activate a partial import). Its database access is confined to `src/lib/tariff/hts-import-store.ts`.
 - Each cron route must call `isAuthorizedCronRequest()` (`src/lib/cron-auth.ts`) before anything else: it requires `Authorization: Bearer <CRON_SECRET>`, compares in constant time, and fails closed when `CRON_SECRET` isn't set. Vercel Cron sends this header automatically.
 - The proxy's login redirect (`src/proxy.ts`, Next.js 16's replacement for `middleware.ts`) skips exactly the `/api/cron/` prefix (`CRON_ROUTE_PREFIX` in `src/lib/supabase/middleware.ts`) and nothing else; security headers still apply.
-- Keep each cron route's service-role use to the one table it maintains (`/api/cron/fx-rates` only upserts `fx_rates`). Treat the external data it fetches as untrusted: validate it (Zod) before writing.
+- Keep each cron route's service-role use to the tables it maintains (listed above). Treat the external data it fetches as untrusted: validate it (Zod) before writing. The HTS import validates every exported row, strips markup from descriptions, and rejects a chapter whole if any row is malformed.
 
 ### Secrets Management
 

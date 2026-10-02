@@ -2,8 +2,8 @@ import { createAdminClient } from "@/lib/supabase/admin-client";
 import { isAuthorizedCronRequest } from "@/lib/cron-auth";
 import { runFxRatesJob } from "@/lib/fx/fx-rates-job";
 
-// Daily FX rates, run by Vercel Cron (schedule in vercel.json). This is the
-// ONLY place the service-role client is used without an admin check: it's
+// Daily FX rates, run by Vercel Cron (schedule in vercel.json). One of the two
+// cron routes that use the service-role client without an admin check: it's
 // protected by CRON_SECRET instead, and only upserts fx_rates (see
 // docs/SECURITY.md, "Service-role exception: cron routes").
 

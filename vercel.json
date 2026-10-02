@@ -8,6 +8,22 @@
     {
       "path": "/api/cron/fx-rates",
       "schedule": "30 23 * * *"
+    },
+    {
+      "path": "/api/cron/hts-release",
+      "schedule": "15 3 * * *"
+    },
+    {
+      "path": "/api/cron/hts-release",
+      "schedule": "15 9 * * *"
+    },
+    {
+      "path": "/api/cron/hts-release",
+      "schedule": "15 15 * * *"
+    },
+    {
+      "path": "/api/cron/hts-release",
+      "schedule": "15 21 * * *"
     }
   ]
 }
