@@ -55,6 +55,32 @@ describe("rowToSavedEstimate", () => {
     });
   });
 
+  test("a row saved before additional duties existed reads as none", () => {
+    expect(rowToSavedEstimate(row)!.estimate).toMatchObject({ additionalDutiesUsd: 0, dutyReviews: [] });
+  });
+
+  test("additional-duty lines, pending warnings and the review snapshot round-trip", () => {
+    const saved = rowToSavedEstimate({
+      ...row,
+      base_duty_usd: 600,
+      additional_duties_usd: 1000,
+      fees_usd: 47.14,
+      total_usd: 1647.14,
+      lines: [
+        ...row.lines,
+        { kind: "additional", code: "section_301_forced_labor", label: "Section 301 (forced labour) (India)", rateText: "+10%", amountUsd: 1000, detail: "10% of $10,000.00", sourceLabel: "FR 2026-15181", sourceUrl: "https://www.federalregister.gov/", effectiveFrom: "2026-07-24", heading: "9903.05.44", effectiveTo: null, legalStatus: "In force", sourceCheckedOn: "2026-10-02", notes: [] },
+      ],
+      warnings: [{ programKey: "section_301_china", name: "Section 301 (China)", text: "May apply.", sourceLabel: "CBP", sourceUrl: "https://www.cbp.gov/", kind: "not_loaded", indicativePct: null, hint: null, counted: true }],
+      duty_reviews: [{ programKey: "section_301_forced_labor", name: "Section 301 (forced labour)", status: "reviewed", reviewedAt: "2026-10-02T09:00:00Z", reviewedByName: "Dani", staleReason: null }],
+    });
+    expect(saved!.estimate).toMatchObject({
+      additionalDutiesUsd: 1000,
+      totalUsd: 1647.14,
+      dutyReviews: [{ reviewedByName: "Dani" }],
+    });
+    expect(saved!.estimate.lines[1]).toMatchObject({ kind: "additional", heading: "9903.05.44" });
+  });
+
   test("a malformed snapshot is reported as unavailable, not thrown", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     expect(rowToSavedEstimate({ ...row, lines: [{ kind: "bogus" }] })).toBeNull();

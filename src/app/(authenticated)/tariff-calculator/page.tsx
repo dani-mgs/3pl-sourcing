@@ -7,12 +7,8 @@ import { ORIGIN_COUNTRIES, countryName } from "@/lib/tariff/countries";
 import { loadAuthorNames } from "@/lib/tariff/estimate-authors";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
 import { HTS_SOURCE_URL } from "@/lib/tariff/calculate";
+import { excludedCount } from "@/lib/tariff/programs";
 import { EstimateForm } from "./estimate-form";
-
-// Programs a saved estimate's total leaves out (its warnings snapshot).
-function excludedCount(warnings: unknown): number {
-  return Array.isArray(warnings) ? warnings.length : 0;
-}
 
 // Tariff Calculator: estimate US base duty, MPF and HMF for one HTS line,
 // and the list of saved (locked) estimates. Any signed-in user can use it.
@@ -107,7 +103,7 @@ export default async function TariffCalculatorPage() {
                         // Same rule as the estimate itself: a total that leaves
                         // programs out never reads as complete.
                         <span className="block text-xs font-medium text-[#92400E]">
-                          Base duty + fees; excludes {excludedCount(e.warnings)} program
+                          Excludes {excludedCount(e.warnings)} additional duty program
                           {excludedCount(e.warnings) === 1 ? "" : "s"}
                         </span>
                       )}

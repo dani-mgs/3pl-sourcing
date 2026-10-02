@@ -68,8 +68,10 @@ export type EstimateInput = {
 };
 
 export type EstimateLine = {
-  kind: "duty" | "fee";
-  code: "general" | "column2" | FeeCode;
+  kind: "duty" | "additional" | "fee";
+  // "general" / "column2" for the base duty, the fee code for fees, the
+  // program key for additional duties.
+  code: string;
   label: string;
   rateText: string;
   amountUsd: number;
@@ -77,6 +79,13 @@ export type EstimateLine = {
   sourceLabel: string;
   sourceUrl: string;
   effectiveFrom: string | null;
+  // Additional duties only.
+  heading?: string;
+  effectiveTo?: string | null;
+  legalStatus?: string;
+  sourceCheckedOn?: string;
+  // Conditional exemptions ("may be exempt if …"), not applied.
+  notes?: string[];
 };
 
 export type EstimateCalculation =

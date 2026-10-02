@@ -74,14 +74,15 @@ function EstimateTotal({ estimate }: { estimate: EstimateResult }) {
         className={hasExclusions ? "text-xs font-semibold text-[#92400E]" : "text-xs text-neutral-muted"}
         data-testid="estimate-total-label"
       >
-        {totalLabel(excluded.length)}
+        {totalLabel(excluded.length, estimate.additionalDutiesUsd > 0)}
       </p>
       <p className="font-display text-2xl font-semibold" data-testid="estimate-total">
         {usd(estimate.totalUsd)}
       </p>
       <p className="mt-1 text-xs text-neutral-muted">
-        Base duty {usd(estimate.baseDutyUsd)} · Fees {usd(estimate.feesUsd)} · Customs value{" "}
-        {usd(estimate.customsValueUsd)}
+        Base duty {usd(estimate.baseDutyUsd)}
+        {estimate.additionalDutiesUsd > 0 && <> · Additional duties {usd(estimate.additionalDutiesUsd)}</>} · Fees{" "}
+        {usd(estimate.feesUsd)} · Customs value {usd(estimate.customsValueUsd)}
       </p>
       {hasExclusions && (
         <ul className="mt-2 flex flex-col gap-1 border-t border-[#FBBF24]/60 pt-2 text-xs text-[#92400E]">
@@ -90,17 +91,48 @@ function EstimateTotal({ estimate }: { estimate: EstimateResult }) {
               <AlertTriangle aria-hidden="true" className="mt-0.5 size-3 shrink-0" />
               <span>
                 <span className="font-medium">Not included: {program.name}</span>
-                {program.indicativePct != null && program.indicativeUsd != null && (
-                  <>
-                    {" "}
-                    — could add up to {program.indicativePct}% (about {usd(program.indicativeUsd)})
-                  </>
-                )}
+                {program.hint && <> — {program.hint}</>}
               </span>
             </li>
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+// Who last reviewed the duty data behind this estimate, per program, and a
+// prominent warning when a review may be out of date.
+function DutyDataReviews({ estimate }: { estimate: EstimateResult }) {
+  if (estimate.dutyReviews.length === 0) return null;
+  const stale = estimate.dutyReviews.filter((r) => r.staleReason);
+  return (
+    <div className="flex flex-col gap-2">
+      {stale.length > 0 && (
+        <div className={WARNING_BOX_CLASS} role="note" data-testid="duty-data-stale">
+          <p className="flex items-center gap-2 font-semibold">
+            <AlertTriangle aria-hidden="true" className="size-4" />
+            Duty data may be out of date
+          </p>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {stale.map((r) => (
+              <li key={r.programKey}>
+                {r.name}: {r.staleReason}. Ask a tariff editor to review it.
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <ul className="flex flex-col gap-0.5 text-xs text-neutral-muted" data-testid="duty-data-reviews">
+        {estimate.dutyReviews.map((r) => (
+          <li key={r.programKey}>
+            Duty data, {r.name}:{" "}
+            {r.status === "reviewed" && r.reviewedAt
+              ? `last reviewed ${formatRateDate(r.reviewedAt.slice(0, 10))}${r.reviewedByName ? ` by ${r.reviewedByName}` : ""}`
+              : "pending expert review (not counted in the total)"}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -138,6 +170,8 @@ export function EstimateResultView({ estimate }: { estimate: EstimateResult }) {
 
       <EstimateTotal estimate={estimate} />
 
+      <DutyDataReviews estimate={estimate} />
+
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
@@ -149,14 +183,29 @@ export function EstimateResultView({ estimate }: { estimate: EstimateResult }) {
           </thead>
           <tbody>
             {estimate.lines.map((line) => (
-              <tr key={line.code} className="border-b border-neutral-border align-top last:border-0">
+              <tr key={`${line.kind}-${line.code}`} className="border-b border-neutral-border align-top last:border-0">
                 <td className="px-4 py-3">
                   <p className="font-medium">{line.label}</p>
+                  {line.heading && (
+                    <p className="text-xs text-neutral-muted">
+                      Chapter 99 heading {line.heading}
+                      {line.legalStatus && <> · {line.legalStatus}</>}
+                    </p>
+                  )}
                   {line.detail && <p className="text-xs text-neutral-muted">{line.detail}</p>}
                   <p className="mt-0.5 text-xs text-neutral-muted">
                     Source: <SourceLink label={line.sourceLabel} url={line.sourceUrl} />
                     {line.effectiveFrom && <> · in effect from {formatRateDate(line.effectiveFrom)}</>}
+                    {line.effectiveTo && <> to {formatRateDate(line.effectiveTo)}</>}
+                    {line.sourceCheckedOn && <> · source checked {formatRateDate(line.sourceCheckedOn)}</>}
                   </p>
+                  {line.notes && line.notes.length > 0 && (
+                    <ul className="mt-1 flex flex-col gap-0.5 text-xs text-[#92400E]">
+                      {line.notes.map((note) => (
+                        <li key={note}>{note} (not applied)</li>
+                      ))}
+                    </ul>
+                  )}
                 </td>
                 <td className="px-4 py-3">{line.rateText}</td>
                 <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">{usd(line.amountUsd)}</td>
@@ -187,7 +236,7 @@ export function EstimateResultView({ estimate }: { estimate: EstimateResult }) {
         <div className={WARNING_BOX_CLASS}>
           <p className="flex items-center gap-2 font-semibold">
             <AlertTriangle aria-hidden="true" className="size-4" />
-            Additional duties may apply — not included in this estimate
+            Additional duties not included in this estimate
           </p>
           <ul className="mt-2 flex flex-col gap-2">
             {estimate.warnings.map((warning) => (

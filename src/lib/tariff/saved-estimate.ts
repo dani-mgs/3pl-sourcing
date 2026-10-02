@@ -10,11 +10,11 @@ export const SAVED_ESTIMATE_COLUMNS =
   "hts_release_name, hts_release_title, hts_release_start_date, rate_column, rate_text, special_rate_text, " +
   "origin_country, shipment_mode, customs_value_original, original_currency, exchange_rate_to_usd, " +
   "exchange_rate_source, exchange_rate_date, customs_value_usd, quantity, quantity_unit, base_duty_usd, " +
-  "fees_usd, total_usd, lines, warnings";
+  "fees_usd, total_usd, lines, warnings, additional_duties_usd, duty_reviews";
 
 const lineSchema = z.object({
-  kind: z.enum(["duty", "fee"]),
-  code: z.enum(["general", "column2", "mpf_formal", "mpf_informal", "hmf"]),
+  kind: z.enum(["duty", "additional", "fee"]),
+  code: z.string(),
   label: z.string(),
   rateText: z.string(),
   amountUsd: z.number(),
@@ -22,6 +22,11 @@ const lineSchema = z.object({
   sourceLabel: z.string(),
   sourceUrl: z.string(),
   effectiveFrom: z.string().nullable(),
+  heading: z.string().optional(),
+  effectiveTo: z.string().nullable().optional(),
+  legalStatus: z.string().optional(),
+  sourceCheckedOn: z.string().optional(),
+  notes: z.array(z.string()).optional(),
 });
 
 const warningSchema = z.object({
@@ -30,7 +35,19 @@ const warningSchema = z.object({
   text: z.string(),
   sourceLabel: z.string(),
   sourceUrl: z.string(),
-  indicativePct: z.number().positive().nullish(),
+  indicativePct: z.number().nonnegative().nullish(),
+  kind: z.enum(["not_loaded", "pending_review", "depends_on", "exempt_pending"]).optional(),
+  hint: z.string().nullable().optional(),
+  counted: z.boolean().optional(),
+});
+
+const dutyReviewSchema = z.object({
+  programKey: z.string(),
+  name: z.string(),
+  status: z.enum(["not_loaded", "pending_review", "reviewed"]),
+  reviewedAt: z.string().nullable(),
+  reviewedByName: z.string().nullable(),
+  staleReason: z.string().nullable(),
 });
 
 const rowSchema = z.object({
@@ -63,6 +80,9 @@ const rowSchema = z.object({
   total_usd: z.union([z.number(), z.string()]),
   lines: z.array(lineSchema),
   warnings: z.array(warningSchema),
+  // Rows saved before additional duties existed default to none.
+  additional_duties_usd: z.union([z.number(), z.string()]).optional().default(0),
+  duty_reviews: z.array(dutyReviewSchema).optional().default([]),
 });
 
 export type SavedEstimate = {
@@ -113,10 +133,12 @@ export function rowToSavedEstimate(row: unknown): SavedEstimate | null {
           ? { value: Number(r.quantity), unit: r.quantity_unit, unitLabel: r.quantity_unit }
           : null,
       baseDutyUsd: Number(r.base_duty_usd),
+      additionalDutiesUsd: Number(r.additional_duties_usd),
       feesUsd: Number(r.fees_usd),
       totalUsd: Number(r.total_usd),
       lines: r.lines,
       warnings: r.warnings,
+      dutyReviews: r.duty_reviews,
     },
   };
 }
