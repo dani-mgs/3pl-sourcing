@@ -46,6 +46,11 @@ describe("parseDutyDetails", () => {
   };
   test("only non-rate fields", () => {
     expect(parseDutyDetails(form(base))).toMatchObject({ ok: true, data: { legalStatus: "in_force_under_litigation", notes: null } });
+    expect((parseDutyDetails(form(base)) as { data: { assumeCondition?: boolean } }).data.assumeCondition).toBeUndefined();
+  });
+  test("whether a condition is assumed, only for a row that has one", () => {
+    expect(parseDutyDetails(form({ ...base, has_condition: "1", assume_condition: "on" }))).toMatchObject({ ok: true, data: { assumeCondition: true } });
+    expect(parseDutyDetails(form({ ...base, has_condition: "1" }))).toMatchObject({ ok: true, data: { assumeCondition: false } });
   });
   test("refuses a non-https source and an unknown legal status", () => {
     expect(parseDutyDetails(form({ ...base, source_url: "http://x" }))).toEqual({
@@ -61,11 +66,21 @@ describe("parseScopeLines", () => {
     expect(parseScopeLines("0805.90.01 | Etrogs\n0201.10.05\n\n 1207.30.00 | Castor oil seeds, for sowing ")).toEqual({
       ok: true,
       data: [
-        { prefix: "08059001", description: "Etrogs" },
-        { prefix: "02011005", description: null },
-        { prefix: "12073000", description: "Castor oil seeds, for sowing" },
+        { prefix: "08059001", description: "Etrogs", excluded: false },
+        { prefix: "02011005", description: null, excluded: false },
+        { prefix: "12073000", description: "Castor oil seeds, for sowing", excluded: false },
       ],
     });
+  });
+  test('"-" takes a statistical number out of the row', () => {
+    expect(parseScopeLines("2931.90.90\n-2931.90.9051")).toEqual({
+      ok: true,
+      data: [
+        { prefix: "29319090", description: null, excluded: false },
+        { prefix: "2931909051", description: null, excluded: true },
+      ],
+    });
+    expect(parseScopeLines("-2931.90.9051 | x")).toEqual({ ok: false, error: "Scope line 1: an excepted number has no description." });
   });
   test("names the bad line", () => {
     expect(parseScopeLines("0805.90.01\n12AB")).toEqual({ ok: false, error: 'Scope line 2: "12AB" isn\'t a 4- to 10-digit HTS code.' });
@@ -110,6 +125,18 @@ describe("parseNewDuty", () => {
     });
   });
 
+  test("a conditional rate for any origin, not assumed unless ticked", () => {
+    const parsed = parseNewDuty(
+      form({ ...base, authority: "section_232", chapter99_heading: "9903.82.04", origin_countries: "", excludes_programs: "", exclusion_heading: "", condition_text: "95% melted and poured in the UK" }),
+    );
+    expect(parsed).toMatchObject({ ok: true, data: { originCountries: null, conditionText: "95% melted and poured in the UK", assumeCondition: false } });
+  });
+
+  test("an unconfirmed row needs no rate", () => {
+    const parsed = parseNewDuty(form({ ...base, rate_type: "unconfirmed", rate_pct: "", condition_text: "total or added?", excludes_programs: "", exclusion_heading: "" }));
+    expect(parsed).toMatchObject({ ok: true, data: { rateType: "unconfirmed", ratePct: null } });
+  });
+
   test("an exemption with a scope and no origin", () => {
     const result = parseNewDuty(
       form({ ...base, chapter99_heading: "9903.05.87", rate_type: "exempt", rate_pct: "", origin_countries: "", excludes_programs: "", exclusion_heading: "", scope: "0805.90.01 | Etrogs" }),
@@ -121,8 +148,9 @@ describe("parseNewDuty", () => {
     [{ rate_type: "exempt" }, "An exemption has no rate; leave the rate empty."],
     [{ rate_pct: "" }, "Enter the rate."],
     [{ rate_type: "minimum_total" }, "A minimum-total row needs the heading used when the base rate already meets it."],
-    [{ condition_text: "if USMCA" }, "Only exemptions can have a condition."],
-    [{ origin_countries: "" }, "A duty needs at least one origin."],
+    [{ rate_type: "unconfirmed" }, "Say what's unconfirmed in the condition."],
+    [{ rate_type: "unconfirmed", condition_text: "total or added?", assume_condition: "on" }, "An unconfirmed row is never counted, so its condition can't be assumed."],
+    [{ assume_condition: "on" }, "Only a row with a condition can treat it as met."],
     [{ origin_countries: "Vietnam" }, "Origins must be ISO country codes, e.g. VN, IN."],
     [{ exclusion_heading: "" }, "Give both the excluding programs and the heading claimed when excluded, or neither."],
     [{ effective_to: "2026-12-31" }, "The last day can't be before the first."],

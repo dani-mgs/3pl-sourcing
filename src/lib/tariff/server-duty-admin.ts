@@ -103,11 +103,12 @@ export type ProgramDutyRow = {
   chapter99_heading: string;
   chapter99_heading_at_minimum: string | null;
   label: string;
-  rate_type: "add" | "minimum_total" | "exempt";
+  rate_type: "add" | "minimum_total" | "exempt" | "unconfirmed";
   rate_pct: number | null;
   origin_countries: string[] | null;
   hts_scope: "all" | "listed";
   condition_text: string | null;
+  assume_condition: boolean;
   excludes_programs: string[];
   exclusion_heading: string | null;
   effective_from: string;
@@ -119,6 +120,8 @@ export type ProgramDutyRow = {
   notes: string | null;
   updated_at: string;
   scopeCount: number;
+  // Statistical numbers the row takes out ("except …").
+  excludedCount: number;
 };
 
 export type HistoryEntry = {
@@ -149,7 +152,7 @@ export async function loadProgramDetail(supabase: Supabase, programKey: string) 
     supabase
       .from("additional_duties")
       .select(
-        "id, chapter99_heading, chapter99_heading_at_minimum, label, rate_type, rate_pct, origin_countries, hts_scope, condition_text, excludes_programs, exclusion_heading, effective_from, effective_to, legal_status, source_label, source_url, source_checked_on, notes, updated_at",
+        "id, chapter99_heading, chapter99_heading_at_minimum, label, rate_type, rate_pct, origin_countries, hts_scope, condition_text, assume_condition, excludes_programs, exclusion_heading, effective_from, effective_to, legal_status, source_label, source_url, source_checked_on, notes, updated_at",
       )
       .eq("program_key", programKey)
       .order("chapter99_heading")
@@ -170,13 +173,17 @@ export async function loadProgramDetail(supabase: Supabase, programKey: string) 
   for (const r of [programResult, rowsResult, historyResult, reviewsResult]) if (r.error) throw r.error;
   if (!programResult.data) return null;
 
-  const rows = (rowsResult.data ?? []) as Omit<ProgramDutyRow, "scopeCount">[];
+  const rows = (rowsResult.data ?? []) as Omit<ProgramDutyRow, "scopeCount" | "excludedCount">[];
   const listed = rows.filter((r) => r.hts_scope === "listed").map((r) => r.id);
-  const counts = new Map<string, number>();
+  // Counted in the database: a list can hold thousands of lines (List 3).
+  const counts = new Map<string, { line_count: number; excluded_count: number }>();
   if (listed.length > 0) {
-    const { data, error } = await supabase.from("additional_duty_scope").select("duty_id").in("duty_id", listed);
+    const { data, error } = await supabase
+      .from("additional_duty_scope_counts")
+      .select("duty_id, line_count, excluded_count")
+      .in("duty_id", listed);
     if (error) throw error;
-    for (const s of data ?? []) counts.set(s.duty_id as string, (counts.get(s.duty_id as string) ?? 0) + 1);
+    for (const c of (data ?? []) as { duty_id: string; line_count: number; excluded_count: number }[]) counts.set(c.duty_id, c);
   }
 
   const history = (historyResult.data ?? []) as {
@@ -199,7 +206,15 @@ export async function loadProgramDetail(supabase: Supabase, programKey: string) 
 
   return {
     program: programResult.data as DutyProgramRow,
-    rows: rows.map((r) => ({ ...r, rate_pct: r.rate_pct == null ? null : Number(r.rate_pct), scopeCount: counts.get(r.id) ?? 0 })),
+    rows: rows.map((r) => {
+      const c = counts.get(r.id);
+      return {
+        ...r,
+        rate_pct: r.rate_pct == null ? null : Number(r.rate_pct),
+        scopeCount: c ? c.line_count - c.excluded_count : 0,
+        excludedCount: c?.excluded_count ?? 0,
+      };
+    }),
     history: history.map<HistoryEntry>((h) => ({
       id: h.id,
       table_name: h.table_name,

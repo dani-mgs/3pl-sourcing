@@ -106,6 +106,7 @@ export async function updateDutyDetails(formData: FormData): Promise<DutyDataAct
       source_label: d.sourceLabel,
       source_url: d.sourceUrl,
       source_checked_on: d.sourceCheckedOn,
+      ...(d.assumeCondition === undefined ? {} : { assume_condition: d.assumeCondition }),
     })
     .eq("id", d.id)
     .select("program_key");
@@ -136,6 +137,7 @@ export async function addDuty(formData: FormData): Promise<DutyDataActionState> 
       origin_countries: d.originCountries,
       hts_scope: d.scope.length > 0 ? "listed" : "all",
       condition_text: d.conditionText,
+      assume_condition: d.assumeCondition,
       excludes_programs: d.excludesPrograms,
       exclusion_heading: d.exclusionHeading,
       effective_from: d.effectiveFrom,
@@ -152,7 +154,7 @@ export async function addDuty(formData: FormData): Promise<DutyDataActionState> 
 
   if (d.scope.length > 0) {
     const { error: scopeError } = await supabase.from("additional_duty_scope").insert(
-      d.scope.map((s) => ({ duty_id: data.id, hts_prefix: s.prefix, article_description: s.description })),
+      d.scope.map((s) => ({ duty_id: data.id, hts_prefix: s.prefix, article_description: s.description, excluded: s.excluded })),
     );
     if (scopeError) {
       // Don't leave a row limited to a scope it doesn't have.

@@ -36,7 +36,7 @@ const warningSchema = z.object({
   sourceLabel: z.string(),
   sourceUrl: z.string(),
   indicativePct: z.number().nonnegative().nullish(),
-  kind: z.enum(["not_loaded", "pending_review", "depends_on", "exempt_pending"]).optional(),
+  kind: z.enum(["not_loaded", "pending_review", "depends_on", "exempt_pending", "unconfirmed", "conditional"]).optional(),
   hint: z.string().nullable().optional(),
   counted: z.boolean().optional(),
 });

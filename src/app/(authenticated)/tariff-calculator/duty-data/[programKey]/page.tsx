@@ -21,6 +21,7 @@ const fieldClass =
 
 function rateText(r: { rate_type: string; rate_pct: number | null; chapter99_heading_at_minimum: string | null }) {
   if (r.rate_type === "exempt") return "Exempt";
+  if (r.rate_type === "unconfirmed") return `Unconfirmed${r.rate_pct != null ? ` (${r.rate_pct}% as published)` : ""} — never counted`;
   if (r.rate_type === "minimum_total") return `Minimum total ${r.rate_pct}% (else ${r.chapter99_heading_at_minimum})`;
   return `+${r.rate_pct}%`;
 }
@@ -150,8 +151,20 @@ export default async function ProgramDutyDataPage({ params }: { params: Promise<
                     <td className="px-4 py-3 whitespace-nowrap tabular-nums">{r.chapter99_heading}</td>
                     <td className="px-4 py-3">
                       {r.label}
-                      {r.hts_scope === "listed" && <p className="text-xs text-neutral-muted">{r.scopeCount} HTS lines</p>}
-                      {r.condition_text && <p className="text-xs text-neutral-muted">If {r.condition_text}</p>}
+                      {r.hts_scope === "listed" && (
+                        <p className="text-xs text-neutral-muted">
+                          {r.scopeCount.toLocaleString("en-US")} HTS lines
+                          {r.excludedCount > 0 && `, except ${r.excludedCount} statistical number${r.excludedCount === 1 ? "" : "s"}`}
+                        </p>
+                      )}
+                      {r.condition_text && (
+                        <p className="text-xs text-neutral-muted">
+                          {r.rate_type === "unconfirmed" ? "Open: " : "If "}
+                          {r.condition_text}
+                          {r.rate_type !== "unconfirmed" &&
+                            (r.assume_condition ? " — treated as met" : " — not assumed: only named, the higher rate applies")}
+                        </p>
+                      )}
                       {r.exclusion_heading && (
                         <p className="text-xs text-neutral-muted">
                           Not when {r.excludes_programs.length} other program(s) apply ({r.exclusion_heading})

@@ -66,6 +66,25 @@ export function DutyRowEditor({ row }: { row: ProgramDutyRow }) {
             Notes
             <textarea name="notes" defaultValue={row.notes ?? ""} rows={2} maxLength={2000} className={fieldClass} />
           </label>
+          {row.condition_text && row.rate_type !== "unconfirmed" && (
+            <>
+              <input type="hidden" name="has_condition" value="1" />
+              <label className="flex items-start gap-2 text-sm text-move-navy">
+                <input
+                  type="checkbox"
+                  name="assume_condition"
+                  defaultChecked={row.assume_condition}
+                  className="mt-1 size-4 accent-move-green"
+                />
+                <span>
+                  Treat the condition as met
+                  <span className={`block ${hintClass}`}>
+                    Only where it raises the duty: an estimate must not be lowered by a fact nobody has checked.
+                  </span>
+                </span>
+              </label>
+            </>
+          )}
         </ActionForm>
       </div>
     </details>
@@ -100,10 +119,11 @@ export function AddDutyForm({ programKey, today }: { programKey: string; today: 
           <option value="add">Add a rate</option>
           <option value="minimum_total">Minimum total rate</option>
           <option value="exempt">Exemption</option>
+          <option value="unconfirmed">Unconfirmed (named, never counted)</option>
         </select>
       </label>
       <label className={labelClass}>
-        Rate (%) <span className={hintClass}>empty for an exemption</span>
+        Rate (%) <span className={hintClass}>empty for an exemption; optional if unconfirmed</span>
         <input name="rate_pct" type="number" min="0" max="1000" step="0.0001" className={fieldClass} />
       </label>
       <label className={labelClass}>
@@ -111,12 +131,21 @@ export function AddDutyForm({ programKey, today }: { programKey: string; today: 
         <input name="chapter99_heading_at_minimum" className={fieldClass} />
       </label>
       <label className={labelClass}>
-        Origins <span className={hintClass}>ISO codes, e.g. VN IN; empty = any covered origin (exemptions)</span>
+        Origins <span className={hintClass}>ISO codes, e.g. VN IN; empty = any origin</span>
         <input name="origin_countries" className={fieldClass} />
       </label>
       <label className={labelClass}>
-        Condition <span className={hintClass}>exemptions only, shown as &ldquo;may be exempt if …&rdquo;</span>
+        Condition <span className={hintClass}>a fact the calculator can&apos;t check, shown as &ldquo;could be … if …&rdquo; or &ldquo;may be exempt if …&rdquo;; for an unconfirmed row, what&apos;s open</span>
         <input name="condition_text" maxLength={1000} className={fieldClass} />
+      </label>
+      <label className="flex items-start gap-2 text-sm text-move-navy md:col-span-2">
+        <input type="checkbox" name="assume_condition" className="mt-1 size-4 accent-move-green" />
+        <span>
+          Treat the condition as met
+          <span className={`block ${hintClass}`}>
+            Only where the condition raises the duty. Left unticked, the row is only named and the higher rate applies.
+          </span>
+        </span>
       </label>
       <label className={labelClass}>
         Not when these programs apply <span className={hintClass}>program keys, e.g. section_232_metals</span>
@@ -151,7 +180,7 @@ export function AddDutyForm({ programKey, today }: { programKey: string; today: 
         <input name="source_url" type="url" required placeholder="https://www.federalregister.gov/…" className={fieldClass} />
       </label>
       <label className={`${labelClass} md:col-span-2`}>
-        HTS scope <span className={hintClass}>one per line, &ldquo;0805.90.01 | Etrogs&rdquo;; the description limits it to that article. Empty = every HTS code.</span>
+        HTS scope <span className={hintClass}>one per line, &ldquo;0805.90.01 | Etrogs&rdquo;; the description limits it to that article. &ldquo;-2931.90.9051&rdquo; takes a statistical number out. Empty = every HTS code.</span>
         <textarea name="scope" rows={4} className={fieldClass} />
       </label>
       <label className={`${labelClass} md:col-span-2`}>

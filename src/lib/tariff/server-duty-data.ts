@@ -3,14 +3,15 @@ import { inForceOn, type DutyRow, type ProgramReview, type ReviewStatus } from "
 
 // Loads what evaluateAdditionalDuties needs for one HTS code: the duty rows
 // in force on the date (with only the scope lines that could match this
-// code), and each program's review state, reviewer name and chapter 99
-// changes since its review. Reads only, through the signed-in user's client.
+// code, plus, for a code shorter than 10 digits, the lines listed under it),
+// and each program's review state, reviewer name and chapter 99 changes
+// since its review. Reads only, through the signed-in user's client.
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 const DUTY_COLUMNS =
   "id, program_key, chapter99_heading, chapter99_heading_at_minimum, label, rate_type, rate_pct, origin_countries, " +
-  "hts_scope, condition_text, excludes_programs, exclusion_heading, filing_order, effective_from, effective_to, " +
+  "hts_scope, condition_text, assume_condition, excludes_programs, exclusion_heading, filing_order, effective_from, effective_to, " +
   "legal_status, source_label, source_url, source_checked_on";
 
 // Every prefix of the code a scope line could hold (4–10 digits).
@@ -31,24 +32,26 @@ export async function loadAdditionalDutyData(
   htsCode: string,
   asOfDate: string,
 ): Promise<{ rows: DutyRow[]; reviews: ProgramReview[] }> {
-  const [dutiesResult, scopeResult, statusResult] = await Promise.all([
+  const SCOPE_COLUMNS = "duty_id, hts_prefix, article_description, excluded";
+  const [dutiesResult, scopeResult, childResult, statusResult] = await Promise.all([
     supabase.from("additional_duties").select(DUTY_COLUMNS),
-    supabase
-      .from("additional_duty_scope")
-      .select("duty_id, hts_prefix, article_description")
-      .in("hts_prefix", candidatePrefixes(htsCode)),
+    supabase.from("additional_duty_scope").select(SCOPE_COLUMNS).in("hts_prefix", candidatePrefixes(htsCode)),
+    htsCode.length < 10
+      ? supabase.from("additional_duty_scope").select(SCOPE_COLUMNS).like("hts_prefix", `${htsCode}_%`)
+      : Promise.resolve({ data: [], error: null }),
     supabase
       .from("duty_program_review_status")
       .select("program_key, review_status, last_reviewed_at, last_reviewed_by"),
   ]);
-  for (const result of [dutiesResult, scopeResult, statusResult]) {
+  for (const result of [dutiesResult, scopeResult, childResult, statusResult]) {
     if (result.error) throw result.error;
   }
 
+  type ScopeRow = { duty_id: string; hts_prefix: string; article_description: string | null; excluded: boolean };
   const scopeByDuty = new Map<string, DutyRow["scope"]>();
-  for (const s of (scopeResult.data ?? []) as { duty_id: string; hts_prefix: string; article_description: string | null }[]) {
+  for (const s of [...(scopeResult.data ?? []), ...(childResult.data ?? [])] as ScopeRow[]) {
     const list = scopeByDuty.get(s.duty_id) ?? [];
-    list.push({ hts_prefix: s.hts_prefix, article_description: s.article_description });
+    list.push({ hts_prefix: s.hts_prefix, article_description: s.article_description, excluded: s.excluded });
     scopeByDuty.set(s.duty_id, list);
   }
   const allRows = (dutiesResult.data ?? []) as unknown as Omit<DutyRow, "scope">[];

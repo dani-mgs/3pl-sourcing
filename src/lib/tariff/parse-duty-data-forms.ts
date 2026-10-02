@@ -23,7 +23,7 @@ const heading = (label: string) =>
   z.string().regex(/^9903\.\d{2}\.\d{2}$/, `${label} must look like 9903.05.84.`);
 
 export const LEGAL_STATUSES = ["in_force", "in_force_under_litigation", "enjoined", "expired"] as const;
-export const RATE_TYPES = ["add", "minimum_total", "exempt"] as const;
+export const RATE_TYPES = ["add", "minimum_total", "exempt", "unconfirmed"] as const;
 
 function run<S extends z.ZodType>(schema: S, raw: unknown, label: string): ParseResult<z.infer<S>> {
   const parsed = schema.safeParse(raw);
@@ -53,7 +53,12 @@ export function parseEndDate(formData: FormData) {
   );
 }
 
+// Edits that don't change what a row charges: label, legal status, source,
+// notes and, for a row with a condition, whether the condition is treated as
+// met (a deliberate choice of direction; it puts the program back to pending
+// review like any change).
 export function parseDutyDetails(formData: FormData) {
+  const hasCondition = field(formData, "has_condition") === "1";
   return run(
     z.object({
       id: uuid,
@@ -63,6 +68,7 @@ export function parseDutyDetails(formData: FormData) {
       sourceLabel: z.string().min(1, "Enter the source.").max(500, "Keep the source under 500 characters."),
       sourceUrl: httpsUrl,
       sourceCheckedOn: isoDate("the date the source was checked"),
+      assumeCondition: z.boolean().optional(),
     }),
     {
       id: field(formData, "id"),
@@ -72,25 +78,32 @@ export function parseDutyDetails(formData: FormData) {
       sourceLabel: field(formData, "source_label"),
       sourceUrl: field(formData, "source_url"),
       sourceCheckedOn: field(formData, "source_checked_on"),
+      assumeCondition: hasCondition ? field(formData, "assume_condition") === "on" : undefined,
     },
     "dutyDetails",
   );
 }
 
-// "0805.90.01 | Etrogs" per line; the description is optional.
-export function parseScopeLines(text: string): ParseResult<{ prefix: string; description: string | null }[]> {
+// "0805.90.01 | Etrogs" per line; the description is optional. A line
+// starting with "-" takes that statistical number out of the row
+// ("-2931.90.9051": the subheading except that number).
+export type ScopeInput = { prefix: string; description: string | null; excluded: boolean };
+
+export function parseScopeLines(text: string): ParseResult<ScopeInput[]> {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   if (lines.length > 5000) return { ok: false, error: "Paste at most 5,000 scope lines at a time." };
-  const out: { prefix: string; description: string | null }[] = [];
+  const out: ScopeInput[] = [];
   for (const [i, line] of lines.entries()) {
-    const [code, ...rest] = line.split("|");
+    const excluded = line.startsWith("-");
+    const [code, ...rest] = (excluded ? line.slice(1) : line).split("|");
     const prefix = code.trim().replace(/[.\s]/g, "");
     if (!/^\d{4,10}$/.test(prefix)) {
       return { ok: false, error: `Scope line ${i + 1}: "${code.trim()}" isn't a 4- to 10-digit HTS code.` };
     }
     const description = rest.join("|").trim();
     if (description.length > 500) return { ok: false, error: `Scope line ${i + 1}: keep the description under 500 characters.` };
-    out.push({ prefix, description: description || null });
+    if (excluded && description) return { ok: false, error: `Scope line ${i + 1}: an excepted number has no description.` };
+    out.push({ prefix, description: description || null, excluded });
   }
   return { ok: true, data: out };
 }
@@ -105,6 +118,7 @@ export type NewDuty = {
   ratePct: number | null;
   originCountries: string[] | null;
   conditionText: string | null;
+  assumeCondition: boolean;
   excludesPrograms: string[];
   exclusionHeading: string | null;
   effectiveFrom: string;
@@ -114,7 +128,7 @@ export type NewDuty = {
   sourceUrl: string;
   sourceCheckedOn: string;
   notes: string | null;
-  scope: { prefix: string; description: string | null }[];
+  scope: ScopeInput[];
 };
 
 const newDutySchema = z
@@ -131,6 +145,7 @@ const newDutySchema = z
       .refine((v) => v == null || (Number.isFinite(v) && v > 0 && v <= 1000), "Enter the rate as a percentage above 0."),
     originCountries: z.array(z.string()).refine((codes) => codes.every(isOriginCountry), "Origins must be ISO country codes, e.g. VN, IN."),
     conditionText: optionalText(1000, "The condition"),
+    assumeCondition: z.boolean(),
     excludesPrograms: z.array(z.string().regex(/^[a-z0-9_]+$/, "Excluding programs must be program keys.")),
     exclusionHeading: z.union([z.literal(""), heading("The exclusion heading")]).transform((v) => v || null),
     effectiveFrom: isoDate("the first day it applies"),
@@ -144,13 +159,14 @@ const newDutySchema = z
   .superRefine((d, ctx) => {
     const issue = (message: string) => ctx.addIssue({ code: "custom", message });
     if (d.rateType === "exempt" && d.ratePct != null) issue("An exemption has no rate; leave the rate empty.");
-    if (d.rateType !== "exempt" && d.ratePct == null) issue("Enter the rate.");
+    if ((d.rateType === "add" || d.rateType === "minimum_total") && d.ratePct == null) issue("Enter the rate.");
+    if (d.rateType === "unconfirmed" && !d.conditionText) issue("Say what's unconfirmed in the condition.");
+    if (d.rateType === "unconfirmed" && d.assumeCondition) issue("An unconfirmed row is never counted, so its condition can't be assumed.");
+    if (d.assumeCondition && !d.conditionText) issue("Only a row with a condition can treat it as met.");
     if (d.rateType === "minimum_total" && !d.chapter99HeadingAtMinimum) {
       issue("A minimum-total row needs the heading used when the base rate already meets it.");
     }
     if (d.rateType !== "minimum_total" && d.chapter99HeadingAtMinimum) issue("Only minimum-total rows have a heading at the minimum.");
-    if (d.rateType !== "exempt" && d.conditionText) issue("Only exemptions can have a condition.");
-    if (d.rateType !== "exempt" && d.originCountries.length === 0) issue("A duty needs at least one origin.");
     if ((d.excludesPrograms.length === 0) !== (d.exclusionHeading == null)) {
       issue("Give both the excluding programs and the heading claimed when excluded, or neither.");
     }
@@ -176,6 +192,7 @@ export function parseNewDuty(formData: FormData): ParseResult<NewDuty> {
       ratePct: field(formData, "rate_pct"),
       originCountries: list(field(formData, "origin_countries").toUpperCase()),
       conditionText: field(formData, "condition_text"),
+      assumeCondition: field(formData, "assume_condition") === "on",
       excludesPrograms: list(field(formData, "excludes_programs")),
       exclusionHeading: field(formData, "exclusion_heading"),
       effectiveFrom: field(formData, "effective_from"),

@@ -339,3 +339,100 @@ describe("staleness", () => {
     expect(r.additional.additionalDutiesUsd).toBe(1000);
   });
 });
+
+describe("one row per program: precedence, conditions, unconfirmed and excepted numbers", () => {
+  // A Section 232-like program on steel, with the shapes PR 2b seeds.
+  const m = (overrides: Partial<DutyRow>) =>
+    row({
+      program_key: "section_232_metals",
+      excludes_programs: [],
+      exclusion_heading: null,
+      origin_countries: null,
+      hts_scope: "listed",
+      scope: [{ hts_prefix: "7208", article_description: null }],
+      ...overrides,
+    });
+  const ANY = m({ chapter99_heading: "9903.82.02", label: "Steel", rate_pct: 50 });
+  const metalsReviewed = [review("section_232_metals", "reviewed"), review("section_301_brazil", "reviewed"), review("section_301_forced_labor", "reviewed")];
+  const run = (rows: DutyRow[], origin: string, line: (typeof LINES)[keyof typeof LINES] = LINES.steel) =>
+    estimate(line, origin, { rows: [...rows, ...FL_ROWS, ...BR_ROWS], reviews: metalsReviewed });
+
+  test("a row for named origins beats an any-origin row", () => {
+    const r = run([ANY, m({ chapter99_heading: "9903.82.14", label: "Russia", rate_pct: 60, origin_countries: ["RU"] })], "RU");
+    expect(lineFor(r, "section_232_metals")).toMatchObject({ heading: "9903.82.14", amountUsd: 6000 });
+  });
+
+  test("a lowering condition isn't assumed: the higher rate applies and the lower one is named", () => {
+    const uk = m({ chapter99_heading: "9903.82.04", label: "UK", rate_pct: 25, origin_countries: ["GB"], condition_text: "95% melted and poured in the UK" });
+    const r = run([ANY, uk], "GB");
+    expect(lineFor(r, "section_232_metals")).toMatchObject({
+      heading: "9903.82.02",
+      amountUsd: 5000,
+      notes: ["9903.82.04: could be +25% instead (about $2,500.00) if 95% melted and poured in the UK"],
+    });
+  });
+
+  test("an assumed condition applies, and says what applies otherwise", () => {
+    const uk = m({ chapter99_heading: "9903.82.04", label: "UK", rate_pct: 25, origin_countries: ["GB"], condition_text: "95% melted and poured in the UK", assume_condition: true });
+    const r = run([ANY, uk], "GB");
+    expect(lineFor(r, "section_232_metals")).toMatchObject({
+      heading: "9903.82.04",
+      amountUsd: 2500,
+      notes: ["Assumes 95% melted and poured in the UK; if not, 9903.82.02 (+50%) applies instead"],
+    });
+  });
+
+  test("equal rows: the higher charge applies and the other is named", () => {
+    const r = run([ANY, m({ chapter99_heading: "9903.82.09", label: "Derivatives", rate_pct: 25 })], "BR");
+    expect(lineFor(r, "section_232_metals")).toMatchObject({
+      heading: "9903.82.02",
+      amountUsd: 5000,
+      notes: ["Also matches 9903.82.09 (+25%); only one applies — the higher is shown pending expert confirmation"],
+    });
+  });
+
+  test("the longest matching line wins, and an excepted number takes the code out", () => {
+    const tenDigit = m({ chapter99_heading: "9903.82.10", label: "Ten-digit", rate_pct: 15, scope: [{ hts_prefix: "7208101500", article_description: null }] });
+    expect(lineFor(run([ANY, tenDigit], "BR"), "section_232_metals")).toMatchObject({ heading: "9903.82.10" });
+    const except = m({ chapter99_heading: "9903.82.02", label: "Steel", rate_pct: 50, scope: [{ hts_prefix: "7208", article_description: null }, { hts_prefix: "7208101500", article_description: null, excluded: true }] });
+    const r = run([except], "BR");
+    expect(lineFor(r, "section_232_metals")).toBeUndefined();
+    // Section 232 doesn't apply, so Brazil's 301 does.
+    expect(lineFor(r, "section_301_brazil")).toMatchObject({ amountUsd: 2500 });
+  });
+
+  test("an unconfirmed best match is named, never charged, and settles nothing it would exclude", () => {
+    const unconfirmed = m({ chapter99_heading: "9903.82.22", label: "Listed countries", rate_type: "unconfirmed", rate_pct: 15, origin_countries: ["BR"], condition_text: "total or added?" });
+    const r = run([ANY, unconfirmed], "BR");
+    expect(lineFor(r, "section_232_metals")).toBeUndefined();
+    expect(warningFor(r, "section_232_metals")).toMatchObject({ kind: "unconfirmed", counted: true });
+    expect(warningFor(r, "section_232_metals")!.hint).toBe("may apply under 9903.82.22; rate unconfirmed, for expert review");
+    expect(warningFor(r, "section_301_brazil")).toMatchObject({ kind: "depends_on" });
+  });
+
+  test("a conditional exemption on the excluding program: the excluded one says what it would add", () => {
+    const under15 = m({ chapter99_heading: "9903.82.03", label: "Under 15%", rate_type: "exempt", rate_pct: null, condition_text: "the metal is under 15% of the weight" });
+    const r = run([ANY, under15], "BR");
+    expect(lineFor(r, "section_232_metals")!.notes).toEqual(["9903.82.03: may be exempt if the metal is under 15% of the weight"]);
+    expect(lineFor(r, "section_301_brazil")).toMatchObject({
+      rateText: "Exempt",
+      notes: ["If Section 232 (steel, aluminium, copper) doesn't apply (see its notes), this program adds 25% (about $2,500.00, 9903.05.01) instead"],
+    });
+  });
+
+  test("only a row with an unmet condition matches: a note, not counted", () => {
+    const russianAluminium = m({ chapter99_heading: "9903.85.67", label: "Russian-smelted", rate_pct: 200, condition_text: "Russian-smelted aluminium was used" });
+    const r = run([russianAluminium], "BR");
+    expect(lineFor(r, "section_232_metals")).toBeUndefined();
+    expect(warningFor(r, "section_232_metals")).toMatchObject({ kind: "conditional", counted: false });
+    expect(lineFor(r, "section_301_brazil")).toMatchObject({ amountUsd: 2500 });
+  });
+
+  test("a product exclusion with an end date is named with it", () => {
+    const exclusion = row({ program_key: "section_301_brazil", chapter99_heading: "9903.05.09", label: "USTR product exclusion", rate_type: "exempt", rate_pct: null, origin_countries: ["BR"], excludes_programs: [], exclusion_heading: null, hts_scope: "listed", effective_to: "2026-11-09", scope: [{ hts_prefix: "6402993110", article_description: "Sandals of a particular kind" }] });
+    const r = estimate(LINES.footwear, "BR", { rows: [...BR_ROWS, exclusion], reviews: metalsReviewed });
+    expect(lineFor(r, "section_301_brazil")!.notes).toEqual([
+      "9903.05.09 (USTR product exclusion, through Nov 9, 2026): may be exempt if the article is: Sandals of a particular kind. Verify before relying on it",
+    ]);
+  });
+});

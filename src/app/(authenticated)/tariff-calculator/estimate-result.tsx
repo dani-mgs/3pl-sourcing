@@ -202,7 +202,7 @@ export function EstimateResultView({ estimate }: { estimate: EstimateResult }) {
                   {line.notes && line.notes.length > 0 && (
                     <ul className="mt-1 flex flex-col gap-0.5 text-xs text-[#92400E]">
                       {line.notes.map((note) => (
-                        <li key={note}>{note} (not applied)</li>
+                        <li key={note}>{note}</li>
                       ))}
                     </ul>
                   )}

@@ -26,7 +26,12 @@ export type ProgramWarningKind =
   // Exempt if another program (not loaded yet) applies.
   | "depends_on"
   // Pending rows say it's exempt; shown, not counted.
-  | "exempt_pending";
+  | "exempt_pending"
+  // The best matching row's rate isn't confirmed; named, not counted.
+  | "unconfirmed"
+  // Only rows with unmet conditions match (e.g. Russian-smelted aluminium);
+  // a note, not excluded from the total.
+  | "conditional";
 
 export type ProgramWarning = {
   programKey: string;

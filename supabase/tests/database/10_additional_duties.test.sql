@@ -29,7 +29,7 @@ select is((select count(*)::int from additional_duties where program_key = 'sect
 select is((select count(*)::int from additional_duties where program_key = 'section_301_brazil'), 5, 'Brazil seed: the 25% row and 4 exemption rows');
 select is(pg_temp.status('section_301_forced_labor'), 'pending_review', 'the forced-labour seed is pending review');
 select is(pg_temp.status('section_301_brazil'), 'pending_review', 'the Brazil seed is pending review');
-select is(pg_temp.status('section_301_china'), 'not_loaded', 'a program with no rows is not loaded');
+select is(pg_temp.status('section_301_nicaragua'), 'not_loaded', 'a program with no rows is not loaded');
 select is((select rate_pct from additional_duties where chapter99_heading = '9903.05.84'), 12.5::numeric, 'Vietnam is +12.5% (9903.05.84)');
 select is(
   (select row(rate_type, rate_pct, chapter99_heading_at_minimum)::text from additional_duties where chapter99_heading = '9903.05.39'),
@@ -40,8 +40,9 @@ select is(
   864, 'Brazil 9903.05.03 lists the 864 subheadings of note 50(a)(ii)'
 );
 select ok(
-  (select bool_and(source_url like 'https://www.federalregister.gov/%' and source_checked_on = '2026-10-02') from additional_duties),
-  'every seeded row cites its Federal Register notice and the date it was checked'
+  (select bool_and(source_url like 'https://www.federalregister.gov/%' and source_checked_on = '2026-10-02') from additional_duties
+   where program_key in ('section_301_forced_labor', 'section_301_brazil')),
+  'every PR 2a row cites its Federal Register notice and the date it was checked'
 );
 select is(
   (select excludes_programs from additional_duties where chapter99_heading = '9903.05.31'),
