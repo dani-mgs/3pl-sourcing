@@ -49,7 +49,8 @@ export async function fetchSources({ ids = null, update = false, log = console.l
     if (update) {
       source.sha256 = hash;
       source.bytes = bytes.length;
-      source.retrieved_on = new Date().toISOString().slice(0, 10);
+      // The local calendar date of the download.
+      source.retrieved_on = new Date().toLocaleDateString("en-CA");
     }
   }
   if (update && changed.length > 0) writeFileSync(SOURCES_FILE, `${JSON.stringify(manifest, null, 2)}\n`);

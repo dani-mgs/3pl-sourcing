@@ -14,7 +14,7 @@ describe("tariff seed migrations", () => {
   const dirs = seedDirs();
 
   test("there is a seed for PR 2a and PR 2b", () => {
-    expect(dirs).toEqual(expect.arrayContaining(["data/tariff/2a-origin-301"]));
+    expect(dirs).toEqual(expect.arrayContaining(["data/tariff/2a-origin-301", "data/tariff/2b-china301-232"]));
   });
 
   test.each(dirs)("%s matches its migration", (dir) => {

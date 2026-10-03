@@ -35,7 +35,7 @@
       "used_for": "2b primary: U.S. notes 16 (Section 232 metals), 20 (China 301 Lists 1-4A and exclusions (vvv)/(www)) and 31 (China 301 four-year review).",
       "sha256": "53c7858d3c70583537684f7e78b9fc1bd222a51a857d5f331f67d2468d48986c",
       "bytes": 14004064,
-      "retrieved_on": "2026-10-02"
+      "retrieved_on": "2026-10-03"
     },
     "usitc_china_tariffs": {
       "title": "USITC, China Tariffs reference table (last updated January 1, 2026)",
@@ -44,7 +44,7 @@
       "used_for": "2b cross-check A: every chapter 1-97 code covered by China Section 301 and its chapter 99 heading.",
       "sha256": "4c1643216e56c4547205d06b89e53ebfbd617e0b7d3360b4850312ae4a428002",
       "bytes": 397769,
-      "retrieved_on": "2026-10-02"
+      "retrieved_on": "2026-10-03"
     },
     "fr_2024_21217": {
       "title": "USTR, Notice of Modification (four-year review), FR 2024-21217, 89 FR 76581 (XML)",
@@ -53,7 +53,7 @@
       "used_for": "2b cross-check B: U.S. note 31 subdivisions (b)-(e), (h), (i) as implemented.",
       "sha256": "34efbe41b51ae62f81a951932059b134124bf5a7b9a65d4056cec029305e192a",
       "bytes": 357627,
-      "retrieved_on": "2026-10-02"
+      "retrieved_on": "2026-10-03"
     },
     "fr_2024_29462": {
       "title": "USTR, Notice of Modification, FR 2024-29462, 89 FR 101682 (XML)",
@@ -62,7 +62,7 @@
       "used_for": "2b cross-check B: U.S. note 31 subdivisions (f), (g), (j).",
       "sha256": "028ff3427a2aa097055296f5a225eeecebe68423dec19b36bc11ba3440cc464e",
       "bytes": 23631,
-      "retrieved_on": "2026-10-02"
+      "retrieved_on": "2026-10-03"
     },
     "fr_2025_21671": {
       "title": "USTR, Notice of Product Exclusion Extensions, FR 2025-21671, 90 FR 55232 (full text)",
@@ -71,7 +71,7 @@
       "used_for": "2b: exclusion count (178) and end date (before 11:59 p.m. EDT, November 9, 2026).",
       "sha256": "56ffbe6c752760b932330cdce00060ef873f2aee2f981f74b440558da1799147",
       "bytes": 9676,
-      "retrieved_on": "2026-10-02"
+      "retrieved_on": "2026-10-03"
     },
     "fr_2026_17925": {
       "title": "USTR, Notice of Conforming Amendments to Product Exclusions, FR 2026-17925, 91 FR 56538 (full text)",
@@ -80,7 +80,7 @@
       "used_for": "2b: checks the four exclusion items renumbered from July 1, 2026 read as amended in the note text.",
       "sha256": "831a7de0ad8e87df0f89c23d0d9087d22893424d16b190b826f7e8e7be6fe163",
       "bytes": 5409,
-      "retrieved_on": "2026-10-02"
+      "retrieved_on": "2026-10-03"
     },
     "cbp_metals_list": {
       "title": "CBP CSMS #68855869 (June 5, 2026) attachment: Metals HTS LIST 6426FINAL.docx",
@@ -89,7 +89,7 @@
       "used_for": "2b cross-check: U.S. note 16 lists, by chapter 99 heading and subdivision.",
       "sha256": "d06cb5707a3a45440de78c38e119a70ecfa222677aa7637fbbfd2639cd62a017",
       "bytes": 100310,
-      "retrieved_on": "2026-10-02"
+      "retrieved_on": "2026-10-03"
     },
     "fr_2026_06960": {
       "title": "Proclamation 11021, Strengthening Actions Taken To Adjust Imports of Aluminum, Steel, and Copper (FR 2026-06960, 91 FR 18201), full text",
@@ -98,7 +98,7 @@
       "used_for": "2b: Section 232 rules (full customs value, one metal duty per article, 15% metal content, Russian aluminium). Its annexes are images.",
       "sha256": "d234468f296d06bc142753abe86f75dc8e361bdf6c9111cb0f116747c8b3b106",
       "bytes": 41521,
-      "retrieved_on": "2026-10-02"
+      "retrieved_on": "2026-10-03"
     },
     "fr_2026_11314": {
       "title": "Proclamation, Further Adjusting the Tariff Regimes for Imports of Aluminum, Steel, and Copper (FR 2026-11314), full text",
@@ -107,7 +107,25 @@
       "used_for": "2b: June 8, 2026 changes (85% U.S. content). Its annexes are images.",
       "sha256": "69c2312b0b0576b0661290df0dee1a702b855184e60cef1868267cfbfeda9575",
       "bytes": 25880,
-      "retrieved_on": "2026-10-02"
+      "retrieved_on": "2026-10-03"
+    },
+    "fr_2019_09681": {
+      "title": "USTR, Notice of Modification of Section 301 Action (List 3 rate to 25%), FR 2019-09681, 84 FR 20459 (full text)",
+      "url": "https://www.federalregister.gov/documents/full_text/text/2019/05/09/2019-09681.txt",
+      "file": "fr-2019-09681.txt",
+      "used_for": "2b: date the List 3 rate (9903.88.03/.04) became 25% (May 10, 2019).",
+      "sha256": "d06e83d43d1a0908ca224fd5135e46d87d2d2378528712f0f327ae310cd7ea19",
+      "bytes": 9699,
+      "retrieved_on": "2026-10-03"
+    },
+    "fr_2020_00904": {
+      "title": "USTR, Notice of Modification of Section 301 Action (List 4A rate to 7.5%), FR 2020-00904, 85 FR 3741 (full text)",
+      "url": "https://www.federalregister.gov/documents/full_text/text/2020/01/22/2020-00904.txt",
+      "file": "fr-2020-00904.txt",
+      "used_for": "2b: date the List 4A rate (9903.88.15) became 7.5% (February 14, 2020).",
+      "sha256": "980e4d9cc50785445c472ae397007d35f52829bd95e03a12ab96ddc896f210c9",
+      "bytes": 7465,
+      "retrieved_on": "2026-10-03"
     }
   }
 }
