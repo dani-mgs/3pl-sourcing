@@ -65,8 +65,8 @@ export function TariffSection() {
       <SubHeading>Additional duties</SubHeading>
       <Bullets>
         <li>
-          Additional duties (so far the forced-labour Section 301 and the Brazil Section 301
-          programs) are added to the total only once a <Ui>tariff editor</Ui> has reviewed the
+          Additional duties (the forced-labour, Brazil and China Section 301 programs, and Section
+          232 on steel, aluminium and copper) are added to the total only once a <Ui>tariff editor</Ui> has reviewed the
           program&apos;s data against its primary sources. Each one shows its Chapter 99 heading,
           rate, legal status (e.g. <Ui>In force — under litigation</Ui>), effective dates, source and
           the date the source was checked.
@@ -83,9 +83,24 @@ export function TariffSection() {
           under it. Programs with no data yet show the rate read from the HTS, marked as indicative.
         </li>
         <li>
-          Programs stack. Some don&apos;t apply to goods covered by another program: forced-labour and
-          Brazil Section 301 duties don&apos;t apply to Section 232 goods. Until Section 232 is
-          loaded, such goods show &ldquo;exempt if Section 232 applies&rdquo;, without a percentage.
+          Programs stack, in CBP&apos;s filing order (Section 301 first, then Section 232). Some don&apos;t
+          apply to goods covered by another program: forced-labour and Brazil Section 301 duties
+          don&apos;t apply to Section 232 goods. While that Section 232 duty isn&apos;t settled (not
+          loaded, or pending review), such goods show &ldquo;exempt if Section 232 applies&rdquo;, without
+          a percentage. China Section 301 applies on top of everything, including Section 232 and the
+          forced-labour duty.
+        </li>
+        <li>
+          Within one program only one rate applies to a line (Section 232 steel and aluminium duties
+          never stack). The most specific entry wins; if two still match equally, the higher rate is
+          used and the other is named.
+        </li>
+        <li>
+          When a rate depends on a fact the calculator can&apos;t check (where the steel was melted, U.S.
+          metal content, metal under 15% of the weight, an end use), the estimate never assumes the fact
+          that would lower the duty: it applies the higher rate and names the lower one (&ldquo;could be
+          +25% (9903.82.04) instead if …&rdquo;). Tariff editors can change that per row where the typical
+          case differs.
         </li>
         <li>
           Where the base rate is low, some origins (EU, Japan, South Korea, Switzerland, Taiwan) pay a
@@ -96,6 +111,40 @@ export function TariffSection() {
           Every estimate shows <Ui>Duty data last reviewed {"{date}"} by {"{name}"}</Ui> for each
           program it uses, and a warning when that review is over 30 days old or Chapter 99 headings
           changed in the HTS since.
+        </li>
+      </Bullets>
+
+      <SubHeading>China Section 301 and Section 232 metals: what&apos;s covered</SubHeading>
+      <Bullets>
+        <li>
+          <Ui>China Section 301</Ui> (goods of China): Lists 1, 2 and 3 (25%), List 4A (7.5%) and the
+          2024 four-year review increases (25% to 100% on products such as semiconductors, solar cells,
+          electric vehicles, batteries, steel and aluminium, medical products). The lists come from the
+          HTS (U.S. notes 20 and 31), checked against USITC&apos;s China Tariffs table and USTR&apos;s
+          notices. For an 8-digit code split between lists, enter the 10-digit number for an exact
+          estimate.
+        </li>
+        <li>
+          USTR&apos;s China product exclusions depend on the product&apos;s description, not just its
+          code, so they&apos;re never applied: an estimate for a code named in one says &ldquo;may be
+          exempt if the article is …&rdquo; with the date the exclusion runs to, and the note disappears
+          once it lapses.
+        </li>
+        <li>
+          <Ui>Section 232 metals</Ui> (any origin): steel, aluminium and copper articles at 50%,
+          listed derivatives at 25% or a 15% minimum total rate, on the full customs value; Russian
+          aluminium at 200%; the UK, U.S.-metal and other reduced rates only as notes. The lists come
+          from the HTS (U.S. note 16), checked against CBP&apos;s list.
+        </li>
+        <li>
+          <Ui>Unconfirmed</Ui> headings (for example 9903.82.22, where the source doesn&apos;t say whether
+          15% is a total or an added rate, and the China chassis and crane duties due from 10 November
+          2026) are named as &ldquo;may apply&rdquo; and never counted until experts confirm them.
+        </li>
+        <li>
+          Not covered (named as warnings): Section 232 on vehicles, trucks, timber, semiconductors,
+          pharmaceuticals and drones; Canada&apos;s Section 338 duties; antidumping and countervailing
+          duties.
         </li>
       </Bullets>
 
@@ -111,6 +160,11 @@ export function TariffSection() {
           Rates are never edited in place: to change one, end-date the row and add a new one from the
           next day. Every change is recorded with who made it, and puts the program back to pending
           review.
+        </li>
+        <li>
+          The China Section 301 and Section 232 lists are extracted from the official sources by
+          scripts kept with the code, never typed by hand, and arrive pending review with a cross-check
+          report and a spot-check sample for the reviewer.
         </li>
       </Bullets>
 

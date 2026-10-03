@@ -27,7 +27,7 @@ function rateText(r: { rate_type: string; rate_pct: number | null; chapter99_hea
 }
 
 function originsText(origins: string[] | null) {
-  if (!origins) return "Any covered origin";
+  if (!origins) return "Any origin";
   return origins.length > 6 ? `${origins.slice(0, 6).join(", ")} +${origins.length - 6}` : origins.join(", ");
 }
 
@@ -162,7 +162,11 @@ export default async function ProgramDutyDataPage({ params }: { params: Promise<
                           {r.rate_type === "unconfirmed" ? "Open: " : "If "}
                           {r.condition_text}
                           {r.rate_type !== "unconfirmed" &&
-                            (r.assume_condition ? " — treated as met" : " — not assumed: only named, the higher rate applies")}
+                            (r.assume_condition
+                              ? " — treated as met"
+                              : r.rate_type === "exempt"
+                                ? " — not assumed: only named, the duty applies"
+                                : " — not assumed: only named, the higher rate applies")}
                         </p>
                       )}
                       {r.exclusion_heading && (

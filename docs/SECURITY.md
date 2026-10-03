@@ -27,7 +27,7 @@
 ### Tariff editor permission
 
 - `app_metadata.tariff_editor = true` (set only by admins through `updateTariffEditor` in /admin, via the service role after an admin check; users can't edit app_metadata) lets a user maintain duty and fee data. SQL `is_tariff_editor()` (editor or admin) gates writes to `customs_fees`, `additional_duties`, `additional_duty_scope` and `duty_program_reviews`, and nothing else. The duty-data server actions check the same permission (`getTariffPermissions`, using `getUser`) before writing.
-- Rates in `additional_duties` can't be edited in place (trigger); every change to duties, scope and fees is written to `tariff_data_history` by a security-definer trigger that nobody can write to directly.
+- Rates in `additional_duties` can't be edited in place (trigger; a row can't become conditional or unconditional in place either); every change to duties, scope and fees is written to `tariff_data_history` by a security-definer trigger that nobody can write to directly. Whether a row's condition is assumed (`assume_condition`) is editable by tariff editors like other details and, like any change, puts the program back to pending review. `additional_duty_scope_counts` is a `security_invoker` view (signed-in read, anon revoked).
 
 ### Secrets Management
 

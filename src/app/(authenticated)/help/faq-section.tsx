@@ -85,7 +85,9 @@ export function FaqSection() {
           <p>
             Only programs a tariff editor has reviewed are counted. Others that may apply to your
             origin or HTS code are named under the total, which says it EXCLUDES them, so it never
-            reads as complete. Section 232 and China Section 301 aren&apos;t loaded yet.
+            reads as complete. Section 232 on steel, aluminium and copper and China Section 301 are
+            loaded; Section 232 on vehicles, timber, semiconductors, pharmaceuticals and drones
+            isn&apos;t yet.
           </p>
         </Faq>
         <Faq question={'What does "pending expert review" mean?'}>
@@ -99,8 +101,25 @@ export function FaqSection() {
           <p>
             Forced-labour and Brazil Section 301 duties don&apos;t apply to goods subject to Section
             232 (steel, aluminium, copper, vehicles, wood products, semiconductors, patented
-            pharmaceuticals). Section 232 isn&apos;t calculated yet, so the calculator can&apos;t tell
-            which applies and names both instead of guessing.
+            pharmaceuticals). Where that Section 232 duty isn&apos;t calculated (not loaded, or pending
+            review), the calculator can&apos;t tell which applies and names both instead of guessing.
+            Where Section 232 is counted, the other duty shows as exempt, with what it would add if
+            Section 232 turned out not to apply.
+          </p>
+        </Faq>
+        <Faq question={'Why does a duty line say "could be … instead if …"?'}>
+          <p>
+            The rate depends on a fact the calculator can&apos;t check, such as whether UK steel was
+            melted and poured in the UK or how much U.S. metal an article contains. The estimate uses
+            the higher rate, so it never understates the duty, and names the lower one with the
+            condition. Ask your broker whether your goods qualify.
+          </p>
+        </Faq>
+        <Faq question="Why is a China product exclusion named but not applied?">
+          <p>
+            USTR&apos;s exclusions cover particular products described in words, not whole HTS codes,
+            so the calculator can&apos;t tell whether yours qualifies. It names the exclusion and the
+            date it runs to; verify with your broker before relying on it.
           </p>
         </Faq>
         <Faq question="Who can change duty rates or fees?">
