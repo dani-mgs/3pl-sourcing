@@ -30,11 +30,13 @@ import {
   quotePosition,
 } from "@/lib/forwarder/project-summary";
 import { requirementFit, type FitProject } from "@/lib/forwarder/requirement-fit";
+import { loadProjectDutyEstimates } from "@/lib/forwarder/load-duty-estimates";
 import { formatRelativeTime } from "@/lib/relative-time";
 import {
   ForwarderAssessmentBadge,
   ForwarderStatusBadge,
 } from "../../forwarder-status-badge";
+import { DutyEstimatesList } from "../../duty-estimates";
 import { ForwarderOverflowMenu } from "./forwarder-overflow-menu";
 import { ForwarderNotes, ForwarderProfile } from "./forwarder-profile";
 import {
@@ -92,6 +94,12 @@ export default async function ForwarderDetailPage({
   };
 
   const { project, results, effectiveAnnualShipments, details } = comparison;
+  // Shown in their own card; never passed into ranking or savings.
+  const dutyEstimates = await loadProjectDutyEstimates(supabase, comparison);
+  const ownDutyEstimates = dutyEstimates.estimates.filter((e) => e.forwarderId === forwarderId);
+  const ownDutyEstimateCount = comparison.quotes
+    .filter((q) => q.forwarder_id === forwarderId)
+    .reduce((sum, q) => sum + (dutyEstimates.countByQuote.get(q.id) ?? 0), 0);
   const client = embeddedOne(project.clients as { name: string } | null);
   const clientName = client?.name ?? "—";
   const route = shortRouteLabel(project);
@@ -150,6 +158,7 @@ export default async function ForwarderDetailPage({
           tied: rowPosition.tiedWith.length > 0,
         },
         isProjectBest: projectBestIds.has(result.quote.id),
+        dutyEstimateCount: dutyEstimates.countByQuote.get(result.quote.id) ?? 0,
       };
     });
 
@@ -198,6 +207,7 @@ export default async function ForwarderDetailPage({
               projectId={id}
               forwarderId={forwarderId}
               companyName={fields.company_name}
+              dutyEstimateCount={ownDutyEstimateCount}
             />
           </div>
         )}
@@ -238,6 +248,18 @@ export default async function ForwarderDetailPage({
               targetLeadTime={targetLeadTime}
               today={today}
               canWrite={canWrite}
+            />
+          </SectionCard>
+          <SectionCard title="Duty estimates">
+            <DutyEstimatesList
+              rows={ownDutyEstimates}
+              projectId={id}
+              canWrite={canWrite}
+              emptyText={
+                canWrite
+                  ? "No duty estimates for these quotes yet. Use Estimate duties for this quote in a quote's ⋯ menu."
+                  : "No duty estimates for these quotes yet."
+              }
             />
           </SectionCard>
           <RequirementFitCard fit={fit} />

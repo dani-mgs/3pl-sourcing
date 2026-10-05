@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { dutyEstimatesLabel } from "./duty-estimate-links";
 import { deleteForwarder } from "./forwarders/[forwarderId]/actions";
 
 // Shared by the Forwarders table's row menu and the forwarder detail page's
@@ -18,12 +19,15 @@ export function DeleteForwarderDialog({
   projectId,
   forwarderId,
   companyName,
+  dutyEstimateCount,
   open,
   onOpenChange,
 }: {
   projectId: string;
   forwarderId: string;
   companyName: string;
+  // Duty estimates linked to its quotes, deleted with them.
+  dutyEstimateCount: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -55,7 +59,8 @@ export function DeleteForwarderDialog({
         <DialogHeader>
           <DialogTitle>Delete Forwarder</DialogTitle>
           <DialogDescription>
-            Delete {companyName}? This also deletes all of its quotes. This can&apos;t be
+            Delete {companyName}? This also deletes all of its quotes
+            {dutyEstimateCount > 0 && <> and {dutyEstimatesLabel(dutyEstimateCount)}</>}. This can&apos;t be
             undone.
           </DialogDescription>
         </DialogHeader>

@@ -24,6 +24,8 @@ export type QuoteTableRow = {
   position: { rank: number; of: number; tied: boolean } | null;
   // The project's best quote overall (same highlight as Project Summary).
   isProjectBest: boolean;
+  // Linked duty estimates (deleted with the quote).
+  dutyEstimateCount: number;
 };
 
 const headClass =
@@ -207,6 +209,7 @@ export function QuotesTable({
                           forwarderId={forwarderId}
                           quoteId={quote.id}
                           scenarioGroup={quote.scenario_group}
+                          dutyEstimateCount={row.dutyEstimateCount}
                         />
                       </td>
                     )}

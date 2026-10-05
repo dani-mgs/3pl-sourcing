@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { dutyEstimatesLabel, estimateDutiesHref } from "../../duty-estimate-links";
 import { deleteQuote } from "./quotes/[quoteId]/actions";
 
 // Edit / Delete for one quote row. Only rendered for users who can write.
@@ -25,11 +26,13 @@ export function QuoteRowMenu({
   forwarderId,
   quoteId,
   scenarioGroup,
+  dutyEstimateCount,
 }: {
   projectId: string;
   forwarderId: string;
   quoteId: string;
   scenarioGroup: string;
+  dutyEstimateCount: number;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +68,9 @@ export function QuoteRowMenu({
           >
             Edit
           </DropdownMenuItem>
+          <DropdownMenuItem render={<Link href={estimateDutiesHref(projectId, quoteId)} />}>
+            Estimate duties for this quote
+          </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
             onClick={() => {
@@ -82,7 +88,8 @@ export function QuoteRowMenu({
           <DialogHeader>
             <DialogTitle>Delete Quote</DialogTitle>
             <DialogDescription>
-              Delete this {scenarioGroup} quote? This can&apos;t be undone.
+              Delete this {scenarioGroup} quote
+              {dutyEstimateCount > 0 && <> and {dutyEstimatesLabel(dutyEstimateCount)}</>}? This can&apos;t be undone.
             </DialogDescription>
           </DialogHeader>
 

@@ -6,7 +6,9 @@ import { getUserRole } from "@/lib/auth/get-user-role";
 import { formatRateDate } from "@/lib/fx/rate-provenance";
 import { loadAuthorNames } from "@/lib/tariff/estimate-authors";
 import { SAVED_ESTIMATE_COLUMNS, rowToSavedEstimate } from "@/lib/tariff/saved-estimate";
-import { EstimateResultView } from "../../estimate-result";
+import { inputChanges, type InputChange } from "@/lib/tariff/forwarder-link";
+import { loadLinkSources } from "@/lib/tariff/server-forwarder-link";
+import { EstimateResultView, WARNING_BOX_CLASS } from "../../estimate-result";
 import { DeleteEstimateButton } from "./delete-estimate-button";
 
 // A saved estimate: shown exactly as locked (rates, dates, sources and the
@@ -27,6 +29,27 @@ export default async function SavedEstimatePage({ params }: { params: Promise<{ 
   const saved = rowToSavedEstimate(row);
   const authors = saved ? await loadAuthorNames(supabase, [saved.createdBy]) : new Map<string, string>();
   const canDelete = saved != null && (auth.user?.id === saved.createdBy || role === "admin");
+
+  // A linked estimate: what it's linked to, and which of the values it was
+  // built from have changed since. The estimate itself is never recalculated.
+  let linked: { title: string; href: string; changes: InputChange[] } | null = null;
+  if (saved?.link) {
+    try {
+      const sources = await loadLinkSources(supabase, saved.link.projectId, saved.link.quoteId);
+      if (sources) {
+        const { quote } = sources;
+        linked = {
+          title: [sources.clientName, quote?.forwarder_name, quote?.scenario_group].filter(Boolean).join(" · "),
+          href: quote
+            ? `/forwarder-sourcing/${sources.project.id}/forwarders/${quote.forwarder_id}`
+            : `/forwarder-sourcing/${sources.project.id}`,
+          changes: saved.link.snapshot ? inputChanges(saved.link.snapshot, sources.project, quote) : [],
+        };
+      }
+    } catch (linkError) {
+      console.error("SavedEstimatePage link error:", linkError);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-8 py-10 max-sm:px-4">
@@ -54,6 +77,33 @@ export default async function SavedEstimatePage({ params }: { params: Promise<{ 
         </div>
         {canDelete && saved && <DeleteEstimateButton estimateId={saved.id} />}
       </div>
+
+      {linked && (
+        <div className="mb-6 flex flex-col gap-3">
+          <p className="text-sm text-move-navy" data-testid="estimate-link">
+            Linked to{" "}
+            <Link
+              href={linked.href}
+              className="rounded font-medium underline decoration-neutral-border underline-offset-2 outline-none hover:decoration-move-green focus-visible:ring-2 focus-visible:ring-move-green"
+            >
+              {linked.title}
+            </Link>
+          </p>
+          {linked.changes.length > 0 && (
+            <div className={WARNING_BOX_CLASS} role="note" data-testid="inputs-changed">
+              <p className="font-semibold">Inputs changed since this estimate</p>
+              <ul className="mt-1 flex flex-col gap-0.5">
+                {linked.changes.map((change) => (
+                  <li key={change.label}>
+                    {change.label}: {change.then} → {change.now}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1">This estimate stays as saved. Create a new one from the project to use the new values.</p>
+            </div>
+          )}
+        </div>
+      )}
 
       <section className="rounded-2xl border border-neutral-border bg-white p-8 shadow-sm">
         {saved ? (

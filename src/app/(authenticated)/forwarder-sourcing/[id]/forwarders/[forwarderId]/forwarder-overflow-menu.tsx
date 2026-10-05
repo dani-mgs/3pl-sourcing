@@ -15,10 +15,12 @@ export function ForwarderOverflowMenu({
   projectId,
   forwarderId,
   companyName,
+  dutyEstimateCount,
 }: {
   projectId: string;
   forwarderId: string;
   companyName: string;
+  dutyEstimateCount: number;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -42,6 +44,7 @@ export function ForwarderOverflowMenu({
         projectId={projectId}
         forwarderId={forwarderId}
         companyName={companyName}
+        dutyEstimateCount={dutyEstimateCount}
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
       />

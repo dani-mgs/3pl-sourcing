@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { deleteForwarderProject } from "../actions";
+import { dutyEstimatesLabel } from "./duty-estimate-links";
 
 // "⋯" menu for project-level actions that don't need a primary button. Only
 // rendered for users who can write to the project.
@@ -24,10 +25,13 @@ export function ProjectOverflowMenu({
   projectId,
   clientName,
   forwarderCount,
+  dutyEstimateCount,
 }: {
   projectId: string;
   clientName: string;
   forwarderCount: number;
+  // Linked duty estimates, deleted with the project.
+  dutyEstimateCount: number;
 }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +85,8 @@ export function ProjectOverflowMenu({
               <DialogHeader>
                 <DialogTitle>Delete Project</DialogTitle>
                 <DialogDescription>
-                  Delete this forwarder project for {clientName}? The client
+                  Delete this forwarder project for {clientName}
+                  {dutyEstimateCount > 0 && <> and {dutyEstimatesLabel(dutyEstimateCount)}</>}? The client
                   itself is kept for other projects. This cannot be undone.
                 </DialogDescription>
               </DialogHeader>

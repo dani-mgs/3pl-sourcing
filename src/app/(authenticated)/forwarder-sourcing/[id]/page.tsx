@@ -13,9 +13,12 @@ import { formatRelativeTime } from "@/lib/relative-time";
 import { CAPABILITY_FIELDS } from "@/lib/forwarder/forwarder-fields";
 import type { ForwarderProjectTerms } from "@/lib/forwarder/cost-comparison";
 import { loadProjectComparison } from "@/lib/forwarder/load-project-comparison";
+import { loadProjectDutyEstimates } from "@/lib/forwarder/load-duty-estimates";
 import { shortRouteLabel } from "@/lib/forwarder/project-display";
 import { pickBestQuotes, pipelineCounts } from "@/lib/forwarder/project-summary";
 import { ProjectStatusBadge } from "../project-status-badge";
+import { estimateDutiesHref } from "./duty-estimate-links";
+import { DutyEstimatesList } from "./duty-estimates";
 import { ExportMenu } from "./export-menu";
 import { ForwardersTable, type ForwarderRow } from "./forwarders-table";
 import { ProjectOverflowMenu } from "./project-overflow-menu";
@@ -42,7 +45,7 @@ export default async function ForwarderProjectSummaryPage({
   const route = shortRouteLabel(row);
 
   const capabilitySelect = CAPABILITY_FIELDS.map((c) => c.name).join(", ");
-  const [{ canWrite, isOwner }, owner, { data: forwarderRows }] = await Promise.all([
+  const [{ canWrite, isOwner }, owner, { data: forwarderRows }, dutyEstimates] = await Promise.all([
     getOwnershipContext(id, "forwarder_projects"),
     getClientOwner(id, "forwarder_projects"),
     supabase
@@ -50,11 +53,12 @@ export default async function ForwarderProjectSummaryPage({
       .select(`id, company_name, contact_person, status, assessment, updated_at, ${capabilitySelect}`)
       .eq("forwarder_project_id", id)
       .order("company_name", { ascending: true }),
+    loadProjectDutyEstimates(supabase, comparison),
   ]);
 
   // The select string above is built at runtime, so Supabase can't infer its
   // columns from the literal type.
-  type ForwarderQueryRow = Omit<ForwarderRow, "updatedRelative"> & {
+  type ForwarderQueryRow = Omit<ForwarderRow, "updatedRelative" | "dutyEstimateCount"> & {
     updated_at: string;
   };
   const forwarders: ForwarderRow[] = (
@@ -62,6 +66,9 @@ export default async function ForwarderProjectSummaryPage({
   ).map((f) => ({
     ...f,
     updatedRelative: formatRelativeTime(f.updated_at),
+    dutyEstimateCount: comparisonQuotes
+      .filter((q) => q.forwarder_id === f.id)
+      .reduce((sum, q) => sum + (dutyEstimates.countByQuote.get(q.id) ?? 0), 0),
   }));
 
   const projectTerms = row as unknown as ForwarderProjectTerms;
@@ -103,6 +110,15 @@ export default async function ForwarderProjectSummaryPage({
             <Button
               variant="outline"
               nativeButton={false}
+              render={<Link href={estimateDutiesHref(id)} />}
+            >
+              Estimate duties
+            </Button>
+          )}
+          {canWrite && (
+            <Button
+              variant="outline"
+              nativeButton={false}
               render={<Link href={`/forwarder-sourcing/${id}/edit`} />}
             >
               Edit
@@ -114,6 +130,7 @@ export default async function ForwarderProjectSummaryPage({
               projectId={id}
               clientName={clientName}
               forwarderCount={forwarders.length}
+              dutyEstimateCount={dutyEstimates.total}
             />
           )}
         </div>
@@ -149,6 +166,19 @@ export default async function ForwarderProjectSummaryPage({
               targetLeadTime={row.target_lead_time_days as number | null}
               today={today}
               defaultGroup={best[0]?.quote.scenario_group ?? null}
+            />
+          </SectionCard>
+
+          <SectionCard title="Duty estimates">
+            <DutyEstimatesList
+              rows={dutyEstimates.estimates}
+              projectId={id}
+              canWrite={canWrite}
+              emptyText={
+                canWrite
+                  ? "No duty estimates yet. Use Estimate duties above, or Estimate duties for this quote in a quote's menu."
+                  : "No duty estimates yet."
+              }
             />
           </SectionCard>
 

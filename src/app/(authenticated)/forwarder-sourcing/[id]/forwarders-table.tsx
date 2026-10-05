@@ -34,6 +34,8 @@ export type ForwarderRow = {
   status: ForwarderStatus;
   assessment: ForwarderAssessment | null;
   updatedRelative: string;
+  // Duty estimates linked to its quotes (deleted with it).
+  dutyEstimateCount: number;
 } & Record<CapabilityKey, boolean>;
 
 type ColumnKey = "company" | "capabilities" | "contact" | "status" | "assessment" | "updated";
@@ -131,6 +133,7 @@ function ForwarderRowMenu({
         projectId={projectId}
         forwarderId={forwarder.id}
         companyName={forwarder.company_name}
+        dutyEstimateCount={forwarder.dutyEstimateCount}
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
       />
