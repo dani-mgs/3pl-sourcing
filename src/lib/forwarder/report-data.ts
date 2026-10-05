@@ -24,6 +24,13 @@ import {
   isUsd,
   type RateSource,
 } from "@/lib/fx/rate-provenance";
+import { ESTIMATE_DISCLAIMER } from "@/lib/tariff/caveats";
+import { normalizeProject, type LinkQuote } from "@/lib/tariff/forwarder-link";
+import {
+  LINKED_ESTIMATE_COLUMNS,
+  summarizeLinkedEstimates,
+  type LinkedEstimateSummary,
+} from "@/lib/tariff/linked-estimates";
 
 // Shared by CSV, PDF, and DOCX export (export-actions.ts, render-report-pdf.ts,
 // render-report-docx.ts) — the tier-based (client/expert) column definitions,
@@ -227,6 +234,64 @@ export function quoteColumns(): Column<ForwarderQuoteResult<QuoteExportFields>>[
   ];
 }
 
+// ---- Duty estimates (Expert CSV only) -------------------------------------------
+//
+// The latest saved duty estimate per quote, with its as-of date and labels.
+// Only the Expert CSV carries them: never the client exports, and not the
+// Expert PDF/DOCX yet (docs/TECH_DEBT.md). They're informational and never
+// feed rank or savings.
+
+export function dutyEstimateLabelText(summary: LinkedEstimateSummary): string {
+  const parts: string[] = [];
+  if (summary.excludedCount > 0) {
+    parts.push(
+      `EXCLUDES ${summary.excludedCount} additional duty program${summary.excludedCount === 1 ? "" : "s"} that may apply`,
+    );
+  }
+  if (summary.pendingReview.length > 0) parts.push(`Pending expert review: ${summary.pendingReview.join(", ")}`);
+  if (summary.lastReviewedOn) parts.push(`Duty data last reviewed ${formatRateDate(summary.lastReviewedOn)}`);
+  if (summary.changes.length > 0) parts.push("Inputs changed since this estimate");
+  parts.push(ESTIMATE_DISCLAIMER);
+  return parts.join("; ");
+}
+
+export function dutyEstimateColumns(
+  estimates: Map<string, LinkedEstimateSummary>,
+): Column<ForwarderQuoteResult<QuoteExportFields>>[] {
+  const of = (r: ForwarderQuoteResult<QuoteExportFields>) => estimates.get(r.quote.id);
+  return [
+    {
+      header: "Forwarder Quoted Duties (USD)",
+      tier: "expert",
+      value: (r) => (r.quote.duties_taxes_usd != null ? formatCurrency(r.quote.duties_taxes_usd, "USD") : null),
+    },
+    {
+      header: "Duty Estimate (USD)",
+      tier: "expert",
+      value: (r) => {
+        const e = of(r);
+        return e ? formatCurrency(e.totalUsd, "USD") : null;
+      },
+    },
+    {
+      header: "Duty Estimate As Of",
+      tier: "expert",
+      value: (r) => {
+        const e = of(r);
+        return e ? formatRateDate(e.asOfDate) : null;
+      },
+    },
+    {
+      header: "Duty Estimate Labels",
+      tier: "expert",
+      value: (r) => {
+        const e = of(r);
+        return e ? dutyEstimateLabelText(e) : null;
+      },
+    },
+  ];
+}
+
 export function filterQuotesForVersion(
   results: ForwarderQuoteResult<QuoteExportFields>[],
   version: ExportVersion,
@@ -256,6 +321,8 @@ export type ForwarderReportData = {
   // Full expert sets, unfiltered — callers apply filterForwardersForVersion
   // and filterQuotesForVersion.
   quoteResults: ForwarderQuoteResult<QuoteExportFields>[];
+  // Latest linked duty estimate per quote id (Expert CSV only).
+  dutyEstimates?: Map<string, LinkedEstimateSummary>;
 };
 
 export async function fetchForwarderReportData(
@@ -263,8 +330,12 @@ export async function fetchForwarderReportData(
 ): Promise<{ data: ForwarderReportData } | { error: string }> {
   const supabase = await createClient();
 
-  const [{ data: project, error: projectError }, { data: forwarderRows, error: forwarderError }, { data: quoteRows, error: quoteError }] =
-    await Promise.all([
+  const [
+    { data: project, error: projectError },
+    { data: forwarderRows, error: forwarderError },
+    { data: quoteRows, error: quoteError },
+    { data: estimateRows, error: estimateError },
+  ] = await Promise.all([
       supabase
         .from("forwarder_projects")
         .select(`id, status, clients(name, business_model), ${FORWARDER_PROJECT_FIELDS_SELECT}`)
@@ -279,7 +350,10 @@ export async function fetchForwarderReportData(
         .from("forwarder_quotes")
         .select(`id, forwarder_id, ${QUOTE_FIELDS_SELECT}, forwarders!inner(company_name, status, forwarder_project_id)`)
         .eq("forwarders.forwarder_project_id", projectId),
+      supabase.from("duty_estimates").select(LINKED_ESTIMATE_COLUMNS).eq("forwarder_project_id", projectId),
     ]);
+  // Estimates are an extra column; the report still exports without them.
+  if (estimateError) console.error("fetchForwarderReportData duty estimates error:", estimateError);
 
   if (projectError || !project || forwarderError || quoteError) {
     console.error("fetchForwarderReportData fetch error:", projectError ?? forwarderError ?? quoteError);
@@ -322,6 +396,27 @@ export async function fetchForwarderReportData(
 
   const { results } = buildForwarderCostComparison(projectTerms, quotes);
 
+  const linkQuotes = new Map<string, LinkQuote>(
+    quotes.map((q) => [
+      q.id,
+      {
+        id: q.id,
+        updated_at: "",
+        forwarder_id: q.forwarder_id,
+        forwarder_name: q.forwarder_name,
+        scenario_group: q.scenario_group,
+        shipment_mode: q.shipment_mode,
+        cost_of_goods_usd: q.cost_of_goods_usd,
+        duties_taxes_usd: q.duties_taxes_usd,
+      },
+    ]),
+  );
+  const dutyEstimates = new Map(
+    summarizeLinkedEstimates(estimateRows ?? [], normalizeProject(row), linkQuotes)
+      .filter((e) => e.quoteId != null)
+      .map((e) => [e.quoteId!, e]),
+  );
+
   return {
     data: {
       clientName: client?.name ?? "project",
@@ -329,6 +424,7 @@ export async function fetchForwarderReportData(
       projectRow,
       forwarders: (forwarderRows ?? []) as unknown as ForwarderFields[],
       quoteResults: results,
+      dutyEstimates,
     },
   };
 }
@@ -404,12 +500,23 @@ export function buildForwarderReportCsv(data: ForwarderReportData, version: Expo
     version,
     filterForwardersForVersion(data.forwarders, version),
   );
-  const quoteTable = buildSectionTable(quoteColumns(), version, quoteResults);
+  const estimates = version === "expert" ? (data.dutyEstimates ?? new Map()) : new Map();
+  const quoteTable = buildSectionTable(
+    estimates.size > 0 ? [...quoteColumns(), ...dutyEstimateColumns(estimates)] : quoteColumns(),
+    version,
+    quoteResults,
+  );
+  const notes = reportNotes(quoteResults);
+  if (estimates.size > 0) {
+    notes.push(
+      "Duty estimates are informational: they don't affect rank or savings. Each is locked as of its date; verify with your customs broker.",
+    );
+  }
 
   return buildMultiSectionCsv([
     { title: "PROJECT DETAILS", csv: buildCsv(projectTable.headers, projectTable.rows) },
     { title: "FORWARDERS", csv: buildCsv(forwarderTable.headers, forwarderTable.rows) },
     { title: "QUOTE COMPARISON", csv: buildCsv(quoteTable.headers, quoteTable.rows) },
-    ...notesSection(reportNotes(quoteResults)),
+    ...notesSection(notes),
   ]);
 }

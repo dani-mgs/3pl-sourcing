@@ -193,6 +193,27 @@ const data: ForwarderReportData = {
   ],
 };
 
+// The duty estimate travels only in the Expert CSV: never in a client export,
+// and not yet in the Expert PDF/DOCX (docs/TECH_DEBT.md).
+const DUTY_ESTIMATE_SENTINEL = "ZZLEAKDutyEstimateProgram";
+data.dutyEstimates = new Map([
+  [
+    "q",
+    {
+      estimateId: "e1",
+      quoteId: "q",
+      asOfDate: "2026-10-05",
+      totalUsd: 3000,
+      excludedCount: 1,
+      pendingReview: [DUTY_ESTIMATE_SENTINEL],
+      lastReviewedOn: null,
+      comparison: null,
+      changes: [],
+      earlierCount: 0,
+    },
+  ],
+]);
+
 const MUST_NOT_REACH_CLIENT = [...Object.values(EXPERT_ONLY), ...Object.values(EXCLUDED)];
 
 async function pdfText(buffer: Buffer): Promise<string> {
@@ -244,4 +265,27 @@ describe.each(Object.keys(renderers) as (keyof typeof renderers)[])("%s export",
     },
     15000,
   );
+});
+
+describe("duty estimates in exports", () => {
+  test.each([
+    ["CSV", "client"],
+    ["PDF", "client"],
+    ["DOCX", "client"],
+    ["PDF", "expert"],
+    ["DOCX", "expert"],
+  ] as const)("%s %s version has no duty estimate", async (format, version) => {
+    const text = squash(await renderers[format](version));
+    expect(text).not.toContain(DUTY_ESTIMATE_SENTINEL);
+    expect(text).not.toContain("DutyEstimate");
+  }, 15000);
+
+  test("the Expert CSV has the estimate, its as-of date and its labels", async () => {
+    const csv = await renderers.CSV("expert");
+    expect(csv).toContain("Duty Estimate (USD),Duty Estimate As Of,Duty Estimate Labels");
+    const row = csv.split("\r\n").find((line) => line.includes(DUTY_ESTIMATE_SENTINEL));
+    expect(row).toContain(',"$3,000.00","Oct 5, 2026",EXCLUDES 1 additional duty program that may apply; Pending expert review: ');
+    expect(row).toContain("; Estimate — verify with your customs broker.");
+    expect(csv).toContain("Duty estimates are informational");
+  });
 });
