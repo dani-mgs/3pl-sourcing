@@ -18,6 +18,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Medium (each is named on the estimate; nothing is silently zero, and ties take the higher rate)
 - **Where:** `docs/tariff-data/2b-crosscheck.md` ("Open items"); Tariff Calculator → Duty data
 
+### HTS lookup paths start at "Chapter NN" without the chapter title
+- **Added:** 2026-10-05
+- **What:** The USITC export has no chapter titles, so HTS lookup paths read "Chapter 64 › 6402 …". Add titles only if they're generated from an official source (e.g. a USITC endpoint or the published HTS), never hand-typed.
+- **Why deferred:** No official machine-readable source wired up yet; hand-typed titles would be unverified data.
+- **Severity:** Low
+- **Where:** `src/lib/tariff/hts-lookup.ts` (`buildPath`), `src/lib/tariff/hts-import.ts`
+
 ### Duty estimates aren't in the Expert PDF/DOCX
 - **Added:** 2026-10-05
 - **What:** Linked duty estimates (Tariff PR 3) are exported only in the Expert CSV (Forwarder Quoted Duties, Duty Estimate, As Of, Labels). The Expert PDF and DOCX quote tables don't have them: the tables are already wide and the labels need their own layout.

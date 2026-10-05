@@ -101,9 +101,10 @@ export function sourceVersion(sources: Pick<LinkSources, "project" | "quote">): 
   return `${sources.project.updated_at}|${sources.quote?.updated_at ?? ""}`;
 }
 
-// The project's HS code looked up in the current HTS release, for the
-// description shown beside the suggestion and the rate's unit.
-export async function lookupProjectHts(supabase: Supabase, hsCode: string | null): Promise<HtsLookup> {
+// An HS code (the project's, or one chosen in HTS lookup) looked up in the
+// current HTS release, for the description shown beside the suggestion and
+// the rate's unit.
+export async function lookupHtsCode(supabase: Supabase, hsCode: string | null): Promise<HtsLookup> {
   const input = htsLookupInput(hsCode);
   if ("status" in input) return input;
   const { data: release, error } = await supabase
@@ -239,6 +240,8 @@ export async function loadLinkContext(
   quoteId: string | null,
   latestRates: LatestRates,
   today: string,
+  // A code chosen in HTS lookup: replaces the project's code in the form only.
+  lookedUpHts: string | null = null,
 ): Promise<LinkContextResult> {
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!UUID.test(projectId) || (quoteId != null && !UUID.test(quoteId))) return { status: "not_found" };
@@ -249,7 +252,7 @@ export async function loadLinkContext(
   if (!sources) return { status: "not_found" };
   if (!canWrite) return { status: "not_allowed" };
 
-  const hts = await lookupProjectHts(supabase, sources.project.hs_code);
+  const hts = await lookupHtsCode(supabase, lookedUpHts ?? sources.project.hs_code);
   const { project, quote } = sources;
   return {
     status: "ok",
@@ -262,7 +265,7 @@ export async function loadLinkContext(
         ? `/forwarder-sourcing/${projectId}/forwarders/${quote.forwarder_id}`
         : `/forwarder-sourcing/${projectId}`,
       quotedDutiesUsd: quote?.duties_taxes_usd ?? null,
-      prefill: buildPrefill({ project, quote, hts, latestRates, today }),
+      prefill: buildPrefill({ project, quote, hts, htsFromLookup: lookedUpHts != null, latestRates, today }),
     },
   };
 }

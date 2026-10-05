@@ -7,6 +7,7 @@ import {
   DUTY_DIFFERENCE_FLAG_USD,
   QUANTITY_HINT,
 } from "@/lib/tariff/forwarder-link";
+import { LOOKUP_GUARDRAIL, RESULT_LIMIT } from "@/lib/tariff/hts-lookup";
 import { Bullets, HelpSection, Note, Steps, SubHeading, Ui } from "./help-parts";
 
 // The Tariff Calculator's workflow and rules. Mirrors src/lib/tariff (the
@@ -38,6 +39,53 @@ export function TariffSection() {
           current data and locks it.
         </li>
       </Steps>
+      <SubHeading>Look up HTS code</SubHeading>
+      <p>
+        Helps you find candidate lines in the official schedule. It never classifies a product or suggests a code:{" "}
+        <Ui>{LOOKUP_GUARDRAIL}</Ui> There are no AI suggestions.
+      </p>
+      <Steps>
+        <li>
+          <Ui>Look up HTS code</Ui> (beside the calculator&apos;s HTS field, or at the top of the Tariff Calculator).
+          Any signed-in user can use it.
+        </li>
+        <li>
+          Search words (&ldquo;footwear rubber&rdquo;) or a code (&ldquo;6402&rdquo;, &ldquo;6402.99&rdquo; or
+          &ldquo;640299&rdquo; show everything under it). It searches the current HTS release, named at the top.
+        </li>
+        <li>
+          <Ui>Browse heading</Ui> opens a heading as a tree you expand and collapse.
+        </li>
+        <li>
+          <Ui>Use this code</Ui> opens the calculator with the code and its official description filled in. Check
+          that it matches the goods. From a linked estimate it returns there and replaces the suggested code for
+          that estimate only; the project&apos;s own HS code isn&apos;t changed.
+        </li>
+      </Steps>
+      <Bullets>
+        <li>
+          Words match from their start (&ldquo;foot&rdquo; finds &ldquo;footwear&rdquo;) and every word must appear,
+          in the line or the lines above it, so a line that only says &ldquo;Other&rdquo; is found by its
+          parents&apos; words. Common words like &ldquo;other&rdquo; are ignored.
+        </li>
+        <li>
+          Results are grouped by heading and listed in code order, not ranked by &ldquo;best match&rdquo;. Up to{" "}
+          {RESULT_LIMIT} lines are shown; refine the search when there are more.
+        </li>
+        <li>
+          Each line shows its full path (chapter → heading → subheading → line), the general rate (marked when the
+          calculator can&apos;t work it out), its units, and the additional duty programs that <em>may</em> apply
+          to its chapter or heading, with no amounts. Programs that depend on origin alone aren&apos;t shown there;
+          the estimate names them.
+        </li>
+        <li>
+          <Ui>CBP rulings (CROSS)</Ui> opens CBP&apos;s rulings search for the heading in a new tab.
+        </li>
+        <li>
+          Only 8- or 10-digit lines with nothing under them, outside chapters 98 and 99, can be used in the
+          calculator.
+        </li>
+      </Bullets>
 
       <SubHeading>How the estimate is worked out</SubHeading>
       <Bullets>
@@ -211,7 +259,8 @@ export function TariffSection() {
       <Bullets>
         <li>
           <Ui>HTS code</Ui>: the project&apos;s HS code, with its official description to check against
-          the goods. A warning shows when it has fewer than 10 digits.
+          the goods. A warning shows when it has fewer than 10 digits. To use another code, <Ui>Look up HTS
+          code</Ui> → <Ui>Use this code</Ui>: it replaces the code in this form only, never the project&apos;s.
         </li>
         <li>
           <Ui>Country of origin</Ui>: filled in only when the project&apos;s origin names exactly one

@@ -33,6 +33,10 @@
 - `duty_estimates` rows are locked (no update privilege plus a trigger). Any signed-in user can save an unlinked estimate as themselves. A row linked to a forwarder project (`forwarder_project_id`, optionally `forwarder_quote_id`) can only be inserted by that project's owner or an admin (insert policy), and a trigger refuses a quote from another project. The save and preview actions check the same (`getOwnershipContext`), re-read the project and quote, refuse if they changed since the page loaded, require every input to be confirmed, and build the input snapshot from the database, never the form. Linked rows cascade-delete with their project or quote (a delete, which the lock allows).
 - Linked estimates reach the Expert CSV only; client exports never carry them (`export-leak.test.ts`).
 
+### HTS code lookup
+- `search_hts_lines()` is `security invoker` (RLS applies: signed-in users read `hts_lines`), read-only, and executable by `authenticated` only (revoked from `public` and `anon`). It searches the current release only. Input is validated twice: the page parses the query with Zod (`parseLookupQuery`: 100 characters, up to 8 words of lowercase letters and digits, or 2–10 digits), and the function refuses anything else (22023), so nothing typed can carry tsquery syntax. It's called through supabase-js `rpc()` with parameters; no SQL is built from user input. `activate_hts_release()` (service role only) now also fills `hts_lines.ancestor_text`.
+- "Use this code" passes only the digits (`?hts=`) to the calculator, which re-checks the code against the current release. On a linked estimate it changes the form only; nothing writes to `forwarder_projects` (tests in `actions.test.ts` and pgTAP 14).
+
 ### Secrets Management
 
 - All keys (`NEXT_PUBLIC_SUPABASE_URL`, etc.) must be read exclusively from environment variables.

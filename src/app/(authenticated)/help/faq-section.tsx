@@ -74,6 +74,16 @@ export function FaqSection() {
             are net weights, not the shipment&apos;s gross weight.
           </p>
         </Faq>
+        <Faq question={"Why doesn't my HTS search find \"shoes\"?"}>
+          <p>
+            The HTS uses formal tariff wording: &ldquo;footwear&rdquo;, not &ldquo;shoes&rdquo;;
+            &ldquo;apparel&rdquo; or &ldquo;garments&rdquo; rather than &ldquo;clothes&rdquo;. Try the material and
+            the product type (&ldquo;rubber footwear&rdquo;, &ldquo;cotton shirts&rdquo;), or search the 4-digit
+            heading to see everything under it. Every word must appear, and common words like &ldquo;other&rdquo;
+            are ignored. The search finds candidate lines only; classification is the importer&apos;s
+            responsibility, so confirm with your customs broker.
+          </p>
+        </Faq>
         <Faq question="Why can't the Tariff Calculator estimate my HTS code?">
           <p>
             Either the code isn&apos;t in the current HTS release (check it, and enter all 10

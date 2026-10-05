@@ -9,7 +9,9 @@ import { loadAuthorNames } from "@/lib/tariff/estimate-authors";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
 import { HTS_SOURCE_URL } from "@/lib/tariff/calculate";
 import { excludedCount } from "@/lib/tariff/programs";
-import { loadLinkContext, type LinkContextResult } from "@/lib/tariff/server-forwarder-link";
+import { lookedUpHtsPrefill, type Prefill } from "@/lib/tariff/forwarder-link";
+import { lookupHref, projectLinkFrom } from "@/lib/tariff/hts-lookup";
+import { loadLinkContext, lookupHtsCode, type LinkContextResult } from "@/lib/tariff/server-forwarder-link";
 import { EstimateForm } from "./estimate-form";
 import { WARNING_BOX_CLASS } from "./estimate-result";
 
@@ -19,10 +21,16 @@ const one = (value: string | string[] | undefined) => (typeof value === "string"
 // and the list of saved (locked) estimates. Any signed-in user can use it.
 // Opened with ?project=<id>[&quote=<id>] from Forwarder Sourcing, the form is
 // pre-filled from that project or quote for the owner or an admin to confirm.
+// ?hts=<digits> comes from HTS lookup ("Use this code"): the code is
+// pre-filled with its official description for the user to confirm; on a
+// linked estimate it replaces the project's code in the form only.
 export default async function TariffCalculatorPage({ searchParams }: PageProps<"/tariff-calculator">) {
   const params = await searchParams;
   const projectId = one(params.project);
   const quoteId = one(params.quote);
+  const htsParam = one(params.hts);
+  // Only a plausible code is looked up; anything else is ignored.
+  const lookedUpHts = htsParam && /^[0-9]{8,10}$/.test(htsParam) ? htsParam : null;
   const supabase = await createClient();
   const [latestRates, releaseResult, estimatesResult, permissions] = await Promise.all([
     loadLatestFxRates(supabase),
@@ -44,10 +52,19 @@ export default async function TariffCalculatorPage({ searchParams }: PageProps<"
   let link: LinkContextResult | null = null;
   if (projectId) {
     try {
-      link = await loadLinkContext(supabase, projectId, quoteId, latestRates, todayUtc());
+      link = await loadLinkContext(supabase, projectId, quoteId, latestRates, todayUtc(), lookedUpHts);
     } catch (error) {
       console.error("TariffCalculatorPage link error:", error);
       link = { status: "not_found" };
+    }
+  }
+
+  let pickedHts: Prefill["hts"] | undefined;
+  if (!projectId && lookedUpHts) {
+    try {
+      pickedHts = lookedUpHtsPrefill(await lookupHtsCode(supabase, lookedUpHts), null);
+    } catch (error) {
+      console.error("TariffCalculatorPage HTS lookup error:", error);
     }
   }
 
@@ -62,14 +79,22 @@ export default async function TariffCalculatorPage({ searchParams }: PageProps<"
     <div className="mx-auto max-w-6xl px-8 py-10 max-sm:px-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-semibold text-move-navy">Tariff Calculator</h1>
-        {permissions.canEditTariffData && (
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
           <Link
-            href="/tariff-calculator/duty-data"
+            href={lookupHref(link?.status === "ok" ? projectLinkFrom(projectId, quoteId) : null)}
             className="rounded text-sm font-medium text-move-navy hover:text-move-green hover:underline focus-visible:ring-2 focus-visible:ring-move-green focus-visible:outline-none"
           >
-            Duty data →
+            Look up HTS code →
           </Link>
-        )}
+          {permissions.canEditTariffData && (
+            <Link
+              href="/tariff-calculator/duty-data"
+              className="rounded text-sm font-medium text-move-navy hover:text-move-green hover:underline focus-visible:ring-2 focus-visible:ring-move-green focus-visible:outline-none"
+            >
+              Duty data →
+            </Link>
+          )}
+        </div>
       </div>
       <p className="mt-1 text-sm text-neutral-muted">
         Estimate US import duty and fees for one HTS line. Estimates only — verify with your customs broker.
@@ -105,11 +130,12 @@ export default async function TariffCalculatorPage({ searchParams }: PageProps<"
 
       <EstimateForm
         // Remount when the link changes so the suggestions reset.
-        key={link?.status === "ok" ? link.context.sourceVersion : "unlinked"}
+        key={`${link?.status === "ok" ? link.context.sourceVersion : "unlinked"}|${lookedUpHts ?? ""}`}
         latestRates={latestRates}
         today={todayUtc()}
         countries={ORIGIN_COUNTRIES}
         link={link?.status === "ok" ? link.context : undefined}
+        pickedHts={pickedHts}
       />
 
       <section className="mt-6 rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">

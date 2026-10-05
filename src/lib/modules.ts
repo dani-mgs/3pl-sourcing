@@ -20,7 +20,7 @@ export const HUB_MODULES: HubModule[] = [
   },
   {
     name: "Tariff Calculator",
-    description: "Estimate duties and tariffs on imported goods.",
+    description: "Estimate duties and tariffs on imported goods, and look up HTS codes.",
     href: "/tariff-calculator",
   },
   {

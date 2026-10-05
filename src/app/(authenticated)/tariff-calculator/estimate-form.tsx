@@ -21,7 +21,9 @@ import {
   DEDUCTION_PROMPT,
   QUANTITY_HINT,
   type CustomsValueBasis,
+  type Prefill,
 } from "@/lib/tariff/forwarder-link";
+import { lookupHref } from "@/lib/tariff/hts-lookup";
 import type { LinkConfirmation } from "@/lib/tariff/parse-estimate-form";
 import type { LinkedFormContext } from "@/lib/tariff/server-forwarder-link";
 import { fieldClass, labelClass } from "../forwarder-sourcing/form-fields";
@@ -66,6 +68,7 @@ export function EstimateForm({
   today,
   countries,
   link,
+  pickedHts,
 }: {
   latestRates: LatestRates;
   today: string;
@@ -75,6 +78,8 @@ export function EstimateForm({
   // Set when opened from a forwarder project or quote: every input is a
   // suggestion the user must confirm before calculating.
   link?: LinkedFormContext;
+  // An unlinked form opened from HTS lookup ("Use this code").
+  pickedHts?: Prefill["hts"];
 }) {
   const [preview, previewAction, previewing] = useActionState<PreviewState, FormData>(
     async (_prev, formData) => previewEstimate(formData),
@@ -115,7 +120,10 @@ export function EstimateForm({
   const [rateState, setRateState] = useState<RateState>(initialBasis?.rate ?? { rate: "1", source: null, date: null });
   const [deduction, setDeduction] = useState(prefill?.deduction?.suggestedUsd ?? "");
   const [quantity, setQuantity] = useState(prefill?.quantity?.suggested ?? "");
-  const [htsValue, setHtsValue] = useState(prefill?.hts.value ?? "");
+  // The HTS suggestion: the project's code, or one chosen in HTS lookup.
+  const htsPrefill = prefill?.hts ?? pickedHts;
+  const htsControlled = Boolean(link || pickedHts);
+  const [htsValue, setHtsValue] = useState(htsPrefill?.value ?? "");
   const [confirmed, setConfirmed] = useState<Set<LinkConfirmation>>(new Set());
 
   const latestForCurrency = isUsd(currency) ? undefined : latestRates[currency];
@@ -211,9 +219,17 @@ export function EstimateForm({
           )}
 
           <div className="flex flex-col gap-2">
-            <label htmlFor="hts_code" className={labelClass}>
-              HTS code
-            </label>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+              <label htmlFor="hts_code" className={labelClass}>
+                HTS code
+              </label>
+              <Link
+                href={lookupHref(link ? { project: link.projectId, quote: link.quoteId } : null)}
+                className="rounded text-xs font-medium text-move-navy outline-none hover:text-move-green hover:underline focus-visible:ring-2 focus-visible:ring-move-green"
+              >
+                Look up HTS code
+              </Link>
+            </div>
             <input
               id="hts_code"
               name="hts_code"
@@ -222,26 +238,33 @@ export function EstimateForm({
               autoComplete="off"
               placeholder="e.g. 7208.10.15.00"
               aria-describedby="hts_code_hint"
-              value={link ? htsValue : undefined}
-              onChange={link ? (e) => setHtsValue(e.target.value) : undefined}
+              value={htsControlled ? htsValue : undefined}
+              onChange={htsControlled ? (e) => setHtsValue(e.target.value) : undefined}
               className={fieldClass}
             />
-            {prefill && (
+            {htsPrefill && (
               <>
-                {prefill.hts.projectText && <FromProject>Project HS code: {prefill.hts.projectText}</FromProject>}
-                {prefill.hts.description && htsValue === prefill.hts.value && (
+                {htsPrefill.projectText && <FromProject>Project HS code: {htsPrefill.projectText}</FromProject>}
+                {htsPrefill.fromLookup && (
+                  <p className={hintClass} data-testid="hts-from-lookup">
+                    {link
+                      ? "Chosen in HTS lookup. It's used for this estimate only; the project's HS code isn't changed."
+                      : "Chosen in HTS lookup."}
+                  </p>
+                )}
+                {htsPrefill.description && htsValue === htsPrefill.value && (
                   <div className="rounded-lg bg-neutral-bg px-3 py-2 text-xs text-move-navy" data-testid="hts-description">
                     <span className="text-neutral-muted">Official description: </span>
-                    {prefill.hts.ancestorDescriptions.length > 0 && (
+                    {htsPrefill.ancestorDescriptions.length > 0 && (
                       <span className="text-neutral-muted">
-                        {prefill.hts.ancestorDescriptions.map((d) => d.replace(/:\s*$/, "")).join(" › ")} ›{" "}
+                        {htsPrefill.ancestorDescriptions.map((d) => d.replace(/:\s*$/, "")).join(" › ")} ›{" "}
                       </span>
                     )}
-                    <span className="font-medium">{prefill.hts.description}</span>
+                    <span className="font-medium">{htsPrefill.description}</span>
                     <span className="block text-neutral-muted">Confirm this matches the goods.</span>
                   </div>
                 )}
-                {prefill.hts.warning && <p className={`${WARNING_BOX_CLASS} text-xs`}>{prefill.hts.warning}</p>}
+                {htsPrefill.warning && <p className={`${WARNING_BOX_CLASS} text-xs`}>{htsPrefill.warning}</p>}
               </>
             )}
             <p id="hts_code_hint" className={hintClass}>

@@ -4,6 +4,7 @@ import {
   DELIVERED_INCOTERMS,
   buildInputSnapshot,
   buildPrefill,
+  lookedUpHtsPrefill,
   compareDuties,
   customsValueAfterDeduction,
   htsLookupInput,
@@ -91,6 +92,31 @@ describe("HTS code pre-fill", () => {
     expect(htsLookupInput("6402.99.31.10")).toEqual({ digits: "6402993110" });
     const p = prefill({}, quote, { status: "not_found", digits: "6402993199" });
     expect(p.hts.warning).toMatch(/isn't in the current HTS/);
+  });
+
+  test("a code chosen in HTS lookup replaces the suggestion; the project's code is still shown", () => {
+    const picked: HtsLookup = { ...found, digits: "6402993160", description: "Other", ancestorDescriptions: ["For women"] };
+    const p = buildPrefill({ project, quote, hts: picked, htsFromLookup: true, latestRates: latest, today: TODAY });
+    expect(p.hts).toEqual({
+      value: "6402.99.31.60",
+      projectText: "6402.99.31.10",
+      description: "Other",
+      ancestorDescriptions: ["For women"],
+      warning: null,
+      fromLookup: true,
+    });
+    expect(prefill().hts.fromLookup).toBe(false);
+  });
+
+  test("a looked-up code is checked like the project's", () => {
+    expect(lookedUpHtsPrefill({ status: "several", digits: "64029931", description: "Other" }, null)).toMatchObject({
+      value: "6402.99.31",
+      warning: expect.stringMatching(/several 10-digit lines/),
+      projectText: null,
+    });
+    expect(lookedUpHtsPrefill({ status: "not_found", digits: "6402993199" }, null).warning).toMatch(
+      /isn't in the current HTS/,
+    );
   });
 });
 

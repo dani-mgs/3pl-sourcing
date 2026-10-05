@@ -36,6 +36,8 @@ const quoteRow = {
 const VERSION = `${projectRow.updated_at}|${quoteRow.updated_at}`;
 
 const inserts: Record<string, unknown>[] = [];
+// Every write other than the estimate insert, by table.
+const otherWrites: string[] = [];
 function stubClient() {
   return {
     auth: { getUser: async () => ({ data: { user: { id: "u1" } } }) },
@@ -47,7 +49,20 @@ function stubClient() {
           data: table === "forwarder_projects" ? projectRow : table === "forwarder_quotes" ? quoteRow : null,
           error: null,
         }),
+        update: () => {
+          otherWrites.push(`update ${table}`);
+          return chain;
+        },
+        upsert: () => {
+          otherWrites.push(`upsert ${table}`);
+          return chain;
+        },
+        delete: () => {
+          otherWrites.push(`delete ${table}`);
+          return chain;
+        },
         insert: (row: Record<string, unknown>) => {
+          if (table !== "duty_estimates") otherWrites.push(`insert ${table}`);
           inserts.push(row);
           return { select: () => ({ single: async () => ({ data: { id: "e1" }, error: null }) }) };
         },
@@ -129,6 +144,7 @@ function form(fields: Record<string, string> = {}) {
 
 beforeEach(() => {
   inserts.length = 0;
+  otherWrites.length = 0;
   canWrite.mockReturnValue(true);
   buildEstimate.mockResolvedValue({ ok: true, estimate: ESTIMATE });
 });
@@ -152,6 +168,15 @@ describe("linked duty estimates", () => {
     });
     expect(revalidatePath).toHaveBeenCalledWith(`/forwarder-sourcing/${PROJECT}`);
     expect(revalidatePath).toHaveBeenCalledWith(`/forwarder-sourcing/${PROJECT}/forwarders/f1`);
+  });
+
+  test("a code chosen in HTS lookup is used for the estimate only; the project's HS code is never written", async () => {
+    await expect(saveEstimate(form({ hts_code: "6402.99.31.60" }))).rejects.toThrow("REDIRECT");
+    expect(buildEstimate.mock.calls[0][1]).toMatchObject({ htsDigits: "6402993160" });
+    expect(otherWrites).toEqual([]);
+    // The snapshot records the project as it is, with its own code.
+    expect(inserts[0]).toMatchObject({ input_snapshot: { project: { hs_code: "6402.99.31.10" } } });
+    expect(projectRow.hs_code).toBe("6402.99.31.10");
   });
 
   test("someone who can't write to the project can't save or even preview a linked estimate", async () => {
