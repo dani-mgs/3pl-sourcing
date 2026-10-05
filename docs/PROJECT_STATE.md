@@ -12,7 +12,7 @@ Internal tool for Move Supply Chain Logistics Experts to manage 3PL sourcing eng
 - Backend/API: Next.js Server Actions (no separate API layer)
 - DB: Supabase Postgres — project ref vnidvcskfsyfytdjbiji
 - Auth: Supabase Auth (email/password, invite-only, no public signup). Roles (admin / logistics_expert) stored in auth.users.raw_app_meta_data.role, synced one-way into a public profiles table via trigger.
-- Infra/hosting: Vercel — walkthrough was given, NOT yet confirmed deployed. Still local-dev only as of last session.
+- Infra/hosting: Vercel — walkthrough was given, NOT yet confirmed deployed. Still local-dev only as of last session. Deploying a change with migrations: `npx supabase db push && git push` (never push the code if the migration fails); rollback via Vercel → Deployments → previous production deployment → Promote to Production. See AGENTS.md, "Database Changes".
 - Repo: github.com/dani-mgs/3pl-sourcing
 - Package manager/runtime: npm, Node 22 via nvm (.nvmrc)
 - AI: @anthropic-ai/sdk for document extraction, pdf-parse + mammoth for PDF/DOCX text extraction
