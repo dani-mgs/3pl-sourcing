@@ -24,7 +24,8 @@ export function ConceptsSection() {
         </li>
         <li>
           Ranking and savings use freight cost only (amount × exchange rate, in USD), not
-          duties or other charges.
+          duties or other charges. Duty estimates from the Tariff Calculator are shown beside quotes
+          but never change rank or savings.
         </li>
         <li>
           Annual figures use shipments per year, or shipments per month × 12 if per year is
@@ -184,6 +185,7 @@ export function ExportSection() {
           Quotes: Forwarder Status, Key Strength, Key Weakness / Risk, Important Assumption,
           Overall Assessment, Client Decision, and Notes.
         </li>
+        <li>Duty estimates: only the Expert CSV has them (not the Expert PDF or DOCX yet).</li>
         <li>
           Excluded forwarders (Unfit, Do Not Contact, Withdrawn / No Response) entirely: they
           aren&apos;t listed under forwarders considered, and none of their quotes appear. The
@@ -223,7 +225,8 @@ export function PermissionsSection() {
         <li>
           <Ui>Tariff Calculator</Ui>: everyone signed in can calculate, save, and view saved
           estimates. Only whoever saved an estimate, or an admin, can delete it; nobody can
-          change one. Duty and fee data can only be changed by <Ui>tariff editors</Ui> and admins;
+          change one. Estimates linked to a forwarder project or quote can only be created by the
+          project&apos;s owner or an admin. Duty and fee data can only be changed by <Ui>tariff editors</Ui> and admins;
           admins grant the tariff editor permission in Administration.
         </li>
         <li>

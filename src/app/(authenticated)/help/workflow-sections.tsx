@@ -126,11 +126,15 @@ export function ForwarderSection() {
           requirement fit.
         </li>
         <li>
+          Optionally, <Ui>Estimate duties</Ui> for the project or a quote, to compare with the duties
+          the forwarder quoted (see Tariff Calculator).
+        </li>
+        <li>
           <Ui>Export</Ui> a Client or Expert version as CSV, PDF, or DOCX.
         </li>
       </Steps>
       <Bullets>
-        <li>Deleting a forwarder also deletes all of its quotes.</li>
+        <li>Deleting a forwarder also deletes all of its quotes, and their duty estimates.</li>
         <li>A project can&apos;t be deleted while it still has forwarders.</li>
         <li>A shipment type must go with its mode (e.g. FCL and LCL are Sea types).</li>
       </Bullets>

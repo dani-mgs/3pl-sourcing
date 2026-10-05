@@ -18,6 +18,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Medium (each is named on the estimate; nothing is silently zero, and ties take the higher rate)
 - **Where:** `docs/tariff-data/2b-crosscheck.md` ("Open items"); Tariff Calculator → Duty data
 
+### Duty estimates aren't in the Expert PDF/DOCX
+- **Added:** 2026-10-05
+- **What:** Linked duty estimates (Tariff PR 3) are exported only in the Expert CSV (Forwarder Quoted Duties, Duty Estimate, As Of, Labels). The Expert PDF and DOCX quote tables don't have them: the tables are already wide and the labels need their own layout.
+- **Why deferred:** Layout work in both renderers; the CSV covers the expert need for now.
+- **Severity:** Low
+- **Where:** `src/lib/forwarder/report-data.ts` (`dutyEstimateColumns`, `buildForwarderReport`), `render-report-pdf.ts`, `render-report-docx.ts`
+
 ### Tariff Calculator: rounding and single-line MPF are assumptions
 - **Added:** 2026-10-02
 - **What:** Each estimate line rounds once, half up to the cent, and the MPF minimum/maximum are applied to the one line as if it were the whole entry. CBP's exact per-line rounding in ACE wasn't confirmed against a primary source; differences should be cents, but a multi-line entry's MPF can differ a lot. Both are stated on every estimate and in /help.
@@ -28,6 +35,7 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 ### Tariff Calculator: saved estimates trust RLS for who can insert
 - **Added:** 2026-10-02
 - **What:** The save action recalculates on the server, but RLS lets any signed-in user insert a `duty_estimates` row directly through the API (with their own `created_by`), so a determined user could store numbers the calculator never produced. Rows are still locked afterwards and attributed to that user.
+- **Update 2026-10-05 (PR 3):** an estimate linked to a forwarder project or quote can only be inserted by the project's owner or an admin (RLS), and the quote must belong to the project (trigger). The amounts and the input snapshot are still not enforced server-side for a direct API insert. Linked estimates now appear on the project/forwarder pages and in the Expert CSV (internal only; never in client exports).
 - **Why deferred:** Users are internal staff, and the same holds for quotes. **Must be closed before any client-facing use** (an export, a client report, or the Landed Cost Calculator showing estimates to clients): replace the insert policy with a security-definer function that builds the row from the server-side calculation, or insert via a server-only path.
 - **Severity:** Low (internal only); High before client-facing use
 - **Where:** `supabase/migrations/20261002135142_tariff_duty_estimates.sql` (insert policy)

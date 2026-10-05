@@ -136,6 +136,31 @@ export function FaqSection() {
             one that counts.
           </p>
         </Faq>
+        <Faq question="Why does our estimate differ from the forwarder's?">
+          <p>
+            Forwarders often include things our estimate doesn&apos;t: import VAT or other taxes,
+            brokerage and entry fees, bond costs, or a margin. Our estimate may also leave out
+            additional duty programs (its total says EXCLUDES when it does) and never applies
+            trade-agreement savings. The customs value can differ too: we use the confirmed goods value
+            less freight and insurance, while the forwarder may have used the CIF value or a different
+            exchange rate. Both are for one shipment as described on the project. A large gap is
+            flagged &ldquo;Check with forwarder&rdquo;: ask what their figure includes.
+          </p>
+        </Faq>
+        <Faq question="Why didn't the calculator fill in the origin from my project?">
+          <p>
+            The project&apos;s origin is free text. The calculator only fills it in when it names exactly
+            one country; &ldquo;Korea&rdquo;, &ldquo;China / Vietnam&rdquo; or a city on its own could mean
+            more than one, so you pick. A wrong origin would change which duties apply.
+          </p>
+        </Faq>
+        <Faq question={'Why does a duty estimate say "Inputs changed since this estimate"?'}>
+          <p>
+            Something it was built from (the HS code, origin, invoice value, incoterm, current freight
+            cost, the quote&apos;s mode or quoted duties) has been edited since it was saved. Saved
+            estimates are locked; create a new one from the project or quote to use the new values.
+          </p>
+        </Faq>
         <Faq question="Why didn't my saved estimate change when rates changed?">
           <p>
             Saved estimates are locked with the rates and dates they used. Calculate again and

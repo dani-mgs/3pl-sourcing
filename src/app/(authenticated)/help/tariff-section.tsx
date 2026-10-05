@@ -1,4 +1,12 @@
 import { ESTIMATE_CAVEATS, ESTIMATE_DISCLAIMER } from "@/lib/tariff/caveats";
+import {
+  DEDUCTION_NOTE,
+  DEDUCTION_PROMPT,
+  DELIVERED_INCOTERMS,
+  DUTY_DIFFERENCE_FLAG_SHARE,
+  DUTY_DIFFERENCE_FLAG_USD,
+  QUANTITY_HINT,
+} from "@/lib/tariff/forwarder-link";
 import { Bullets, HelpSection, Note, Steps, SubHeading, Ui } from "./help-parts";
 
 // The Tariff Calculator's workflow and rules. Mirrors src/lib/tariff (the
@@ -173,6 +181,78 @@ export function TariffSection() {
         {ESTIMATE_CAVEATS.map((caveat) => (
           <li key={caveat}>{caveat}</li>
         ))}
+      </Bullets>
+
+      <SubHeading>Estimating duties from Forwarder Sourcing</SubHeading>
+      <Steps>
+        <li>
+          On a forwarder project, <Ui>Estimate duties</Ui>; or on a forwarder&apos;s page, a quote&apos;s{" "}
+          <Ui>⋯</Ui> menu → <Ui>Estimate duties for this quote</Ui>. Only the project&apos;s owner or an
+          admin sees these.
+        </li>
+        <li>
+          The calculator opens pre-filled from the project (and quote). Every value is a suggestion:
+          check each one and tick <Ui>Confirmed</Ui>. Nothing is calculated or saved until every input
+          is confirmed.
+        </li>
+        <li>
+          <Ui>Calculate</Ui>, then <Ui>Save to quote</Ui> (or <Ui>Save to project</Ui>). The estimate is
+          locked like any other and linked to the project or quote.
+        </li>
+      </Steps>
+      <Bullets>
+        <li>
+          <Ui>HTS code</Ui>: the project&apos;s HS code, with its official description to check against
+          the goods. A warning shows when it has fewer than 10 digits.
+        </li>
+        <li>
+          <Ui>Country of origin</Ui>: filled in only when the project&apos;s origin names exactly one
+          country (&ldquo;Vietnam&rdquo;, &ldquo;Shenzhen, China&rdquo;). Anything else
+          (&ldquo;Korea&rdquo;, &ldquo;China / Vietnam&rdquo;, &ldquo;Asia&rdquo;) is left for you to pick;
+          the calculator never guesses an origin.
+        </li>
+        <li>
+          <Ui>Customs value</Ui>: the project&apos;s invoice value, converted with the latest daily rate
+          (shown with its date and source, and locked when saved). If the quote has a cost of goods, you
+          can use that instead.
+        </li>
+        <li>
+          When the project&apos;s current incoterm is {DELIVERED_INCOTERMS.join(", ")}, the supplier&apos;s
+          price includes international freight, so the calculator asks: <Ui>{DEDUCTION_PROMPT}</Ui>{" "}
+          {DEDUCTION_NOTE} The suggested amount is the project&apos;s current freight cost (the freight
+          inside today&apos;s invoice, not the new forwarder&apos;s quote); edit it to match the invoice,
+          or leave it blank. You must confirm it either way. The estimate shows goods value, deduction and
+          the final customs value.
+        </li>
+        <li>
+          <Ui>Shipment mode</Ui>: the quote&apos;s mode (the project&apos;s current mode from the project
+          page). HMF applies to Sea only.
+        </li>
+        <li>
+          <Ui>Quantity</Ui>, for per-unit rates only: the project&apos;s weight for a per-kg rate, or its
+          units for a per-each rate. {QUANTITY_HINT}
+        </li>
+        <li>
+          The <Ui>Duty estimates</Ui> card on the project and forwarder pages shows each quote&apos;s
+          latest estimate: <Ui>Forwarder quoted duties $X · Our estimate $Y (as of date)</Ui> and the
+          difference, or <Ui>Forwarder didn&apos;t quote duties</Ui>. A difference of at least $
+          {DUTY_DIFFERENCE_FLAG_USD} and at least {Math.round(DUTY_DIFFERENCE_FLAG_SHARE * 100)}% of the
+          higher figure is flagged <Ui>Check with forwarder</Ui>. The estimate&apos;s labels (EXCLUDES,
+          pending expert review, last reviewed, {ESTIMATE_DISCLAIMER}) always go with it.
+        </li>
+        <li>
+          If the project or quote values an estimate used change later, it shows{" "}
+          <Ui>Inputs changed since this estimate</Ui> with what changed. The estimate stays as saved;
+          create a new one to use the new values.
+        </li>
+        <li>
+          Duty estimates never affect ranking, savings or the Quote Comparison numbers, and aren&apos;t
+          in Client exports. The Expert CSV has a duty estimate column with its as-of date and labels.
+        </li>
+        <li>
+          Deleting a project, forwarder or quote also deletes the duty estimates linked to it; the
+          delete confirmation says how many.
+        </li>
       </Bullets>
 
       <SubHeading>Saved estimates</SubHeading>
