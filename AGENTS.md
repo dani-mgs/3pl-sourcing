@@ -18,10 +18,12 @@ Always follow this flow:
 1. Create a migration file: `npx supabase migration new <descriptive_name>`
 2. Write the SQL inside that generated file
 3. Test locally: `npx supabase db reset`
-4. Apply to the live project: `npx supabase db push`
-5. Commit the migration file to git in the same commit/PR as the related feature code
+4. Commit the migration file to git in the same commit/PR as the related feature code
+5. Deploy with the migration first, chained: `npx supabase db push && git push`
 
-After committing a migration, always remind the user to run `npx supabase db push` before (or alongside) `git push`. Code that expects a schema the live DB doesn't have will break, and security policies won't apply.
+The `&&` matters: if the migration fails, `git push` must not run. Pushing deploys the code to Vercel, and code that expects columns or tables the live DB doesn't have breaks production (and its security policies won't apply). Fix the migration, push it to the database, and only then push the code. After committing a migration, always remind the user to deploy with `npx supabase db push && git push`.
+
+Rollback: if a deploy breaks production, go to Vercel → Deployments → the previous production deployment → Promote to Production. That restores the previous code only; migrations already applied stay in the database, so a schema change is undone with a new migration, never by editing the live database.
 
 Every migration that creates a table must revoke all privileges from anon unless the table is meant to be public. The strict pgTAP anon check enforces this.
 
