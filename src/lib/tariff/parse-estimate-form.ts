@@ -20,6 +20,9 @@ export type EstimateFormData = {
   exchangeRateDate: string | null;
   quantity: string | null;
   label: string | null;
+  // USD taken off the converted value; only linked estimates set it
+  // (parseLinkFields), so the plain calculator form always sends null.
+  deductionUsd: string | null;
 };
 
 export type ParseEstimateResult =
@@ -97,6 +100,78 @@ export function parseEstimateForm(formData: FormData): ParseEstimateResult {
       exchangeRateDate,
       quantity: quantityText === "" ? null : quantityText,
       label: label === "" ? null : label,
+      deductionUsd: null,
     },
   };
+}
+
+// ---- Linked estimates ("Estimate duties" from Forwarder Sourcing) --------------
+
+// Every input the user must tick as checked before a linked estimate is
+// calculated or saved. The deduction and quantity are only asked when shown.
+export const LINK_CONFIRMATIONS = {
+  hts: "HTS code",
+  origin: "country of origin",
+  customs_value: "customs value",
+  deduction: "freight and insurance deduction",
+  mode: "shipment mode",
+  quantity: "quantity",
+} as const;
+export type LinkConfirmation = keyof typeof LINK_CONFIRMATIONS;
+
+export type LinkFields = {
+  projectId: string;
+  quoteId: string | null;
+  // The project's (and quote's) updated_at when the page was loaded, so a
+  // change made meanwhile is caught instead of saved into the snapshot.
+  sourceVersion: string;
+  deductionUsd: string | null;
+  confirmed: Set<LinkConfirmation>;
+};
+
+export type ParseLinkResult = { linked: false } | { linked: true; data: LinkFields } | { error: string };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const LINK_ERROR = "This estimate's link to the project is invalid. Open it again from the project.";
+
+export function parseLinkFields(formData: FormData): ParseLinkResult {
+  const projectId = field(formData, "forwarder_project_id");
+  if (projectId === "") return { linked: false };
+  const quoteId = field(formData, "forwarder_quote_id");
+  const sourceVersion = field(formData, "source_version");
+  if (!UUID.test(projectId) || (quoteId !== "" && !UUID.test(quoteId)) || sourceVersion === "") {
+    return { error: LINK_ERROR };
+  }
+  // The plain form treats a blank currency as USD; a linked one never assumes it.
+  if (field(formData, "original_currency") === "") return { error: "Choose the currency of the customs value." };
+
+  // Blank or zero means no deduction.
+  const deductionText = field(formData, "freight_insurance_deduction_usd").replace(/,/g, "");
+  let deductionUsd: string | null = null;
+  if (deductionText !== "" && Number(deductionText) !== 0) {
+    // numeric(14,2)
+    if (!positiveDecimal(deductionText, 2, 1e12)) {
+      return { error: "Enter the freight and insurance deduction in USD, e.g. 2500.00, or leave it blank." };
+    }
+    deductionUsd = deductionText;
+  }
+
+  const confirmed = new Set<LinkConfirmation>();
+  for (const key of Object.keys(LINK_CONFIRMATIONS) as LinkConfirmation[]) {
+    if (formData.get(`confirm_${key}`) === "on") confirmed.add(key);
+  }
+  return { linked: true, data: { projectId, quoteId: quoteId || null, sourceVersion, deductionUsd, confirmed } };
+}
+
+// The first required confirmation that's missing, as a message.
+export function missingConfirmation(
+  confirmed: Set<LinkConfirmation>,
+  { deductionOffered, quantityEntered }: { deductionOffered: boolean; quantityEntered: boolean },
+): string | null {
+  const required: LinkConfirmation[] = ["hts", "origin", "customs_value"];
+  if (deductionOffered) required.push("deduction");
+  required.push("mode");
+  if (quantityEntered) required.push("quantity");
+  const missing = required.find((key) => !confirmed.has(key));
+  return missing ? `Confirm the ${LINK_CONFIRMATIONS[missing]} before calculating.` : null;
 }

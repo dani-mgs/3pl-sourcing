@@ -3,7 +3,6 @@ import { todayUtc } from "@/lib/fx/server-rates";
 import { verifyRateProvenance } from "@/lib/fx/rate-provenance";
 import {
   calculateEstimate,
-  customsValueInUsd,
   type EstimateLine,
   type FeeRow,
   type ReleaseInfo,
@@ -15,6 +14,7 @@ import type { DutyProgramRow, ProgramWarning } from "./programs";
 import { centsToNumber, parseDecimal, toCents } from "./rational";
 import { loadAdditionalDutyData } from "./server-duty-data";
 import type { EstimateFormData } from "./parse-estimate-form";
+import { customsValueAfterDeduction } from "./forwarder-link";
 
 // Builds an estimate on the server from validated form data: the current
 // HTS release and line, the fees and column 2 list in force today, the
@@ -43,6 +43,9 @@ export type EstimateResult = {
   exchangeRateSource: "daily_feed" | "manual" | null;
   exchangeRateDate: string | null;
   customsValueUsd: number;
+  // International freight and insurance taken out of a delivered-terms
+  // invoice price (linked estimates only); customsValueUsd is net of it.
+  deductionUsd: number | null;
   rateColumn: "general" | "column2";
   rateText: string;
   quantityUsed: { value: number; unit: string; unitLabel: string } | null;
@@ -63,7 +66,7 @@ export type BuildEstimateResult = { ok: true; estimate: EstimateResult } | { ok:
 
 const UNEXPECTED = "An unexpected error occurred.";
 
-type HtsLineRecord = {
+export type HtsLineRecord = {
   hts_code: string;
   description: string;
   ancestor_descriptions: string[];
@@ -86,7 +89,7 @@ export function inForce(row: DatedRow, date: string): boolean {
 // Exact 8- or 10-digit match. An 8-digit code with no line of its own (the
 // HTS merges 8471.30.01 into 8471.30.01.00) matches its only 10-digit line;
 // with several, the user must choose.
-async function findLine(
+export async function findLine(
   supabase: Supabase,
   releaseId: string,
   digits: string,
@@ -194,7 +197,9 @@ export async function buildEstimate(
       exchangeRateDate = exchangeRateSource === "manual" ? asOfDate : verified.date;
     }
 
-    const customsValueUsd = customsValueInUsd(input.customsValue, input.exchangeRate);
+    const value = customsValueAfterDeduction(input.customsValue, input.exchangeRate, input.deductionUsd);
+    if (!value.ok) return { ok: false, error: value.error };
+    const { customsValueUsd } = value;
     const releaseInfo: ReleaseInfo = {
       name: release.name,
       title: release.title,
@@ -273,6 +278,7 @@ export async function buildEstimate(
         exchangeRateSource,
         exchangeRateDate,
         customsValueUsd: centsToNumber(toCents(customsValueUsd)),
+        deductionUsd: input.deductionUsd == null ? null : Number(input.deductionUsd),
         rateColumn: calculation.rateColumn,
         rateText: calculation.rateText,
         quantityUsed: calculation.quantityUsed,
@@ -314,6 +320,7 @@ export function estimateToRow(estimate: EstimateResult, label: string | null) {
     exchange_rate_source: estimate.exchangeRateSource,
     exchange_rate_date: estimate.exchangeRateDate,
     customs_value_usd: estimate.customsValueUsd,
+    freight_insurance_deduction_usd: estimate.deductionUsd,
     quantity: estimate.quantityUsed?.value ?? null,
     quantity_unit: estimate.quantityUsed?.unitLabel ?? null,
     base_duty_usd: estimate.baseDutyUsd,

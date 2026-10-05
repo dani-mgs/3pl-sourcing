@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseInputSnapshot, type InputSnapshot } from "./forwarder-link";
 import type { EstimateResult } from "./server-estimate";
 
 // Reads a saved duty_estimates row back into the shape the result view
@@ -10,7 +11,8 @@ export const SAVED_ESTIMATE_COLUMNS =
   "hts_release_name, hts_release_title, hts_release_start_date, rate_column, rate_text, special_rate_text, " +
   "origin_country, shipment_mode, customs_value_original, original_currency, exchange_rate_to_usd, " +
   "exchange_rate_source, exchange_rate_date, customs_value_usd, quantity, quantity_unit, base_duty_usd, " +
-  "fees_usd, total_usd, lines, warnings, additional_duties_usd, duty_reviews";
+  "fees_usd, total_usd, lines, warnings, additional_duties_usd, duty_reviews, freight_insurance_deduction_usd, " +
+  "forwarder_project_id, forwarder_quote_id, input_snapshot";
 
 const lineSchema = z.object({
   kind: z.enum(["duty", "additional", "fee"]),
@@ -83,6 +85,10 @@ const rowSchema = z.object({
   // Rows saved before additional duties existed default to none.
   additional_duties_usd: z.union([z.number(), z.string()]).optional().default(0),
   duty_reviews: z.array(dutyReviewSchema).optional().default([]),
+  freight_insurance_deduction_usd: z.union([z.number(), z.string()]).nullable().optional().default(null),
+  forwarder_project_id: z.string().nullable().optional().default(null),
+  forwarder_quote_id: z.string().nullable().optional().default(null),
+  input_snapshot: z.unknown().optional().default(null),
 });
 
 export type SavedEstimate = {
@@ -90,6 +96,8 @@ export type SavedEstimate = {
   createdAt: string;
   createdBy: string;
   label: string | null;
+  // Set when saved from a forwarder project or quote.
+  link: { projectId: string; quoteId: string | null; snapshot: InputSnapshot | null } | null;
   estimate: EstimateResult;
 };
 
@@ -105,6 +113,13 @@ export function rowToSavedEstimate(row: unknown): SavedEstimate | null {
     createdAt: r.created_at,
     createdBy: r.created_by,
     label: r.label,
+    link: r.forwarder_project_id
+      ? {
+          projectId: r.forwarder_project_id,
+          quoteId: r.forwarder_quote_id,
+          snapshot: parseInputSnapshot(r.input_snapshot),
+        }
+      : null,
     estimate: {
       asOfDate: r.as_of_date,
       htsCode: r.hts_code,
@@ -126,6 +141,7 @@ export function rowToSavedEstimate(row: unknown): SavedEstimate | null {
       exchangeRateSource: r.exchange_rate_source,
       exchangeRateDate: r.exchange_rate_date,
       customsValueUsd: Number(r.customs_value_usd),
+      deductionUsd: r.freight_insurance_deduction_usd == null ? null : Number(r.freight_insurance_deduction_usd),
       rateColumn: r.rate_column,
       rateText: r.rate_text,
       quantityUsed:

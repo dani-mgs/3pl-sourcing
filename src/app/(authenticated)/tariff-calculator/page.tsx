@@ -9,11 +9,20 @@ import { loadAuthorNames } from "@/lib/tariff/estimate-authors";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
 import { HTS_SOURCE_URL } from "@/lib/tariff/calculate";
 import { excludedCount } from "@/lib/tariff/programs";
+import { loadLinkContext, type LinkContextResult } from "@/lib/tariff/server-forwarder-link";
 import { EstimateForm } from "./estimate-form";
+import { WARNING_BOX_CLASS } from "./estimate-result";
+
+const one = (value: string | string[] | undefined) => (typeof value === "string" && value !== "" ? value : null);
 
 // Tariff Calculator: estimate US base duty, MPF and HMF for one HTS line,
 // and the list of saved (locked) estimates. Any signed-in user can use it.
-export default async function TariffCalculatorPage() {
+// Opened with ?project=<id>[&quote=<id>] from Forwarder Sourcing, the form is
+// pre-filled from that project or quote for the owner or an admin to confirm.
+export default async function TariffCalculatorPage({ searchParams }: PageProps<"/tariff-calculator">) {
+  const params = await searchParams;
+  const projectId = one(params.project);
+  const quoteId = one(params.quote);
   const supabase = await createClient();
   const [latestRates, releaseResult, estimatesResult, permissions] = await Promise.all([
     loadLatestFxRates(supabase),
@@ -31,6 +40,16 @@ export default async function TariffCalculatorPage() {
   ]);
   if (releaseResult.error) console.error("TariffCalculatorPage release error:", releaseResult.error);
   if (estimatesResult.error) console.error("TariffCalculatorPage estimates error:", estimatesResult.error);
+
+  let link: LinkContextResult | null = null;
+  if (projectId) {
+    try {
+      link = await loadLinkContext(supabase, projectId, quoteId, latestRates, todayUtc());
+    } catch (error) {
+      console.error("TariffCalculatorPage link error:", error);
+      link = { status: "not_found" };
+    }
+  }
 
   const release = releaseResult.data;
   const estimates = estimatesResult.data ?? [];
@@ -76,7 +95,22 @@ export default async function TariffCalculatorPage() {
         )}
       </p>
 
-      <EstimateForm latestRates={latestRates} today={todayUtc()} countries={ORIGIN_COUNTRIES} />
+      {link && link.status !== "ok" && (
+        <p className={`${WARNING_BOX_CLASS} mb-6`} role="note">
+          {link.status === "not_allowed"
+            ? "Only the project's owner or an admin can create duty estimates for it. You can still use the calculator below without linking."
+            : "That forwarder project or quote wasn't found. You can still use the calculator below without linking."}
+        </p>
+      )}
+
+      <EstimateForm
+        // Remount when the link changes so the suggestions reset.
+        key={link?.status === "ok" ? link.context.sourceVersion : "unlinked"}
+        latestRates={latestRates}
+        today={todayUtc()}
+        countries={ORIGIN_COUNTRIES}
+        link={link?.status === "ok" ? link.context : undefined}
+      />
 
       <section className="mt-6 rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
         <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">Saved estimates</h2>

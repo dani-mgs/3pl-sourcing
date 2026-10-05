@@ -102,6 +102,7 @@ const input = (overrides: Partial<EstimateFormData> = {}): EstimateFormData => (
   exchangeRateDate: null,
   quantity: null,
   label: null,
+  deductionUsd: null,
   ...overrides,
 });
 
@@ -245,6 +246,27 @@ describe("buildEstimate", () => {
       input({ currency: "EUR", exchangeRate: "1.5", exchangeRateSource: "daily_feed", exchangeRateDate: "2026-10-01" }),
     );
     expect(result.ok && result.estimate).toMatchObject({ exchangeRateSource: "manual", exchangeRateDate: "2026-10-02" });
+  });
+
+  test("a confirmed deduction is taken off the converted value before duty", async () => {
+    const result = await buildEstimate(
+      stubSupabase(tables()),
+      input({
+        currency: "EUR",
+        exchangeRate: "1.08",
+        exchangeRateSource: "daily_feed",
+        exchangeRateDate: "2026-10-01",
+        deductionUsd: "800",
+      }),
+    );
+    // EUR 10,000 × 1.08 = $10,800, less $800 = $10,000; 6% = $600.
+    expect(result.ok && result.estimate).toMatchObject({ customsValueUsd: 10000, deductionUsd: 800, baseDutyUsd: 600 });
+    if (result.ok) expect(estimateToRow(result.estimate, null).freight_insurance_deduction_usd).toBe(800);
+  });
+
+  test("a deduction larger than the goods value is refused", async () => {
+    const result = await buildEstimate(stubSupabase(tables()), input({ deductionUsd: "10000" }));
+    expect(result).toMatchObject({ ok: false, error: expect.stringMatching(/more than the goods value/) });
   });
 
   test("database errors return the generic message", async () => {

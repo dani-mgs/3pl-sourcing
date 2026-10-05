@@ -215,15 +215,36 @@ export function EstimateResultView({ estimate }: { estimate: EstimateResult }) {
         </table>
       </div>
 
-      {!isUsd && estimate.exchangeRateSource && (
-        <div className="text-xs text-neutral-muted">
+      {estimate.deductionUsd != null ? (
+        // Linked estimate with delivered terms: goods value, less the freight
+        // and insurance the user confirmed, is the customs value.
+        <div className="text-xs text-neutral-muted" data-testid="customs-value-breakdown">
           <p>
-            Customs value {formatCurrency(Number(estimate.customsValueOriginal), estimate.currency)} →{" "}
-            {usd(estimate.customsValueUsd)} at{" "}
-            {rateCaption(estimate.currency, rate, estimate.exchangeRateSource, estimate.exchangeRateDate)}
+            Goods value {formatCurrency(Number(estimate.customsValueOriginal), estimate.currency)}
+            {!isUsd && estimate.exchangeRateSource && (
+              <>
+                {" "}
+                → {usd(estimate.customsValueUsd + estimate.deductionUsd)} at{" "}
+                {rateCaption(estimate.currency, rate, estimate.exchangeRateSource, estimate.exchangeRateDate)}
+              </>
+            )}
           </p>
+          <p>Less international freight and insurance (confirmed by the user): {usd(estimate.deductionUsd)}</p>
+          <p className="font-medium text-move-navy">Customs value {usd(estimate.customsValueUsd)}</p>
           {usesDailyFeed && <p className="mt-0.5">{DAILY_FEED_ATTRIBUTION}</p>}
         </div>
+      ) : (
+        !isUsd &&
+        estimate.exchangeRateSource && (
+          <div className="text-xs text-neutral-muted">
+            <p>
+              Customs value {formatCurrency(Number(estimate.customsValueOriginal), estimate.currency)} →{" "}
+              {usd(estimate.customsValueUsd)} at{" "}
+              {rateCaption(estimate.currency, rate, estimate.exchangeRateSource, estimate.exchangeRateDate)}
+            </p>
+            {usesDailyFeed && <p className="mt-0.5">{DAILY_FEED_ATTRIBUTION}</p>}
+          </div>
+        )
       )}
 
       {estimate.specialRateText && (
