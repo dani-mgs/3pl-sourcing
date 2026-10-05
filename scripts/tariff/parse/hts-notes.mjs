@@ -130,3 +130,13 @@ export function parenItems(blockLines) {
   }
   return items.map((i) => ({ ...i, text: i.text.replace(/\s+/g, " ").trim() }));
 }
+
+// Where a chapter 99 heading's own row is printed: the last line that is
+// exactly the heading number (the tariff rows follow the notes, which only
+// mention headings inside sentences). For citing "page N" of the PDF.
+export function headingLocation(lines, heading) {
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].text.trim() === heading) return { page: lines[i].page, label: lines[i].label };
+  }
+  throw new Error(`Heading row ${heading} not found`);
+}

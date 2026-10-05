@@ -5,6 +5,7 @@ The additional-duty seeds (`supabase/migrations/*_tariff_seed_*.sql`) are genera
 ```
 official sources ──fetch──▶ .cache/tariff-sources/   (not committed; SHA-256 pinned in sources.json)
                  ──extract─▶ data/tariff/<seed>/      seed.json (duty rows) + scope.csv (HTS lines, with source location)
+                                                       [+ source-links.json: browser-friendly links, a later update migration]
                  ──seed────▶ supabase/migrations/…    (byte-for-byte; checked by scripts/tariff/seeds.test.mjs)
 ```
 
@@ -21,6 +22,10 @@ official sources ──fetch──▶ .cache/tariff-sources/   (not committed; S
 1. `npm run tariff:fetch` reports which sources changed.
 2. `npm run tariff:extract`, then read the diff in `data/tariff/` and the cross-check report.
 3. Don't edit a committed seed migration (it may already be applied). Put changes in a **new** migration, or through the Duty data screens, where they go back to pending review. Then record the new hashes with `npm run tariff:fetch -- --update`.
+
+## Source links
+
+USITC serves the HTS chapter PDFs only as downloads (`application/octet-stream`), so a seeded row's `source_url` is a page that opens in a browser: the HTS website's search for its heading (`https://hts.usitc.gov/search?query=9903.88.01`, which shows the current revision) or the Federal Register notice it cites. The Chapter 99 PDF is the row's second link (`source_document_url`), labelled as a download with the page where the heading's row is printed (`source_document_label`). For 2b these come from `source-links.json` and are applied by their own migration, because the seed migration was already applied with the PDF endpoint as `source_url`. Editing only a row's source doesn't put its program back to pending review.
 
 ## Layout
 

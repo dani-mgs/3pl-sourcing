@@ -1,14 +1,14 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getTariffPermissions } from "@/lib/auth/get-tariff-permissions";
 import { formatRateDate } from "@/lib/fx/rate-provenance";
 import { todayUtc } from "@/lib/fx/server-rates";
 import { LEGAL_STATUS_LABELS, inForceOn } from "@/lib/tariff/additional-duties";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
-import { compactSourceLabel } from "@/lib/tariff/source-label";
+import { describeSourceLink } from "@/lib/tariff/source-link";
 import { indicativeComparison, loadProgramDetail, loadProgramsOverview } from "@/lib/tariff/server-duty-admin";
 import { WARNING_BOX_CLASS } from "../../estimate-result";
 import { ActionForm } from "../action-form";
@@ -181,7 +181,7 @@ export default async function ProgramDutyDataPage({ params }: { params: Promise<
                 {detail.rows.map((r) => {
                   const muted = inForceOn(r, today) ? "" : "text-neutral-muted";
                   const { rate, qualifier, counted } = rateParts(r);
-                  const compactSource = compactSourceLabel(r.source_label);
+                  const primary = describeSourceLink(r.source_url);
                   return (
                     <Fragment key={r.id}>
                       <tr className={`align-top ${r.notes ? "" : "border-b border-neutral-border"} ${muted}`}>
@@ -232,19 +232,37 @@ export default async function ProgramDutyDataPage({ params }: { params: Promise<
                             {LEGAL_STATUS_LABELS[r.legal_status]}
                           </span>
                         </td>
-                        {/* max-w-0 lets the cell take the remaining width while the
-                            link truncates instead of widening the table. */}
-                        <td className="w-full max-w-0 min-w-[280px] px-3 py-3">
+                        {/* Primary link (says what it opens), the exact citation so
+                            the source can be found even if a link changes, the
+                            optional second link (e.g. the Chapter 99 PDF, which
+                            USITC only serves as a download) and the checked date. */}
+                        <td className="w-full min-w-[280px] px-3 py-3">
                           <a
                             href={r.source_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            title={r.source_label}
-                            aria-label={`${r.source_label} (opens in a new tab)`}
-                            className="block truncate underline decoration-neutral-border underline-offset-2 hover:decoration-move-green focus-visible:ring-2 focus-visible:ring-move-green focus-visible:outline-none"
+                            className="inline-flex items-center gap-1 font-medium underline decoration-neutral-border underline-offset-2 hover:decoration-move-green focus-visible:ring-2 focus-visible:ring-move-green focus-visible:outline-none"
                           >
-                            {compactSource}
+                            {primary.name}
+                            <span className="font-normal text-neutral-muted">({primary.kind})</span>
+                            <ExternalLink aria-hidden="true" className="size-3 shrink-0" />
+                            <span className="sr-only">, opens in a new tab</span>
                           </a>
+                          <p className="text-xs break-words text-move-navy">{r.source_label}</p>
+                          {r.source_document_url && r.source_document_label && (
+                            <a
+                              href={r.source_document_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-0.5 flex items-start gap-1 text-xs underline decoration-neutral-border underline-offset-2 hover:decoration-move-green focus-visible:ring-2 focus-visible:ring-move-green focus-visible:outline-none"
+                            >
+                              <Download aria-hidden="true" className="mt-0.5 size-3 shrink-0" />
+                              <span>
+                                {r.source_document_label}
+                                <span className="sr-only">, opens in a new tab</span>
+                              </span>
+                            </a>
+                          )}
                           <p className="text-xs whitespace-nowrap text-neutral-muted">
                             Checked {formatRateDate(r.source_checked_on)}
                           </p>

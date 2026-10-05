@@ -125,7 +125,8 @@ export function FaqSection() {
         <Faq question="Who can change duty rates or fees?">
           <p>
             Tariff editors and admins, in Tariff Calculator → Duty data. Ask an admin for the tariff
-            editor permission. Changes put the program back to pending review until someone reviews it.
+            editor permission. Changes put the program back to pending review until someone reviews it, except
+            an edit of only a row&apos;s source (citation, links, checked date).
           </p>
         </Faq>
         <Faq question="Why is my customs broker's figure different?">

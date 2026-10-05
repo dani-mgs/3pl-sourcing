@@ -117,6 +117,9 @@ export type ProgramDutyRow = {
   source_label: string;
   source_url: string;
   source_checked_on: string;
+  // A second source link (e.g. the Chapter 99 PDF download) and what it is.
+  source_document_url: string | null;
+  source_document_label: string | null;
   notes: string | null;
   updated_at: string;
   scopeCount: number;
@@ -152,7 +155,7 @@ export async function loadProgramDetail(supabase: Supabase, programKey: string) 
     supabase
       .from("additional_duties")
       .select(
-        "id, chapter99_heading, chapter99_heading_at_minimum, label, rate_type, rate_pct, origin_countries, hts_scope, condition_text, assume_condition, excludes_programs, exclusion_heading, effective_from, effective_to, legal_status, source_label, source_url, source_checked_on, notes, updated_at",
+        "id, chapter99_heading, chapter99_heading_at_minimum, label, rate_type, rate_pct, origin_countries, hts_scope, condition_text, assume_condition, excludes_programs, exclusion_heading, effective_from, effective_to, legal_status, source_label, source_url, source_checked_on, source_document_url, source_document_label, notes, updated_at",
       )
       .eq("program_key", programKey)
       .order("chapter99_heading")

@@ -19,6 +19,13 @@ const isoDate = (label: string) =>
 const optionalText = (max: number, label: string) =>
   z.string().max(max, `${label} must be ${max} characters or fewer.`).transform((v) => v || null);
 const httpsUrl = z.string().regex(/^https:\/\/\S+$/, "The source link must start with https://.").max(2000);
+// An optional second source link (e.g. a PDF that's only a download) and the
+// label saying what it is; both or neither.
+const documentUrl = z
+  .union([z.literal(""), z.string().regex(/^https:\/\/\S+$/, "The document link must start with https://.").max(2000)])
+  .transform((v) => v || null);
+const documentLabel = optionalText(300, "The document link's label");
+const DOCUMENT_PAIR = "Give the document link and its label (e.g. \"Download Chapter 99 PDF (14 MB) — see page 685\"), or neither.";
 const heading = (label: string) =>
   z.string().regex(/^9903\.\d{2}\.\d{2}$/, `${label} must look like 9903.05.84.`);
 
@@ -55,8 +62,9 @@ export function parseEndDate(formData: FormData) {
 
 // Edits that don't change what a row charges: label, legal status, source,
 // notes and, for a row with a condition, whether the condition is treated as
-// met (a deliberate choice of direction; it puts the program back to pending
-// review like any change).
+// met (a deliberate choice of direction). Any of these puts the program back
+// to pending review, except an edit of the source alone (label, links,
+// checked date).
 export function parseDutyDetails(formData: FormData) {
   const hasCondition = field(formData, "has_condition") === "1";
   return run(
@@ -68,8 +76,10 @@ export function parseDutyDetails(formData: FormData) {
       sourceLabel: z.string().min(1, "Enter the source.").max(500, "Keep the source under 500 characters."),
       sourceUrl: httpsUrl,
       sourceCheckedOn: isoDate("the date the source was checked"),
+      sourceDocumentUrl: documentUrl,
+      sourceDocumentLabel: documentLabel,
       assumeCondition: z.boolean().optional(),
-    }),
+    }).refine((d) => (d.sourceDocumentUrl == null) === (d.sourceDocumentLabel == null), DOCUMENT_PAIR),
     {
       id: field(formData, "id"),
       label: field(formData, "label"),
@@ -78,6 +88,8 @@ export function parseDutyDetails(formData: FormData) {
       sourceLabel: field(formData, "source_label"),
       sourceUrl: field(formData, "source_url"),
       sourceCheckedOn: field(formData, "source_checked_on"),
+      sourceDocumentUrl: field(formData, "source_document_url"),
+      sourceDocumentLabel: field(formData, "source_document_label"),
       assumeCondition: hasCondition ? field(formData, "assume_condition") === "on" : undefined,
     },
     "dutyDetails",
@@ -127,6 +139,8 @@ export type NewDuty = {
   sourceLabel: string;
   sourceUrl: string;
   sourceCheckedOn: string;
+  sourceDocumentUrl: string | null;
+  sourceDocumentLabel: string | null;
   notes: string | null;
   scope: ScopeInput[];
 };
@@ -154,10 +168,13 @@ const newDutySchema = z
     sourceLabel: z.string().min(1, "Enter the source.").max(500),
     sourceUrl: httpsUrl,
     sourceCheckedOn: isoDate("the date the source was checked"),
+    sourceDocumentUrl: documentUrl,
+    sourceDocumentLabel: documentLabel,
     notes: optionalText(2000, "Notes"),
   })
   .superRefine((d, ctx) => {
     const issue = (message: string) => ctx.addIssue({ code: "custom", message });
+    if ((d.sourceDocumentUrl == null) !== (d.sourceDocumentLabel == null)) issue(DOCUMENT_PAIR);
     if (d.rateType === "exempt" && d.ratePct != null) issue("An exemption has no rate; leave the rate empty.");
     if ((d.rateType === "add" || d.rateType === "minimum_total") && d.ratePct == null) issue("Enter the rate.");
     if (d.rateType === "unconfirmed" && !d.conditionText) issue("Say what's unconfirmed in the condition.");
@@ -201,6 +218,8 @@ export function parseNewDuty(formData: FormData): ParseResult<NewDuty> {
       sourceLabel: field(formData, "source_label"),
       sourceUrl: field(formData, "source_url"),
       sourceCheckedOn: field(formData, "source_checked_on"),
+      sourceDocumentUrl: field(formData, "source_document_url"),
+      sourceDocumentLabel: field(formData, "source_document_label"),
       notes: field(formData, "notes"),
     },
     "newDuty",

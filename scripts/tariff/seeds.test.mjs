@@ -2,9 +2,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import { parseCsv, toCsv } from "./lib/csv.mjs";
-import { readSeed, seedSql } from "./lib/seed-sql.mjs";
 import { REPO_ROOT } from "./lib/sources.mjs";
-import { seedDirs } from "./generate-seeds.mjs";
+import { seedDirs, seedOutputs } from "./generate-seeds.mjs";
 
 // Drift test: every seed migration must be exactly what its committed data
 // files generate. Edit data/tariff/<seed>/ (or re-extract from the sources),
@@ -17,10 +16,17 @@ describe("tariff seed migrations", () => {
     expect(dirs).toEqual(expect.arrayContaining(["data/tariff/2a-origin-301", "data/tariff/2b-china301-232"]));
   });
 
-  test.each(dirs)("%s matches its migration", (dir) => {
-    const data = readSeed(dir);
-    const committed = readFileSync(path.join(REPO_ROOT, data.seed.migration), "utf8");
-    expect(seedSql(data) === committed).toBe(true);
+  const outputs = dirs.flatMap((dir) => seedOutputs(dir).map((o) => [o.migration, dir, o.sql]));
+
+  test("the 2b seed has its source-links migration", () => {
+    expect(outputs.map(([migration]) => migration)).toContain(
+      "supabase/migrations/20261005111624_tariff_seed_source_links.sql",
+    );
+  });
+
+  test.each(outputs)("%s matches %s", (migration, _dir, sql) => {
+    const committed = readFileSync(path.join(REPO_ROOT, migration), "utf8");
+    expect(sql === committed).toBe(true);
   });
 });
 

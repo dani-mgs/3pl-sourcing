@@ -60,6 +60,19 @@ export function DutyRowEditor({ row }: { row: ProgramDutyRow }) {
             <input name="source_url" type="url" defaultValue={row.source_url} required className={fieldClass} />
           </label>
           <label className={labelClass}>
+            Document link <span className="font-normal text-neutral-muted">(optional)</span>
+            <input name="source_document_url" type="url" defaultValue={row.source_document_url ?? ""} className={fieldClass} />
+          </label>
+          <label className={labelClass}>
+            Document link label
+            <input
+              name="source_document_label"
+              defaultValue={row.source_document_label ?? ""}
+              maxLength={300}
+              className={fieldClass}
+            />
+          </label>
+          <label className={labelClass}>
             Source checked on
             <input name="source_checked_on" type="date" defaultValue={row.source_checked_on} required className={fieldClass} />
           </label>
@@ -177,8 +190,21 @@ export function AddDutyForm({ programKey, today }: { programKey: string; today: 
         <input name="source_label" required maxLength={500} placeholder="HTS heading 9903.05.84 and U.S. note 52, FR 2026-15181" className={fieldClass} />
       </label>
       <label className={labelClass}>
-        Source link
-        <input name="source_url" type="url" required placeholder="https://www.federalregister.gov/…" className={fieldClass} />
+        Source link <span className={hintClass}>a page that opens in a browser</span>
+        <input name="source_url" type="url" required placeholder="https://hts.usitc.gov/search?query=9903.05.84" className={fieldClass} />
+      </label>
+      <label className={labelClass}>
+        Document link <span className={hintClass}>optional, e.g. the Chapter 99 PDF</span>
+        <input name="source_document_url" type="url" className={fieldClass} />
+      </label>
+      <label className={labelClass}>
+        Document link label <span className={hintClass}>say what it is and where to look</span>
+        <input
+          name="source_document_label"
+          maxLength={300}
+          placeholder="Download Chapter 99 PDF (14 MB) — see page 651"
+          className={fieldClass}
+        />
       </label>
       <label className={`${labelClass} md:col-span-2`}>
         HTS scope <span className={hintClass}>one per line, &ldquo;0805.90.01 | Etrogs&rdquo;; the description limits it to that article. &ldquo;-2931.90.9051&rdquo; takes a statistical number out. Empty = every HTS code.</span>

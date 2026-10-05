@@ -106,6 +106,8 @@ export async function updateDutyDetails(formData: FormData): Promise<DutyDataAct
       source_label: d.sourceLabel,
       source_url: d.sourceUrl,
       source_checked_on: d.sourceCheckedOn,
+      source_document_url: d.sourceDocumentUrl,
+      source_document_label: d.sourceDocumentLabel,
       ...(d.assumeCondition === undefined ? {} : { assume_condition: d.assumeCondition }),
     })
     .eq("id", d.id)
@@ -113,8 +115,20 @@ export async function updateDutyDetails(formData: FormData): Promise<DutyDataAct
   if (error) return { error: friendly(error, "updateDutyDetails") };
   if (!data || data.length === 0) return { error: NO_PERMISSION };
 
-  refresh(data[0].program_key as string);
-  return { success: "Saved. The program is pending review again." };
+  const key = data[0].program_key as string;
+  refresh(key);
+  // A source-only edit keeps the program's review (duty_program_review_status).
+  const { data: status } = await supabase
+    .from("duty_program_review_status")
+    .select("review_status")
+    .eq("program_key", key)
+    .maybeSingle();
+  return {
+    success:
+      status?.review_status === "reviewed"
+        ? "Saved. Only the source changed, so the program stays reviewed."
+        : "Saved. The program is pending review until someone reviews it again.",
+  };
 }
 
 export async function addDuty(formData: FormData): Promise<DutyDataActionState> {
@@ -146,6 +160,8 @@ export async function addDuty(formData: FormData): Promise<DutyDataActionState> 
       source_label: d.sourceLabel,
       source_url: d.sourceUrl,
       source_checked_on: d.sourceCheckedOn,
+      source_document_url: d.sourceDocumentUrl,
+      source_document_label: d.sourceDocumentLabel,
       notes: d.notes,
     })
     .select("id")

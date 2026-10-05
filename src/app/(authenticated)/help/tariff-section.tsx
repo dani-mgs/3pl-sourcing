@@ -167,7 +167,15 @@ export function TariffSection() {
         <li>
           Rates are never edited in place: to change one, end-date the row and add a new one from the
           next day. Every change is recorded with who made it, and puts the program back to pending
-          review.
+          review, except an edit of only a row&apos;s source (its citation, links or checked date), which
+          changes no rates or scope.
+        </li>
+        <li>
+          Each row&apos;s source shows a link that opens in a new tab and says what it is (a web page, a
+          PDF, or a download), the exact citation (heading, U.S. note, HTS revision) so it can be found
+          even if a link changes, and, for the China Section 301 and Section 232 rows, a second link to
+          download the Chapter 99 PDF with the page to open. USITC only offers that PDF as a download;
+          the main link is the HTS website&apos;s page for the heading, which shows the current revision.
         </li>
         <li>
           The China Section 301 and Section 232 lists are extracted from the official sources by

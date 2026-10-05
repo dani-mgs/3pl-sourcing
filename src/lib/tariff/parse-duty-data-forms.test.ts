@@ -59,6 +59,25 @@ describe("parseDutyDetails", () => {
     });
     expect(parseDutyDetails(form({ ...base, legal_status: "struck_down" })).ok).toBe(false);
   });
+  test("an optional document link, with its label or not at all", () => {
+    expect(parseDutyDetails(form(base))).toMatchObject({ ok: true, data: { sourceDocumentUrl: null, sourceDocumentLabel: null } });
+    const pdf = {
+      source_document_url: "https://hts.usitc.gov/reststop/file?release=2026HTSRev20&filename=Chapter%2099",
+      source_document_label: "Download Chapter 99 PDF (14 MB) — see page 685",
+    };
+    expect(parseDutyDetails(form({ ...base, ...pdf }))).toMatchObject({
+      ok: true,
+      data: { sourceDocumentUrl: pdf.source_document_url, sourceDocumentLabel: pdf.source_document_label },
+    });
+    expect(parseDutyDetails(form({ ...base, source_document_url: pdf.source_document_url }))).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/document link and its label/),
+    });
+    expect(parseDutyDetails(form({ ...base, ...pdf, source_document_url: "http://x" }))).toMatchObject({
+      ok: false,
+      error: "The document link must start with https://.",
+    });
+  });
 });
 
 describe("parseScopeLines", () => {
@@ -109,6 +128,16 @@ describe("parseNewDuty", () => {
     notes: "",
     scope: "",
   };
+
+  test("a document link needs its label", () => {
+    expect(parseNewDuty(form({ ...base, source_document_label: "Download PDF" }))).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/document link and its label/),
+    });
+    expect(
+      parseNewDuty(form({ ...base, source_document_url: "https://example.gov/a.pdf", source_document_label: "PDF, page 3" })),
+    ).toMatchObject({ ok: true, data: { sourceDocumentUrl: "https://example.gov/a.pdf", sourceDocumentLabel: "PDF, page 3" } });
+  });
 
   test("an add row", () => {
     expect(parseNewDuty(form(base))).toMatchObject({
