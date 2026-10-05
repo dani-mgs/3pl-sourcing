@@ -26,8 +26,9 @@ function LegalStatusSelect({ defaultValue }: { defaultValue: string }) {
 // source, notes). Rates are fixed once saved.
 export function DutyRowEditor({ row }: { row: ProgramDutyRow }) {
   return (
-    <details className="min-w-48">
-      <summary className="cursor-pointer text-sm font-medium text-move-green outline-none focus-visible:ring-2 focus-visible:ring-move-green">
+    // Closed it's just "Edit"; open, the form sets its own width.
+    <details className="text-left">
+      <summary className="cursor-pointer text-right text-sm font-medium whitespace-nowrap text-move-green outline-none focus-visible:ring-2 focus-visible:ring-move-green">
         Edit
       </summary>
       <div className="mt-3 flex w-80 flex-col gap-5">
