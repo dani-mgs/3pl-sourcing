@@ -22,19 +22,23 @@ function errorCode(error: unknown): unknown {
 // Runs `call`, retrying only when it throws an error whose code is PGRST303.
 // Logs each retry with the label, attempt, and code only (never the error's
 // message or the request), and rethrows the last error once attempts run out.
+// `delaysMs` is the wait before each retry (the crons' long default; a user
+// waiting on a save passes a short one).
 export async function retryOnPgrst303<T>(
   label: string,
   call: () => Promise<T>,
   sleep: Sleep = realSleep,
+  delaysMs: readonly number[] = PGRST303_RETRY_DELAYS_MS,
 ): Promise<T> {
+  const maxAttempts = delaysMs.length + 1;
   for (let attempt = 1; ; attempt++) {
     try {
       return await call();
     } catch (error) {
-      if (errorCode(error) !== PGRST303 || attempt >= PGRST303_MAX_ATTEMPTS) throw error;
-      const delay = PGRST303_RETRY_DELAYS_MS[attempt - 1];
+      if (errorCode(error) !== PGRST303 || attempt >= maxAttempts) throw error;
+      const delay = delaysMs[attempt - 1];
       console.warn(
-        `${label}: Supabase returned ${PGRST303} (attempt ${attempt} of ${PGRST303_MAX_ATTEMPTS}); retrying in ${delay} ms.`,
+        `${label}: Supabase returned ${PGRST303} (attempt ${attempt} of ${maxAttempts}); retrying in ${delay} ms.`,
       );
       await sleep(delay);
     }

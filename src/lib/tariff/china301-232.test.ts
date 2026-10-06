@@ -81,6 +81,11 @@ function estimate(
     baseDutyUsd: parseDecimal(base.baseDutyUsd),
     asOfDate: asOf,
   });
+  // save_duty_estimate() re-checks that the additional-duty lines add up to
+  // additional_duties_usd; keep that true for every golden case.
+  expect(additional.lines.reduce((sum, l) => sum + Math.round(l.amountUsd * 100), 0)).toBe(
+    Math.round(additional.additionalDutiesUsd * 100),
+  );
   const total = centsToNumber(
     toCents(parseDecimal(base.baseDutyUsd)) + toCents(parseDecimal(additional.additionalDutiesUsd)) + toCents(parseDecimal(base.feesUsd)),
   );

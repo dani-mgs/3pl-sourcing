@@ -61,9 +61,10 @@ function stubClient() {
           otherWrites.push(`delete ${table}`);
           return chain;
         },
-        insert: (row: Record<string, unknown>) => {
-          if (table !== "duty_estimates") otherWrites.push(`insert ${table}`);
-          inserts.push(row);
+        // The user's own client must never insert: estimates are saved
+        // through the estimate store.
+        insert: () => {
+          otherWrites.push(`insert ${table}`);
           return { select: () => ({ single: async () => ({ data: { id: "e1" }, error: null }) }) };
         },
       };
@@ -71,6 +72,14 @@ function stubClient() {
     },
   };
 }
+
+const savedFor: string[] = [];
+const saveDutyEstimate = vi.fn(async (userId: string, row: Record<string, unknown>) => {
+  savedFor.push(userId);
+  inserts.push(row);
+  return { ok: true as const, id: "e1" };
+});
+vi.mock("@/lib/tariff/estimate-store", () => ({ saveDutyEstimate }));
 
 const canWrite = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => stubClient() }));
@@ -145,6 +154,7 @@ function form(fields: Record<string, string> = {}) {
 beforeEach(() => {
   inserts.length = 0;
   otherWrites.length = 0;
+  savedFor.length = 0;
   canWrite.mockReturnValue(true);
   buildEstimate.mockResolvedValue({ ok: true, estimate: ESTIMATE });
 });
@@ -156,6 +166,10 @@ describe("linked duty estimates", () => {
     await expect(saveEstimate(form({ input_snapshot: '{"forged":true}' }))).rejects.toThrow("REDIRECT /tariff-calculator/estimates/e1");
     expect(buildEstimate.mock.calls[0][1]).toMatchObject({ deductionUsd: "800", customsValue: "10000" });
     expect(inserts).toHaveLength(1);
+    // Saved through the estimate store as the signed-in user, never by the
+    // user's own client.
+    expect(savedFor).toEqual(["u1"]);
+    expect(otherWrites).toEqual([]);
     expect(inserts[0]).toMatchObject({
       forwarder_project_id: PROJECT,
       forwarder_quote_id: QUOTE,
@@ -216,6 +230,15 @@ describe("linked duty estimates", () => {
     } finally {
       projectRow.current_incoterm = saved;
     }
+  });
+});
+
+describe("saving through the estimate store", () => {
+  test("a failed save returns the store's message and doesn't redirect or revalidate", async () => {
+    saveDutyEstimate.mockResolvedValueOnce({ ok: false as never, error: "Couldn't save the estimate right now. Try again." } as never);
+    expect(await saveEstimate(form())).toEqual({ error: "Couldn't save the estimate right now. Try again." });
+    expect(revalidatePath).not.toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
   });
 });
 

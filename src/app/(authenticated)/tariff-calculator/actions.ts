@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { parseEstimateForm, parseLinkFields, type EstimateFormData } from "@/lib/tariff/parse-estimate-form";
+import { saveDutyEstimate } from "@/lib/tariff/estimate-store";
 import { buildEstimate, estimateToRow, type EstimateResult } from "@/lib/tariff/server-estimate";
 import { checkLinkedEstimate, type CheckedLink } from "@/lib/tariff/server-forwarder-link";
 
@@ -71,15 +72,14 @@ export async function saveEstimate(formData: FormData): Promise<SaveState> {
   const built = await buildEstimate(supabase, request.input);
   if (!built.ok) return { error: built.error };
 
-  const { data, error } = await supabase
-    .from("duty_estimates")
-    .insert({ ...estimateToRow(built.estimate, request.input.label), ...(request.link?.row ?? {}) })
-    .select("id")
-    .single();
-  if (error || !data) {
-    console.error("saveEstimate insert error:", error);
-    return { error: UNEXPECTED };
-  }
+  // The user and link checks above have passed; the insert itself goes
+  // through save_duty_estimate (the service role's only use here), which
+  // stamps created_by from this user and re-checks the row.
+  const saved = await saveDutyEstimate(user.id, {
+    ...estimateToRow(built.estimate, request.input.label),
+    ...(request.link?.row ?? {}),
+  });
+  if (!saved.ok) return { error: saved.error };
 
   revalidatePath("/tariff-calculator");
   if (request.link) {
@@ -87,5 +87,5 @@ export async function saveEstimate(formData: FormData): Promise<SaveState> {
     revalidatePath(`/forwarder-sourcing/${project.id}`);
     if (quote) revalidatePath(`/forwarder-sourcing/${project.id}/forwarders/${quote.forwarder_id}`);
   }
-  redirect(`/tariff-calculator/estimates/${data.id}`);
+  redirect(`/tariff-calculator/estimates/${saved.id}`);
 }

@@ -39,9 +39,17 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 - **Where:** `src/lib/tariff/calculate.ts`, `src/lib/tariff/caveats.ts`
 
-### Tariff Calculator: saved estimates trust RLS for who can insert
+### Service-role paths other than estimate saving use only the cron-length PGRST303 retry
+- **Added:** 2026-10-06
+- **What:** The service-role key (sb_secret_) intermittently answers PGRST303 (clock skew). The FX and HTS crons retry it for about 15 s (`retryOnPgrst303` defaults); the estimate save retries for about 3 s because a user is waiting (3 attempts, `ESTIMATE_RETRY_DELAYS_MS`). The /admin actions (`createAdminClient` in `admin/actions.ts` and `admin/page.tsx`) don't retry at all, so an unlucky admin action can fail with a generic error until it's retried by hand.
+- **Why deferred:** Rare, and the admin actions are low-volume and easy to repeat.
+- **Severity:** Low
+- **Where:** `src/lib/supabase/pgrst303-retry.ts`, `src/lib/tariff/estimate-store.ts`, `src/app/(authenticated)/admin/actions.ts`
+
+### Tariff Calculator: saved estimates trust RLS for who can insert (step 1 done, revoke pending)
 - **Added:** 2026-10-02
 - **What:** The save action recalculates on the server, but RLS lets any signed-in user insert a `duty_estimates` row directly through the API (with their own `created_by`), so a determined user could store numbers the calculator never produced. Rows are still locked afterwards and attributed to that user.
+- **Update 2026-10-06 (step 1 of 2):** `save_duty_estimate()` (service role only) and `estimate-store.ts` are in, and `saveEstimate` uses them; the database re-checks the HTS line, rate, column, exchange rate, date, customs value and line totals. Direct inserts by signed-in users are **still open** until step 2 (a separate migration revoking `INSERT` from `authenticated` and dropping the insert policy) is deployed after step 1 is verified in production. Remove this item then.
 - **Update 2026-10-05 (PR 3):** an estimate linked to a forwarder project or quote can only be inserted by the project's owner or an admin (RLS), and the quote must belong to the project (trigger). The amounts and the input snapshot are still not enforced server-side for a direct API insert. Linked estimates now appear on the project/forwarder pages and in the Expert CSV (internal only; never in client exports).
 - **Why deferred:** Users are internal staff, and the same holds for quotes. **Must be closed before any client-facing use** (an export, a client report, or the Landed Cost Calculator showing estimates to clients): replace the insert policy with a security-definer function that builds the row from the server-side calculation, or insert via a server-only path.
 - **Severity:** Low (internal only); High before client-facing use
