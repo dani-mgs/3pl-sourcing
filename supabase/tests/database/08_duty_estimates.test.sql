@@ -1,9 +1,11 @@
--- Saved duty estimates are locked: any signed-in user can read them and save
--- their own, nobody can change one (not even the service role), and only the
--- owner or an admin can delete one. Rolled back at the end.
+-- Saved duty estimates are locked: any signed-in user can read them, nobody can
+-- insert one directly (they're saved through save_duty_estimate(), see 15 and
+-- 16), nobody can change one (not even the service role), and only the owner
+-- or an admin can delete one. Rows here are set up as the table owner. Rolled
+-- back at the end.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(16);
+select plan(15);
 
 create function pg_temp.act_as(uid uuid, app_role text default 'logistics_expert')
 returns void language plpgsql as $$
@@ -13,8 +15,8 @@ begin
   execute 'set local role authenticated';
 end $$;
 
--- A valid estimate for the current user (created_by defaults to auth.uid()).
-create function pg_temp.save_estimate(p_id uuid, p_created_by uuid default null)
+-- A valid estimate for the given user, set up as the table owner.
+create function pg_temp.save_estimate(p_id uuid, p_created_by uuid)
 returns void language plpgsql as $$
 begin
   insert into duty_estimates (
@@ -22,7 +24,7 @@ begin
     origin_country, shipment_mode, customs_value_original, customs_value_usd,
     base_duty_usd, fees_usd, total_usd, lines
   ) values (
-    p_id, coalesce(p_created_by, auth.uid()), '2026-10-02', '6402993110', 'House slippers', '2026HTSRev20',
+    p_id, p_created_by, '2026-10-02', '6402993110', 'House slippers', '2026HTSRev20',
     'general', '6%', 'VN', 'Sea', 10000, 10000, 600, 47.14, 647.14, '[]'
   );
 end $$;
@@ -32,38 +34,39 @@ insert into auth.users (id, email, raw_app_meta_data) values
   ('00000000-0000-4000-8000-0000000000b1', 'other@test.local', '{"role":"logistics_expert"}'),
   ('00000000-0000-4000-8000-0000000000ad', 'admin@test.local', '{"role":"admin"}');
 
--- ---- Owner (a1) saves estimates ---------------------------------------------
+-- ---- Setup (table owner) and the constraints that still hold -------------------
+select pg_temp.save_estimate('00000000-0000-4000-8000-0000000d0001', '00000000-0000-4000-8000-0000000000a1');
+select pg_temp.save_estimate('00000000-0000-4000-8000-0000000d0002', '00000000-0000-4000-8000-0000000000a1');
+
+select throws_ok(
+  $$ insert into duty_estimates (created_by, as_of_date, hts_code, hts_description, hts_release_name, rate_column, rate_text,
+       origin_country, shipment_mode, customs_value_original, customs_value_usd, base_duty_usd, fees_usd, total_usd, lines)
+     values ('00000000-0000-4000-8000-0000000000a1', '2026-10-02', '6402993110', 'x', 'r', 'general', '6%', 'VN', 'Sea', 10000, 10000, 600, 47.14, 999, '[]') $$,
+  '23514', null, 'the total must equal base duty plus fees'
+);
+select throws_ok(
+  $$ insert into duty_estimates (created_by, as_of_date, hts_code, hts_description, hts_release_name, rate_column, rate_text,
+       origin_country, shipment_mode, customs_value_original, customs_value_usd, base_duty_usd, fees_usd, total_usd, lines,
+       original_currency, exchange_rate_to_usd)
+     values ('00000000-0000-4000-8000-0000000000a1', '2026-10-02', '6402993110', 'x', 'r', 'general', '6%', 'VN', 'Sea', 10000, 10800, 648, 47.14, 695.14, '[]',
+       'EUR', 1.08) $$,
+  '23514', null, 'a non-USD estimate must record where its exchange rate came from'
+);
+
+-- ---- Owner (a1): no direct insert, no change ----------------------------------
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000a1');
 
-select lives_ok(
-  $$ select pg_temp.save_estimate('00000000-0000-4000-8000-0000000d0001') $$,
-  'a signed-in user can save an estimate'
-);
-select lives_ok(
-  $$ select pg_temp.save_estimate('00000000-0000-4000-8000-0000000d0002') $$,
-  'and another'
+select throws_ok(
+  $$ select pg_temp.save_estimate('00000000-0000-4000-8000-0000000d0003', '00000000-0000-4000-8000-0000000000a1') $$,
+  '42501', null, 'a signed-in user cannot insert an estimate directly'
 );
 select throws_ok(
   $$ select pg_temp.save_estimate('00000000-0000-4000-8000-0000000d0003', '00000000-0000-4000-8000-0000000000b1') $$,
-  '42501', null, 'a user cannot save an estimate in someone else''s name'
+  '42501', null, 'nor one in someone else''s name'
 );
 select throws_ok(
   $$ update duty_estimates set total_usd = 1 where id = '00000000-0000-4000-8000-0000000d0001' $$,
   '42501', null, 'the owner cannot change a saved estimate'
-);
-select throws_ok(
-  $$ insert into duty_estimates (as_of_date, hts_code, hts_description, hts_release_name, rate_column, rate_text,
-       origin_country, shipment_mode, customs_value_original, customs_value_usd, base_duty_usd, fees_usd, total_usd, lines)
-     values ('2026-10-02', '6402993110', 'x', 'r', 'general', '6%', 'VN', 'Sea', 10000, 10000, 600, 47.14, 999, '[]') $$,
-  '23514', null, 'the total must equal base duty plus fees'
-);
-select throws_ok(
-  $$ insert into duty_estimates (as_of_date, hts_code, hts_description, hts_release_name, rate_column, rate_text,
-       origin_country, shipment_mode, customs_value_original, customs_value_usd, base_duty_usd, fees_usd, total_usd, lines,
-       original_currency, exchange_rate_to_usd)
-     values ('2026-10-02', '6402993110', 'x', 'r', 'general', '6%', 'VN', 'Sea', 10000, 10800, 648, 47.14, 695.14, '[]',
-       'EUR', 1.08) $$,
-  '23514', null, 'a non-USD estimate must record where its exchange rate came from'
 );
 
 -- ---- Another user (b1): reads, can't delete -----------------------------------
@@ -94,9 +97,7 @@ select isnt_empty(
 
 -- ---- Locked for everyone, even with table privileges --------------------------
 reset role;
-select pg_temp.act_as('00000000-0000-4000-8000-0000000000a1');
-select pg_temp.save_estimate('00000000-0000-4000-8000-0000000d0004');
-reset role;
+select pg_temp.save_estimate('00000000-0000-4000-8000-0000000d0004', '00000000-0000-4000-8000-0000000000a1');
 
 set local role service_role;
 select throws_ok(

@@ -165,18 +165,20 @@ create temp table project_before as
   select to_jsonb(p) as row from forwarder_projects p where id = '00000000-0000-4000-8000-000000000601';
 grant select on project_before to authenticated;
 
-select pg_temp.act_as('00000000-0000-4000-8000-0000000000a1');
+-- Direct inserts by signed-in users are revoked (see 16); the estimate goes in
+-- as the table owner, which is all this check needs: that saving a linked
+-- estimate leaves the project row alone.
 select lives_ok(
   $$ insert into duty_estimates (
-       as_of_date, hts_code, hts_description, hts_release_name, rate_column, rate_text,
+       created_by, as_of_date, hts_code, hts_description, hts_release_name, rate_column, rate_text,
        origin_country, shipment_mode, customs_value_original, customs_value_usd,
        base_duty_usd, fees_usd, total_usd, lines, forwarder_project_id, input_snapshot
      ) values (
-       '2026-10-05', '6402993160', 'Other', 'pgTAPLookup1', 'general', '6%', 'VN', 'Sea',
+       '00000000-0000-4000-8000-0000000000a1', '2026-10-05', '6402993160', 'Other', 'pgTAPLookup1', 'general', '6%', 'VN', 'Sea',
        10000, 10000, 600, 47.14, 647.14, '[]', '00000000-0000-4000-8000-000000000601',
        '{"project": {"hs_code": "6402.99.31.10"}}'
      ) $$,
-  'the owner saves a linked estimate with a code chosen in HTS lookup'
+  'a linked estimate with a code chosen in HTS lookup is stored'
 );
 select is(
   (select to_jsonb(p) from forwarder_projects p where id = '00000000-0000-4000-8000-000000000601'),

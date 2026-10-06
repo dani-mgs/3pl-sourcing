@@ -140,22 +140,22 @@ select results_eq(
 );
 
 -- ---- Estimates with additional duties ------------------------------------------
-select pg_temp.act_as('00000000-0000-4000-8000-0000000000a1', '{"role":"logistics_expert"}');
+-- Direct inserts by signed-in users are revoked (see 16); the table's own
+-- checks are exercised as the table owner.
 select lives_ok(
-  $$ insert into duty_estimates (as_of_date, hts_code, hts_description, hts_release_name, rate_column, rate_text,
+  $$ insert into duty_estimates (created_by, as_of_date, hts_code, hts_description, hts_release_name, rate_column, rate_text,
        origin_country, shipment_mode, customs_value_original, customs_value_usd, base_duty_usd, additional_duties_usd,
        fees_usd, total_usd, lines)
-     values ('2026-10-02', '6402993110', 'x', 'r', 'general', '6%', 'IN', 'Sea', 10000, 10000, 600, 1000, 47.14, 1647.14, '[]') $$,
+     values ('00000000-0000-4000-8000-0000000000a1', '2026-10-02', '6402993110', 'x', 'r', 'general', '6%', 'IN', 'Sea', 10000, 10000, 600, 1000, 47.14, 1647.14, '[]') $$,
   'an estimate total includes additional duties'
 );
 select throws_ok(
-  $$ insert into duty_estimates (as_of_date, hts_code, hts_description, hts_release_name, rate_column, rate_text,
+  $$ insert into duty_estimates (created_by, as_of_date, hts_code, hts_description, hts_release_name, rate_column, rate_text,
        origin_country, shipment_mode, customs_value_original, customs_value_usd, base_duty_usd, additional_duties_usd,
        fees_usd, total_usd, lines)
-     values ('2026-10-02', '6402993110', 'x', 'r', 'general', '6%', 'IN', 'Sea', 10000, 10000, 600, 1000, 47.14, 647.14, '[]') $$,
+     values ('00000000-0000-4000-8000-0000000000a1', '2026-10-02', '6402993110', 'x', 'r', 'general', '6%', 'IN', 'Sea', 10000, 10000, 600, 1000, 47.14, 647.14, '[]') $$,
   '23514', null, 'a total that leaves out the additional duties is refused'
 );
-reset role;
 select is(
   (select count(*)::int from additional_duties where program_key = 'section_301_forced_labor'),
   74, 'the forced-labour rows are unchanged'
