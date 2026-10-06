@@ -48,11 +48,24 @@ export function Ui({ children }: { children: React.ReactNode }) {
   return <span className="font-medium">{children}</span>;
 }
 
-export function Faq({ question, children }: { question: string; children: React.ReactNode }) {
+export function Faq({
+  question,
+  tag,
+  children,
+}: {
+  question: string;
+  // "Module › Page", shown small above the question when the item names a page.
+  tag?: string | null;
+  children: React.ReactNode;
+}) {
   return (
     <details className="group rounded-xl border border-neutral-border px-4 py-3 open:bg-neutral-bg/60">
       <summary className="cursor-pointer font-medium outline-none marker:text-neutral-muted focus-visible:ring-2 focus-visible:ring-move-green">
-        {question}
+        {/* One inline-block, so the disclosure marker sits beside the tag line, not above it. */}
+        <span className="inline-block align-top">
+          {tag && <span className="mb-0.5 block text-xs font-normal text-neutral-muted">{tag}</span>}
+          {question}
+        </span>
       </summary>
       <div className="mt-2 flex flex-col gap-2 text-move-navy">{children}</div>
     </details>
