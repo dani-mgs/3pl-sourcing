@@ -9,7 +9,7 @@ import { parseRateText } from "./rate-text";
 // the full path of each line so "Other" reads as the article it is.
 // The search itself is search_hts_lines() (migration 20261005133647).
 
-// Shown on the lookup page, word for word.
+// Shown in the lookup popup, word for word.
 export const LOOKUP_GUARDRAIL =
   "Search helps you find candidate lines. Classification depends on the General Rules of Interpretation and section/chapter notes, and is the importer's responsibility. Confirm with your customs broker.";
 
@@ -235,34 +235,6 @@ export function releaseLabel(release: { name: string; title: string | null }): s
 }
 
 // ---- Links ---------------------------------------------------------------------------
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export type ProjectLink = { project: string; quote: string | null };
-
-// The forwarder project (and quote) the calculator was opened for, carried
-// through the lookup so "Use this code" returns to the linked estimate.
-export function projectLinkFrom(project: unknown, quote: unknown): ProjectLink | null {
-  if (typeof project !== "string" || !UUID.test(project)) return null;
-  return { project, quote: typeof quote === "string" && UUID.test(quote) ? quote : null };
-}
-
-function linkParams(link: ProjectLink | null): [string, string][] {
-  if (!link) return [];
-  return link.quote ? [["project", link.project], ["quote", link.quote]] : [["project", link.project]];
-}
-
-export function calculatorHref(link: ProjectLink | null, htsCode?: string): string {
-  const params = new URLSearchParams([...(htsCode ? [["hts", htsCode] as [string, string]] : []), ...linkParams(link)]);
-  const query = params.toString();
-  return query ? `/tariff-calculator?${query}` : "/tariff-calculator";
-}
-
-export function lookupHref(link: ProjectLink | null, params: { q?: string; heading?: string; line?: string } = {}): string {
-  const entries = Object.entries(params).filter((e): e is [string, string] => typeof e[1] === "string" && e[1] !== "");
-  const query = new URLSearchParams([...entries, ...linkParams(link)]).toString();
-  return query ? `/tariff-calculator/hts-lookup?${query}` : "/tariff-calculator/hts-lookup";
-}
 
 // CBP's CROSS rulings search for a heading (opens in a browser).
 export function crossRulingsUrl(heading: string): string {

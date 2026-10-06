@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState, useTransition, type FormEvent, type ReactNode } from "react";
+import { useActionState, useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/currency";
@@ -21,14 +21,15 @@ import {
   DEDUCTION_PROMPT,
   QUANTITY_HINT,
   type CustomsValueBasis,
-  type Prefill,
 } from "@/lib/tariff/forwarder-link";
-import { lookupHref } from "@/lib/tariff/hts-lookup";
+import { formatHtsCode } from "@/lib/tariff/hts-code";
+import type { LookupLine } from "@/lib/tariff/hts-lookup";
 import type { LinkConfirmation } from "@/lib/tariff/parse-estimate-form";
 import type { LinkedFormContext } from "@/lib/tariff/server-forwarder-link";
 import { fieldClass, labelClass } from "../forwarder-sourcing/form-fields";
 import { previewEstimate, saveEstimate, type PreviewState, type SaveState } from "./actions";
 import { EstimateResultView, WARNING_BOX_CLASS } from "./estimate-result";
+import { HtsLookupDialog, type LookupRelease } from "./hts-lookup/hts-lookup-dialog";
 
 const hintClass = "text-xs text-neutral-muted";
 const usd = (amount: number) => formatCurrency(amount, "USD");
@@ -59,6 +60,19 @@ function ConfirmBox({
   );
 }
 
+function HtsDescription({ description, ancestors }: { description: string; ancestors: string[] }) {
+  return (
+    <div className="rounded-lg bg-neutral-bg px-3 py-2 text-xs text-move-navy" data-testid="hts-description">
+      <span className="text-neutral-muted">Official description: </span>
+      {ancestors.length > 0 && (
+        <span className="text-neutral-muted">{ancestors.map((d) => d.replace(/:\s*$/, "")).join(" › ")} › </span>
+      )}
+      <span className="font-medium">{description}</span>
+      <span className="block text-neutral-muted">Confirm this matches the goods.</span>
+    </div>
+  );
+}
+
 function FromProject({ children }: { children: ReactNode }) {
   return <p className={hintClass}>{children}</p>;
 }
@@ -68,7 +82,7 @@ export function EstimateForm({
   today,
   countries,
   link,
-  pickedHts,
+  htsRelease,
 }: {
   latestRates: LatestRates;
   today: string;
@@ -78,8 +92,8 @@ export function EstimateForm({
   // Set when opened from a forwarder project or quote: every input is a
   // suggestion the user must confirm before calculating.
   link?: LinkedFormContext;
-  // An unlinked form opened from HTS lookup ("Use this code").
-  pickedHts?: Prefill["hts"];
+  // The HTS release the lookup popup searches; null when none is imported.
+  htsRelease: LookupRelease | null;
 }) {
   const [preview, previewAction, previewing] = useActionState<PreviewState, FormData>(
     async (_prev, formData) => previewEstimate(formData),
@@ -120,10 +134,13 @@ export function EstimateForm({
   const [rateState, setRateState] = useState<RateState>(initialBasis?.rate ?? { rate: "1", source: null, date: null });
   const [deduction, setDeduction] = useState(prefill?.deduction?.suggestedUsd ?? "");
   const [quantity, setQuantity] = useState(prefill?.quantity?.suggested ?? "");
-  // The HTS suggestion: the project's code, or one chosen in HTS lookup.
-  const htsPrefill = prefill?.hts ?? pickedHts;
-  const htsControlled = Boolean(link || pickedHts);
+  const htsPrefill = prefill?.hts;
   const [htsValue, setHtsValue] = useState(htsPrefill?.value ?? "");
+  // A line chosen in the HTS lookup popup. It only fills this form's HTS
+  // field; the project's own HS code is never written.
+  const [picked, setPicked] = useState<{ value: string; line: LookupLine } | null>(null);
+  const [lookupOpen, setLookupOpen] = useState(false);
+  const lookupButton = useRef<HTMLButtonElement>(null);
   const [confirmed, setConfirmed] = useState<Set<LinkConfirmation>>(new Set());
 
   const latestForCurrency = isUsd(currency) ? undefined : latestRates[currency];
@@ -150,6 +167,17 @@ export function EstimateForm({
     setAmount(option.amount);
     setCurrency(option.currency ?? "");
     setRateState(option.rate);
+  }
+
+  function pickHts(line: LookupLine) {
+    const value = formatHtsCode(line.hts_code);
+    setHtsValue(value);
+    setPicked({ value, line });
+    // Set in code, not typed, so the form's onChange doesn't see it: the
+    // earlier result no longer matches, and a project's HTS confirmation no
+    // longer applies to the new code.
+    setEditedSinceResult(true);
+    confirm("hts", false);
   }
 
   function confirm(name: LinkConfirmation, checked: boolean) {
@@ -182,6 +210,14 @@ export function EstimateForm({
 
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      {/* Outside the <form>, so nothing typed or clicked in the popup reaches it. */}
+      <HtsLookupDialog
+        open={lookupOpen}
+        onOpenChange={setLookupOpen}
+        release={htsRelease}
+        onPick={pickHts}
+        finalFocus={lookupButton}
+      />
       <section className="self-start rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
         <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">Shipment line</h2>
 
@@ -223,12 +259,15 @@ export function EstimateForm({
               <label htmlFor="hts_code" className={labelClass}>
                 HTS code
               </label>
-              <Link
-                href={lookupHref(link ? { project: link.projectId, quote: link.quoteId } : null)}
+              <button
+                ref={lookupButton}
+                type="button"
+                onClick={() => setLookupOpen(true)}
+                aria-haspopup="dialog"
                 className="rounded text-xs font-medium text-move-navy outline-none hover:text-move-green hover:underline focus-visible:ring-2 focus-visible:ring-move-green"
               >
-                Look up HTS code
-              </Link>
+                Look up code
+              </button>
             </div>
             <input
               id="hts_code"
@@ -238,34 +277,29 @@ export function EstimateForm({
               autoComplete="off"
               placeholder="e.g. 7208.10.15.00"
               aria-describedby="hts_code_hint"
-              value={htsControlled ? htsValue : undefined}
-              onChange={htsControlled ? (e) => setHtsValue(e.target.value) : undefined}
+              value={htsValue}
+              onChange={(e) => setHtsValue(e.target.value)}
               className={fieldClass}
             />
-            {htsPrefill && (
+            {htsPrefill?.projectText && <FromProject>Project HS code: {htsPrefill.projectText}</FromProject>}
+            {picked && htsValue === picked.value ? (
               <>
-                {htsPrefill.projectText && <FromProject>Project HS code: {htsPrefill.projectText}</FromProject>}
-                {htsPrefill.fromLookup && (
-                  <p className={hintClass} data-testid="hts-from-lookup">
-                    {link
-                      ? "Chosen in HTS lookup. It's used for this estimate only; the project's HS code isn't changed."
-                      : "Chosen in HTS lookup."}
-                  </p>
-                )}
-                {htsPrefill.description && htsValue === htsPrefill.value && (
-                  <div className="rounded-lg bg-neutral-bg px-3 py-2 text-xs text-move-navy" data-testid="hts-description">
-                    <span className="text-neutral-muted">Official description: </span>
-                    {htsPrefill.ancestorDescriptions.length > 0 && (
-                      <span className="text-neutral-muted">
-                        {htsPrefill.ancestorDescriptions.map((d) => d.replace(/:\s*$/, "")).join(" › ")} ›{" "}
-                      </span>
-                    )}
-                    <span className="font-medium">{htsPrefill.description}</span>
-                    <span className="block text-neutral-muted">Confirm this matches the goods.</span>
-                  </div>
-                )}
-                {htsPrefill.warning && <p className={`${WARNING_BOX_CLASS} text-xs`}>{htsPrefill.warning}</p>}
+                <p className={hintClass} data-testid="hts-from-lookup">
+                  {link
+                    ? "Chosen in HTS lookup. It's used for this estimate only; the project's HS code isn't changed."
+                    : "Chosen in HTS lookup."}
+                </p>
+                <HtsDescription description={picked.line.description} ancestors={picked.line.ancestor_descriptions} />
               </>
+            ) : (
+              htsPrefill && (
+                <>
+                  {htsPrefill.description && htsValue === htsPrefill.value && (
+                    <HtsDescription description={htsPrefill.description} ancestors={htsPrefill.ancestorDescriptions} />
+                  )}
+                  {htsPrefill.warning && <p className={`${WARNING_BOX_CLASS} text-xs`}>{htsPrefill.warning}</p>}
+                </>
+              )
             )}
             <p id="hts_code_hint" className={hintClass}>
               8 or 10 digits (10 recommended). Classification is the importer&apos;s responsibility: the

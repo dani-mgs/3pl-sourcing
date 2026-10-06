@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // The HTS lookup page became a popup in the calculator. Next carries the
+      // query string over, so ?project= and ?quote= survive.
+      { source: "/tariff-calculator/hts-lookup", destination: "/tariff-calculator", permanent: true },
       {
         source: "/3pl-sourcing/projects/:id/comparison",
         destination: "/3pl-sourcing/projects/:id",

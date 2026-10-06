@@ -46,20 +46,23 @@ export function TariffSection() {
       </p>
       <Steps>
         <li>
-          <Ui>Look up HTS code</Ui> (beside the calculator&apos;s HTS field, or at the top of the Tariff Calculator).
-          Any signed-in user can use it.
+          <Ui>Look up code</Ui>, beside the calculator&apos;s <Ui>HTS code</Ui> field, opens a popup. Any
+          signed-in user can use it, and nothing you&apos;ve typed in the form is lost.
         </li>
         <li>
-          Search words (&ldquo;footwear rubber&rdquo;) or a code (&ldquo;6402&rdquo;, &ldquo;6402.99&rdquo; or
-          &ldquo;640299&rdquo; show everything under it). It searches the current HTS release, named at the top.
+          Type words (&ldquo;footwear rubber&rdquo;) or a code (&ldquo;6402&rdquo;, &ldquo;6402.99&rdquo; or
+          &ldquo;640299&rdquo; show everything under it), then press Enter or <Ui>Search</Ui>. It searches the
+          current HTS release, named at the top of the popup. Your last search is still there if you close and
+          reopen it.
         </li>
         <li>
           <Ui>Browse heading</Ui> opens a heading as a tree you expand and collapse.
         </li>
         <li>
-          <Ui>Use this code</Ui> opens the calculator with the code and its official description filled in. Check
-          that it matches the goods. From a linked estimate it returns there and replaces the suggested code for
-          that estimate only; the project&apos;s own HS code isn&apos;t changed.
+          <Ui>Use this code</Ui> closes the popup and fills the code into the <Ui>HTS code</Ui> field, with its
+          official description. Check that it matches the goods. Nothing else in the form changes, except that on
+          a linked estimate you need to tick <Ui>Confirmed</Ui> for the HTS code again. The code is used for that
+          estimate only; the project&apos;s own HS code isn&apos;t changed.
         </li>
       </Steps>
       <Bullets>
@@ -259,7 +262,7 @@ export function TariffSection() {
       <Bullets>
         <li>
           <Ui>HTS code</Ui>: the project&apos;s HS code, with its official description to check against
-          the goods. A warning shows when it has fewer than 10 digits. To use another code, <Ui>Look up HTS
+          the goods. A warning shows when it has fewer than 10 digits. To use another code, <Ui>Look up
           code</Ui> → <Ui>Use this code</Ui>: it replaces the code in this form only, never the project&apos;s.
         </li>
         <li>

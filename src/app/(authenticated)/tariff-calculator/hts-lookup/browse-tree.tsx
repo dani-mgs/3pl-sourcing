@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
-import type { BrowseNode, ProjectLink } from "@/lib/tariff/hts-lookup";
+import type { BrowseNode, LookupLine } from "@/lib/tariff/hts-lookup";
 import { LineFacts } from "./hts-line";
 
 function allIds(nodes: BrowseNode[]): string[] {
@@ -12,15 +12,7 @@ function allIds(nodes: BrowseNode[]): string[] {
 
 // A heading's lines as an indented tree; rows with children expand and
 // collapse. Everything starts expanded.
-export function BrowseTree({
-  nodes,
-  link,
-  highlight,
-}: {
-  nodes: BrowseNode[];
-  link: ProjectLink | null;
-  highlight: string | null;
-}) {
+export function BrowseTree({ nodes, onPick }: { nodes: BrowseNode[]; onPick: (line: LookupLine) => void }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const toggle = (id: string) =>
     setCollapsed((prev) => {
@@ -39,13 +31,9 @@ export function BrowseTree({
         {list.map((node) => {
           const open = !collapsed.has(node.id);
           const hasChildren = node.children.length > 0;
-          const isHighlight = highlight != null && node.code === highlight;
           return (
             <li key={node.id}>
-              <div
-                id={node.code ? `line-${node.code}` : undefined}
-                className={`flex items-start gap-2 rounded-lg py-1.5 pr-2 ${isHighlight ? "bg-[#ECFDF5] pl-2" : ""}`}
-              >
+              <div className="flex items-start gap-2 rounded-lg py-1.5 pr-2">
                 {hasChildren ? (
                   <button
                     type="button"
@@ -64,7 +52,7 @@ export function BrowseTree({
                     <span className="mr-2 font-semibold whitespace-nowrap tabular-nums">{formatHtsCode(node.code)}</span>
                   ) : null}
                   <span className={node.code ? "" : "text-neutral-muted"}>{node.description}</span>
-                  {node.line && <LineFacts line={node.line} link={link} />}
+                  {node.line && <LineFacts line={node.line} onPick={onPick} />}
                 </div>
               </div>
               {hasChildren && open && render(node.children, depth + 1)}

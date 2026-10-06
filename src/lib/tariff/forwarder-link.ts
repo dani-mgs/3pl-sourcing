@@ -112,9 +112,6 @@ export type Prefill = {
     description: string | null;
     ancestorDescriptions: string[];
     warning: string | null;
-    // Chosen in HTS lookup rather than taken from the project. The project's
-    // own HS code is never changed.
-    fromLookup: boolean;
   };
   origin: { value: string; projectText: string | null; match: OriginMatch; note: string | null };
   customsValue: { options: CustomsBasisOption[]; defaultBasis: CustomsValueBasis | null; note: string | null };
@@ -136,7 +133,7 @@ function isShipmentMode(value: string | null | undefined): value is ShipmentMode
 
 function htsPrefill(project: LinkProject, lookup: HtsLookup): Prefill["hts"] {
   const projectText = project.hs_code?.trim() || null;
-  const base = { projectText, description: null, ancestorDescriptions: [] as string[], fromLookup: false };
+  const base = { projectText, description: null, ancestorDescriptions: [] as string[] };
   switch (lookup.status) {
     case "missing":
       return { ...base, value: "", warning: "The project has no HS code. Enter the 10-digit HTS code." };
@@ -169,40 +166,6 @@ function htsPrefill(project: LinkProject, lookup: HtsLookup): Prefill["hts"] {
           lookup.digits.length < 10
             ? "The project's code has fewer than 10 digits. A 10-digit code is recommended: some duties depend on the statistical suffix."
             : null,
-      };
-  }
-}
-
-// A code chosen in HTS lookup ("Use this code"), checked against the current
-// release like the project's. On a linked estimate it replaces the project's
-// suggestion in the form only; projectText still shows the project's code.
-export function lookedUpHtsPrefill(lookup: HtsLookup, projectText: string | null): Prefill["hts"] {
-  const base = { projectText, description: null, ancestorDescriptions: [] as string[], fromLookup: true };
-  switch (lookup.status) {
-    case "missing":
-      return { ...base, value: "", warning: null };
-    case "invalid":
-      return { ...base, value: "", warning: `The code from HTS lookup "${lookup.text}" can't be used: ${lookup.error}` };
-    case "not_found":
-      return {
-        ...base,
-        value: formatHtsCode(lookup.digits),
-        warning: `${formatHtsCode(lookup.digits)} isn't in the current HTS. Check the code.`,
-      };
-    case "several":
-      return {
-        ...base,
-        description: lookup.description,
-        value: formatHtsCode(lookup.digits),
-        warning: `${formatHtsCode(lookup.digits)} has several 10-digit lines. Enter the full 10-digit code.`,
-      };
-    case "found":
-      return {
-        ...base,
-        value: formatHtsCode(lookup.digits),
-        description: lookup.description,
-        ancestorDescriptions: lookup.ancestorDescriptions,
-        warning: null,
       };
   }
 }
@@ -248,15 +211,12 @@ export function buildPrefill({
   project,
   quote,
   hts,
-  htsFromLookup = false,
   latestRates,
   today,
 }: {
   project: LinkProject;
   quote: LinkQuote | null;
   hts: HtsLookup;
-  // hts is a code chosen in HTS lookup, not the project's.
-  htsFromLookup?: boolean;
   latestRates: LatestRates;
   today: string;
 }): Prefill {
@@ -302,7 +262,7 @@ export function buildPrefill({
       : { value: "" as const, from: null };
 
   return {
-    hts: htsFromLookup ? lookedUpHtsPrefill(hts, project.hs_code?.trim() || null) : htsPrefill(project, hts),
+    hts: htsPrefill(project, hts),
     origin: originPrefill(project),
     customsValue: { options, defaultBasis: options[0]?.key ?? null, note },
     deduction: invoiceIncludesFreight(project.current_incoterm)

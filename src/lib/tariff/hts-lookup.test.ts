@@ -3,16 +3,13 @@ import {
   MAX_QUERY_LENGTH,
   buildBrowseTree,
   buildPath,
-  calculatorHref,
   canUseInCalculator,
   crossRulingsUrl,
   generalRateDisplay,
   groupByHeading,
-  lookupHref,
   mayApplyLabel,
   parseLookupQuery,
   parseLookupRows,
-  projectLinkFrom,
   releaseLabel,
   type BrowseNode,
   type LookupLine,
@@ -229,32 +226,6 @@ describe("display", () => {
 });
 
 describe("links", () => {
-  const P = "00000000-0000-4000-8000-000000000401";
-  const Q = "00000000-0000-4000-8000-000000000501";
-
-  test("a project link is carried only when its ids are valid", () => {
-    expect(projectLinkFrom(P, Q)).toEqual({ project: P, quote: Q });
-    expect(projectLinkFrom(P, "nope")).toEqual({ project: P, quote: null });
-    expect(projectLinkFrom("nope", Q)).toBeNull();
-    expect(projectLinkFrom(undefined, undefined)).toBeNull();
-  });
-
-  test("Use this code returns to the calculator, keeping the project link", () => {
-    expect(calculatorHref(null, "6402993160")).toBe("/tariff-calculator?hts=6402993160");
-    expect(calculatorHref({ project: P, quote: Q }, "6402993160")).toBe(
-      `/tariff-calculator?hts=6402993160&project=${P}&quote=${Q}`,
-    );
-    expect(calculatorHref({ project: P, quote: null })).toBe(`/tariff-calculator?project=${P}`);
-    expect(calculatorHref(null)).toBe("/tariff-calculator");
-  });
-
-  test("lookup links keep the search and project link", () => {
-    expect(lookupHref(null)).toBe("/tariff-calculator/hts-lookup");
-    expect(lookupHref({ project: P, quote: null }, { heading: "6402", q: "" })).toBe(
-      `/tariff-calculator/hts-lookup?heading=6402&project=${P}`,
-    );
-  });
-
   test("CROSS rulings search for a heading", () => {
     expect(crossRulingsUrl("6402")).toBe("https://rulings.cbp.gov/search?term=6402");
   });

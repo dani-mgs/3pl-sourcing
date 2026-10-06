@@ -170,7 +170,7 @@ describe("linked duty estimates", () => {
     expect(revalidatePath).toHaveBeenCalledWith(`/forwarder-sourcing/${PROJECT}/forwarders/f1`);
   });
 
-  test("a code chosen in HTS lookup is used for the estimate only; the project's HS code is never written", async () => {
+  test("a code picked in the HTS lookup popup is used for the estimate only; the project's HS code is never written", async () => {
     await expect(saveEstimate(form({ hts_code: "6402.99.31.60" }))).rejects.toThrow("REDIRECT");
     expect(buildEstimate.mock.calls[0][1]).toMatchObject({ htsDigits: "6402993160" });
     expect(otherWrites).toEqual([]);

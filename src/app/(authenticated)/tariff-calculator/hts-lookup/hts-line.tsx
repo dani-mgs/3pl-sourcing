@@ -1,20 +1,13 @@
-import Link from "next/link";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
-import {
-  calculatorHref,
-  canUseInCalculator,
-  generalRateDisplay,
-  mayApplyLabel,
-  type LookupLine,
-  type ProjectLink,
-} from "@/lib/tariff/hts-lookup";
+import { canUseInCalculator, generalRateDisplay, mayApplyLabel, type LookupLine } from "@/lib/tariff/hts-lookup";
 
 export const linkClass =
   "rounded font-medium text-move-navy hover:text-move-green hover:underline focus-visible:ring-2 focus-visible:ring-move-green focus-visible:outline-none";
 
 // Rate, units, programs that may apply and "Use this code" for one HTS line,
-// shared by the search results and the browse tree.
-export function LineFacts({ line, link }: { line: LookupLine; link: ProjectLink | null }) {
+// shared by the search results and the browse tree. Buttons are type="button":
+// the popup sits beside the calculator form and must never submit it.
+export function LineFacts({ line, onPick }: { line: LookupLine; onPick: (line: LookupLine) => void }) {
   const rate = generalRateDisplay(line);
   return (
     <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-neutral-muted">
@@ -35,13 +28,14 @@ export function LineFacts({ line, link }: { line: LookupLine; link: ProjectLink 
         </span>
       ))}
       {canUseInCalculator(line) ? (
-        <Link
-          href={calculatorHref(link, line.hts_code)}
+        <button
+          type="button"
+          onClick={() => onPick(line)}
           className="rounded-lg border border-move-navy px-2.5 py-1 font-medium text-move-navy outline-none hover:bg-move-navy hover:text-white focus-visible:ring-2 focus-visible:ring-move-green"
           aria-label={`Use ${formatHtsCode(line.hts_code)} in the Tariff Calculator`}
         >
           Use this code
-        </Link>
+        </button>
       ) : (
         line.has_children &&
         (line.hts_code.length === 8 || line.hts_code.length === 10) && <span>Choose a 10-digit line under it</span>
