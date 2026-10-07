@@ -171,6 +171,12 @@ export function TariffSection() {
           case differs.
         </li>
         <li>
+          A row whose rate isn&apos;t confirmed yet is never charged and never replaces a confirmed row,
+          however specific it is: the confirmed rate stays in the total and the other is named (&ldquo;Could
+          be +100% (9903.91.12) instead, not yet confirmed&rdquo;). Only when no confirmed row applies is
+          the program listed as &ldquo;may apply&rdquo; with nothing counted.
+        </li>
+        <li>
           Where the base rate is low, some origins (EU, Japan, South Korea, Switzerland, Taiwan) pay a
           minimum total rate instead of a flat add-on; per-unit rates are compared as duty divided by
           customs value.

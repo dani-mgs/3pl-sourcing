@@ -235,6 +235,10 @@ export const TARIFF_FAQ: FaqItem[] = [
           the higher rate, so it never understates the duty, and names the lower one with the
           condition. Ask your broker whether your goods qualify.
         </p>
+        <p>
+          &ldquo;Could be … instead, not yet confirmed&rdquo; means a rate that hasn&apos;t been confirmed
+          yet might apply instead. The confirmed rate stays in the total and the other is only named.
+        </p>
       </>
     ),
   },

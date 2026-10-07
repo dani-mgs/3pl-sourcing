@@ -28,8 +28,10 @@ import {
 //   - within a program one row applies (note 16(a): the 232 metal headings
 //     are mutually exclusive). The most specific row wins: a row whose
 //     condition is assumed, then a row for named origins (fewer first), then
-//     the longest matching HTS line; a charging row beats an unconfirmed one
-//     at the same rank. Rows that still tie: the highest charge applies and
+//     the longest matching HTS line. Only confirmed (charging) rows can be the
+//     charged row: an unconfirmed row never displaces one, however specific
+//     it is; it is named on the line ("could be +100% (...) instead, not yet
+//     confirmed"). Rows that still tie: the highest charge applies and
 //     the others are named, so a data question never understates the duty;
 //   - a scope line marked excluded takes its statistical number out of the
 //     row ("8-digit subheading except 10-digit number");
@@ -40,7 +42,7 @@ import {
 //     fact) apply with "assumes …". Which way each row goes is data
 //     (assume_condition), so experts can change it;
 //   - unconfirmed rows are never charged: the program is named "may apply"
-//     when one is the best match, and noted otherwise;
+//     only when no confirmed row applies, and the row is noted otherwise;
 //   - a row doesn't apply when a program in its excludes_programs applies
 //     (note 52(f), 50(a)(vi): Section 232 goods); if that program isn't
 //     settled yet (not loaded, or pending review) but may apply, the row is
@@ -260,9 +262,13 @@ function evaluate(
     if (match) matched.push({ row, match });
   }
   const charging = (c: Candidate) => c.row.rate_type === "add" || c.row.rate_type === "minimum_total";
+  const bySpecificity = (a: Candidate, b: Candidate) =>
+    compareRank(rank(a), rank(b)) || a.row.chapter99_heading.localeCompare(b.row.chapter99_heading);
+  // Only confirmed rows can be charged; unconfirmed ones are named, never chosen over them.
   const candidates = matched
-    .filter((c) => (charging(c) && (!isConditional(c.row) || isAssumed(c.row))) || c.row.rate_type === "unconfirmed")
-    .sort((a, b) => compareRank(rank(a), rank(b)) || a.row.chapter99_heading.localeCompare(b.row.chapter99_heading));
+    .filter((c) => charging(c) && (!isConditional(c.row) || isAssumed(c.row)))
+    .sort(bySpecificity);
+  const unconfirmedMatches = matched.filter((c) => c.row.rate_type === "unconfirmed").sort(bySpecificity);
   const alternatives = matched.filter((c) => charging(c) && isConditional(c.row) && !isAssumed(c.row));
 
   const notes: string[] = [];
@@ -282,13 +288,19 @@ function evaluate(
 
   const top = candidates[0];
   if (!top) {
+    // Nothing confirmed applies: an unconfirmed match is named as "may apply".
+    if (unconfirmedMatches.length > 0) {
+      return { kind: "unconfirmed", row: unconfirmedMatches[0].row, notes: [...alternatives.map(couldBe), ...notes] };
+    }
     const conditional = [...alternatives.map(couldBe), ...notes];
     return conditional.length > 0 ? { kind: "conditional", notes: conditional } : { kind: "not_applicable" };
   }
-  const unconfirmedNote = (row: DutyRow) => `${row.chapter99_heading} (rate unconfirmed, not included): ${row.condition_text ?? row.label}`;
-  if (top.row.rate_type === "unconfirmed") {
-    return { kind: "unconfirmed", row: top.row, notes: [...alternatives.map(couldBe), ...notes] };
-  }
+  // A more specific unconfirmed row could replace the charged one; a less
+  // specific one is just not included.
+  const unconfirmedNote = (c: Candidate) =>
+    compareRank(rank(c), rank(top)) < 0
+      ? `Could be ${rateText(c.row)} (${c.row.chapter99_heading}) instead, not yet confirmed: ${c.row.condition_text ?? c.row.label}`
+      : `${c.row.chapter99_heading} (rate unconfirmed, not included): ${c.row.condition_text ?? c.row.label}`;
 
   // Equal-ranked charging rows: the highest charge applies, the rest are named.
   const tied = candidates.filter((c) => charging(c) && compareRank(rank(c), rank(top)) === 0);
@@ -312,7 +324,7 @@ function evaluate(
     );
   }
   for (const alt of alternatives) notes.push(couldBe(alt));
-  for (const c of candidates.filter((x) => x.row.rate_type === "unconfirmed")) notes.push(unconfirmedNote(c.row));
+  for (const c of unconfirmedMatches) notes.push(unconfirmedNote(c));
 
   // Exemptions: definite (or assumed) ones apply; conditional ones are listed.
   const mayBeExempt: string[] = [];

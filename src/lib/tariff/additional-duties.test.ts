@@ -401,9 +401,32 @@ describe("one row per program: precedence, conditions, unconfirmed and excepted 
     expect(lineFor(r, "section_301_brazil")).toMatchObject({ amountUsd: 2500 });
   });
 
-  test("an unconfirmed best match is named, never charged, and settles nothing it would exclude", () => {
+  test("an unconfirmed row more specific than a confirmed one never displaces it: the confirmed charge stays, the other is named", () => {
     const unconfirmed = m({ chapter99_heading: "9903.82.22", label: "Listed countries", rate_type: "unconfirmed", rate_pct: 15, origin_countries: ["BR"], condition_text: "total or added?" });
     const r = run([ANY, unconfirmed], "BR");
+    expect(lineFor(r, "section_232_metals")).toMatchObject({
+      heading: "9903.82.02",
+      amountUsd: 5000,
+      notes: ["Could be +15% (9903.82.22) instead, not yet confirmed: total or added?"],
+    });
+    expect(warningFor(r, "section_232_metals")).toBeUndefined();
+    // The confirmed 232 charge settles the program it excludes.
+    expect(lineFor(r, "section_301_brazil")).toMatchObject({ rateText: "Exempt" });
+  });
+
+  test("a less specific unconfirmed row is named as not included", () => {
+    const broad = m({ chapter99_heading: "9903.82.22", label: "Broad", rate_type: "unconfirmed", rate_pct: 15, scope: [{ hts_prefix: "72", article_description: null }], condition_text: "total or added?" });
+    const tenDigit = m({ chapter99_heading: "9903.82.10", label: "Ten-digit", rate_pct: 15, scope: [{ hts_prefix: "7208101500", article_description: null }] });
+    const r = run([broad, tenDigit], "BR");
+    expect(lineFor(r, "section_232_metals")).toMatchObject({
+      heading: "9903.82.10",
+      notes: ["9903.82.22 (rate unconfirmed, not included): total or added?"],
+    });
+  });
+
+  test("when only unconfirmed rows apply, nothing is charged: the program is named as may apply and settles nothing it would exclude", () => {
+    const unconfirmed = m({ chapter99_heading: "9903.82.22", label: "Listed countries", rate_type: "unconfirmed", rate_pct: 15, origin_countries: ["BR"], condition_text: "total or added?" });
+    const r = run([unconfirmed], "BR");
     expect(lineFor(r, "section_232_metals")).toBeUndefined();
     expect(warningFor(r, "section_232_metals")).toMatchObject({ kind: "unconfirmed", counted: true });
     expect(warningFor(r, "section_232_metals")!.hint).toBe("may apply under 9903.82.22; rate unconfirmed, for expert review");

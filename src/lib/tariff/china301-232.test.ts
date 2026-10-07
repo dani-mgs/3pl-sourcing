@@ -208,11 +208,14 @@ describe("Section 232 metals", () => {
     expect(r.total).toBe(390 + 2500 + 47.14);
   });
 
-  test("9903.82.22 countries (here the UK) on list (xi): unconfirmed, named, not counted", () => {
+  test("9903.82.22 countries (here the UK) on list (xi): the confirmed 25% row is charged; the unconfirmed 15% is named, not counted", () => {
     const r = estimate("8427104000", "Free", "GB");
-    expect(r.line("section_232_metals")).toBeUndefined();
-    expect(r.warning("section_232_metals")).toMatchObject({ kind: "unconfirmed", counted: true });
-    expect(r.warning("section_301_forced_labor")).toMatchObject({ kind: "depends_on" });
+    const metals = r.line("section_232_metals")!;
+    expect(metals).toMatchObject({ heading: "9903.82.09", amountUsd: 2500 });
+    expect(metals.notes!.some((n) => n.startsWith("Could be +15% (9903.82.22) instead, not yet confirmed:"))).toBe(true);
+    expect(r.warning("section_232_metals")).toBeUndefined();
+    expect(r.line("section_301_forced_labor")).toMatchObject({ rateText: "Exempt", amountUsd: 0 });
+    expect(r.total).toBe(2500 + 47.14);
   });
 
   test("a Russian line on two lists: the higher (200%) applies and the other is named", () => {
@@ -242,18 +245,27 @@ describe("rows in force depend on the entry date", () => {
     expect(named("2026-11-10")).toBe(false);
   });
 
-  test("intermodal chassis (9903.91.12, +100% from Nov 10, 2026, unconfirmed) are named from that day and never charged", () => {
+  test("intermodal chassis (9903.91.12, +100% from Nov 10, 2026, unconfirmed) never displace the confirmed +25%: named, not charged", () => {
     const before = estimate("8716390090", "Free", "CN", { asOf: "2026-11-09" });
     const after = estimate("8716390090", "Free", "CN", { asOf: "2026-11-10" });
-    expect(before.line("section_301_china")).toMatchObject({ heading: "9903.88.03", amountUsd: 2500 });
-    expect(before.warning("section_301_china")?.text ?? "").not.toContain("9903.91.12");
-    expect(after.additional.lines.some((l) => l.heading === "9903.91.12")).toBe(false);
-    expect(after.warning("section_301_china")).toMatchObject({ kind: "unconfirmed" });
-    expect(after.warning("section_301_china")!.text).toContain("9903.91.12");
-    // Known behaviour, in TECH_DEBT: the more specific unconfirmed row takes the
-    // place of the +25% row, so the total is $2,500 lower and the program is
-    // named as "may apply" instead.
-    expect(after.total).toBeCloseTo(before.total - 2500, 2);
+    for (const r of [before, after]) {
+      expect(r.line("section_301_china")).toMatchObject({ heading: "9903.88.03", amountUsd: 2500 });
+      expect(r.additional.lines.some((l) => l.heading === "9903.91.12")).toBe(false);
+      expect(r.warning("section_301_china")).toBeUndefined();
+      expect(r.total).toBe(2500 + 2500 + 47.14);
+    }
+    // Named only from the day the row is in force.
+    expect(before.line("section_301_china")!.notes!.join(" ")).not.toContain("9903.91.12");
+    expect(after.line("section_301_china")!.notes).toEqual([
+      "Could be +100% (9903.91.12) instead, not yet confirmed: intermodal chassis, subassemblies and parts of China (U.S. note 31(k)(i)) are charged +100% from November 10, 2026 unless the suspension is extended",
+    ]);
+  });
+
+  test("ship-to-shore cranes (9903.91.14): the confirmed row stays and the unconfirmed one is named as not included", () => {
+    const r = estimate("8426190000", "Free", "CN", { asOf: "2026-11-10" });
+    expect(r.line("section_301_china")).toMatchObject({ heading: "9903.92.10", amountUsd: 2500 });
+    expect(r.line("section_301_china")!.notes!.some((n) => n.startsWith("9903.91.14 (rate unconfirmed, not included)"))).toBe(true);
+    expect(r.total).toBe(2500 + 1250 + 47.14);
   });
 
   test("the row for a future effective_from is out of force today and in force on that day", () => {
