@@ -1,6 +1,7 @@
 import type { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { embeddedOne } from "@/lib/clients";
+import { defaultEntryDate } from "./entry-date";
 import {
   LINK_PROJECT_COLUMNS,
   buildInputSnapshot,
@@ -37,7 +38,7 @@ export type LinkSources = {
 
 const QUOTE_COLUMNS =
   "id, updated_at, forwarder_id, scenario_group, shipment_mode, cost_of_goods_usd, duties_taxes_usd, " +
-  "forwarders!inner(company_name, forwarder_project_id)";
+  "lead_time_min_days, lead_time_max_days, forwarders!inner(company_name, forwarder_project_id)";
 
 type QuoteRow = {
   id: string;
@@ -47,6 +48,8 @@ type QuoteRow = {
   shipment_mode: string | null;
   cost_of_goods_usd: number | string | null;
   duties_taxes_usd: number | string | null;
+  lead_time_min_days: number | string | null;
+  lead_time_max_days: number | string | null;
   forwarders: { company_name: string; forwarder_project_id: string } | { company_name: string; forwarder_project_id: string }[];
 };
 
@@ -63,6 +66,8 @@ export function quoteFromRow(row: QuoteRow): LinkQuote {
     shipment_mode: row.shipment_mode,
     cost_of_goods_usd: toNumber(row.cost_of_goods_usd),
     duties_taxes_usd: toNumber(row.duties_taxes_usd),
+    lead_time_min_days: toNumber(row.lead_time_min_days),
+    lead_time_max_days: toNumber(row.lead_time_max_days),
   };
 }
 
@@ -138,6 +143,7 @@ const sameAmount = (text: string, value: number | null) =>
 export function snapshotChoices(
   input: EstimateFormData,
   sources: Pick<LinkSources, "project" | "quote">,
+  today: string,
 ): SnapshotChoices {
   const { project, quote } = sources;
   const customs_value_basis =
@@ -154,11 +160,15 @@ export function snapshotChoices(
         : Number(input.quantity) === project.units
           ? "units"
           : null;
+  const suggested = defaultEntryDate(today, quote?.lead_time_min_days, quote?.lead_time_max_days);
+  const entry_date_from =
+    input.entryDate === suggested.date ? suggested.from : input.entryDate === today ? "today" : "entered";
   return {
     customs_value_basis,
     deduction_offered: invoiceIncludesFreight(project.current_incoterm),
     quantity_from,
-  };
+    entry_date_from,
+  } satisfies SnapshotChoices;
 }
 
 export type CheckedLink =
@@ -178,12 +188,14 @@ export const SOURCES_CHANGED =
 // Everything a linked preview or save must pass: the user can write to the
 // project, the project and quote still exist and haven't changed since the
 // page was loaded, a deduction is only taken when the incoterm calls for it,
-// and every input has been confirmed. Returns the input with the deduction
+// and every input has been confirmed (`today` is the day of calculation, for
+// where the entry date came from). Returns the input with the deduction
 // and the row's link columns and snapshot.
 export async function checkLinkedEstimate(
   supabase: Supabase,
   input: EstimateFormData,
   link: LinkFields,
+  today: string,
 ): Promise<CheckedLink> {
   const { canWrite } = await getOwnershipContext(link.projectId, "forwarder_projects");
   if (!canWrite) return { ok: false, error: NOT_ALLOWED };
@@ -210,7 +222,7 @@ export async function checkLinkedEstimate(
     row: {
       forwarder_project_id: link.projectId,
       forwarder_quote_id: link.quoteId,
-      input_snapshot: buildInputSnapshot(sources.project, sources.quote, snapshotChoices(withDeduction, sources)),
+      input_snapshot: buildInputSnapshot(sources.project, sources.quote, snapshotChoices(withDeduction, sources, today)),
     },
   };
 }

@@ -24,6 +24,8 @@ const quoteA: LinkQuote = {
   shipment_mode: "Sea",
   cost_of_goods_usd: null,
   duties_taxes_usd: 3100,
+  lead_time_min_days: null,
+  lead_time_max_days: null,
 };
 const quoteB: LinkQuote = { ...quoteA, id: "qb", scenario_group: "Air", duties_taxes_usd: null };
 const quotes = new Map([
@@ -37,6 +39,7 @@ function row(id: string, quoteId: string | null, createdAt: string, extra: Recor
     id,
     created_at: createdAt,
     as_of_date: createdAt.slice(0, 10),
+    entry_date: createdAt.slice(0, 10),
     total_usd: "3000.00",
     warnings: [],
     duty_reviews: [],

@@ -7,7 +7,7 @@ import type { EstimateResult } from "./server-estimate";
 // as unavailable instead of breaking the page.
 
 export const SAVED_ESTIMATE_COLUMNS =
-  "id, created_at, created_by, label, as_of_date, hts_code, hts_description, hts_ancestor_descriptions, " +
+  "id, created_at, created_by, label, as_of_date, entry_date, hts_code, hts_description, hts_ancestor_descriptions, " +
   "hts_release_name, hts_release_title, hts_release_start_date, rate_column, rate_text, special_rate_text, " +
   "origin_country, shipment_mode, customs_value_original, original_currency, exchange_rate_to_usd, " +
   "exchange_rate_source, exchange_rate_date, customs_value_usd, quantity, quantity_unit, base_duty_usd, " +
@@ -58,6 +58,8 @@ const rowSchema = z.object({
   created_by: z.string(),
   label: z.string().nullable(),
   as_of_date: z.string(),
+  // Rows saved before the expected entry date existed were backfilled with as_of_date.
+  entry_date: z.string().nullish(),
   hts_code: z.string(),
   hts_description: z.string(),
   hts_ancestor_descriptions: z.array(z.string()),
@@ -122,6 +124,7 @@ export function rowToSavedEstimate(row: unknown): SavedEstimate | null {
       : null,
     estimate: {
       asOfDate: r.as_of_date,
+      entryDate: r.entry_date ?? r.as_of_date,
       htsCode: r.hts_code,
       matchedTenDigit: false,
       description: r.hts_description,

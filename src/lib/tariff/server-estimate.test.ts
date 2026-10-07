@@ -102,6 +102,7 @@ const input = (overrides: Partial<EstimateFormData> = {}): EstimateFormData => (
   exchangeRateDate: null,
   quantity: null,
   label: null,
+  entryDate: "2026-10-02",
   deductionUsd: null,
   ...overrides,
 });
@@ -122,6 +123,7 @@ describe("buildEstimate", () => {
     if (!result.ok) throw new Error(result.error);
     expect(result.estimate).toMatchObject({
       asOfDate: "2026-10-02",
+      entryDate: "2026-10-02",
       htsCode: "6402993110",
       rateColumn: "general",
       baseDutyUsd: 600,
@@ -281,6 +283,111 @@ describe("buildEstimate", () => {
       },
     } as never;
     expect(await buildEstimate(failing, input())).toEqual({ ok: false, error: "An unexpected error occurred." });
+  });
+});
+
+describe("buildEstimate with an expected entry date", () => {
+  const forcedLabor = {
+    id: "d1", program_key: "section_301_forced_labor", chapter99_heading: "9903.05.84", chapter99_heading_at_minimum: null,
+    label: "Vietnam", rate_type: "add", rate_pct: 12.5, origin_countries: ["VN"], hts_scope: "all", condition_text: null,
+    excludes_programs: ["section_232_metals"], exclusion_heading: "9903.05.90", filing_order: 10,
+    effective_from: "2026-07-24", effective_to: null, legal_status: "in_force", source_label: "FR 2026-15181",
+    source_url: "https://www.federalregister.gov/", source_checked_on: "2026-10-02",
+  };
+  const reviewed = [
+    { program_key: "section_301_forced_labor", review_status: "reviewed", last_reviewed_at: "2026-10-01T10:00:00Z", last_reviewed_by: null },
+  ];
+  const mpf = FEES[0];
+
+  test("calculated on today, for an entry date later on: both are kept, and in the row", async () => {
+    const result = await buildEstimate(stubSupabase(tables()), input({ entryDate: "2026-11-08" }));
+    if (!result.ok) throw new Error(result.error);
+    expect(result.estimate).toMatchObject({ asOfDate: "2026-10-02", entryDate: "2026-11-08" });
+    expect(estimateToRow(result.estimate, null)).toMatchObject({ as_of_date: "2026-10-02", entry_date: "2026-11-08" });
+  });
+
+  test("additional duty rows follow the entry date: one that starts later, one that has ended", async () => {
+    const starts = { ...forcedLabor, id: "d2", effective_from: "2026-11-01" };
+    const ends = { ...forcedLabor, id: "d3", chapter99_heading: "9903.05.99", rate_pct: 50, effective_from: "2026-07-24", effective_to: "2026-10-10" };
+    const run = async (entryDate: string, rows: unknown[]) => {
+      const result = await buildEstimate(
+        stubSupabase(tables({ additional_duties: rows as never, duty_program_review_status: reviewed })),
+        input({ originCountry: "VN", entryDate }),
+      );
+      if (!result.ok) throw new Error(result.error);
+      return result.estimate.additionalDutiesUsd;
+    };
+    expect(await run("2026-10-02", [starts])).toBe(0);
+    expect(await run("2026-11-01", [starts])).toBe(1250);
+    expect(await run("2026-10-05", [ends])).toBe(5000);
+    expect(await run("2026-10-11", [ends])).toBe(0);
+  });
+
+  test("fees follow the entry date", async () => {
+    const fees = [
+      { ...mpf, effective_to: "2026-10-31" },
+      { ...mpf, rate_pct: 0.5, min_usd: 40, max_usd: 700, effective_from: "2026-11-01", effective_to: null },
+      FEES[2],
+      FEES[3],
+    ];
+    const mpfLine = async (entryDate: string) => {
+      const result = await buildEstimate(stubSupabase(tables({ customs_fees: fees })), input({ entryDate }));
+      if (!result.ok) throw new Error(result.error);
+      return result.estimate.lines.find((l) => l.code === "mpf_formal")!.amountUsd;
+    };
+    expect(await mpfLine("2026-10-31")).toBe(34.64);
+    expect(await mpfLine("2026-11-01")).toBe(50);
+  });
+
+  test("no fee row for the entry date stops with a plain message naming the date", async () => {
+    const fees = [{ ...mpf, effective_to: "2026-10-31" }, FEES[2], FEES[3]];
+    const result = await buildEstimate(stubSupabase(tables({ customs_fees: fees })), input({ entryDate: "2026-11-05" }));
+    expect(result).toEqual({
+      ok: false,
+      error: expect.stringMatching(/^Fee rates for .*2026.* aren't set up yet, so the estimate can't be completed\. Ask an admin to add them\.$/),
+    });
+    expect(!result.ok && result.error).not.toContain("today");
+  });
+
+  test("column 2 is judged on the entry date", async () => {
+    const column2 = [{ country_code: "VN", effective_from: "2026-12-01", effective_to: null }];
+    const rateColumn = async (entryDate: string) => {
+      const result = await buildEstimate(
+        stubSupabase(tables({ hts_column2_countries: column2 })),
+        input({ originCountry: "VN", entryDate }),
+        "2026-11-30",
+      );
+      if (!result.ok) throw new Error(result.error);
+      return result.estimate.rateColumn;
+    };
+    expect(await rateColumn("2026-11-30")).toBe("general");
+    expect(await rateColumn("2026-12-01")).toBe("column2");
+  });
+
+  test("the base rate always comes from the current release", async () => {
+    const result = await buildEstimate(stubSupabase(tables()), input({ entryDate: "2027-06-01" }));
+    expect(result.ok && result.estimate).toMatchObject({ rateText: "6%", release: { name: "2026HTSRev20" } });
+  });
+
+  test("the exchange rate and review age stay tied to the calculation day, not the entry date", async () => {
+    const result = await buildEstimate(
+      stubSupabase(tables({ duty_program_review_status: reviewed, additional_duties: [forcedLabor] })),
+      input({ originCountry: "VN", currency: "EUR", exchangeRate: "1.5", exchangeRateSource: "daily_feed", exchangeRateDate: "2026-10-01", entryDate: "2027-09-01" }),
+    );
+    if (!result.ok) throw new Error(result.error);
+    // A claimed daily rate that isn't the stored one is manual, dated the day of calculation.
+    expect(result.estimate).toMatchObject({ exchangeRateSource: "manual", exchangeRateDate: "2026-10-02" });
+    // Reviewed 1 day before the calculation day: not stale, however far out the entry date is.
+    expect(result.estimate.dutyReviews[0].staleReason).toBeNull();
+  });
+
+  test("an entry date outside the window is refused with the plain message, not a crash", async () => {
+    const past = await buildEstimate(stubSupabase(tables()), input({ entryDate: "2026-09-30" }));
+    expect(past).toEqual({ ok: false, error: expect.stringContaining("Past entry dates aren't supported") });
+    const far = await buildEstimate(stubSupabase(tables()), input({ entryDate: "2027-10-04" }));
+    expect(far.ok).toBe(false);
+    const bad = await buildEstimate(stubSupabase(tables()), input({ entryDate: "2026-02-30" }));
+    expect(bad.ok).toBe(false);
   });
 });
 

@@ -1,6 +1,6 @@
 import type { createClient } from "@/lib/supabase/server";
 import { todayUtc } from "@/lib/fx/server-rates";
-import { verifyRateProvenance } from "@/lib/fx/rate-provenance";
+import { formatRateDate, verifyRateProvenance } from "@/lib/fx/rate-provenance";
 import {
   calculateEstimate,
   type EstimateLine,
@@ -8,6 +8,7 @@ import {
   type ReleaseInfo,
   type ShipmentMode,
 } from "./calculate";
+import { checkEntryDate } from "./entry-date";
 import { formatHtsCode } from "./hts-code";
 import { evaluateAdditionalDuties, type DutyReviewNote } from "./additional-duties";
 import type { DutyProgramRow, ProgramWarning } from "./programs";
@@ -26,7 +27,13 @@ import { customsValueAfterDeduction } from "./forwarder-link";
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 export type EstimateResult = {
+  // The day the estimate was calculated (todayUtc(); "Calculated on"). FX
+  // provenance and duty-data review age are judged on this day.
   asOfDate: string;
+  // The day the goods are expected to enter the US. Fees, column 2 countries
+  // and additional duty rows are those in force on this day; the base HTS rate
+  // is always the current release's.
+  entryDate: string;
   htsCode: string;
   // The user typed 8 digits and the HTS only has one 10-digit line under it.
   matchedTenDigit: boolean;
@@ -120,11 +127,17 @@ export async function findLine(
   return { line: children[0] as HtsLineRecord, matchedTenDigit: true };
 }
 
+// `calculatedOn` defaults to today (UTC); the actions read it once and pass
+// it to the form parser too.
 export async function buildEstimate(
   supabase: Supabase,
   input: EstimateFormData,
+  calculatedOn: string = todayUtc(),
 ): Promise<BuildEstimateResult> {
-  const asOfDate = todayUtc();
+  const asOfDate = calculatedOn;
+  const entry = checkEntryDate(input.entryDate, asOfDate);
+  if (!entry.ok) return { ok: false, error: entry.error };
+  const entryDate = entry.date;
   try {
     const { data: release, error: releaseError } = await supabase
       .from("hts_releases")
@@ -166,8 +179,8 @@ export async function buildEstimate(
       if (result.error) throw result.error;
     }
 
-    const fees = ((feesResult.data ?? []) as (FeeRow & DatedRow)[]).filter((f) => inForce(f, asOfDate));
-    const originIsColumn2 = ((column2Result.data ?? []) as DatedRow[]).some((r) => inForce(r, asOfDate));
+    const fees = ((feesResult.data ?? []) as (FeeRow & DatedRow)[]).filter((f) => inForce(f, entryDate));
+    const originIsColumn2 = ((column2Result.data ?? []) as DatedRow[]).some((r) => inForce(r, entryDate));
     const programs = (programsResult.data ?? []) as DutyProgramRow[];
 
     let exchangeRateSource: EstimateResult["exchangeRateSource"] = null;
@@ -233,15 +246,15 @@ export async function buildEstimate(
             error: `The rate for ${formatHtsCode(line.hts_code)} is charged per unit. Enter the quantity in ${calculation.unitLabel}.`,
           };
         case "missing_fee":
-          console.error(`buildEstimate: no ${calculation.feeCode} row in force on ${asOfDate}`);
+          console.error(`buildEstimate: no ${calculation.feeCode} row in force on ${entryDate}`);
           return {
             ok: false,
-            error: "Fee rates for today aren't set up yet, so the estimate can't be completed. Ask an admin to add them.",
+            error: `Fee rates for ${entryDate === asOfDate ? "today" : formatRateDate(entryDate)} aren't set up yet, so the estimate can't be completed. Ask an admin to add them.`,
           };
       }
     }
 
-    const dutyData = await loadAdditionalDutyData(supabase, line.hts_code, asOfDate);
+    const dutyData = await loadAdditionalDutyData(supabase, line.hts_code, entryDate);
     const additional = evaluateAdditionalDuties({
       programs,
       rows: dutyData.rows,
@@ -250,6 +263,7 @@ export async function buildEstimate(
       htsCode: line.hts_code,
       customsValueUsd,
       baseDutyUsd: parseDecimal(calculation.baseDutyUsd),
+      // Review age is measured to the day of calculation, not the entry date.
       asOfDate,
     });
     const [baseLine, ...feeLines] = calculation.lines;
@@ -263,6 +277,7 @@ export async function buildEstimate(
       ok: true,
       estimate: {
         asOfDate,
+        entryDate,
         htsCode: line.hts_code,
         matchedTenDigit,
         description: line.description,
@@ -303,6 +318,7 @@ export function estimateToRow(estimate: EstimateResult, label: string | null) {
   return {
     label,
     as_of_date: estimate.asOfDate,
+    entry_date: estimate.entryDate,
     hts_code: estimate.htsCode,
     hts_description: estimate.description,
     hts_ancestor_descriptions: estimate.ancestorDescriptions,

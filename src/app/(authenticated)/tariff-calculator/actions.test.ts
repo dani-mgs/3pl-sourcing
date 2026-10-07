@@ -31,6 +31,8 @@ const quoteRow = {
   shipment_mode: "Sea",
   cost_of_goods_usd: null,
   duties_taxes_usd: 3100,
+  lead_time_min_days: 28,
+  lead_time_max_days: 32,
   forwarders: { company_name: "Acme Freight", forwarder_project_id: PROJECT },
 };
 const VERSION = `${projectRow.updated_at}|${quoteRow.updated_at}`;
@@ -102,6 +104,7 @@ const { previewEstimate, saveEstimate } = await import("./actions");
 
 const ESTIMATE = {
   asOfDate: "2026-10-05",
+  entryDate: "2026-10-05",
   htsCode: "6402993110",
   description: "House slippers",
   ancestorDescriptions: [],
@@ -145,6 +148,7 @@ function form(fields: Record<string, string> = {}) {
     confirm_customs_value: "on",
     confirm_deduction: "on",
     confirm_mode: "on",
+    confirm_entry_date: "on",
     ...fields,
   };
   for (const [key, value] of Object.entries(all)) if (value !== "") data.set(key, value);
@@ -182,6 +186,34 @@ describe("linked duty estimates", () => {
     });
     expect(revalidatePath).toHaveBeenCalledWith(`/forwarder-sourcing/${PROJECT}`);
     expect(revalidatePath).toHaveBeenCalledWith(`/forwarder-sourcing/${PROJECT}/forwarders/f1`);
+  });
+
+  test("the entry date is read once with today, passed on, and recorded in the snapshot with where it came from", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const lead = new Date(Date.now() + 32 * 86_400_000).toISOString().slice(0, 10);
+    await expect(saveEstimate(form({ entry_date: lead }))).rejects.toThrow("REDIRECT");
+    expect(buildEstimate.mock.calls[0][1]).toMatchObject({ entryDate: lead });
+    expect(buildEstimate.mock.calls[0][2]).toBe(today);
+    expect(inserts[0]).toMatchObject({ input_snapshot: { choices: { entry_date_from: "quote_lead_time" } } });
+    expect(inserts[0].input_snapshot).toMatchObject({ quote: { lead_time_min_days: 28, lead_time_max_days: 32 } });
+
+    inserts.length = 0;
+    await expect(saveEstimate(form({ entry_date: "" }))).rejects.toThrow("REDIRECT");
+    expect(inserts[0]).toMatchObject({ input_snapshot: { choices: { entry_date_from: "today" } } });
+
+    inserts.length = 0;
+    const other = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
+    await expect(saveEstimate(form({ entry_date: other }))).rejects.toThrow("REDIRECT");
+    expect(inserts[0]).toMatchObject({ input_snapshot: { choices: { entry_date_from: "entered" } } });
+  });
+
+  test("an entry date out of range is refused before anything is calculated or saved", async () => {
+    for (const entry_date of ["2020-01-01", "2999-01-01", "2026-02-30"]) {
+      expect(await previewEstimate(form({ entry_date }))).toEqual({ error: expect.stringMatching(/entry date/) });
+      expect(await saveEstimate(form({ entry_date }))).toEqual({ error: expect.stringMatching(/entry date/) });
+    }
+    expect(buildEstimate).not.toHaveBeenCalled();
+    expect(inserts).toEqual([]);
   });
 
   test("a code picked in the HTS lookup popup is used for the estimate only; the project's HS code is never written", async () => {

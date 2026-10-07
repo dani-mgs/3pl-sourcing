@@ -3,6 +3,7 @@ import { CURRENCIES } from "@/lib/forwarder/project-fields";
 import { isRealIsoDate } from "@/lib/forwarder/parse-quote-form";
 import { SHIPMENT_MODES, type ShipmentMode } from "./calculate";
 import { isOriginCountry } from "./countries";
+import { parseEntryDate } from "./entry-date";
 import { normalizeHtsCode } from "./hts-code";
 
 // Validates the Tariff Calculator form. Amounts stay as decimal strings so
@@ -20,6 +21,9 @@ export type EstimateFormData = {
   exchangeRateDate: string | null;
   quantity: string | null;
   label: string | null;
+  // The day the goods are expected to enter the US (UTC date); duty applies
+  // on this day. Inside entryDateBounds(calculatedOn).
+  entryDate: string;
   // USD taken off the converted value; only linked estimates set it
   // (parseLinkFields), so the plain calculator form always sends null.
   deductionUsd: string | null;
@@ -44,7 +48,9 @@ function positiveDecimal(value: string, places: number, max: number): boolean {
 const currencySchema = z.enum(CURRENCIES);
 const modeSchema = z.enum(SHIPMENT_MODES as [ShipmentMode, ...ShipmentMode[]]);
 
-export function parseEstimateForm(formData: FormData): ParseEstimateResult {
+// `calculatedOn` is today (UTC), read once per request by the caller so the
+// bounds here and in buildEstimate can't straddle midnight differently.
+export function parseEstimateForm(formData: FormData, calculatedOn: string): ParseEstimateResult {
   const code = normalizeHtsCode(field(formData, "hts_code"));
   if (!code.ok) return { ok: false, error: code.error };
 
@@ -84,6 +90,9 @@ export function parseEstimateForm(formData: FormData): ParseEstimateResult {
     return { ok: false, error: "Enter the quantity as a positive number." };
   }
 
+  const entry = parseEntryDate(field(formData, "entry_date"), calculatedOn);
+  if (!entry.ok) return { ok: false, error: entry.error };
+
   const label = field(formData, "label");
   if (label.length > 200) return { ok: false, error: "Keep the reference under 200 characters." };
 
@@ -100,6 +109,7 @@ export function parseEstimateForm(formData: FormData): ParseEstimateResult {
       exchangeRateDate,
       quantity: quantityText === "" ? null : quantityText,
       label: label === "" ? null : label,
+      entryDate: entry.date,
       deductionUsd: null,
     },
   };
@@ -115,6 +125,7 @@ export const LINK_CONFIRMATIONS = {
   customs_value: "customs value",
   deduction: "freight and insurance deduction",
   mode: "shipment mode",
+  entry_date: "expected entry date",
   quantity: "quantity",
 } as const;
 export type LinkConfirmation = keyof typeof LINK_CONFIRMATIONS;
@@ -170,7 +181,7 @@ export function missingConfirmation(
 ): string | null {
   const required: LinkConfirmation[] = ["hts", "origin", "customs_value"];
   if (deductionOffered) required.push("deduction");
-  required.push("mode");
+  required.push("mode", "entry_date");
   if (quantityEntered) required.push("quantity");
   const missing = required.find((key) => !confirmed.has(key));
   return missing ? `Confirm the ${LINK_CONFIRMATIONS[missing]} before calculating.` : null;

@@ -39,6 +39,18 @@ const row = {
 
 afterEach(() => vi.restoreAllMocks());
 
+describe("rowToSavedEstimate: entry date", () => {
+  test("a saved entry date is kept separately from the calculation date", () => {
+    const saved = rowToSavedEstimate({ ...row, entry_date: "2026-11-08" });
+    expect(saved?.estimate).toMatchObject({ asOfDate: "2026-10-02", entryDate: "2026-11-08" });
+  });
+
+  test("a row without one (read before the backfill) shows its calculation date", () => {
+    expect(rowToSavedEstimate(row)?.estimate).toMatchObject({ asOfDate: "2026-10-02", entryDate: "2026-10-02" });
+    expect(rowToSavedEstimate({ ...row, entry_date: null })?.estimate.entryDate).toBe("2026-10-02");
+  });
+});
+
 describe("rowToSavedEstimate", () => {
   test("maps a locked row back to the result view", () => {
     const saved = rowToSavedEstimate(row);

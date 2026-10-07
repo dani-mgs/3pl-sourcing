@@ -107,7 +107,15 @@ export function TariffSection() {
           calculator says so rather than guess.
         </li>
         <li>
-          <Ui>MPF</Ui> (Merchandise Processing Fee): the percentage in force today, between its
+          <Ui>Expected entry date</Ui>: duty applies on the day the goods enter the US, so the
+          fees, the column 2 country list and the additional duties are those in force on that
+          day. It starts as today (or, for a quote, today plus the quote&apos;s longest lead time)
+          and you can change it from yesterday (UTC) to 366 days ahead. Past dates can&apos;t be
+          chosen. The base rate is always from the HTS schedule in force today, so for a later date
+          the estimate says so, and that rates announced later aren&apos;t included.
+        </li>
+        <li>
+          <Ui>MPF</Ui> (Merchandise Processing Fee): the percentage in force on the entry date, between its
           minimum and maximum, as if this line were the whole entry. Values up to the
           informal-entry limit pay the flat informal fee instead.
         </li>
@@ -117,7 +125,8 @@ export function TariffSection() {
         <li>Each line is rounded once, half up to the cent.</li>
         <li>
           Every line shows its rate, its source and the date it came into effect; the estimate
-          shows the date the rates were taken.
+          shows <Ui>Estimated for entry on</Ui> the entry date and the day it was calculated.
+          Exchange rates and the age of the duty-data reviews are judged on the day of calculation.
         </li>
       </Bullets>
 
@@ -289,6 +298,13 @@ export function TariffSection() {
           page). HMF applies to Sea only.
         </li>
         <li>
+          <Ui>Expected entry date</Ui>: today plus the quote&apos;s longest lead time (for 28–32 days,
+          32 days), or today when the quote has none or you opened it from the project. Change it if
+          the goods won&apos;t ship today, and confirm it like the other inputs. If the quote&apos;s lead
+          time changes later and the date came from it, the estimate shows{" "}
+          <Ui>Inputs changed since this estimate</Ui>.
+        </li>
+        <li>
           <Ui>Quantity</Ui>, for per-unit rates only: the project&apos;s weight for a per-kg rate, or its
           units for a per-each rate. {QUANTITY_HINT}
         </li>
@@ -307,7 +323,7 @@ export function TariffSection() {
         </li>
         <li>
           Duty estimates never affect ranking, savings or the Quote Comparison numbers, and aren&apos;t
-          in Client exports. The Expert CSV has a duty estimate column with its as-of date and labels.
+          in Client exports. The Expert CSV has duty estimate columns with its as-of date, entry date and labels.
         </li>
         <li>
           Deleting a project, forwarder or quote also deletes the duty estimates linked to it; the
@@ -318,8 +334,8 @@ export function TariffSection() {
       <SubHeading>Saved estimates</SubHeading>
       <Bullets>
         <li>
-          A saved estimate is locked with its rates, dates, exchange rate and warnings. It never
-          changes; calculate again and save a new one to use newer rates.
+          A saved estimate is locked with its rates, the day it was calculated, its expected entry
+          date, exchange rate and warnings. It never changes; calculate again and save a new one to use newer rates.
         </li>
         <li>Everyone signed in can view saved estimates. The person who saved one, or an admin, can delete it.</li>
       </Bullets>

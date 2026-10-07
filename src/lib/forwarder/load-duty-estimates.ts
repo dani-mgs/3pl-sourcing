@@ -54,6 +54,8 @@ export async function loadProjectDutyEstimates(
         shipment_mode: q.shipment_mode,
         cost_of_goods_usd: q.cost_of_goods_usd,
         duties_taxes_usd: q.duties_taxes_usd,
+        lead_time_min_days: q.lead_time_min_days,
+        lead_time_max_days: q.lead_time_max_days,
       },
     ]),
   );

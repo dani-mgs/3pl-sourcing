@@ -65,6 +65,7 @@ describe.each(Object.entries(configs))("rankings and savings ignore duty estimat
       id: `e${i}`,
       created_at: `2026-10-0${(i % 9) + 1}T00:00:00Z`,
       as_of_date: "2026-10-05",
+      entry_date: "2026-11-08",
       total_usd: 100000 + i,
       warnings: [{ programKey: "x" }],
       duty_reviews: [],
@@ -83,6 +84,8 @@ describe.each(Object.entries(configs))("rankings and savings ignore duty estimat
           shipment_mode: q.shipment_mode,
           cost_of_goods_usd: q.cost_of_goods_usd,
           duties_taxes_usd: q.duties_taxes_usd,
+          lead_time_min_days: null,
+          lead_time_max_days: null,
         },
       ]),
     );

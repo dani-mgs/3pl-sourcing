@@ -3,7 +3,9 @@ import { formatCurrency } from "@/lib/currency";
 import { DAILY_FEED_ATTRIBUTION, formatRateDate, rateCaption } from "@/lib/fx/rate-provenance";
 import { ESTIMATE_CAVEATS, ESTIMATE_DISCLAIMER, ESTIMATE_DISCLAIMER_DETAIL } from "@/lib/tariff/caveats";
 import { countryName } from "@/lib/tariff/countries";
+import { entryDateCaveats } from "@/lib/tariff/entry-date";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
+import { releaseLabel } from "@/lib/tariff/hts-lookup";
 import { excludedPrograms, totalLabel } from "@/lib/tariff/programs";
 import type { EstimateResult } from "@/lib/tariff/server-estimate";
 
@@ -62,6 +64,12 @@ export function EstimateCaveats() {
 function EstimateTotal({ estimate }: { estimate: EstimateResult }) {
   const excluded = excludedPrograms(estimate.warnings, estimate.customsValueUsd);
   const hasExclusions = excluded.length > 0;
+  const notToday = estimate.entryDate !== estimate.asOfDate;
+  const caveats = entryDateCaveats({
+    calculatedOn: estimate.asOfDate,
+    entryDate: estimate.entryDate,
+    releaseLabel: releaseLabel(estimate.release),
+  });
   return (
     <div
       className={
@@ -79,11 +87,29 @@ function EstimateTotal({ estimate }: { estimate: EstimateResult }) {
       <p className="font-display text-2xl font-semibold" data-testid="estimate-total">
         {usd(estimate.totalUsd)}
       </p>
+      <p className="text-xs font-medium text-move-navy" data-testid="estimate-entry-date">
+        Estimated for entry on {formatRateDate(estimate.entryDate)}
+        {notToday && <span className="font-normal text-neutral-muted"> (not today)</span>}
+      </p>
       <p className="mt-1 text-xs text-neutral-muted">
         Base duty {usd(estimate.baseDutyUsd)}
         {estimate.additionalDutiesUsd > 0 && <> · Additional duties {usd(estimate.additionalDutiesUsd)}</>} · Fees{" "}
         {usd(estimate.feesUsd)} · Customs value {usd(estimate.customsValueUsd)}
       </p>
+      {notToday && (
+        <div className={`${WARNING_BOX_CLASS} mt-2 text-xs`} role="note" data-testid="entry-date-note">
+          <p className="font-semibold">
+            Calculated on {formatRateDate(estimate.asOfDate)} for entry on {formatRateDate(estimate.entryDate)}.
+          </p>
+          {caveats.length > 0 && (
+            <ul className="mt-1 flex flex-col gap-1">
+              {caveats.map((c) => (
+                <li key={c}>{c}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       {hasExclusions && (
         <ul className="mt-2 flex flex-col gap-1 border-t border-[#FBBF24]/60 pt-2 text-xs text-[#92400E]">
           {excluded.map((program) => (
@@ -163,7 +189,7 @@ export function EstimateResultView({ estimate }: { estimate: EstimateResult }) {
           </p>
         )}
         <p className="mt-1 text-xs text-neutral-muted">
-          Origin {countryName(estimate.originCountry)} · {estimate.shipmentMode} · Rates as of{" "}
+          Origin {countryName(estimate.originCountry)} · {estimate.shipmentMode} · Calculated on{" "}
           {formatRateDate(estimate.asOfDate)}
         </p>
       </div>

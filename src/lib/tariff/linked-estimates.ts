@@ -17,12 +17,13 @@ import { excludedCount } from "./programs";
 // nothing here feeds ranking, savings or the comparison panel.
 
 export const LINKED_ESTIMATE_COLUMNS =
-  "id, created_at, as_of_date, total_usd, warnings, duty_reviews, forwarder_quote_id, input_snapshot";
+  "id, created_at, as_of_date, entry_date, total_usd, warnings, duty_reviews, forwarder_quote_id, input_snapshot";
 
 const rowSchema = z.object({
   id: z.string(),
   created_at: z.string(),
   as_of_date: z.string(),
+  entry_date: z.string(),
   total_usd: z.union([z.number(), z.string()]),
   warnings: z.unknown(),
   duty_reviews: z.unknown(),
@@ -38,7 +39,10 @@ export type LinkedEstimateSummary = {
   estimateId: string;
   // Null for an estimate of the project itself.
   quoteId: string | null;
+  // The day it was calculated.
   asOfDate: string;
+  // The day the goods were expected to enter the US.
+  entryDate: string;
   totalUsd: number;
   // Additional duty programs that may apply but aren't in the total.
   excludedCount: number;
@@ -85,6 +89,7 @@ export function summarizeLinkedEstimates(
       estimateId: latest.id,
       quoteId: latest.forwarder_quote_id,
       asOfDate: latest.as_of_date,
+      entryDate: latest.entry_date,
       totalUsd,
       excludedCount: excludedCount(latest.warnings),
       pendingReview: reviewList.filter((r) => r.status === "pending_review").map((r) => r.name),

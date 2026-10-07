@@ -19,6 +19,55 @@ export const TARIFF_FAQ: FaqItem[] = [
     ),
   },
   {
+    id: "entry-date",
+    module: "Tariff Calculator",
+    page: "Estimating duties",
+    question: "What is the expected entry date, and what is it set to?",
+    answer: (
+      <>
+        <p>
+          Duty applies on the day the goods enter the US, not the day you calculate. The
+          calculator uses the fees, additional duties and column 2 list in force on that day. It
+          starts as today; for an estimate opened from a quote it is today plus the quote&apos;s
+          longest lead time (28–32 days gives 32). You can change it to any day from yesterday
+          (UTC) to 366 days ahead.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "entry-date-past",
+    module: "Tariff Calculator",
+    page: "Estimating duties",
+    question: "Why can't I choose a past entry date?",
+    answer: (
+      <>
+        <p>
+          Base duty rates come from the current HTS schedule only; the calculator doesn&apos;t keep
+          earlier schedules or the history of past additional duties, so it can&apos;t say what
+          applied on a day that has gone. Yesterday (UTC) is allowed so that a date picked in a time
+          zone west of UTC isn&apos;t refused. For an entry that has already happened, ask your customs broker.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "entry-date-base-rate-note",
+    module: "Tariff Calculator",
+    page: "Estimating duties",
+    question: "Why does an estimate for a later entry date say the base rate is from today's schedule?",
+    answer: (
+      <>
+        <p>
+          The base rate is from the HTS schedule in force today (the revision is named). If USITC
+          publishes a change before your entry date, it isn&apos;t in the estimate. Additional duties
+          and fees are those known today to be in force on the entry date, so later announcements
+          aren&apos;t included either. Calculate again closer to the entry date.
+        </p>
+      </>
+    ),
+  },
+  {
     id: "search-shoes",
     module: "Tariff Calculator",
     page: "HTS lookup",
@@ -279,7 +328,7 @@ export const TARIFF_FAQ: FaqItem[] = [
       <>
         <p>
           Something it was built from (the HS code, origin, invoice value, incoterm, current freight
-          cost, the quote&apos;s mode or quoted duties) has been edited since it was saved. Saved
+          cost, the quote&apos;s mode, quoted duties, or its lead time when the expected entry date came from it) has been edited since it was saved. Saved
           estimates are locked; create a new one from the project or quote to use the new values.
         </p>
       </>

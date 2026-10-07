@@ -4,6 +4,20 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### Tariff Calculator: past entry dates not supported; base HTS rate is the current schedule only
+- **Added:** 2026-10-07
+- **What:** The expected entry date can be yesterday (UTC) at the earliest. Base HTS rates come from the current release only (earlier schedules aren't kept), and there is no history of Section 122 / IEEPA or other past additional duties, so an estimate can't be made for an entry that has already happened. For a later date the base rate is still today's schedule (the result says so). Fee rows have no end date, so after the next 1 October the FY2027 fees would still be used silently; the result adds a fiscal-year caveat instead.
+- **Why deferred:** Needs keeping every HTS release and the dated history of past duties, with sources.
+- **Severity:** Low (refused or caveated on the estimate; nothing is silently wrong)
+- **Where:** `src/lib/tariff/entry-date.ts`, `save_duty_estimate()`
+
+### Tariff Calculator: an unconfirmed row replaces a charged one from its start date
+- **Added:** 2026-10-07
+- **What:** Found while testing entry dates. From 2026-11-10 the chassis row 9903.91.12 (+100%, `unconfirmed`) is more specific (10-digit line) than the China 301 List 3 row (+25%, 9903.88.03) and wins the program, so for an entry on or after that date the program is named "may apply" and the +25% is no longer in the total (about $2,500 less on $10,000 of goods). The header of `additional-duties.ts` says a data question should never understate the duty; here the charged lower row is dropped, not kept beside the unconfirmed one. Before entry dates this couldn't be reached (the as-of date was always today). The estimate still names the program and heading. Same for the 9903.91.14 cranes row. The `china301-232.test.ts` case documents the behaviour.
+- **Why deferred:** Needs an expert decision (keep the charged row as the floor while the higher one is unconfirmed?) and a change to the row precedence rules, outside the entry-date change.
+- **Severity:** Medium (understates the duty for these lines from 2026-11-10; the "may apply" warning is shown)
+- **Where:** `src/lib/tariff/additional-duties.ts` (`rank`, `evaluate`); rows 9903.91.12/.14 in the 2b seed
+
 ### Tariff duty data: gaps left for experts (not machine-readable or not decidable)
 - **Added:** 2026-10-02
 - **What:** The PR 2a seed took only what the primary sources state as text. Left out, for tariff editors to add from the sources: forced-labour note 52(b) product list and Annex II Part A (9903.05.86), (d) civil aircraft list (9903.05.88), (e) pharmaceutical-use list (9903.05.89), the (j)(1)-(13)(i) country product lists (9903.05.96-.99, 9903.06.02/.04/.06/.07/.09/.10/.12/.14/.16/.18/.20) — all published only as images in FR 2026-15181; donations and informational materials (9903.05.91/.92, 9903.05.08/.09), which an HTS code can't decide; the expired in-transit windows (9903.05.85, 9903.05.02). Legal status is seeded `in_force` for every row: the forced-labour action is challenged at the CIT (argued 2026-09-30, per press reports), but no primary source was loaded, so an editor should set `in_force_under_litigation` with a court source. Section 232 on vehicles, timber, semiconductors, pharmaceuticals and drones, Nicaragua 301 and Canada 338 aren't loaded, so goods they may cover show "exempt if Section 232 applies" or a warning.

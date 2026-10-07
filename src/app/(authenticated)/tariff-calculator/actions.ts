@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { todayUtc } from "@/lib/fx/server-rates";
 import { parseEstimateForm, parseLinkFields, type EstimateFormData } from "@/lib/tariff/parse-estimate-form";
 import { saveDutyEstimate } from "@/lib/tariff/estimate-store";
 import { buildEstimate, estimateToRow, type EstimateResult } from "@/lib/tariff/server-estimate";
@@ -22,15 +23,16 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 async function parseRequest(
   supabase: Supabase,
   formData: FormData,
+  calculatedOn: string,
 ): Promise<{ ok: true; input: EstimateFormData; link: Extract<CheckedLink, { ok: true }> | null } | { ok: false; error: string }> {
-  const parsed = parseEstimateForm(formData);
+  const parsed = parseEstimateForm(formData, calculatedOn);
   if (!parsed.ok) return { ok: false, error: parsed.error };
   const link = parseLinkFields(formData);
   if ("error" in link) return { ok: false, error: link.error };
   if (!link.linked) return { ok: true, input: parsed.data, link: null };
 
   try {
-    const checked = await checkLinkedEstimate(supabase, parsed.data, link.data);
+    const checked = await checkLinkedEstimate(supabase, parsed.data, link.data, calculatedOn);
     if (!checked.ok) return { ok: false, error: checked.error };
     return { ok: true, input: checked.input, link: checked };
   } catch (error) {
@@ -47,10 +49,12 @@ export async function previewEstimate(formData: FormData): Promise<PreviewState>
   } = await supabase.auth.getUser();
   if (!user) return { error: SIGN_IN };
 
-  const request = await parseRequest(supabase, formData);
+  // One "today" per request, for the entry-date bounds and the calculation.
+  const calculatedOn = todayUtc();
+  const request = await parseRequest(supabase, formData, calculatedOn);
   if (!request.ok) return { error: request.error };
 
-  const built = await buildEstimate(supabase, request.input);
+  const built = await buildEstimate(supabase, request.input, calculatedOn);
   return built.ok ? { result: built.estimate } : { error: built.error };
 }
 
@@ -66,10 +70,11 @@ export async function saveEstimate(formData: FormData): Promise<SaveState> {
   } = await supabase.auth.getUser();
   if (!user) return { error: SIGN_IN };
 
-  const request = await parseRequest(supabase, formData);
+  const calculatedOn = todayUtc();
+  const request = await parseRequest(supabase, formData, calculatedOn);
   if (!request.ok) return { error: request.error };
 
-  const built = await buildEstimate(supabase, request.input);
+  const built = await buildEstimate(supabase, request.input, calculatedOn);
   if (!built.ok) return { error: built.error };
 
   // The user and link checks above have passed; the insert itself goes

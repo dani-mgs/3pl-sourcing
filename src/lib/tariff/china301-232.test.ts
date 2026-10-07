@@ -230,3 +230,38 @@ describe("Section 232 metals", () => {
     expect(r.total).toBe(47.14);
   });
 });
+
+// The expected entry date picks which rows are in force: the same goods,
+// calculated with different as-of dates, on the seeded rows.
+describe("rows in force depend on the entry date", () => {
+  test("a USTR exclusion is named through its last day (Nov 9, 2026) and gone the next", () => {
+    const named = (asOf: string) =>
+      estimate("8504409580", "Free", "CN", { asOf }).line("section_301_china")!.notes!.some((n) => n.includes("9903.88.69"));
+    expect(named("2026-10-07")).toBe(true);
+    expect(named("2026-11-09")).toBe(true);
+    expect(named("2026-11-10")).toBe(false);
+  });
+
+  test("intermodal chassis (9903.91.12, +100% from Nov 10, 2026, unconfirmed) are named from that day and never charged", () => {
+    const before = estimate("8716390090", "Free", "CN", { asOf: "2026-11-09" });
+    const after = estimate("8716390090", "Free", "CN", { asOf: "2026-11-10" });
+    expect(before.line("section_301_china")).toMatchObject({ heading: "9903.88.03", amountUsd: 2500 });
+    expect(before.warning("section_301_china")?.text ?? "").not.toContain("9903.91.12");
+    expect(after.additional.lines.some((l) => l.heading === "9903.91.12")).toBe(false);
+    expect(after.warning("section_301_china")).toMatchObject({ kind: "unconfirmed" });
+    expect(after.warning("section_301_china")!.text).toContain("9903.91.12");
+    // Known behaviour, in TECH_DEBT: the more specific unconfirmed row takes the
+    // place of the +25% row, so the total is $2,500 lower and the program is
+    // named as "may apply" instead.
+    expect(after.total).toBeCloseTo(before.total - 2500, 2);
+  });
+
+  test("the row for a future effective_from is out of force today and in force on that day", () => {
+    const future = ALL_ROWS.filter((r) => r.effective_from > "2026-10-07");
+    expect(future.length).toBeGreaterThan(0);
+    for (const row of future) {
+      expect(inForceOn(row, "2026-10-07")).toBe(false);
+      expect(inForceOn(row, row.effective_from)).toBe(true);
+    }
+  });
+});

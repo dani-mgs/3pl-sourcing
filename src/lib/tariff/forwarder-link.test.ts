@@ -42,6 +42,8 @@ const quote: LinkQuote = {
   shipment_mode: "Sea",
   cost_of_goods_usd: null,
   duties_taxes_usd: 3100,
+  lead_time_min_days: 28,
+  lead_time_max_days: 32,
 };
 
 const found: HtsLookup = {
@@ -350,5 +352,73 @@ describe("comparison with the forwarder's quoted duties", () => {
     [851, 1000, false],
   ])("quoted %s vs estimate %s → flag %s", (quoted, estimate, flag) => {
     expect(compareDuties(quoted, estimate)).toMatchObject({ kind: "compared", flag });
+  });
+});
+
+describe("expected entry date pre-fill", () => {
+  test("the quote's longest lead time: today plus 32 for 28-32 days", () => {
+    expect(prefill().entryDate).toEqual({ value: "2026-11-06", from: "quote_lead_time", leadTimeText: "28–32 days" });
+  });
+
+  test("a single lead time", () => {
+    expect(prefill({}, { ...quote, lead_time_min_days: null, lead_time_max_days: 30 }).entryDate).toEqual({
+      value: "2026-11-04",
+      from: "quote_lead_time",
+      leadTimeText: "30 days",
+    });
+  });
+
+  test("a quote without a lead time, an unusable one, a project-only estimate: today", () => {
+    const today = { value: TODAY, from: "today", leadTimeText: null };
+    expect(prefill({}, { ...quote, lead_time_min_days: null, lead_time_max_days: null }).entryDate).toEqual(today);
+    expect(prefill({}, { ...quote, lead_time_min_days: 0, lead_time_max_days: 0 }).entryDate).toEqual(today);
+    expect(prefill({}, null).entryDate).toEqual(today);
+  });
+});
+
+describe("lead time in the snapshot", () => {
+  const leadChoices = {
+    customs_value_basis: "invoice" as const,
+    deduction_offered: true,
+    quantity_from: null,
+    entry_date_from: "quote_lead_time" as const,
+  };
+  const snapshot = buildInputSnapshot(project, quote, leadChoices);
+
+  test("is kept and round-trips", () => {
+    expect(parseInputSnapshot(JSON.parse(JSON.stringify(snapshot)))?.quote).toMatchObject({
+      lead_time_min_days: 28,
+      lead_time_max_days: 32,
+    });
+  });
+
+  test("a changed lead time is reported when the entry date came from it", () => {
+    expect(inputChanges(snapshot, project, { ...quote, lead_time_max_days: 40 })).toEqual([
+      { label: "Quote lead time", then: "28–32 days", now: "28–40 days" },
+    ]);
+    expect(inputChanges(snapshot, project, { ...quote, lead_time_min_days: null, lead_time_max_days: null })).toEqual([
+      { label: "Quote lead time", then: "28–32 days", now: "blank" },
+    ]);
+  });
+
+  test("an unchanged lead time, or an entry date that didn't come from it, reports nothing", () => {
+    expect(inputChanges(snapshot, project, quote)).toEqual([]);
+    for (const from of ["today", "entered"] as const) {
+      const other = buildInputSnapshot(project, quote, { ...leadChoices, entry_date_from: from });
+      expect(inputChanges(other, project, { ...quote, lead_time_max_days: 99 })).toEqual([]);
+    }
+  });
+
+  test("a snapshot saved before lead times were recorded never reports a change", () => {
+    const old = JSON.parse(JSON.stringify(snapshot));
+    delete old.quote.lead_time_min_days;
+    delete old.quote.lead_time_max_days;
+    delete old.choices.entry_date_from;
+    const parsed = parseInputSnapshot(old)!;
+    expect(parsed).not.toBeNull();
+    expect(inputChanges(parsed, project, { ...quote, lead_time_max_days: 99 })).toEqual([]);
+    // Even when it claims the lead time was the source but the values weren't kept.
+    parsed.choices.entry_date_from = "quote_lead_time";
+    expect(inputChanges(parsed, project, { ...quote, lead_time_max_days: 99 })).toEqual([]);
   });
 });

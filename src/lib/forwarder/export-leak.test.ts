@@ -203,6 +203,7 @@ data.dutyEstimates = new Map([
       estimateId: "e1",
       quoteId: "q",
       asOfDate: "2026-10-05",
+      entryDate: "2026-11-08",
       totalUsd: 3000,
       excludedCount: 1,
       pendingReview: [DUTY_ESTIMATE_SENTINEL],
@@ -280,11 +281,11 @@ describe("duty estimates in exports", () => {
     expect(text).not.toContain("DutyEstimate");
   }, 15000);
 
-  test("the Expert CSV has the estimate, its as-of date and its labels", async () => {
+  test("the Expert CSV has the estimate, its as-of date, its entry date and its labels", async () => {
     const csv = await renderers.CSV("expert");
-    expect(csv).toContain("Duty Estimate (USD),Duty Estimate As Of,Duty Estimate Labels");
+    expect(csv).toContain("Duty Estimate (USD),Duty Estimate As Of,Duty Estimate Entry Date,Duty Estimate Labels");
     const row = csv.split("\r\n").find((line) => line.includes(DUTY_ESTIMATE_SENTINEL));
-    expect(row).toContain(',"$3,000.00","Oct 5, 2026",EXCLUDES 1 additional duty program that may apply; Pending expert review: ');
+    expect(row).toContain(',"$3,000.00","Oct 5, 2026","Nov 8, 2026",EXCLUDES 1 additional duty program that may apply; Pending expert review: ');
     expect(row).toContain("; Estimate — verify with your customs broker.");
     expect(csv).toContain("Duty estimates are informational");
   });

@@ -4,6 +4,7 @@ import { CURRENCIES } from "@/lib/forwarder/project-fields";
 import { resolveInitialRate, type LatestRates, type RateState } from "@/lib/fx/rate-provenance";
 import { SHIPMENT_MODES, customsValueInUsd, type ShipmentMode } from "./calculate";
 import { countryName } from "./countries";
+import { defaultEntryDate } from "./entry-date";
 import { formatHtsCode, normalizeHtsCode } from "./hts-code";
 import { matchOriginCountry, type OriginMatch } from "./origin-match";
 import { centsToNumber, parseDecimal, sub, toCents, type Rational } from "./rational";
@@ -40,6 +41,10 @@ export type LinkQuote = {
   shipment_mode: string | null;
   cost_of_goods_usd: number | null;
   duties_taxes_usd: number | null;
+  // The quote's lead time in days; the default expected entry date is today
+  // plus the longer of the two.
+  lead_time_min_days: number | null;
+  lead_time_max_days: number | null;
 };
 
 export const LINK_PROJECT_COLUMNS =
@@ -118,6 +123,8 @@ export type Prefill = {
   // Offered when the project's current incoterm includes freight in the price.
   deduction: { incoterm: string; suggestedUsd: string | null } | null;
   mode: { value: ShipmentMode | ""; from: "quote" | "project" | null };
+  // Today, or today plus the quote's longest lead time.
+  entryDate: { value: string; from: "today" | "quote_lead_time"; leadTimeText: string | null };
   // Only when the rate is charged per unit.
   quantity: { unitLabel: string; suggested: string | null; from: "weight_kg" | "units" | null } | null;
 };
@@ -272,7 +279,25 @@ export function buildPrefill({
         }
       : null,
     mode,
+    entryDate: entryDatePrefill(quote, today),
     quantity: quantityPrefill(project, hts),
+  };
+}
+
+// "28–32 days", "32 days", or null when the quote gives none.
+export function leadTimeText(min: number | null, max: number | null): string | null {
+  const present = [min, max].filter((n): n is number => n != null && Number.isFinite(n));
+  if (present.length === 0) return null;
+  const [low, high] = [Math.min(...present), Math.max(...present)];
+  return low === high ? `${high} days` : `${low}–${high} days`;
+}
+
+function entryDatePrefill(quote: LinkQuote | null, today: string): Prefill["entryDate"] {
+  const d = defaultEntryDate(today, quote?.lead_time_min_days, quote?.lead_time_max_days);
+  return {
+    value: d.date,
+    from: d.from,
+    leadTimeText: d.from === "quote_lead_time" ? leadTimeText(quote!.lead_time_min_days, quote!.lead_time_max_days) : null,
   };
 }
 
@@ -328,12 +353,17 @@ const snapshotSchema = z.object({
       shipment_mode: z.string().nullable(),
       cost_of_goods_usd: numberOrNull,
       duties_taxes_usd: numberOrNull,
+      // Added with the expected entry date; older snapshots don't have them.
+      lead_time_min_days: numberOrNull.optional(),
+      lead_time_max_days: numberOrNull.optional(),
     })
     .nullable(),
   choices: z.object({
     customs_value_basis: z.enum(["invoice", "quote_cost_of_goods", "entered"]),
     deduction_offered: z.boolean(),
     quantity_from: z.enum(["weight_kg", "units"]).nullable(),
+    // Where the entry date came from; absent on older snapshots.
+    entry_date_from: z.enum(["today", "quote_lead_time", "entered"]).optional(),
   }),
 });
 
@@ -430,6 +460,19 @@ export function inputChanges(
     } else {
       const q = snapshot.quote;
       compare("Quote mode", plain(q.shipment_mode), plain(quote.shipment_mode));
+      // Only when the entry date was derived from the lead time, and the
+      // snapshot recorded it (older snapshots didn't).
+      if (
+        choices.entry_date_from === "quote_lead_time" &&
+        q.lead_time_min_days !== undefined &&
+        q.lead_time_max_days !== undefined
+      ) {
+        compare(
+          "Quote lead time",
+          plain(leadTimeText(q.lead_time_min_days, q.lead_time_max_days)),
+          plain(leadTimeText(quote.lead_time_min_days, quote.lead_time_max_days)),
+        );
+      }
       if (choices.customs_value_basis === "quote_cost_of_goods") {
         compare("Quote cost of goods", usdText(q.cost_of_goods_usd), usdText(quote.cost_of_goods_usd));
       }

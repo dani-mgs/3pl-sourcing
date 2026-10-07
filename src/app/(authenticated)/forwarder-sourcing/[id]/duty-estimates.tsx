@@ -17,7 +17,10 @@ const linkClass =
   "rounded font-medium text-move-navy underline decoration-neutral-border underline-offset-2 outline-none hover:decoration-move-green focus-visible:ring-2 focus-visible:ring-move-green";
 
 function Comparison({ summary }: { summary: LinkedEstimateSummary }) {
-  const asOf = `as of ${formatRateDate(summary.asOfDate)}`;
+  const asOf =
+    summary.entryDate === summary.asOfDate
+      ? `as of ${formatRateDate(summary.asOfDate)}`
+      : `calculated ${formatRateDate(summary.asOfDate)}, for entry ${formatRateDate(summary.entryDate)}`;
   const ours = (
     <>
       Our estimate <span className="font-semibold tabular-nums">{usd(summary.totalUsd)}</span>{" "}

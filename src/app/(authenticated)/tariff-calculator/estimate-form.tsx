@@ -16,6 +16,7 @@ import {
   type RateState,
 } from "@/lib/fx/rate-provenance";
 import { SHIPMENT_MODES } from "@/lib/tariff/calculate";
+import { entryDateBounds } from "@/lib/tariff/entry-date";
 import {
   DEDUCTION_NOTE,
   DEDUCTION_PROMPT,
@@ -141,6 +142,8 @@ export function EstimateForm({
   const [picked, setPicked] = useState<{ value: string; line: LookupLine } | null>(null);
   const [lookupOpen, setLookupOpen] = useState(false);
   const lookupButton = useRef<HTMLButtonElement>(null);
+  const entryBounds = entryDateBounds(today);
+  const entryPrefill = prefill?.entryDate;
   const [confirmed, setConfirmed] = useState<Set<LinkConfirmation>>(new Set());
 
   const latestForCurrency = isUsd(currency) ? undefined : latestRates[currency];
@@ -200,7 +203,7 @@ export function EstimateForm({
   const finalCustomsValue =
     goodsUsd != null && Number.isFinite(deductionNumber) ? Math.round((goodsUsd - deductionNumber) * 100) / 100 : null;
 
-  const required: LinkConfirmation[] = ["hts", "origin", "customs_value", "mode"];
+  const required: LinkConfirmation[] = ["hts", "origin", "customs_value", "mode", "entry_date"];
   if (prefill?.deduction) required.push("deduction");
   if (quantity.trim() !== "") required.push("quantity");
   const allConfirmed = !link || required.every((key) => confirmed.has(key));
@@ -536,6 +539,31 @@ export function EstimateForm({
               <ConfirmBox name="customs_value" checked={confirmed.has("customs_value")} onChange={confirm} />
             </div>
           )}
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="entry_date" className={labelClass}>
+              Expected entry date
+            </label>
+            <input
+              id="entry_date"
+              name="entry_date"
+              type="date"
+              required
+              min={entryBounds.min}
+              max={entryBounds.max}
+              defaultValue={entryPrefill?.value ?? today}
+              aria-describedby="entry_date_hint"
+              className={fieldClass}
+            />
+            <p id="entry_date_hint" className={hintClass}>
+              Duty applies on the day the goods enter the US. Default:{" "}
+              {entryPrefill?.from === "quote_lead_time"
+                ? `today plus the quote's longest lead time (${entryPrefill.leadTimeText}).`
+                : "today."}{" "}
+              Past dates aren&apos;t supported: base duty rates come from the HTS schedule in force today.
+            </p>
+            {link && <ConfirmBox name="entry_date" checked={confirmed.has("entry_date")} onChange={confirm} />}
+          </div>
 
           <div className="flex flex-col gap-2">
             <label htmlFor="quantity" className={labelClass}>

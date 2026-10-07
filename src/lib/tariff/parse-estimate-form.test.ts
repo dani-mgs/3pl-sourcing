@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { missingConfirmation, parseEstimateForm, parseLinkFields } from "./parse-estimate-form";
 
+// Today (UTC) for the entry-date bounds.
+const TODAY = "2026-10-07";
+
 function form(fields: Record<string, string>) {
   const data = new FormData();
   const defaults = {
@@ -14,9 +17,36 @@ function form(fields: Record<string, string>) {
   return data;
 }
 
+describe("parseEstimateForm: expected entry date", () => {
+  test("defaults to today when the form doesn't send one", () => {
+    const result = parseEstimateForm(form({}), TODAY);
+    expect(result.ok && result.data.entryDate).toBe(TODAY);
+  });
+
+  test("keeps a date in range", () => {
+    const result = parseEstimateForm(form({ entry_date: "2026-11-08" }), TODAY);
+    expect(result.ok && result.data.entryDate).toBe("2026-11-08");
+  });
+
+  test("the bounds follow the day given, not the machine's clock", () => {
+    expect(parseEstimateForm(form({ entry_date: "2026-10-06" }), "2026-10-07").ok).toBe(true);
+    expect(parseEstimateForm(form({ entry_date: "2026-10-06" }), "2026-10-08").ok).toBe(false);
+  });
+
+  test.each([
+    ["2026-10-05", /Past entry dates aren't supported/],
+    ["2027-10-09", /366 days/],
+    ["2026-02-30", /real date/],
+    ["soon", /real date/],
+  ])("refuses %s", (entry_date, message) => {
+    const result = parseEstimateForm(form({ entry_date }), TODAY);
+    expect(!result.ok && result.error).toMatch(message);
+  });
+});
+
 describe("parseEstimateForm", () => {
   test("a USD estimate", () => {
-    expect(parseEstimateForm(form({}))).toEqual({
+    expect(parseEstimateForm(form({}), TODAY)).toEqual({
       ok: true,
       data: {
         htsDigits: "6402993110",
@@ -29,13 +59,14 @@ describe("parseEstimateForm", () => {
         exchangeRateDate: null,
         quantity: null,
         label: null,
+        entryDate: TODAY,
         deductionUsd: null,
       },
     });
   });
 
   test("the plain calculator never takes a deduction, even if one is posted", () => {
-    const result = parseEstimateForm(form({ freight_insurance_deduction_usd: "500" }));
+    const result = parseEstimateForm(form({ freight_insurance_deduction_usd: "500" }), TODAY);
     expect(result.ok && result.data.deductionUsd).toBeNull();
   });
 
@@ -49,6 +80,7 @@ describe("parseEstimateForm", () => {
         quantity: "20,000",
         label: " Client A ",
       }),
+      TODAY,
     );
     expect(result).toMatchObject({
       ok: true,
@@ -66,6 +98,7 @@ describe("parseEstimateForm", () => {
   test("a claim of any other rate source is treated as manual", () => {
     const result = parseEstimateForm(
       form({ original_currency: "EUR", exchange_rate_to_usd: "1.08", exchange_rate_source: "forwarder_document" }),
+      TODAY,
     );
     expect(result.ok && result.data.exchangeRateSource).toBe("manual");
   });
@@ -83,7 +116,7 @@ describe("parseEstimateForm", () => {
     [{ quantity: "abc" }, /quantity/],
     [{ label: "x".repeat(201) }, /200 characters/],
   ])("refuses %j", (fields, message) => {
-    const result = parseEstimateForm(form(fields as Record<string, string>));
+    const result = parseEstimateForm(form(fields as Record<string, string>), TODAY);
     expect(result.ok).toBe(false);
     expect(!result.ok && result.error).toMatch(message);
   });
@@ -145,9 +178,9 @@ describe("parseLinkFields", () => {
 });
 
 describe("missingConfirmation", () => {
-  const all = new Set(["hts", "origin", "customs_value", "mode"] as const);
+  const all = new Set(["hts", "origin", "customs_value", "mode", "entry_date"] as const);
 
-  test("the four core inputs are always required", () => {
+  test("the five core inputs are always required", () => {
     expect(missingConfirmation(new Set(all), { deductionOffered: false, quantityEntered: false })).toBeNull();
     const noOrigin = new Set(all);
     noOrigin.delete("origin");
@@ -159,6 +192,14 @@ describe("missingConfirmation", () => {
   test("the deduction must be confirmed whenever it's offered, even if left blank", () => {
     expect(missingConfirmation(new Set(all), { deductionOffered: true, quantityEntered: false })).toBe(
       "Confirm the freight and insurance deduction before calculating.",
+    );
+  });
+
+  test("the expected entry date must be confirmed", () => {
+    const noEntry = new Set(all);
+    noEntry.delete("entry_date");
+    expect(missingConfirmation(noEntry, { deductionOffered: false, quantityEntered: false })).toBe(
+      "Confirm the expected entry date before calculating.",
     );
   });
 
