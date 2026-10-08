@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth/get-user-role";
@@ -103,6 +104,14 @@ export default async function AdministrationPage() {
       <h1 className="mb-8 font-display text-2xl font-semibold text-move-navy">
         Administration
       </h1>
+      <p className="-mt-4 mb-8 text-sm">
+        <Link
+          href="/admin/checklist"
+          className="rounded font-medium text-move-navy hover:text-move-green hover:underline focus-visible:ring-2 focus-visible:ring-move-green focus-visible:outline-none"
+        >
+          Expert checklist →
+        </Link>
+      </p>
 
       <div className="flex flex-col gap-8">
         <section className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
