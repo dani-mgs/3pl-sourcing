@@ -150,6 +150,8 @@ export function toClientIntakeFields(extracted: ExtractedIntake): ClientIntakeFi
     latest_month_orders: extracted.latest_month_orders ?? null,
     avg_monthly_units: extracted.avg_monthly_units ?? null,
     peak_monthly_units: extracted.peak_monthly_units ?? null,
+    // Not read from documents; set by hand.
+    contract_period_months: null,
     benchmark_period: cleanText(extracted.benchmark_period),
     core_cost_categories:
       costCategories.length > 0 ? costCategories.join(CHIP_SEPARATOR) : null,

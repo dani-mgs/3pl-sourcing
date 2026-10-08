@@ -5,6 +5,7 @@ import type { ClientIntakeFields } from "@/components/client-intake-form";
 
 const current: ClientIntakeFields = {
   target_geography: "US",
+  contract_period_months: 36,
   avg_monthly_orders: 1000,
   peak_monthly_orders: 2000,
   latest_month_orders: 1100,
@@ -35,6 +36,17 @@ describeMergeRules("mergeClientIntakeFields", mergeClientIntakeFields, current, 
     "important_limitation",
     "assumptions_data_limitations",
   ],
+});
+
+describe("mergeClientIntakeFields: contract period", () => {
+  test("a document that doesn't mention it keeps the stored value", () => {
+    const { merged, changed } = mergeClientIntakeFields(current, {
+      ...current,
+      contract_period_months: null,
+    });
+    expect(merged.contract_period_months).toBe(36);
+    expect(changed.has("contract_period_months")).toBe(false);
+  });
 });
 
 describe("mergeClientIntakeFields: tag lists are combined, never replaced", () => {

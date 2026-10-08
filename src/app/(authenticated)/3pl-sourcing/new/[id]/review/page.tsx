@@ -5,6 +5,7 @@ import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { Button } from "@/components/ui/button";
 import { WizardSteps } from "@/components/wizard-steps";
 import { embeddedOne } from "@/lib/clients";
+import { formatContractPeriod } from "@/lib/three-pl/contract-period";
 import {
   StatusBadge,
   type ProviderStatus,
@@ -14,6 +15,7 @@ const CLIENT_FIELDS: { key: string; label: string }[] = [
   { key: "client_name", label: "Client Name" },
   { key: "business_model", label: "Business Model" },
   { key: "target_geography", label: "Target Geography" },
+  { key: "contract_period_months", label: "Contract Period" },
   { key: "avg_monthly_orders", label: "Average Monthly Orders" },
   { key: "peak_monthly_orders", label: "Peak Monthly Orders" },
   { key: "latest_month_orders", label: "Latest Month Orders" },
@@ -54,7 +56,7 @@ export default async function ReviewStepPage({
   const { data: clientRequirement } = await supabase
     .from("three_pl_projects")
     .select(
-      "clients(name, business_model), target_geography, avg_monthly_orders, peak_monthly_orders, latest_month_orders, avg_monthly_units, peak_monthly_units, benchmark_period, core_cost_categories, key_capability_needs, main_decision_focus, tech_integration_requirement, special_handling_requirement, fixed_comparison_principle, important_limitation, assumptions_data_limitations",
+      "clients(name, business_model), target_geography, contract_period_months, avg_monthly_orders, peak_monthly_orders, latest_month_orders, avg_monthly_units, peak_monthly_units, benchmark_period, core_cost_categories, key_capability_needs, main_decision_focus, tech_integration_requirement, special_handling_requirement, fixed_comparison_principle, important_limitation, assumptions_data_limitations",
     )
     .eq("id", id)
     .single();
@@ -77,6 +79,7 @@ export default async function ReviewStepPage({
     client_name: client?.name,
     business_model: client?.business_model,
     ...projectFields,
+    contract_period_months: formatContractPeriod(projectFields.contract_period_months),
   };
 
   const filledFields = CLIENT_FIELDS.filter((field) => {

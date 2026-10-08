@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { parseProjectForm, parseSummaryNotesForm } from "./parse-project-form";
+import { PROJECT_FIELDS_SELECT, parseProjectForm, parseSummaryNotesForm } from "./parse-project-form";
 
 function formData(overrides: Record<string, string> = {}): FormData {
   const fd = new FormData();
@@ -66,5 +66,44 @@ describe("parseSummaryNotesForm", () => {
       formData({ summary_notes: "x".repeat(10001) }),
     );
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("parseProjectForm: contract period", () => {
+  const parse = (value?: string) =>
+    parseProjectForm(formData(value === undefined ? {} : { contract_period_months: value }));
+
+  test.each([
+    ["1", 1],
+    ["36", 36],
+    ["120", 120],
+    [" 24 ", 24],
+  ])("accepts %j", (input, expected) => {
+    const result = parse(input);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.contract_period_months).toBe(expected);
+  });
+
+  test.each([undefined, "", "   "])("blank %j is saved as empty", (input) => {
+    const result = parse(input);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.contract_period_months).toBeNull();
+  });
+
+  test.each(["0", "121", "-3", "1.5", "1e2", "0x10", "twelve", "36 months"])(
+    "refuses %j with a plain-language message",
+    (input) => {
+      const result = parse(input);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe(
+          "Contract period must be a whole number of months from 1 to 120, or left empty.",
+        );
+      }
+    },
+  );
+
+  test("is part of the saved/selected columns", () => {
+    expect(PROJECT_FIELDS_SELECT).toContain("contract_period_months");
   });
 });

@@ -50,6 +50,7 @@ export function mergeClientIntakeFields(
   const changed = new Set<string>();
 
   mergeScalarField(current, extracted, "target_geography", merged, changed);
+  mergeScalarField(current, extracted, "contract_period_months", merged, changed);
   mergeScalarField(current, extracted, "avg_monthly_orders", merged, changed);
   mergeScalarField(current, extracted, "peak_monthly_orders", merged, changed);
   mergeScalarField(current, extracted, "latest_month_orders", merged, changed);

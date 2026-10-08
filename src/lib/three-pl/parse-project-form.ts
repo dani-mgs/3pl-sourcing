@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  CONTRACT_PERIOD_ERROR,
+  CONTRACT_PERIOD_MAX,
+  CONTRACT_PERIOD_MIN,
+} from "./contract-period";
 
 // Turns the 3PL client-intake / project-info-edit form into a validated
 // three_pl_projects row (everything except client_id/owner_id/status, which
@@ -22,8 +27,20 @@ const integer = z.preprocess(
   z.number().int().min(0).max(INT_MAX).nullable(),
 );
 
+// Digits only, so 1.5, -3, 1e2, 0x10 and text are all refused rather than
+// coerced by Number(). The range matches the column's check constraint.
+const contractPeriod = z.preprocess(
+  (value) => {
+    const v = blankToNull(value);
+    if (v == null) return null;
+    return typeof v === "string" && /^\d+$/.test(v) ? Number(v) : NaN;
+  },
+  z.number().int().min(CONTRACT_PERIOD_MIN).max(CONTRACT_PERIOD_MAX).nullable(),
+);
+
 const projectSchema = z.object({
   target_geography: text(500),
+  contract_period_months: contractPeriod,
   benchmark_period: text(200),
 
   avg_monthly_orders: integer,
@@ -63,6 +80,9 @@ export function parseProjectForm(formData: FormData): ParseProjectResult {
   if (!parsed.success) {
     // Field-level schema detail stays server-side (docs/SECURITY.md).
     console.error("parseProjectForm validation failed:", parsed.error.issues);
+    if (parsed.error.issues.some((issue) => issue.path[0] === "contract_period_months")) {
+      return { ok: false, error: CONTRACT_PERIOD_ERROR };
+    }
     return {
       ok: false,
       error: "Some fields have values that aren't allowed. Check the form and try again.",

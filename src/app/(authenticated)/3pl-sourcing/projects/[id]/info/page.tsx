@@ -10,6 +10,7 @@ import { ViewOnlyBanner } from "@/components/view-only-banner";
 import { EditClientDialog } from "@/components/edit-client-dialog";
 import { embeddedOne } from "@/lib/clients";
 import { DeleteProjectButton } from "./delete-project-button";
+import { formatContractPeriod } from "@/lib/three-pl/contract-period";
 
 function InfoField({
   label,
@@ -35,7 +36,7 @@ export default async function ProjectInfoPage({
   const { data: clientRequirement } = await supabase
     .from("three_pl_projects")
     .select(
-      "date_created, updated_at, clients(id, name, business_model), target_geography, avg_monthly_orders, peak_monthly_orders, latest_month_orders, avg_monthly_units, peak_monthly_units, benchmark_period, core_cost_categories, key_capability_needs, main_decision_focus, tech_integration_requirement, special_handling_requirement, fixed_comparison_principle, important_limitation, assumptions_data_limitations",
+      "date_created, updated_at, clients(id, name, business_model), target_geography, contract_period_months, avg_monthly_orders, peak_monthly_orders, latest_month_orders, avg_monthly_units, peak_monthly_units, benchmark_period, core_cost_categories, key_capability_needs, main_decision_focus, tech_integration_requirement, special_handling_requirement, fixed_comparison_principle, important_limitation, assumptions_data_limitations",
     )
     .eq("id", id)
     .single();
@@ -120,6 +121,10 @@ export default async function ProjectInfoPage({
             <InfoField
               label="Target Geography"
               value={clientRequirement.target_geography}
+            />
+            <InfoField
+              label="Contract Period"
+              value={formatContractPeriod(clientRequirement.contract_period_months)}
             />
           </dl>
         </SectionCard>

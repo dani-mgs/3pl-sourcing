@@ -6,6 +6,7 @@ import { embeddedOne } from "@/lib/clients";
 import { ViewOnlyBanner } from "@/components/view-only-banner";
 import { Button } from "@/components/ui/button";
 import { NotesCard } from "./notes-card";
+import { ContractPeriodLine } from "./contract-period-line";
 import {
   CostComparisonPanel,
   type PanelProvider,
@@ -47,7 +48,7 @@ export default async function ProjectSummaryPage({
   const { data: clientRequirement } = await supabase
     .from("three_pl_projects")
     .select(
-      "id, target_geography, owner_id, date_created, summary_notes, clients(name, business_model)",
+      "id, target_geography, contract_period_months, owner_id, date_created, summary_notes, clients(name, business_model)",
     )
     .eq("id", id)
     .single();
@@ -123,6 +124,7 @@ export default async function ProjectSummaryPage({
               {client?.business_model}
             </p>
           )}
+          <ContractPeriodLine months={clientRequirement.contract_period_months} />
           <p className="mt-1 text-xs text-neutral-muted">
             Owner {ownerDisplay}
             {aggregateCapabilityLabels.length > 0 &&

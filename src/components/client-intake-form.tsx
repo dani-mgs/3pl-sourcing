@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { CHIP_SEPARATOR, parseChipValue } from "@/lib/chip-value";
+import {
+  CONTRACT_PERIOD_ERROR,
+  CONTRACT_PERIOD_MAX,
+  CONTRACT_PERIOD_MIN,
+} from "@/lib/three-pl/contract-period";
 
 const fieldClass =
   "rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy placeholder:italic placeholder:text-gray-400 focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green disabled:cursor-not-allowed disabled:bg-neutral-bg disabled:text-neutral-muted";
@@ -37,6 +42,7 @@ const KEY_CAPABILITY_PRESETS = [
 // live on the shared `clients` record and are chosen with ClientPicker.
 export type ClientIntakeFields = {
   target_geography: string | null;
+  contract_period_months: number | null;
   avg_monthly_orders: number | null;
   peak_monthly_orders: number | null;
   latest_month_orders: number | null;
@@ -70,6 +76,10 @@ function TextField({
   type = "text",
   disabled,
   updated,
+  min,
+  max,
+  hint,
+  invalidMessage,
 }: {
   name: string;
   label: string;
@@ -79,6 +89,10 @@ function TextField({
   type?: "text" | "number";
   disabled?: boolean;
   updated?: boolean;
+  min?: number;
+  max?: number;
+  hint?: string;
+  invalidMessage?: string;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -90,8 +104,19 @@ function TextField({
         id={name}
         name={name}
         type={type}
-        min={type === "number" ? "0" : undefined}
+        min={min ?? (type === "number" ? 0 : undefined)}
+        max={max}
         step={type === "number" ? "1" : undefined}
+        inputMode={type === "number" ? "numeric" : undefined}
+        aria-describedby={hint ? `${name}-hint` : undefined}
+        onInvalid={
+          invalidMessage
+            ? (event) => event.currentTarget.setCustomValidity(invalidMessage)
+            : undefined
+        }
+        onInput={
+          invalidMessage ? (event) => event.currentTarget.setCustomValidity("") : undefined
+        }
         required={required}
         placeholder={placeholder}
         defaultValue={defaultValue ?? ""}
@@ -100,6 +125,11 @@ function TextField({
           updated ? `${fieldClass} ring-2 ring-move-green/40` : fieldClass
         }
       />
+      {hint && (
+        <p id={`${name}-hint`} className="text-xs text-neutral-muted">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }
@@ -286,6 +316,18 @@ export function ClientIntakeFormFields({
           placeholder="e.g. Los Angeles, USA"
           disabled={disabled}
           updated={updated("target_geography")}
+        />
+        <TextField
+          name="contract_period_months"
+          label="Contract Period (months)"
+          type="number"
+          min={CONTRACT_PERIOD_MIN}
+          max={CONTRACT_PERIOD_MAX}
+          hint="Optional. Whole months, e.g. 36."
+          invalidMessage={CONTRACT_PERIOD_ERROR}
+          defaultValue={defaultValues?.contract_period_months ?? null}
+          disabled={disabled}
+          updated={updated("contract_period_months")}
         />
         <TextField
           name="avg_monthly_orders"
