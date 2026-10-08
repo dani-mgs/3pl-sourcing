@@ -68,6 +68,67 @@ export const TARIFF_FAQ: FaqItem[] = [
     ),
   },
   {
+    id: "effective-rate",
+    module: "Tariff Calculator",
+    page: "Estimating duties",
+    question: "What is the \"Effective rate on customs value\"?",
+    answer: (
+      <>
+        <p>
+          The duties counted in the estimate (base plus additional) as a percentage of the customs value,
+          and the same with MPF and HMF added. It is only a way to read the total; it changes nothing. If
+          programs are excluded from the total, the rate covers the counted duties only.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "oldest-review",
+    module: "Tariff Calculator",
+    page: "Estimating duties",
+    question: "What does \"Oldest review: … days ago\" mean?",
+    answer: (
+      <>
+        <p>
+          How long before the day you calculated the least recently reviewed program in this estimate was
+          last reviewed by a tariff editor. It turns amber after 30 days; ask a tariff editor to review that
+          program again.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "scheduled-change",
+    module: "Tariff Calculator",
+    page: "Estimating duties",
+    question: "Why does an estimate say a rate change is scheduled?",
+    answer: (
+      <>
+        <p>
+          A rate for a program and product in this estimate starts, or a row ends, within 45 days after the
+          entry date. If the goods enter on or after that date, the duty may differ. Only changes already
+          loaded in the duty data are known; on a saved estimate the warning is read when you open it
+          (&ldquo;known today&rdquo;).
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "key-dates",
+    module: "Tariff Calculator",
+    page: "Estimating duties",
+    question: "What are the Key dates on the Tariff Calculator page?",
+    answer: (
+      <>
+        <p>
+          A read-only list of upcoming dated changes already in the duty data, by the day they take effect,
+          with the program, the rate change and whether the program is counted in estimates yet. It is empty
+          when nothing dated is loaded. An estimate for a later entry date applies these automatically.
+        </p>
+      </>
+    ),
+  },
+  {
     id: "search-shoes",
     module: "Tariff Calculator",
     page: "HTS lookup",

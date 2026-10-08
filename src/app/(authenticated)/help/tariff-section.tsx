@@ -124,6 +124,25 @@ export function TariffSection() {
         </li>
         <li>Each line is rounded once, half up to the cent.</li>
         <li>
+          Under the total, <Ui>Effective rate on customs value</Ui> shows the duties, and the duties with MPF
+          and HMF, as a percentage of the customs value (to 0.1%). It is display only. When programs are
+          excluded from the total it covers the counted duties only.
+        </li>
+        <li>
+          <Ui>Oldest review</Ui> names the program in the estimate that was reviewed longest ago, in days
+          before the day you calculated. Over 30 days it turns amber.
+        </li>
+        <li>
+          If a rate for a reviewed program and product in the estimate starts, or a row ends, within 45 days
+          after the entry date, the estimate warns that duties may change if entry slips to that date or later.
+          Nothing is shown when no such change is loaded. Fees aren&apos;t included. A saved estimate reads this
+          when opened (&ldquo;known today&rdquo;) and is otherwise unchanged.
+        </li>
+        <li>
+          <Ui>Key dates</Ui>, below the calculator, lists the dated changes already in the duty data, with
+          what changes and whether the program is counted yet.
+        </li>
+        <li>
           Every line shows its rate, its source and the date it came into effect; the estimate
           shows <Ui>Estimated for entry on</Ui> the entry date and the day it was calculated.
           Exchange rates and the age of the duty-data reviews are judged on the day of calculation.

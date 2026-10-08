@@ -4,6 +4,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### Tariff Calculator: scheduled-change warning knows only loaded rows; fees not covered
+- **Added:** 2026-10-08
+- **What:** The 45-day warning and the Key dates list come from dated `additional_duties` rows already in the database, so a change that hasn't been loaded isn't shown (nothing is shown when none is loaded). `customs_fees` rows (MPF/HMF, re-set each 1 October) are left out; the fiscal-year caveat covers them. On a saved estimate the warning is read live when the page opens ("known today"), so it can differ from what it would have said when saved.
+- **Why deferred:** Needs a source of announced-but-unloaded changes, and a decision on storing the warning with the estimate (which would touch `save_duty_estimate`).
+- **Severity:** Low
+- **Where:** `src/lib/tariff/scheduled-changes.ts`, `key-dates.ts`
+
 ### Tariff Calculator: past entry dates not supported; base HTS rate is the current schedule only
 - **Added:** 2026-10-07
 - **What:** The expected entry date can be yesterday (UTC) at the earliest. Base HTS rates come from the current release only (earlier schedules aren't kept), and there is no history of Section 122 / IEEPA or other past additional duties, so an estimate can't be made for an entry that has already happened. For a later date the base rate is still today's schedule (the result says so). Fee rows have no end date, so after the next 1 October the FY2027 fees would still be used silently; the result adds a fiscal-year caveat instead.
