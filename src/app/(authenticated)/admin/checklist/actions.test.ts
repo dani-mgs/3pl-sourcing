@@ -52,7 +52,7 @@ describe("setChecklistItem", () => {
   test("database refusals get plain messages; anything else is generic and logged", async () => {
     rpc.mockResolvedValue({ data: null, error: { code: "42501", message: "Not allowed." } });
     expect(await setChecklistItem(request)).toEqual({ error: "You don't have permission to change this item." });
-    rpc.mockResolvedValue({ data: null, error: { code: "PT409", message: "This item was changed by someone else." } });
+    rpc.mockResolvedValue({ data: null, error: { code: "40001", message: "This item was changed by someone else." } });
     expect((await setChecklistItem(request)).error).toMatch(/Someone else changed this item/);
     rpc.mockResolvedValue({ data: null, error: { code: "XX000", message: "secret detail" } });
     expect(await setChecklistItem(request)).toEqual({ error: "An unexpected error occurred." });

@@ -99,7 +99,7 @@ select throws_ok(
   '22023', 'The request is incomplete.', 'a null version is rejected');
 select throws_ok(
   $$ select set_checklist_item(current_setting('t.b1')::uuid, false, null, 0) $$,
-  'PT409', 'This item was changed by someone else.', 'a stale version is rejected');
+  '40001', 'This item was changed by someone else.', 'a stale version is rejected');
 select throws_ok(
   $$ select set_checklist_item(current_setting('t.b1')::uuid, true, repeat('x', 501), 1) $$,
   '22023', 'The note is too long.', 'a note over 500 characters is rejected');

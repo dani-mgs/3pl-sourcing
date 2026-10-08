@@ -40,7 +40,7 @@ export async function setChecklistItem(raw: {
   if (error) {
     console.error("setChecklistItem error:", error);
     if (error.code === "42501") return { error: NO_PERMISSION };
-    if (error.code === "PT409") return { error: CONFLICT };
+    if (error.code === "40001") return { error: CONFLICT };
     return { error: UNEXPECTED };
   }
 
