@@ -227,7 +227,9 @@ export function PermissionsSection() {
           estimates. Only whoever saved an estimate, or an admin, can delete it; nobody can
           change one. Estimates linked to a forwarder project or quote can only be created by the
           project&apos;s owner or an admin. Duty and fee data can only be changed by <Ui>tariff editors</Ui> and admins;
-          admins grant the tariff editor permission in Administration.
+          admins grant the tariff editor permission in Administration. Tariff editors and admins also see the{" "}
+          <Ui>Expert checklist</Ui> in the account menu, a to-do list for the duty data; ticking an item never
+          reviews a program or changes a rate, and the access and business-decision items can only be ticked by admins.
         </li>
         <li>
           <Ui>View only</Ui>: on anyone else&apos;s project you&apos;ll see &ldquo;Owned by
