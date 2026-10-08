@@ -37,7 +37,8 @@ export type LinkQuote = {
   updated_at: string;
   forwarder_id: string;
   forwarder_name: string;
-  scenario_group: string;
+  // The quote's own name: its terms and lane (quoteTitle).
+  label: string;
   shipment_mode: string | null;
   cost_of_goods_usd: number | null;
   duties_taxes_usd: number | null;
@@ -349,7 +350,9 @@ const snapshotSchema = z.object({
       updated_at: z.string(),
       forwarder_id: z.string(),
       forwarder_name: z.string(),
-      scenario_group: z.string(),
+      // New snapshots store label; older ones stored the quote's scenario group.
+      label: z.string().optional(),
+      scenario_group: z.string().optional(),
       shipment_mode: z.string().nullable(),
       cost_of_goods_usd: numberOrNull,
       duties_taxes_usd: numberOrNull,
@@ -456,7 +459,7 @@ export function inputChanges(
 
   if (snapshot.quote) {
     if (quote === "deleted" || quote == null) {
-      changes.push({ label: "Quote", then: snapshot.quote.scenario_group, now: "deleted" });
+      changes.push({ label: "Quote", then: snapshot.quote.label ?? snapshot.quote.scenario_group ?? "Quote", now: "deleted" });
     } else {
       const q = snapshot.quote;
       compare("Quote mode", plain(q.shipment_mode), plain(quote.shipment_mode));

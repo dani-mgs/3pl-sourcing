@@ -3,7 +3,6 @@ import { isRealIsoDate, parseQuoteForm } from "./parse-quote-form";
 
 function form(fields: Record<string, string>): FormData {
   const data = new FormData();
-  data.set("scenario_group", "SHA-RTM-FCL");
   for (const [name, value] of Object.entries(fields)) data.set(name, value);
   return data;
 }
@@ -81,11 +80,13 @@ describe("parseQuoteForm fields", () => {
     expect(parseQuoteForm(form({ shipment_type: "FCL" })).ok).toBe(false);
   });
 
-  test("missing scenario group is refused with its own message", () => {
-    quietErrors();
-    const data = form({});
-    data.set("scenario_group", "  ");
-    expect(parseQuoteForm(data)).toEqual({ ok: false, error: "Scenario group is required." });
+  test("a quote needs no scenario group, and a stray one is ignored", () => {
+    const plain = parseQuoteForm(form({}));
+    expect(plain.ok).toBe(true);
+    if (plain.ok) expect(plain.data).not.toHaveProperty("scenario_group");
+    const stray = parseQuoteForm(form({ scenario_group: "Old text" }));
+    expect(stray.ok).toBe(true);
+    if (stray.ok) expect(stray.data).not.toHaveProperty("scenario_group");
   });
 
   test.each([

@@ -50,7 +50,6 @@ export function QuoteForm({
   forwarderId,
   quoteId,
   defaultValues = {},
-  existingScenarioGroups,
   cancelHref,
   latestRates,
   today,
@@ -59,7 +58,6 @@ export function QuoteForm({
   forwarderId: string;
   quoteId: string | null;
   defaultValues?: QuoteFormDefaults;
-  existingScenarioGroups: string[];
   cancelHref: string;
   // Latest daily rate per currency, loaded with the page.
   latestRates: LatestRates;
@@ -165,11 +163,7 @@ export function QuoteForm({
     setUploadError(null);
     setUploadNotice(null);
     startExtraction(async () => {
-      const result = await extractQuoteDetails(
-        formData,
-        existingScenarioGroups,
-        values,
-      );
+      const result = await extractQuoteDetails(formData, values);
       if ("error" in result) {
         setUploadError(result.error);
         return;
@@ -318,34 +312,8 @@ export function QuoteForm({
       className="flex flex-col gap-6"
     >
       <div key={formKey} className="contents">
-      <SectionCard title="Scenario & Terms">
+      <SectionCard title="Terms">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <label htmlFor="scenario_group" className={labelClass}>
-              Scenario Group
-              {highlighted.has("scenario_group") && <UpdatedBadge />}
-            </label>
-            <input
-              id="scenario_group"
-              name="scenario_group"
-              type="text"
-              list="scenario-group-options"
-              defaultValue={values.scenario_group ?? ""}
-              className={
-                highlighted.has("scenario_group")
-                  ? `${fieldClass} ${updatedFieldClass}`
-                  : fieldClass
-              }
-            />
-            <datalist id="scenario-group-options">
-              {existingScenarioGroups.map((group) => (
-                <option key={group} value={group} />
-              ))}
-            </datalist>
-            <p className="text-xs text-neutral-muted">
-              Comparable quotes must use the exact same scenario group text.
-            </p>
-          </div>
           <SelectField
             name="shipment_mode"
             label="Shipment Mode"

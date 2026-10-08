@@ -36,7 +36,6 @@ export type ForwarderProjectTerms = {
 };
 
 export type ForwarderQuoteInput = {
-  scenario_group: string;
   shipment_mode: string | null;
   shipment_type: string | null;
   incoterm: string | null;
@@ -173,6 +172,31 @@ export function passesRankingGate(
   );
 }
 
+// True when the quote can't be ranked because its terms differ from the
+// project's final terms: all three final terms are set, the quote states all
+// three of its own, and they don't all match. (A quote that is only missing a
+// term, or is marked incomplete, is "Not Comparable" for a different reason.)
+export function hasDifferentTerms(
+  quote: ForwarderQuoteInput,
+  project: Pick<
+    ForwarderProjectTerms,
+    "final_incoterm" | "final_shipment_mode" | "final_shipment_type"
+  >,
+): boolean {
+  const { final_incoterm, final_shipment_mode, final_shipment_type } = project;
+  if (final_incoterm == null || final_shipment_mode == null || final_shipment_type == null) {
+    return false;
+  }
+  if (quote.incoterm == null || quote.shipment_mode == null || quote.shipment_type == null) {
+    return false;
+  }
+  return (
+    quote.incoterm !== final_incoterm ||
+    quote.shipment_mode !== final_shipment_mode ||
+    quote.shipment_type !== final_shipment_type
+  );
+}
+
 export function buildForwarderCostComparison<Q extends ForwarderQuoteInput>(
   project: ForwarderProjectTerms,
   quotes: Q[],
@@ -187,13 +211,13 @@ export function buildForwarderCostComparison<Q extends ForwarderQuoteInput>(
     excluded: isExcludedFromRanking(quote),
   }));
 
-  // Freight costs (in cents) of every eligible quote, per scenario group.
-  const rankPool = new Map<string, number[]>();
-  for (const { quote, freight, rankable, excluded } of priced) {
+  // Freight costs (in cents) of every eligible quote. One pool for the whole
+  // project: what's eligible is decided only by the final-terms gate, so every
+  // ranked quote already has the same incoterm, mode and type.
+  const rankPool: number[] = [];
+  for (const { freight, rankable, excluded } of priced) {
     if (!rankable || excluded || freight == null) continue;
-    const pool = rankPool.get(quote.scenario_group) ?? [];
-    pool.push(toCents(freight));
-    rankPool.set(quote.scenario_group, pool);
+    rankPool.push(toCents(freight));
   }
 
   const results = priced.map(({ quote, freight, rankable, excluded }) => {
@@ -257,7 +281,7 @@ export function buildForwarderCostComparison<Q extends ForwarderQuoteInput>(
       result.costRank = NOT_COMPARABLE;
       result.rankPosition = NOT_COMPARABLE;
     } else if (!excluded && freight != null) {
-      const pool = rankPool.get(quote.scenario_group) ?? [];
+      const pool = rankPool;
       const cents = toCents(freight);
       const cheaper = pool.filter((other) => other < cents).length;
       const dearer = pool.filter((other) => other > cents).length;

@@ -1,13 +1,17 @@
-"use client";
-
 import Link from "next/link";
-import { useState } from "react";
 import { formatCurrency } from "@/lib/currency";
-import { costBarScale } from "@/lib/forwarder/project-summary";
+import {
+  NOT_COMPARABLE,
+  hasDifferentTerms,
+  type ForwarderProjectTerms,
+} from "@/lib/forwarder/cost-comparison";
+import { quoteLabel } from "@/lib/forwarder/quote-label";
+import { projectBarScale, sortForDisplay } from "@/lib/forwarder/project-summary";
 import {
   AnnualSavingsCell,
   FreightCell,
   LeadTimeCell,
+  QuoteIdentity,
   ValidUntilCell,
   VsBaselineCell,
   rankLabel,
@@ -20,22 +24,10 @@ const headClass =
   "px-2.5 py-2.5 text-xs font-medium uppercase tracking-wide whitespace-nowrap text-neutral-muted";
 const cellClass = "px-2.5 py-2.5";
 
-function groupResults(results: ComparisonResult[]): Map<string, ComparisonResult[]> {
-  const groups = new Map<string, ComparisonResult[]>();
-  for (const result of results) {
-    const list = groups.get(result.quote.scenario_group) ?? [];
-    list.push(result);
-    groups.set(result.quote.scenario_group, list);
-  }
-  for (const list of groups.values()) {
-    list.sort((a, b) => {
-      const rankA = typeof a.costRank === "number" ? a.costRank : Infinity;
-      const rankB = typeof b.costRank === "number" ? b.costRank : Infinity;
-      return rankA - rankB;
-    });
-  }
-  return groups;
-}
+type FinalTerms = Pick<
+  ForwarderProjectTerms,
+  "final_incoterm" | "final_shipment_mode" | "final_shipment_type"
+>;
 
 export function QuoteComparisonPanel({
   projectId,
@@ -44,7 +36,7 @@ export function QuoteComparisonPanel({
   baseline,
   targetLeadTime,
   today,
-  defaultGroup,
+  finalTerms,
 }: {
   projectId: string;
   results: ComparisonResult[];
@@ -52,15 +44,9 @@ export function QuoteComparisonPanel({
   baseline: number | null;
   targetLeadTime: number | null;
   today: string;
-  defaultGroup: string | null;
+  finalTerms: FinalTerms;
 }) {
-  const groups = groupResults(results);
-  const groupNames = [...groups.keys()];
-  const [selected, setSelected] = useState<string | null>(
-    defaultGroup && groups.has(defaultGroup) ? defaultGroup : (groupNames[0] ?? null),
-  );
-
-  if (results.length === 0 || selected == null) {
+  if (results.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-neutral-muted">
         Quotes will be compared here once forwarders have quoted.
@@ -68,53 +54,35 @@ export function QuoteComparisonPanel({
     );
   }
 
-  const activeGroup = groups.has(selected) ? selected : groupNames[0];
-  const rows = groups.get(activeGroup) ?? [];
-  const scale = costBarScale(
-    rows.map((r) => r.freightCostUsd),
-    baseline,
-  );
+  // One table for the project: ranked quotes first, then quotes that weren't
+  // ranked (different terms, or incomplete).
+  const rows = sortForDisplay(results);
+  const anyRanked = results.some((r) => r.costRank !== NOT_COMPARABLE);
+  const scale = projectBarScale(results, baseline);
   const best = new Set(bestQuoteIds);
+  const finalSet =
+    finalTerms.final_incoterm != null &&
+    finalTerms.final_shipment_mode != null &&
+    finalTerms.final_shipment_type != null;
+  const anyDifferent = results.some((r) => hasDifferentTerms(r.quote, finalTerms));
 
   return (
     <div className="flex flex-col gap-3">
-      {groupNames.length > 1 ? (
-        <div
-          role="tablist"
-          aria-label="Scenario groups"
-          className="flex flex-wrap gap-1 self-start rounded-xl border border-neutral-border bg-neutral-bg p-1"
-        >
-          {groupNames.map((name) => {
-            const active = name === activeGroup;
-            return (
-              <button
-                key={name}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setSelected(name)}
-                className={
-                  "max-w-72 truncate rounded-lg px-3 py-1.5 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-move-green " +
-                  (active
-                    ? "bg-white text-move-navy shadow-sm"
-                    : "text-neutral-muted hover:text-move-navy")
-                }
-                title={name}
-              >
-                {name}
-                <span className="ml-1.5 text-xs font-normal text-neutral-muted">
-                  {groups.get(name)!.length}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <h3 className="text-sm font-semibold text-move-navy">{activeGroup}</h3>
+      {finalSet && (
+        <p className="text-xs text-neutral-muted">
+          Ranked on the project&apos;s final terms:{" "}
+          <span className="font-medium text-move-navy">
+            {quoteLabel({
+              incoterm: finalTerms.final_incoterm,
+              shipment_mode: finalTerms.final_shipment_mode,
+              shipment_type: finalTerms.final_shipment_type,
+            })}
+          </span>
+          .{anyDifferent && " Quotes with different terms are listed below them and aren\u2019t ranked."}
+        </p>
       )}
 
       <div
-        role={groupNames.length > 1 ? "tabpanel" : undefined}
         // relative: makes this scroll box the containing block for the sr-only
         // labels inside cells, which otherwise escape it and widen the page.
         className="relative overflow-x-auto rounded-2xl border border-neutral-border bg-white shadow-sm"
@@ -122,7 +90,7 @@ export function QuoteComparisonPanel({
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-neutral-border">
-              <th className={headClass}>Forwarder · Terms</th>
+              <th className={headClass}>Forwarder · Quote</th>
               <th className={headClass}>Freight Cost · /kg</th>
               <th className={headClass}>Lead Time</th>
               <th className={headClass}>Valid Until</th>
@@ -135,15 +103,18 @@ export function QuoteComparisonPanel({
             {rows.map((result) => {
               const { quote } = result;
               const isBest = best.has(quote.id);
-              const terms = [quote.incoterm, quote.shipment_mode, quote.shipment_type]
-                .filter(Boolean)
-                .join(" / ");
+              const different = hasDifferentTerms(quote, finalTerms);
+              const unranked = result.costRank === NOT_COMPARABLE;
               return (
                 <tr
                   key={quote.id}
                   className={
                     "border-b border-neutral-border last:border-b-0 " +
-                    (isBest ? "bg-move-green/5 hover:bg-move-green/10" : "hover:bg-neutral-bg")
+                    (isBest
+                      ? "bg-move-green/5 hover:bg-move-green/10"
+                      : unranked
+                        ? "bg-neutral-bg/70 text-neutral-muted hover:bg-neutral-bg"
+                        : "hover:bg-neutral-bg")
                   }
                 >
                   <td
@@ -156,10 +127,16 @@ export function QuoteComparisonPanel({
                       {quote.forwarder_name}
                     </Link>
                     {isBest && <span className="sr-only"> (best quote)</span>}
-                    <span className="block text-xs text-neutral-muted">{terms || "—"}</span>
+                    <QuoteIdentity quote={quote} />
                   </td>
                   <td className={cellClass}>
-                    <FreightCell result={result} scale={scale} baseline={baseline} />
+                    {/* Unranked quotes get no bar when others are ranked: a bar
+                        beside ranked ones would suggest they are comparable. */}
+                    <FreightCell
+                      result={result}
+                      scale={unranked && anyRanked ? null : scale}
+                      baseline={baseline}
+                    />
                   </td>
                   <td className={cellClass}>
                     <LeadTimeCell quote={quote} target={targetLeadTime} />
@@ -167,7 +144,9 @@ export function QuoteComparisonPanel({
                   <td className={cellClass}>
                     <ValidUntilCell validUntil={quote.rate_valid_until} today={today} />
                   </td>
-                  <td className={`${cellClass} min-w-24 text-neutral-muted`}>{rankLabel(quote, result)}</td>
+                  <td className={`${cellClass} min-w-24 text-neutral-muted`}>
+                    {rankLabel(quote, result, different)}
+                  </td>
                   <td className={cellClass}>
                     <VsBaselineCell result={result} />
                   </td>

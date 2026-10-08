@@ -20,14 +20,14 @@ const quoteA: LinkQuote = {
   updated_at: "",
   forwarder_id: "f1",
   forwarder_name: "Acme",
-  scenario_group: "Sea FCL",
+  label: "Sea FCL",
   shipment_mode: "Sea",
   cost_of_goods_usd: null,
   duties_taxes_usd: 3100,
   lead_time_min_days: null,
   lead_time_max_days: null,
 };
-const quoteB: LinkQuote = { ...quoteA, id: "qb", scenario_group: "Air", duties_taxes_usd: null };
+const quoteB: LinkQuote = { ...quoteA, id: "qb", label: "Air", duties_taxes_usd: null };
 const quotes = new Map([
   [quoteA.id, quoteA],
   [quoteB.id, quoteB],

@@ -4,6 +4,7 @@ import {
   NOT_COMPARABLE,
   RANKING_EXCLUDED_STATUSES,
   buildForwarderCostComparison,
+  hasDifferentTerms,
   type ForwarderProjectTerms,
   type ForwarderQuoteInput,
   type ForwarderQuoteResult,
@@ -17,7 +18,8 @@ const TOLERANCE = 0.0001;
 
 type Expected = Record<string, number | string>;
 type GoldenQuote = {
-  input: ForwarderQuoteInput & { provider: string };
+  // scenario_group is the spreadsheet's own grouping column (not used by the app).
+  input: ForwarderQuoteInput & { provider: string; scenario_group: string };
   expected: Expected;
 };
 type GoldenConfig = {
@@ -59,12 +61,30 @@ function expectValue(actual: unknown, expected: number | string, label: string) 
   }
 }
 
+// The spreadsheet ranks within its own "scenario" column, while the app now
+// ranks every eligible quote in a project together. The two agree when the pool
+// is one spreadsheet group, so the fixture is run one group at a time (each run
+// is exactly what the app does for a project holding only that group's quotes).
+// How pooling differs from the spreadsheet is covered by "one ranking pool".
+function runByGroup(project: ForwarderProjectTerms, quotes: GoldenQuote[]) {
+  const results: ForwarderQuoteResult<ForwarderQuoteInput>[] = new Array(quotes.length);
+  let effectiveAnnualShipments: number | null = null;
+  const groups = [...new Set(quotes.map((q) => q.input.scenario_group))];
+  for (const group of groups) {
+    const indexes = quotes.flatMap((q, i) => (q.input.scenario_group === group ? [i] : []));
+    const run = buildForwarderCostComparison(
+      project,
+      indexes.map((i) => quotes[i].input),
+    );
+    effectiveAnnualShipments = run.effectiveAnnualShipments;
+    run.results.forEach((r, k) => (results[indexes[k]] = r));
+  }
+  return { effectiveAnnualShipments, results };
+}
+
 describe.each(Object.entries(configs))("golden fixture: %s", (name, config) => {
   const { effective_annual_shipments_expected, ...project } = config.project;
-  const comparison = buildForwarderCostComparison(
-    project,
-    config.quotes.map((q) => q.input),
-  );
+  const comparison = runByGroup(project, config.quotes);
 
   test("effective annual shipments", () => {
     expect(comparison.effectiveAnnualShipments).toBe(
@@ -123,7 +143,6 @@ const project: ForwarderProjectTerms = {
 
 function quote(overrides: Partial<ForwarderQuoteInput>): ForwarderQuoteInput {
   return {
-    scenario_group: "Sea DDP",
     shipment_mode: "Sea",
     shipment_type: "FCL",
     incoterm: "DDP",
@@ -319,5 +338,44 @@ describe("deviation: symmetric tie labels", () => {
     ]);
     expect(results.map((r) => r.costRank)).toEqual([1, 1, 1]);
     expect(results.every((r) => r.rankPosition === "Lowest Freight Cost")).toBe(true);
+  });
+});
+
+describe("one ranking pool per project", () => {
+  test("every quote that passes the final-terms gate is ranked together", () => {
+    const { results } = buildForwarderCostComparison(project, [
+      quote({ original_amount: 7000, origin: "Ho Chi Minh City" } as never),
+      quote({ original_amount: 6500, origin: "Hanoi" } as never),
+      quote({ original_amount: 7500 }),
+    ]);
+    expect(results.map((r) => r.costRank)).toEqual([2, 1, 3]);
+    expect(results.map((r) => r.rankPosition)).toEqual([
+      null,
+      "Lowest Freight Cost",
+      "Highest Freight Cost",
+    ]);
+  });
+
+  test("a quote with different terms is not ranked and does not change anyone else's rank", () => {
+    const ddp = [quote({ original_amount: 7000 }), quote({ original_amount: 8000 })];
+    const ddu = quote({ incoterm: "DDU (legacy term)", original_amount: 3000 });
+    const without = buildForwarderCostComparison(project, ddp).results;
+    const withDdu = buildForwarderCostComparison(project, [...ddp, ddu]).results;
+    expect(withDdu.slice(0, 2).map((r) => [r.costRank, r.rankPosition, r.vsBaseline])).toEqual(
+      without.map((r) => [r.costRank, r.rankPosition, r.vsBaseline]),
+    );
+    expect(withDdu[2].costRank).toBe(NOT_COMPARABLE);
+    expect(withDdu[2].rankPosition).toBe(NOT_COMPARABLE);
+    expect(withDdu[2].vsBaseline).toBe(NOT_COMPARABLE);
+  });
+});
+
+describe("hasDifferentTerms", () => {
+  test("only when the final terms are set, the quote states all three, and they differ", () => {
+    expect(hasDifferentTerms(quote({ incoterm: "DDU (legacy term)" }), project)).toBe(true);
+    expect(hasDifferentTerms(quote({ shipment_type: "LCL" }), project)).toBe(true);
+    expect(hasDifferentTerms(quote({}), project)).toBe(false);
+    expect(hasDifferentTerms(quote({ incoterm: null }), project)).toBe(false);
+    expect(hasDifferentTerms(quote({ incoterm: "DDU (legacy term)" }), { ...project, final_incoterm: null })).toBe(false);
   });
 });

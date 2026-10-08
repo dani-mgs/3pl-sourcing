@@ -56,29 +56,30 @@ describe("toExtractedForwarderFields", () => {
 });
 
 describe("toExtractedQuoteFields", () => {
-  test.each(PLACEHOLDERS)("placeholder %j becomes null (or undefined for scenario group)", (filler) => {
-    const fields = toExtractedQuoteFields(
-      { origin: filler, quote_reference: filler, scenario_group: filler },
-      [],
-    );
+  test.each(PLACEHOLDERS)("placeholder %j becomes null", (filler) => {
+    const fields = toExtractedQuoteFields({ origin: filler, quote_reference: filler });
     expect(fields.origin).toBeNull();
     expect(fields.quote_reference).toBeNull();
-    expect(fields.scenario_group).toBeUndefined();
+  });
+
+  test("never produces a scenario group, even if the model returns one", () => {
+    const fields = toExtractedQuoteFields({ scenario_group: "DDP - FCL" } as never);
+    expect(fields).not.toHaveProperty("scenario_group");
   });
 
   test("a USD quote's stated rate is discarded; a non-USD rate is kept", () => {
     expect(
-      toExtractedQuoteFields({ original_currency: "USD", exchange_rate_to_usd: 0.9 }, [])
+      toExtractedQuoteFields({ original_currency: "USD", exchange_rate_to_usd: 0.9 })
         .exchange_rate_to_usd,
     ).toBeUndefined();
     expect(
-      toExtractedQuoteFields({ original_currency: "EUR", exchange_rate_to_usd: 1.08 }, [])
+      toExtractedQuoteFields({ original_currency: "EUR", exchange_rate_to_usd: 1.08 })
         .exchange_rate_to_usd,
     ).toBe(1.08);
   });
 
   test("a missing rate stays missing (never 1)", () => {
-    expect(toExtractedQuoteFields({ original_currency: "EUR" }, []).exchange_rate_to_usd).toBeUndefined();
+    expect(toExtractedQuoteFields({ original_currency: "EUR" }).exchange_rate_to_usd).toBeUndefined();
   });
 
   test("unknown currency, mode, or incoterm is dropped; bad dates are dropped", () => {
@@ -90,7 +91,6 @@ describe("toExtractedQuoteFields", () => {
         quote_date: "30/09/2026",
         rate_valid_until: "2026-10-31",
       },
-      [],
     );
     expect(fields.original_currency).toBeUndefined();
     expect(fields.shipment_mode).toBeNull();
@@ -102,7 +102,6 @@ describe("toExtractedQuoteFields", () => {
   test("never produces the user's own judgment fields", () => {
     const fields = toExtractedQuoteFields(
       { quote_completeness: "Complete", overall_assessment: "Strong", client_decision: "Go" } as never,
-      [],
     );
     expect(fields).not.toHaveProperty("quote_completeness");
     expect(fields).not.toHaveProperty("overall_assessment");

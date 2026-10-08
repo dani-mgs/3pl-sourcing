@@ -9,6 +9,8 @@ import { embeddedOne } from "@/lib/clients";
 import {
   NOT_COMPARABLE,
   RANKING_EXCLUDED_STATUSES,
+  hasDifferentTerms,
+  type ForwarderProjectTerms,
 } from "@/lib/forwarder/cost-comparison";
 import type {
   ForwarderAssessment,
@@ -24,9 +26,10 @@ import {
 } from "@/lib/forwarder/parse-forwarder-form";
 import { shortRouteLabel } from "@/lib/forwarder/project-display";
 import {
-  costBarScale,
+  displayTier,
   lowestFreightQuote,
   pickBestQuotes,
+  projectBarScale,
   quotePosition,
 } from "@/lib/forwarder/project-summary";
 import { requirementFit, type FitProject } from "@/lib/forwarder/requirement-fit";
@@ -122,19 +125,20 @@ export default async function ForwarderDetailPage({
     headline,
     ranked,
     unrankedReason: ranked ? null : unrankedReason(own, excluded, finalTermsSet),
-    rankedGroupCount: ownBest.rankedGroupCount,
     position: position && {
       rank: position.rank,
-      of: position.rankedInGroup,
+      of: position.rankedInProject,
       tiedWith: [...new Set(position.tiedWith.map((r) => r.quote.forwarder_name))],
     },
   };
 
+  const barScale = projectBarScale(results, baseline);
+  const anyRanked = results.some((r) => r.costRank !== NOT_COMPARABLE);
   const projectBestIds = new Set(pickBestQuotes(results).best.map((r) => r.quote.id));
   const rows: QuoteTableRow[] = [...own]
     .sort(
       (a, b) =>
-        a.quote.scenario_group.localeCompare(b.quote.scenario_group) ||
+        displayTier(a) - displayTier(b) ||
         rankOrder(a) - rankOrder(b) ||
         (a.freightCostUsd ?? Infinity) - (b.freightCostUsd ?? Infinity),
     )
@@ -144,17 +148,13 @@ export default async function ForwarderDetailPage({
       return {
         result,
         details: { ...text, updatedRelative: formatRelativeTime(updated_at) },
-        // Same scale as the Project Summary: the group's quotes across every
-        // forwarder, so bar lengths match between the two pages.
-        scale: costBarScale(
-          results
-            .filter((r) => r.quote.scenario_group === result.quote.scenario_group)
-            .map((r) => r.freightCostUsd),
-          baseline,
-        ),
+        // Same scale as the Project Summary (every forwarder's quotes in the
+        // project), so bar lengths match between the two pages.
+        scale: result.costRank === NOT_COMPARABLE && anyRanked ? null : barScale,
+        differentTerms: hasDifferentTerms(result.quote, project as unknown as ForwarderProjectTerms),
         position: rowPosition && {
           rank: rowPosition.rank,
-          of: rowPosition.rankedInGroup,
+          of: rowPosition.rankedInProject,
           tied: rowPosition.tiedWith.length > 0,
         },
         isProjectBest: projectBestIds.has(result.quote.id),

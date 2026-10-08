@@ -73,7 +73,7 @@ export default async function ForwarderProjectSummaryPage({
 
   const projectTerms = row as unknown as ForwarderProjectTerms;
   const summaryProject = row as unknown as SummaryProject;
-  const { best, rankedGroupCount } = pickBestQuotes(results);
+  const { best } = pickBestQuotes(results);
   const pipeline = pipelineCounts(forwarders, comparisonQuotes);
   // Server date (UTC on Vercel) for rate-expiry flags.
   const today = new Date().toISOString().slice(0, 10);
@@ -145,7 +145,6 @@ export default async function ForwarderProjectSummaryPage({
       <SummaryTiles
         project={summaryProject}
         best={best}
-        rankedGroupCount={rankedGroupCount}
         hasQuotes={comparisonQuotes.length > 0}
         effectiveAnnualShipments={effectiveAnnualShipments}
         pipeline={pipeline}
@@ -165,7 +164,7 @@ export default async function ForwarderProjectSummaryPage({
               baseline={projectTerms.current_freight_cost_usd}
               targetLeadTime={row.target_lead_time_days as number | null}
               today={today}
-              defaultGroup={best[0]?.quote.scenario_group ?? null}
+              finalTerms={projectTerms}
             />
           </SectionCard>
 

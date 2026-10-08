@@ -1,0 +1,32 @@
+{
+  "_note": "Modelled on the Pakkable project (Ho Chi Minh City to Guangzhou): current and final terms DDP/Sea/FCL; four DDP quotes that rank (two tie) and two DDU quotes that don't. The DDU quotes are deliberately the cheapest and the dearest, to prove they change neither the DDP numbers nor the bar scale. scenario_group is the legacy stored text.",
+  "project": {
+    "current_incoterm": "DDP",
+    "shipment_mode": "Sea",
+    "shipment_type": "FCL",
+    "current_freight_cost_usd": 10000,
+    "final_incoterm": "DDP",
+    "final_shipment_mode": "Sea",
+    "final_shipment_type": "FCL",
+    "shipments_per_month": 2,
+    "shipments_per_year": null
+  },
+  "quotes": [
+    { "id": "q1", "forwarder_id": "f1", "forwarder_name": "Alpha Freight", "scenario_group": "DDP - FCL", "incoterm": "DDP", "shipment_mode": "Sea", "shipment_type": "FCL", "original_amount": 9000 },
+    { "id": "q2", "forwarder_id": "f2", "forwarder_name": "Beta Logistics", "scenario_group": "DDP - FCL", "incoterm": "DDP", "shipment_mode": "Sea", "shipment_type": "FCL", "original_amount": 9400 },
+    { "id": "q3", "forwarder_id": "f3", "forwarder_name": "Gamma Cargo", "scenario_group": "DDP - FCL", "incoterm": "DDP", "shipment_mode": "Sea", "shipment_type": "FCL", "original_amount": 9400 },
+    { "id": "q4", "forwarder_id": "f4", "forwarder_name": "Delta Shipping", "scenario_group": "DDP - FCL", "incoterm": "DDP", "shipment_mode": "Sea", "shipment_type": "FCL", "original_amount": 11500 },
+    { "id": "q5", "forwarder_id": "f1", "forwarder_name": "Alpha Freight", "scenario_group": "DDU - FCL", "incoterm": "DDU (legacy term)", "shipment_mode": "Sea", "shipment_type": "FCL", "original_amount": 7000 },
+    { "id": "q6", "forwarder_id": "f2", "forwarder_name": "Beta Logistics", "scenario_group": "DDU - FCL", "incoterm": "DDU (legacy term)", "shipment_mode": "Sea", "shipment_type": "FCL", "original_amount": 12500 }
+  ],
+  "quoteDefaults": {
+    "actual_weight_kg": 8000,
+    "chargeable_weight_kg": null,
+    "cost_of_goods_usd": 60000,
+    "original_currency": "USD",
+    "exchange_rate_to_usd": 1,
+    "duties_taxes_usd": null,
+    "other_charges_usd": null,
+    "quote_completeness": "Complete / Comparable"
+  }
+}

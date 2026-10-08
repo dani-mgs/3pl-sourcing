@@ -45,7 +45,6 @@ const SCALAR_FIELDS = [
 // "current values" prompt context.
 export const EXTRACTABLE_FIELD_KEYS: (keyof ExtractedQuoteFields)[] = [
   ...SCALAR_FIELDS,
-  "scenario_group",
   "shipment_mode",
   "shipment_type",
 ];
@@ -71,7 +70,6 @@ export function mergeQuoteFields(
   for (const key of SCALAR_FIELDS) {
     mergeScalarField(current, extracted, key, merged, changed);
   }
-  mergeScalarField(current, extracted, "scenario_group", merged, changed);
   mergeScalarField(current, extracted, "shipment_mode", merged, changed);
   mergeScalarField(current, extracted, "shipment_type", merged, changed);
 

@@ -5,6 +5,7 @@ import type {
   ComparisonResult,
 } from "@/lib/forwarder/load-project-comparison";
 import { rateLockedNote } from "@/lib/fx/rate-provenance";
+import { quoteLabel, quoteRoute } from "@/lib/forwarder/quote-label";
 import {
   exceedsTargetLeadTime,
   leadTimeRange,
@@ -20,10 +21,30 @@ export type { ComparisonQuote, ComparisonResult };
 // light for text, so it's used only for the small indicator dot.
 export const ATTENTION_TEXT = "text-[#B15400]";
 
-export function rankLabel(quote: ComparisonQuote, result: ComparisonResult): string {
-  if (result.rankPosition === NOT_COMPARABLE) return "Not Comparable";
+// differentTerms: the quote's terms differ from the project's final terms
+// (hasDifferentTerms), which is the usual reason a quote isn't ranked.
+export function rankLabel(
+  quote: ComparisonQuote,
+  result: ComparisonResult,
+  differentTerms = false,
+): string {
+  if (result.rankPosition === NOT_COMPARABLE) {
+    return differentTerms ? "Different terms" : "Not Comparable";
+  }
   if (isExcludedFromRanking(quote)) return "Excluded from ranking";
   return result.rankPosition ?? "—";
+}
+
+// A quote's terms ("DDP · Sea · FCL") and lane ("Origin → Destination"), so a
+// quote for a different route or with different terms stands out.
+export function QuoteIdentity({ quote }: { quote: ComparisonQuote }) {
+  const route = quoteRoute(quote);
+  return (
+    <>
+      <span className="block text-xs text-move-navy">{quoteLabel(quote)}</span>
+      {route && <span className="block text-xs text-neutral-muted">{route}</span>}
+    </>
+  );
 }
 
 export function VsBaselineCell({ result }: { result: ComparisonResult }) {

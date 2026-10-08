@@ -1,5 +1,6 @@
 import { formatCurrency } from "@/lib/currency";
 import { NOT_COMPARABLE } from "@/lib/forwarder/cost-comparison";
+import { quoteLabel, quoteRoute, quoteTitle } from "@/lib/forwarder/quote-label";
 import { rateValidity } from "@/lib/forwarder/project-summary";
 import type { RequirementFit } from "@/lib/forwarder/requirement-fit";
 import {
@@ -18,8 +19,6 @@ export type ForwarderSummary = {
   ranked: boolean;
   // Why nothing is ranked; null when the headline is ranked.
   unrankedReason: string | null;
-  // Scenario groups where this forwarder has a ranked quote.
-  rankedGroupCount: number;
   position: { rank: number; of: number; tiedWith: string[] } | null;
 };
 
@@ -71,9 +70,6 @@ export function ForwarderSummaryTiles({
   // A middle rank has no label ("—"); the "#k of N" headline says it all.
   const positionLabel = headline ? rankLabel(headline.quote, headline) : "—";
   const quote = headline?.quote ?? null;
-  const terms = quote
-    ? [quote.incoterm, quote.shipment_mode, quote.shipment_type].filter(Boolean).join(" · ")
-    : "";
   const confirmedCount = fit.requirements.filter((r) => r.confirmed).length;
   const unconfirmed = fit.requirements.filter((r) => !r.confirmed);
 
@@ -84,24 +80,17 @@ export function ForwarderSummaryTiles({
           <>
             <Value>{formatCurrency(headline.freightCostUsd, "USD")}</Value>
             <RateLockedNote quote={headline.quote} className="truncate text-xs text-neutral-muted" />
-            <Detail title={headline.quote.scenario_group}>
-              {headline.quote.scenario_group}
-              {summary.rankedGroupCount > 1 && (
-                <span className="ml-1.5 rounded-full bg-neutral-bg px-1.5 py-0.5 text-[11px]">
-                  1 of {summary.rankedGroupCount} scenarios
-                </span>
-              )}
-            </Detail>
-            {terms && <Detail>{terms}</Detail>}
+            <Detail title={quoteTitle(headline.quote)}>{quoteLabel(headline.quote)}</Detail>
+            {quoteRoute(headline.quote) && <Detail>{quoteRoute(headline.quote)}</Detail>}
           </>
         ) : (
           <>
             <Empty>{unrankedReason}</Empty>
             {headline?.freightCostUsd != null && (
               <>
-                <p className="line-clamp-2 text-xs text-neutral-muted" title={headline.quote.scenario_group}>
+                <p className="line-clamp-2 text-xs text-neutral-muted" title={quoteTitle(headline.quote)}>
                   Lowest quote {formatCurrency(headline.freightCostUsd, "USD")} (unranked) ·{" "}
-                  {headline.quote.scenario_group}
+                  {quoteTitle(headline.quote)}
                 </p>
                 <RateLockedNote quote={headline.quote} className="truncate text-xs text-neutral-muted" />
               </>

@@ -80,7 +80,7 @@ describe.each(Object.entries(configs))("rankings and savings ignore duty estimat
           updated_at: "",
           forwarder_id: q.forwarder_id,
           forwarder_name: "F",
-          scenario_group: q.scenario_group,
+          label: "DDP · Sea · FCL",
           shipment_mode: q.shipment_mode,
           cost_of_goods_usd: q.cost_of_goods_usd,
           duties_taxes_usd: q.duties_taxes_usd,

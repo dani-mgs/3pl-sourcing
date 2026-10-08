@@ -4,7 +4,6 @@ import { describeMergeRules } from "@/lib/test-support/merge-checks";
 import type { QuoteFormDefaults } from "@/app/(authenticated)/forwarder-sourcing/[id]/forwarders/[forwarderId]/quotes/quote-form";
 
 const current: QuoteFormDefaults = {
-  scenario_group: "Lane A",
   shipment_mode: "Sea",
   shipment_type: "FCL",
   origin: "Shenzhen",
@@ -46,7 +45,6 @@ describeMergeRules("mergeQuoteFields", mergeQuoteFields, current, {
     "exchange_rate_date",
   ],
   textKeys: [
-    "scenario_group",
     "origin",
     "destination",
     "other_charges_description",

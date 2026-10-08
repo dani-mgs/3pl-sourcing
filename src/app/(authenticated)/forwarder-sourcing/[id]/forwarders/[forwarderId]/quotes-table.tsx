@@ -14,13 +14,18 @@ import {
   rankLabel,
   type ComparisonResult,
 } from "../../quote-cells";
+import { quoteLabel, quoteRoute, quoteTitle } from "@/lib/forwarder/quote-label";
+import { NOT_COMPARABLE } from "@/lib/forwarder/cost-comparison";
 import { QuoteRowMenu } from "./quote-row-menu";
 
 export type QuoteTableRow = {
   result: ComparisonResult;
   details: Omit<QuoteDetails, "updated_at"> & { updatedRelative: string };
-  // Bar scale for the quote's scenario group, across every forwarder.
+  // Bar scale across every forwarder's quotes in the project; null when the
+  // quote isn't ranked but others are (no bar beside ranked ones).
   scale: number | null;
+  // Terms differ from the project's final terms, so the quote isn't ranked.
+  differentTerms: boolean;
   position: { rank: number; of: number; tied: boolean } | null;
   // The project's best quote overall (same highlight as Project Summary).
   isProjectBest: boolean;
@@ -42,7 +47,7 @@ const DETAIL_FIELDS: { key: keyof Omit<QuoteTableRow["details"], "updatedRelativ
 ];
 
 function RankCell({ row }: { row: QuoteTableRow }) {
-  const label = rankLabel(row.result.quote, row.result);
+  const label = rankLabel(row.result.quote, row.result, row.differentTerms);
   const { position } = row;
   const place = position && `#${position.rank} of ${position.of}${position.tied ? " · tied" : ""}`;
   // A middle rank has no label ("—"), so the position is the headline.
@@ -114,7 +119,7 @@ export function QuotesTable({
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-neutral-border">
-              <th className={headClass}>Scenario · Terms</th>
+              <th className={headClass}>Quote</th>
               <th className={headClass}>Freight Cost · /kg</th>
               <th className={headClass}>Lead · Valid</th>
               <th className={headClass}>Rank</th>
@@ -131,10 +136,10 @@ export function QuotesTable({
             {rows.map((row, index) => {
               const { result, details } = row;
               const { quote } = result;
-              const terms = [quote.incoterm, quote.shipment_mode, quote.shipment_type]
-                .filter(Boolean)
-                .join(" / ");
+              const route = quoteRoute(quote);
+              const unranked = result.costRank === NOT_COMPARABLE;
               const filled = DETAIL_FIELDS.filter((f) => details[f.key]);
+              const hasDetails = filled.length > 0 || quote.legacy_scenario != null;
               const isOpen = expanded.has(quote.id);
               const detailId = `quote-details-${quote.id}`;
               // Hidden detail rows still count for :last-child, so borders
@@ -147,19 +152,21 @@ export function QuotesTable({
                       (isLast && !isOpen ? "" : "border-b border-neutral-border ") +
                       (row.isProjectBest
                         ? "bg-move-green/5 hover:bg-move-green/10"
-                        : "hover:bg-neutral-bg")
+                        : unranked
+                          ? "bg-neutral-bg/70 text-neutral-muted hover:bg-neutral-bg"
+                          : "hover:bg-neutral-bg")
                     }
                   >
                     <td
                       className={`${cellClass} min-w-40 ${row.isProjectBest ? "shadow-[inset_3px_0_0_var(--color-move-green)]" : ""}`}
                     >
                       <div className="flex items-start gap-1.5">
-                        {filled.length > 0 ? (
+                        {hasDetails ? (
                           <button
                             type="button"
                             aria-expanded={isOpen}
                             aria-controls={detailId}
-                            aria-label={`${isOpen ? "Hide" : "Show"} details for ${quote.scenario_group}`}
+                            aria-label={`${isOpen ? "Hide" : "Show"} details for ${quoteTitle(quote)}`}
                             onClick={() => toggle(quote.id)}
                             className="-ml-1 flex size-6 shrink-0 items-center justify-center rounded-md text-neutral-muted outline-none hover:bg-neutral-bg hover:text-move-navy focus-visible:ring-2 focus-visible:ring-move-green"
                           >
@@ -172,10 +179,10 @@ export function QuotesTable({
                         )}
                         <div className="min-w-0 pt-0.5">
                           <span className="font-medium break-words text-move-navy">
-                            {quote.scenario_group}
+                            {quoteLabel(quote)}
                           </span>
                           {row.isProjectBest && <span className="sr-only"> (best quote in project)</span>}
-                          <span className="block text-xs text-neutral-muted">{terms || "—"}</span>
+                          {route && <span className="block text-xs text-neutral-muted">{route}</span>}
                         </div>
                       </div>
                     </td>
@@ -208,19 +215,24 @@ export function QuotesTable({
                           projectId={projectId}
                           forwarderId={forwarderId}
                           quoteId={quote.id}
-                          scenarioGroup={quote.scenario_group}
+                          quoteName={quoteTitle(quote)}
                           dutyEstimateCount={row.dutyEstimateCount}
                         />
                       </td>
                     )}
                   </tr>
-                  {filled.length > 0 && (
+                  {hasDetails && (
                     <tr
                       id={detailId}
                       hidden={!isOpen}
                       className={`bg-neutral-bg/60 ${isLast ? "" : "border-b border-neutral-border"}`}
                     >
                       <td colSpan={columnCount} className="px-4 py-3 pl-11">
+                        {quote.legacy_scenario && (
+                          <p className="mb-3 text-xs break-words text-neutral-muted">
+                            Legacy scenario: {quote.legacy_scenario}
+                          </p>
+                        )}
                         <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 2xl:grid-cols-3">
                           {filled.map((f) => (
                             <div key={f.key} className="min-w-0">
@@ -244,7 +256,7 @@ export function QuotesTable({
       {baseline != null && rows.some((r) => r.scale != null) && (
         <p className="flex items-center gap-2 text-xs text-neutral-muted">
           <span className="inline-block h-3 w-px bg-move-navy" aria-hidden="true" />
-          Baseline {formatCurrency(baseline, "USD")} (current freight cost). Bars are scaled across every forwarder&apos;s quotes in the scenario.
+          Baseline {formatCurrency(baseline, "USD")} (current freight cost). Bars are scaled across every forwarder&apos;s quotes in the project.
         </p>
       )}
     </div>

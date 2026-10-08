@@ -1,6 +1,7 @@
 import type { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { embeddedOne } from "@/lib/clients";
+import { quoteTitle } from "@/lib/forwarder/quote-label";
 import { defaultEntryDate } from "./entry-date";
 import {
   LINK_PROJECT_COLUMNS,
@@ -37,15 +38,18 @@ export type LinkSources = {
 };
 
 const QUOTE_COLUMNS =
-  "id, updated_at, forwarder_id, scenario_group, shipment_mode, cost_of_goods_usd, duties_taxes_usd, " +
+  "id, updated_at, forwarder_id, incoterm, shipment_mode, shipment_type, origin, destination, cost_of_goods_usd, duties_taxes_usd, " +
   "lead_time_min_days, lead_time_max_days, forwarders!inner(company_name, forwarder_project_id)";
 
 type QuoteRow = {
   id: string;
   updated_at: string;
   forwarder_id: string;
-  scenario_group: string;
+  incoterm: string | null;
   shipment_mode: string | null;
+  shipment_type: string | null;
+  origin: string | null;
+  destination: string | null;
   cost_of_goods_usd: number | string | null;
   duties_taxes_usd: number | string | null;
   lead_time_min_days: number | string | null;
@@ -62,7 +66,7 @@ export function quoteFromRow(row: QuoteRow): LinkQuote {
     updated_at: row.updated_at,
     forwarder_id: row.forwarder_id,
     forwarder_name: forwarder?.company_name ?? "",
-    scenario_group: row.scenario_group,
+    label: quoteTitle(row),
     shipment_mode: row.shipment_mode,
     cost_of_goods_usd: toNumber(row.cost_of_goods_usd),
     duties_taxes_usd: toNumber(row.duties_taxes_usd),
@@ -270,7 +274,7 @@ export async function loadLinkContext(
       projectId,
       quoteId,
       sourceVersion: sourceVersion(sources),
-      title: [sources.clientName, quote?.forwarder_name, quote?.scenario_group].filter(Boolean).join(" · "),
+      title: [sources.clientName, quote?.forwarder_name, quote?.label].filter(Boolean).join(" · "),
       backHref: quote
         ? `/forwarder-sourcing/${projectId}/forwarders/${quote.forwarder_id}`
         : `/forwarder-sourcing/${projectId}`,

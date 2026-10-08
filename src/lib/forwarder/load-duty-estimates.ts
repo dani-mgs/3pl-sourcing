@@ -6,6 +6,7 @@ import {
   type LinkedEstimateSummary,
 } from "@/lib/tariff/linked-estimates";
 import type { ProjectComparison } from "./load-project-comparison";
+import { quoteTitle } from "./quote-label";
 
 // Duty estimates linked to a forwarder project, for its project and
 // forwarder pages. Read separately from the comparison and never passed into
@@ -50,7 +51,7 @@ export async function loadProjectDutyEstimates(
         updated_at: "",
         forwarder_id: q.forwarder_id,
         forwarder_name: q.forwarder_name,
-        scenario_group: q.scenario_group,
+        label: quoteTitle(q),
         shipment_mode: q.shipment_mode,
         cost_of_goods_usd: q.cost_of_goods_usd,
         duties_taxes_usd: q.duties_taxes_usd,
@@ -73,11 +74,11 @@ export async function loadProjectDutyEstimates(
       const quote = summary.quoteId ? quotes.get(summary.quoteId) : null;
       return {
         summary,
-        title: quote ? `${quote.forwarder_name} · ${quote.scenario_group}` : "Project",
+        title: quote ? `${quote.forwarder_name} · ${quote.label}` : "Project",
         forwarderId: quote?.forwarder_id ?? null,
       };
     })
-    // Project estimate first, then by forwarder and scenario.
+    // Project estimate first, then by forwarder and quote.
     .sort((a, b) => (a.forwarderId == null ? -1 : b.forwarderId == null ? 1 : a.title.localeCompare(b.title)));
 
   return { estimates, total: rows.length, countByQuote };

@@ -36,6 +36,8 @@ const EXPERT_ONLY = {
   overallAssessment: "ZZLEAKOverallAssessment",
   clientDecision: "ZZLEAKClientDecision",
   quoteNotes: "ZZLEAKQuoteNotes",
+  // Old quotes only; the client version no longer has a Scenario Group column.
+  legacyScenarioGroup: "ZZLEAKLegacyScenarioGroup",
 };
 
 // An excluded (Unfit) forwarder: none of it may reach the client version,
@@ -53,7 +55,6 @@ const CLIENT_SAFE = {
   cargo: "ZZOKCargoDescription",
   forwarderName: "ZZOKForwarderName",
   headquarters: "ZZOKHeadquarters",
-  scenarioGroup: "ZZOKScenario",
 };
 
 const capabilities = {
@@ -117,7 +118,7 @@ function quoteResult(quote: Partial<QuoteExportFields>): ForwarderQuoteResult<Qu
       forwarder_id: "f",
       forwarder_name: CLIENT_SAFE.forwarderName,
       forwarder_status: "Vetted",
-      scenario_group: CLIENT_SAFE.scenarioGroup,
+      scenario_group: EXPERT_ONLY.legacyScenarioGroup,
       shipment_mode: "Sea",
       shipment_type: "FCL",
       origin: null,

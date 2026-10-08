@@ -1,0 +1,130 @@
+{
+  "bestQuoteIds": [
+    "q1"
+  ],
+  "rankedGroupCount": 1,
+  "quotes": [
+    {
+      "id": "q1",
+      "freightCostUsd": 9000,
+      "costPerKg": 1.125,
+      "freightCostRatio": 0.15,
+      "totalComparableLogisticsCost": 9000,
+      "estimatedAnnualFreightCost": 216000,
+      "costDifference": 1000,
+      "savingPct": 0.1,
+      "annualCostDifference": 24000,
+      "annualSavingsPct": 0.1,
+      "vsBaseline": "Below Baseline",
+      "costRank": 1,
+      "rankPosition": "Lowest Freight Cost",
+      "position": {
+        "rank": 1,
+        "rankedInGroup": 4,
+        "tiedWith": []
+      },
+      "barScale": 11500
+    },
+    {
+      "id": "q2",
+      "freightCostUsd": 9400,
+      "costPerKg": 1.175,
+      "freightCostRatio": 0.15666666666666668,
+      "totalComparableLogisticsCost": 9400,
+      "estimatedAnnualFreightCost": 225600,
+      "costDifference": 600,
+      "savingPct": 0.06,
+      "annualCostDifference": 14400,
+      "annualSavingsPct": 0.06,
+      "vsBaseline": "Below Baseline",
+      "costRank": 2,
+      "rankPosition": null,
+      "position": {
+        "rank": 2,
+        "rankedInGroup": 4,
+        "tiedWith": [
+          "q3"
+        ]
+      },
+      "barScale": 11500
+    },
+    {
+      "id": "q3",
+      "freightCostUsd": 9400,
+      "costPerKg": 1.175,
+      "freightCostRatio": 0.15666666666666668,
+      "totalComparableLogisticsCost": 9400,
+      "estimatedAnnualFreightCost": 225600,
+      "costDifference": 600,
+      "savingPct": 0.06,
+      "annualCostDifference": 14400,
+      "annualSavingsPct": 0.06,
+      "vsBaseline": "Below Baseline",
+      "costRank": 2,
+      "rankPosition": null,
+      "position": {
+        "rank": 2,
+        "rankedInGroup": 4,
+        "tiedWith": [
+          "q2"
+        ]
+      },
+      "barScale": 11500
+    },
+    {
+      "id": "q4",
+      "freightCostUsd": 11500,
+      "costPerKg": 1.4375,
+      "freightCostRatio": 0.19166666666666668,
+      "totalComparableLogisticsCost": 11500,
+      "estimatedAnnualFreightCost": 276000,
+      "costDifference": -1500,
+      "savingPct": -0.15,
+      "annualCostDifference": -36000,
+      "annualSavingsPct": -0.15,
+      "vsBaseline": "Above Baseline",
+      "costRank": 4,
+      "rankPosition": "Highest Freight Cost",
+      "position": {
+        "rank": 4,
+        "rankedInGroup": 4,
+        "tiedWith": []
+      },
+      "barScale": 11500
+    },
+    {
+      "id": "q5",
+      "freightCostUsd": 7000,
+      "costPerKg": 0.875,
+      "freightCostRatio": 0.11666666666666667,
+      "totalComparableLogisticsCost": 7000,
+      "estimatedAnnualFreightCost": 168000,
+      "costDifference": "Not Comparable",
+      "savingPct": "Not Comparable",
+      "annualCostDifference": "Not Comparable",
+      "annualSavingsPct": "Not Comparable",
+      "vsBaseline": "Not Comparable",
+      "costRank": "Not Comparable",
+      "rankPosition": "Not Comparable",
+      "position": null,
+      "barScale": 12500
+    },
+    {
+      "id": "q6",
+      "freightCostUsd": 12500,
+      "costPerKg": 1.5625,
+      "freightCostRatio": 0.20833333333333334,
+      "totalComparableLogisticsCost": 12500,
+      "estimatedAnnualFreightCost": 300000,
+      "costDifference": "Not Comparable",
+      "savingPct": "Not Comparable",
+      "annualCostDifference": "Not Comparable",
+      "annualSavingsPct": "Not Comparable",
+      "vsBaseline": "Not Comparable",
+      "costRank": "Not Comparable",
+      "rankPosition": "Not Comparable",
+      "position": null,
+      "barScale": 12500
+    }
+  ]
+}

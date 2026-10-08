@@ -117,12 +117,12 @@ export function ForwarderSection() {
           capabilities, status, and assessment.
         </li>
         <li>
-          Open a forwarder → <Ui>Add Quote</Ui>. Give every quote a scenario group, its
+          Open a forwarder → <Ui>Add Quote</Ui>. Give every quote its
           incoterm, mode and type, weights, currency, amount, and exchange rate.
         </li>
         <li>
-          Compare on the project page: summary tiles, then <Ui>Quote Comparison</Ui> with one
-          tab per scenario group. Each forwarder&apos;s own page shows its position and
+          Compare on the project page: summary tiles, then <Ui>Quote Comparison</Ui>: one table
+          of every quote, ranked ones first and quotes with different terms greyed out below. Each forwarder&apos;s own page shows its position and
           requirement fit.
         </li>
         <li>

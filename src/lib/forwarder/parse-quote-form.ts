@@ -26,9 +26,6 @@ function blankToNull(value: unknown): unknown {
 const text = (max = 2000) =>
   z.preprocess(blankToNull, z.string().max(max).nullable());
 
-const requiredText = (max = 500) =>
-  z.preprocess(blankToNull, z.string().max(max)).pipe(z.string().min(1));
-
 // Native <input type="date"> posts "" or "YYYY-MM-DD". Anything else, or a
 // date that doesn't exist (2026-02-30), is refused here with a friendly
 // message rather than left for the database to reject.
@@ -67,7 +64,6 @@ const decimal = (below: number) =>
   );
 
 const quoteSchema = z.object({
-  scenario_group: requiredText(300),
   shipment_mode: option(SHIPMENT_MODES),
   shipment_type: option(SHIPMENT_TYPES),
   origin: text(200),
@@ -152,9 +148,6 @@ export function parseQuoteForm(formData: FormData): ParseQuoteResult {
   if (!parsed.success) {
     // Field-level schema detail stays server-side (docs/SECURITY.md).
     console.error("parseQuoteForm validation failed:", parsed.error.issues);
-    if (parsed.error.issues.some((issue) => issue.path[0] === "scenario_group")) {
-      return { ok: false, error: "Scenario group is required." };
-    }
     const badDate = parsed.error.issues.find((issue) => String(issue.path[0]) in DATE_FIELD_LABELS);
     if (badDate) {
       return {

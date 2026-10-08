@@ -13,14 +13,12 @@ type Mode = "choice" | "upload" | "form";
 export function NewQuoteEntry({
   projectId,
   forwarderId,
-  existingScenarioGroups,
   cancelHref,
   latestRates,
   today,
 }: {
   projectId: string;
   forwarderId: string;
-  existingScenarioGroups: string[];
   cancelHref: string;
   latestRates: LatestRates;
   today: string;
@@ -38,7 +36,7 @@ export function NewQuoteEntry({
   function handleUpload(formData: FormData) {
     setUploadError(null);
     startTransition(async () => {
-      const result = await extractQuoteDetails(formData, existingScenarioGroups);
+      const result = await extractQuoteDetails(formData);
       if ("error" in result) {
         setUploadError(result.error);
         return;
@@ -65,7 +63,6 @@ export function NewQuoteEntry({
           forwarderId={forwarderId}
           quoteId={null}
           defaultValues={prefilled}
-          existingScenarioGroups={existingScenarioGroups}
           cancelHref={cancelHref}
           latestRates={latestRates}
           today={today}

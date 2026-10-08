@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { embeddedOne } from "@/lib/clients";
+import { quoteTitle } from "@/lib/forwarder/quote-label";
 import { formatCurrency } from "@/lib/currency";
 import { buildCsv, buildMultiSectionCsv, toCsvRow } from "./export-csv";
 import { FORWARDER_PROJECT_FIELDS_SELECT } from "./parse-project-form";
@@ -135,6 +136,9 @@ export function forwarderColumns(): Column<ForwarderFields>[] {
 // ---- Quote Comparison -------------------------------------------------------
 
 export type QuoteExportFields = QuoteFields & {
+  // Stored text of old quotes (the column is no longer filled in); only the
+  // expert CSV shows it, as "Legacy Scenario Group".
+  scenario_group?: string | null;
   id: string;
   forwarder_id: string;
   forwarder_name: string;
@@ -194,7 +198,6 @@ export function reportNotes(results: ForwarderQuoteResult<QuoteExportFields>[]):
 
 export function quoteColumns(): Column<ForwarderQuoteResult<QuoteExportFields>>[] {
   return [
-    { header: "Scenario Group", tier: "client", value: (r) => r.quote.scenario_group },
     { header: "Forwarder Name", tier: "client", value: (r) => r.quote.forwarder_name },
     {
       header: "Incoterm / Mode / Type",
@@ -231,6 +234,8 @@ export function quoteColumns(): Column<ForwarderQuoteResult<QuoteExportFields>>[
     { header: "Overall Assessment", tier: "expert", value: (r) => r.quote.overall_assessment },
     { header: "Client Decision", tier: "expert", value: (r) => r.quote.client_decision },
     { header: "Notes", tier: "expert", value: (r) => r.quote.notes },
+    // Last, so it never becomes a PDF/DOCX record's heading.
+    { header: "Legacy Scenario Group", tier: "expert", value: (r) => r.quote.scenario_group?.trim() || null },
   ];
 }
 
@@ -356,7 +361,7 @@ export async function fetchForwarderReportData(
         .order("company_name", { ascending: true }),
       supabase
         .from("forwarder_quotes")
-        .select(`id, forwarder_id, ${QUOTE_FIELDS_SELECT}, forwarders!inner(company_name, status, forwarder_project_id)`)
+        .select(`id, forwarder_id, scenario_group, ${QUOTE_FIELDS_SELECT}, forwarders!inner(company_name, status, forwarder_project_id)`)
         .eq("forwarders.forwarder_project_id", projectId),
       supabase.from("duty_estimates").select(LINKED_ESTIMATE_COLUMNS).eq("forwarder_project_id", projectId),
     ]);
@@ -384,6 +389,7 @@ export async function fetchForwarderReportData(
   type QuoteQueryRow = QuoteFields & {
     id: string;
     forwarder_id: string;
+    scenario_group: string | null;
     forwarders:
       | { company_name: string; status: string }
       | { company_name: string; status: string }[]
@@ -412,7 +418,7 @@ export async function fetchForwarderReportData(
         updated_at: "",
         forwarder_id: q.forwarder_id,
         forwarder_name: q.forwarder_name,
-        scenario_group: q.scenario_group,
+        label: quoteTitle(q),
         shipment_mode: q.shipment_mode,
         cost_of_goods_usd: q.cost_of_goods_usd,
         duties_taxes_usd: q.duties_taxes_usd,

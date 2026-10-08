@@ -47,12 +47,19 @@ export const FORWARDER_AND_GENERAL_FAQ: FaqItem[] = [
   {
     id: "quotes-dont-compare",
     module: "Forwarder Sourcing",
-    question: "Why don't two of my quotes compare with each other?",
+    question: "Why isn't one of my quotes ranked with the others?",
     answer: (
       <>
         <p>
-          They&apos;re in different scenario groups. The names must match exactly, including
-          capitals; choose an existing name from the suggestions when you type it.
+          Quotes are ranked together when they match the project&apos;s final incoterm, mode,
+          and type. A quote with different terms is still shown, greyed out below the ranked
+          ones, with the rank &ldquo;Different terms&rdquo;; change the quote or the project&apos;s
+          final terms if that isn&apos;t intended. A quote missing a term, or marked
+          &ldquo;Incomplete / Needs Clarification&rdquo;, says &ldquo;Not Comparable&rdquo;.
+        </p>
+        <p>
+          Old quotes keep their previous scenario group text (under &ldquo;Legacy scenario&rdquo; in
+          the quote&apos;s details), but it no longer decides what is compared.
         </p>
       </>
     ),

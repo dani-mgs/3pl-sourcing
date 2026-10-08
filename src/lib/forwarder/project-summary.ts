@@ -3,6 +3,7 @@
 // cost-comparison.ts already produces — no ranking or savings logic here.
 
 import {
+  NOT_COMPARABLE,
   RANKING_EXCLUDED_STATUSES,
   roundToCents,
   type ForwarderQuoteInput,
@@ -12,26 +13,21 @@ import {
 export type BestQuotes<Q extends ForwarderQuoteInput> = {
   // Every quote tied for the lowest eligible freight cost; empty when none.
   best: ForwarderQuoteResult<Q>[];
-  // How many scenario groups have at least one ranked quote.
-  rankedGroupCount: number;
 };
 
 // Eligible = has a numeric cost rank, i.e. passed the ranking gate (final
-// terms), isn't from an excluded forwarder, and has a freight cost. When
-// several scenario groups have ranked quotes, the lowest cost across all of
-// them wins.
+// terms), isn't from an excluded forwarder, and has a freight cost.
 export function pickBestQuotes<Q extends ForwarderQuoteInput>(
   results: ForwarderQuoteResult<Q>[],
 ): BestQuotes<Q> {
   const eligible = results.filter(
     (r) => typeof r.costRank === "number" && r.freightCostUsd != null,
   );
-  const rankedGroupCount = new Set(eligible.map((r) => r.quote.scenario_group)).size;
-  if (eligible.length === 0) return { best: [], rankedGroupCount };
+  if (eligible.length === 0) return { best: [] };
 
   const lowest = Math.min(...eligible.map((r) => roundToCents(r.freightCostUsd!)));
   const best = eligible.filter((r) => roundToCents(r.freightCostUsd!) === lowest);
-  return { best, rankedGroupCount };
+  return { best };
 }
 
 // Freight as a share of the project's invoice value. Only in USD: the project
@@ -92,14 +88,53 @@ export function rateValidity(validUntil: string | null, today: string): RateVali
   return { kind: "ok" };
 }
 
-// Upper bound for a scenario group's cost bars: its most expensive quote or
-// the baseline, whichever is larger, so the baseline marker always fits.
+// Upper bound for the cost bars: the most expensive quote or the baseline,
+// whichever is larger, so the baseline marker always fits.
 export function costBarScale(
   freights: (number | null)[],
   baseline: number | null,
 ): number | null {
   const values = [...freights, baseline].filter((v): v is number => v != null && v > 0);
   return values.length ? Math.max(...values) : null;
+}
+
+// The bar scale for a whole project's quotes. It covers the quotes that were
+// eligible for the ranking gate (so quotes with other terms don't stretch it,
+// and the ranked quotes' bars read the same as they always have); when no quote
+// is eligible, every quote with a price is used so bars still show.
+export function projectBarScale<Q extends ForwarderQuoteInput>(
+  results: ForwarderQuoteResult<Q>[],
+  baseline: number | null,
+): number | null {
+  const gated = results.filter((r) => r.costRank !== NOT_COMPARABLE);
+  const pool = gated.length > 0 ? gated : results;
+  return costBarScale(
+    pool.map((r) => r.freightCostUsd),
+    baseline,
+  );
+}
+
+// Display order for the quotes table: ranked quotes by rank, then quotes that
+// passed the terms gate but have no rank (excluded forwarder, no price), then
+// quotes that were never ranked because their terms differ or are incomplete.
+// Unranked quotes go cheapest first (unpriced last); equal keys keep their
+// input order.
+export function displayTier<Q extends ForwarderQuoteInput>(r: ForwarderQuoteResult<Q>): number {
+  if (typeof r.costRank === "number") return 0;
+  return r.costRank === NOT_COMPARABLE ? 2 : 1;
+}
+
+export function sortForDisplay<Q extends ForwarderQuoteInput>(
+  results: ForwarderQuoteResult<Q>[],
+): ForwarderQuoteResult<Q>[] {
+  return [...results].sort((a, b) => {
+    const tier = displayTier(a) - displayTier(b);
+    if (tier !== 0) return tier;
+    if (typeof a.costRank === "number" && typeof b.costRank === "number") {
+      return a.costRank - b.costRank;
+    }
+    return (a.freightCostUsd ?? Infinity) - (b.freightCostUsd ?? Infinity);
+  });
 }
 
 export type PipelineCounts = { total: number; quoted: number; excluded: number };
@@ -118,29 +153,25 @@ export function pipelineCounts(
 
 export type QuotePosition<Q extends ForwarderQuoteInput> = {
   rank: number;
-  // Ranked quotes in the same scenario group, across every forwarder.
-  rankedInGroup: number;
-  // Other quotes in the group on the same rank.
+  // Ranked quotes in the project, across every forwarder.
+  rankedInProject: number;
+  // Other quotes in the project on the same rank.
   tiedWith: ForwarderQuoteResult<Q>[];
 };
 
-// Where one quote stands in its scenario group. `all` must be the whole
-// project's results so the count covers every forwarder. Null when the quote
-// isn't ranked.
+// Where one quote stands among the project's ranked quotes. `all` must be the
+// whole project's results so the count covers every forwarder. Null when the
+// quote isn't ranked.
 export function quotePosition<Q extends ForwarderQuoteInput>(
   all: ForwarderQuoteResult<Q>[],
   target: ForwarderQuoteResult<Q>,
 ): QuotePosition<Q> | null {
   if (typeof target.costRank !== "number") return null;
-  const group = all.filter(
-    (r) =>
-      r.quote.scenario_group === target.quote.scenario_group &&
-      typeof r.costRank === "number",
-  );
+  const ranked = all.filter((r) => typeof r.costRank === "number");
   return {
     rank: target.costRank,
-    rankedInGroup: group.length,
-    tiedWith: group.filter((r) => r !== target && r.costRank === target.costRank),
+    rankedInProject: ranked.length,
+    tiedWith: ranked.filter((r) => r !== target && r.costRank === target.costRank),
   };
 }
 

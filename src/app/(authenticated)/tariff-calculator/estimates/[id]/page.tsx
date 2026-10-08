@@ -42,7 +42,7 @@ export default async function SavedEstimatePage({ params }: { params: Promise<{ 
       if (sources) {
         const { quote } = sources;
         linked = {
-          title: [sources.clientName, quote?.forwarder_name, quote?.scenario_group].filter(Boolean).join(" · "),
+          title: [sources.clientName, quote?.forwarder_name, quote?.label].filter(Boolean).join(" · "),
           href: quote
             ? `/forwarder-sourcing/${sources.project.id}/forwarders/${quote.forwarder_id}`
             : `/forwarder-sourcing/${sources.project.id}`,

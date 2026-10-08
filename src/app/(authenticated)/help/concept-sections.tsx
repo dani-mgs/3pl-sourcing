@@ -34,21 +34,39 @@ export function ConceptsSection() {
         <li>Cost per kg uses chargeable weight for Air when it&apos;s set, actual weight otherwise.</li>
       </Bullets>
 
-      <SubHeading>Scenario groups</SubHeading>
+      <SubHeading>Which quotes are ranked together</SubHeading>
       <Bullets>
-        <li>Quotes are only ranked against quotes in the same scenario group.</li>
         <li>
-          The group name must match exactly, including capitals (spaces at either end are
-          trimmed). &ldquo;HCM-LGB-LCL&rdquo; and &ldquo;hcm-lgb-lcl&rdquo; are two groups. Pick
-          an existing name from the suggestions as you type.
+          All of a project&apos;s quotes that match its final terms are ranked together,
+          whatever forwarder they come from. There is nothing to type to group them.
+        </li>
+        <li>
+          Quotes with different terms (for example DDU when the final terms are DDP) are still
+          shown, in the same table, but below the ranked ones: greyed out, with the rank{" "}
+          <Ui>Different terms</Ui>. They never take part in ranking or the Best quote.
+        </li>
+        <li>
+          Each quote is named by its terms, such as &ldquo;DDP · Sea · FCL&rdquo;, with its
+          origin → destination underneath when it has one. Check the route: quotes for different
+          lanes would still be ranked against each other if their terms match.
+        </li>
+        <li>
+          Quotes saved before this change keep their old scenario group text. It shows as{" "}
+          <Ui>Legacy scenario</Ui> in the quote&apos;s expanded details and, in the Expert CSV, as
+          Legacy Scenario Group. It no longer affects ranking.
         </li>
       </Bullets>
 
       <SubHeading>Rank labels</SubHeading>
       <Bullets>
         <li>
-          <Ui>Not Comparable</Ui>: the quote&apos;s incoterm, mode, or type doesn&apos;t match
-          the project&apos;s final terms, or its completeness is &ldquo;Incomplete / Needs
+          <Ui>Different terms</Ui>: the quote states an incoterm, mode, and type, and they
+          don&apos;t all match the project&apos;s final terms. Exports call this{" "}
+          <Ui>Not Comparable</Ui>.
+        </li>
+        <li>
+          <Ui>Not Comparable</Ui>: the final terms aren&apos;t all set, the quote is missing
+          one of its own terms, or its completeness is &ldquo;Incomplete / Needs
           Clarification&rdquo;.
         </li>
         <li>
@@ -58,13 +76,13 @@ export function ConceptsSection() {
         </li>
         <li>
           <Ui>Lowest Freight Cost</Ui> goes to every quote tied for cheapest (costs compared to
-          the cent); <Ui>Highest Freight Cost</Ui> likewise. A group with one ranked quote
-          says <Ui>Only Comparable Quote</Ui>; ranks in between show &ldquo;—&rdquo; and
+          the cent); <Ui>Highest Freight Cost</Ui> likewise. When only one quote in the project
+          is ranked it says <Ui>Only Comparable Quote</Ui>; ranks in between show &ldquo;—&rdquo; and
           &ldquo;#2 of 3&rdquo;.
         </li>
         <li>
-          The <Ui>Best quote</Ui> tile is the cheapest ranked quote across all scenario groups,
-          with &ldquo;1 of N scenarios&rdquo; when more than one group has ranked quotes.
+          The <Ui>Best quote</Ui> tile is the cheapest ranked quote in the project. It shows the
+          quote&apos;s terms and route, so you can see at a glance what was compared.
         </li>
       </Bullets>
 
@@ -182,7 +200,7 @@ export function ExportSection() {
           Action, and Key Notes.
         </li>
         <li>
-          Quotes: Forwarder Status, Key Strength, Key Weakness / Risk, Important Assumption,
+          Quotes: Legacy Scenario Group (old quotes only), Forwarder Status, Key Strength, Key Weakness / Risk, Important Assumption,
           Overall Assessment, Client Decision, and Notes.
         </li>
         <li>Duty estimates: only the Expert CSV has them (not the Expert PDF or DOCX yet).</li>

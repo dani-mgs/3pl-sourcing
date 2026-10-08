@@ -1,5 +1,6 @@
 import { formatCurrency } from "@/lib/currency";
 import { NOT_COMPARABLE } from "@/lib/forwarder/cost-comparison";
+import { quoteLabel, quoteRoute, quoteTitle } from "@/lib/forwarder/quote-label";
 import {
   freightInvoiceRatio,
   leadTimeRange,
@@ -59,14 +60,12 @@ function noSavingReason(
 export function SummaryTiles({
   project,
   best,
-  rankedGroupCount,
   hasQuotes,
   effectiveAnnualShipments,
   pipeline,
 }: {
   project: SummaryProject;
   best: ComparisonResult[];
-  rankedGroupCount: number;
   hasQuotes: boolean;
   effectiveAnnualShipments: number | null;
   pipeline: PipelineCounts;
@@ -135,14 +134,8 @@ export function SummaryTiles({
                 </>
               )}
             </p>
-            <Detail title={top.quote.scenario_group}>
-              {top.quote.scenario_group}
-              {rankedGroupCount > 1 && (
-                <span className="ml-1.5 rounded-full bg-neutral-bg px-1.5 py-0.5 text-[11px]">
-                  1 of {rankedGroupCount} scenarios
-                </span>
-              )}
-            </Detail>
+            <Detail title={quoteTitle(top.quote)}>{quoteLabel(top.quote)}</Detail>
+            {quoteRoute(top.quote) && <Detail>{quoteRoute(top.quote)}</Detail>}
           </>
         )}
       </Tile>

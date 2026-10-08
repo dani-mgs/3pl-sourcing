@@ -38,7 +38,7 @@ const quote: LinkQuote = {
   updated_at: "2026-10-02T10:00:00Z",
   forwarder_id: "f1",
   forwarder_name: "Acme Freight",
-  scenario_group: "Sea FCL",
+  label: "Sea FCL",
   shipment_mode: "Sea",
   cost_of_goods_usd: null,
   duties_taxes_usd: 3100,
@@ -258,6 +258,23 @@ describe("snapshot and inputs changed", () => {
   test("the snapshot round-trips through jsonb", () => {
     expect(parseInputSnapshot(JSON.parse(JSON.stringify(snapshot)))).toEqual(snapshot);
     expect(parseInputSnapshot({ project: {} })).toBeNull();
+  });
+
+  test("a snapshot saved before quotes lost their scenario group still reads, and names a deleted quote by it", () => {
+    const old = JSON.parse(
+      JSON.stringify({ ...snapshot, quote: { ...quote, label: undefined, scenario_group: "DDP - FCL" } }),
+    );
+    const parsed = parseInputSnapshot(old);
+    expect(parsed).not.toBeNull();
+    expect(inputChanges(parsed!, project, "deleted")).toEqual([
+      { label: "Quote", then: "DDP - FCL", now: "deleted" },
+    ]);
+  });
+
+  test("a new snapshot names a deleted quote by its label", () => {
+    expect(inputChanges(snapshot, project, "deleted")).toEqual([
+      { label: "Quote", then: quote.label, now: "deleted" },
+    ]);
   });
 
   test("numeric columns are read as numbers", () => {

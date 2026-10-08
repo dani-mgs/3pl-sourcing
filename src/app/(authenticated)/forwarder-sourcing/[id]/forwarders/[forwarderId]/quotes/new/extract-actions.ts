@@ -28,11 +28,6 @@ const EXTRACT_TOOL = {
   input_schema: {
     type: "object" as const,
     properties: {
-      scenario_group: {
-        type: "string",
-        description:
-          "The shipment lane/scenario this quote is for. If it matches one of the EXISTING SCENARIO GROUPS given to you, reuse that exact string verbatim — do not write new text for the same scenario. Only write new text if none of the existing groups clearly describe this document's scenario.",
-      },
       shipment_mode: { type: "string", enum: SHIPMENT_MODES },
       shipment_type: { type: "string", enum: SHIPMENT_TYPES },
       origin: { type: "string" },
@@ -73,7 +68,6 @@ const MERGE_MODE_INSTRUCTION =
 
 export async function extractQuoteDetails(
   formData: FormData,
-  existingScenarioGroups: string[],
   currentValues?: ExtractedQuoteFields,
 ): Promise<ExtractQuoteState> {
   const file = formData.get("document") as File | null;
@@ -102,10 +96,6 @@ export async function extractQuoteDetails(
   let systemPrompt =
     "You extract structured freight-quote data for a forwarder sourcing tool from freeform notes, rate-sheet emails, or quote documents. Only record a field if the source text clearly and confidently states it. Never guess, infer beyond what's written, estimate, or fabricate a value — omit any field that isn't clearly present, even a numeric one. Never output filler text like 'unknown' or 'N/A' for a field you can't confidently fill — omit the field instead.";
 
-  if (existingScenarioGroups.length > 0) {
-    systemPrompt += ` EXISTING SCENARIO GROUPS already used on this project: ${JSON.stringify(existingScenarioGroups)}. If this document describes the same lane/scenario as one of these, reuse that exact string for scenario_group rather than writing new text.`;
-  }
-
   let currentValuesForPrompt: Record<string, unknown> | undefined;
   if (currentValues) {
     systemPrompt += MERGE_MODE_INSTRUCTION;
@@ -123,5 +113,5 @@ export async function extractQuoteDetails(
     return { error: result.error };
   }
 
-  return { fields: toExtractedQuoteFields(result.input, existingScenarioGroups) };
+  return { fields: toExtractedQuoteFields(result.input) };
 }

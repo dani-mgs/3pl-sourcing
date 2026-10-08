@@ -3,7 +3,7 @@ import type { ExtractedQuoteFields } from "./merge-quote-fields";
 import type { ExtractedForwarderFields } from "./merge-forwarder-fields";
 import type { ExtractedForwarderProjectFields } from "./merge-project-fields";
 import { CAPABILITY_FIELDS } from "./forwarder-fields";
-import { canonicalizeScenarioGroup, pickDate } from "./quote-extraction";
+import { pickDate } from "./quote-extraction";
 import {
   BROKERAGE_OPTIONS,
   CURRENCIES,
@@ -32,7 +32,6 @@ export function pickEnum<T extends string>(
 // ---- Quote ------------------------------------------------------------------
 
 export type ExtractedQuoteIntake = {
-  scenario_group?: string;
   shipment_mode?: string;
   shipment_type?: string;
   origin?: string;
@@ -57,7 +56,6 @@ export type ExtractedQuoteIntake = {
 
 export function toExtractedQuoteFields(
   extracted: ExtractedQuoteIntake,
-  existingScenarioGroups: string[],
 ): ExtractedQuoteFields {
   // original_currency/exchange_rate_to_usd are non-nullable columns (the
   // schema defaults them to "USD"/1 when blank), so Partial<QuoteFields>
@@ -66,10 +64,6 @@ export function toExtractedQuoteFields(
   const originalCurrency = pickEnum(extracted.original_currency, CURRENCIES) ?? undefined;
 
   return {
-    scenario_group: canonicalizeScenarioGroup(
-      extracted.scenario_group,
-      existingScenarioGroups,
-    ),
     shipment_mode: pickEnum(extracted.shipment_mode, SHIPMENT_MODES),
     shipment_type: pickEnum(extracted.shipment_type, SHIPMENT_TYPES),
     origin: cleanExtractedText(extracted.origin) ?? null,

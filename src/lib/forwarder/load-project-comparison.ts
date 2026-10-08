@@ -18,6 +18,10 @@ import type { RateSource } from "@/lib/fx/rate-provenance";
 
 export type ComparisonQuote = ForwarderQuoteInput & {
   id: string;
+  origin: string | null;
+  destination: string | null;
+  // Stored text of an old quote; shown read-only in its details, never used to compare.
+  legacy_scenario: string | null;
   forwarder_id: string;
   forwarder_name: string;
   lead_time_min_days: number | null;
@@ -64,6 +68,8 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 // from the literal type; the Zod-derived types are the real contract.
 type QuoteQueryRow = QuoteFields & {
   id: string;
+  // Old quotes only; the column is no longer filled in.
+  scenario_group: string | null;
   forwarder_id: string;
   updated_at: string;
   // Object or single-item array depending on the join shape.
@@ -88,7 +94,7 @@ export async function loadProjectComparison(
     supabase
       .from("forwarder_quotes")
       .select(
-        `id, forwarder_id, updated_at, ${QUOTE_FIELDS_SELECT}, forwarders!inner(company_name, status, forwarder_project_id)`,
+        `id, forwarder_id, updated_at, scenario_group, ${QUOTE_FIELDS_SELECT}, forwarders!inner(company_name, status, forwarder_project_id)`,
       )
       .eq("forwarders.forwarder_project_id", projectId),
   ]);
@@ -106,7 +112,9 @@ export async function loadProjectComparison(
       forwarder_id: q.forwarder_id,
       forwarder_name: forwarder.company_name,
       forwarder_status: forwarder.status,
-      scenario_group: q.scenario_group,
+      legacy_scenario: q.scenario_group?.trim() || null,
+      origin: q.origin,
+      destination: q.destination,
       shipment_mode: q.shipment_mode,
       shipment_type: q.shipment_type,
       incoterm: q.incoterm,

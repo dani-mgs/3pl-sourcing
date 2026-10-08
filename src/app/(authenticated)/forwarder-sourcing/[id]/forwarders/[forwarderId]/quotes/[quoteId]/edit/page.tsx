@@ -44,15 +44,7 @@ export default async function EditQuotePage({
   // contract here (see QUOTE_FIELDS_SELECT).
   const fields = quote as unknown as QuoteFields;
 
-  const { data: existingQuotes } = await supabase
-    .from("forwarder_quotes")
-    .select("scenario_group, forwarders!inner(forwarder_project_id)")
-    .eq("forwarders.forwarder_project_id", id);
   const latestRates = await loadLatestFxRates(supabase);
-
-  const existingScenarioGroups = [
-    ...new Set((existingQuotes ?? []).map((q) => q.scenario_group)),
-  ].sort();
 
   return (
     <div className="mx-auto max-w-4xl px-8 py-10">
@@ -72,7 +64,6 @@ export default async function EditQuotePage({
         forwarderId={forwarderId}
         quoteId={quoteId}
         defaultValues={fields}
-        existingScenarioGroups={existingScenarioGroups}
         cancelHref={`/forwarder-sourcing/${id}/forwarders/${forwarderId}`}
         latestRates={latestRates}
         today={todayUtc()}

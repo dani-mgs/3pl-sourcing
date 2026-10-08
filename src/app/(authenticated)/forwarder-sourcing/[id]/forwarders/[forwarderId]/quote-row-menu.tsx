@@ -25,13 +25,13 @@ export function QuoteRowMenu({
   projectId,
   forwarderId,
   quoteId,
-  scenarioGroup,
+  quoteName,
   dutyEstimateCount,
 }: {
   projectId: string;
   forwarderId: string;
   quoteId: string;
-  scenarioGroup: string;
+  quoteName: string;
   dutyEstimateCount: number;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -88,7 +88,7 @@ export function QuoteRowMenu({
           <DialogHeader>
             <DialogTitle>Delete Quote</DialogTitle>
             <DialogDescription>
-              Delete this {scenarioGroup} quote
+              Delete this quote ({quoteName})
               {dutyEstimateCount > 0 && <> and {dutyEstimatesLabel(dutyEstimateCount)}</>}? This can&apos;t be undone.
             </DialogDescription>
           </DialogHeader>
