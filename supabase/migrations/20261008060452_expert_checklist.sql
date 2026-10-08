@@ -102,7 +102,9 @@ begin
     raise exception 'Not allowed.' using errcode = '42501';
   end if;
   if v_item.version <> p_expected_version then
-    raise exception 'This item was changed by someone else.' using errcode = '40001';
+    -- PT409: PostgREST answers 409 with this code. (40001 would be answered 503
+    -- and retried by the gateway.)
+    raise exception 'This item was changed by someone else.' using errcode = 'PT409';
   end if;
 
   if p_done and not v_item.done then
