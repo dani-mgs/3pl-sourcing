@@ -39,7 +39,7 @@ export function scheduledChanges(input: {
   const add = (row: DutyRow, kind: "starts" | "ends", date: string) => {
     const key = `${row.program_key}|${date}|${kind}`;
     const programName = reviewedPrograms.get(row.program_key)!;
-    const text = `${row.chapter99_heading} (${row.label}${kind === "starts" ? `: ${describeRowRate(row)}` : ": ends"})`;
+    const text = `${row.chapter99_heading} ${row.label}${kind === "starts" ? `: ${describeRowRate(row)}` : " ends"}`;
     const existing = groups.get(key);
     if (existing) {
       existing.headings.push(row.chapter99_heading);

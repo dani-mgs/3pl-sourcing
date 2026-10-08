@@ -18,7 +18,7 @@ export type KeyDate = {
   programName: string;
   heading: string;
   label: string;
-  // "+100%, rate unconfirmed", "exempt", …
+  // "+100%, rate unconfirmed", "exemption", …
   change: string;
   // Who it covers: "China", "37 countries", "any origin"; "listed products" or "all products".
   covers: string;
@@ -45,7 +45,7 @@ export function keyDates(input: {
       programName: programNames.get(row.program_key) ?? row.program_key,
       heading: row.chapter99_heading,
       label: row.label,
-      change: describeRowRate(row),
+      change: row.rate_type === "exempt" ? "exemption" : describeRowRate(row),
       covers,
       counted: reviewStatus.get(row.program_key) === "reviewed",
     };

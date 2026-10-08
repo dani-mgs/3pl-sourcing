@@ -33,7 +33,7 @@ describe("scheduledChanges", () => {
       kind: "starts",
       headings: ["9903.91.12"],
     });
-    expect(change.description).toContain("+100%, rate unconfirmed");
+    expect(change.description).toBe("9903.91.12 Intermodal chassis (from November 10, 2026): +100%, rate unconfirmed");
   });
 
   test("window edges: the 45th day counts, the 46th doesn't; the entry date itself isn't 'after'", () => {
@@ -50,6 +50,7 @@ describe("scheduledChanges", () => {
     expect(changes).toHaveLength(1);
     expect(changes[0]).toMatchObject({ programKey: "section_301_china", date: "2026-11-10", kind: "ends" });
     expect(changes[0].headings).toEqual(expect.arrayContaining(["9903.88.69"]));
+    expect(changes[0].description).toContain("9903.88.69 USTR product exclusion ends");
   });
 
   test("rows that end on the entry date change the next day, so they count; rows already ended don't", () => {
@@ -100,6 +101,11 @@ describe("keyDates", () => {
 
   test("friendly empty: nothing dated ahead", () => {
     expect(list("2027-06-01")).toEqual([]);
+  });
+
+  test("an exemption row reads as an exemption", () => {
+    const dates = list("2026-10-07");
+    expect(dates.filter((d) => d.kind === "ends").map((d) => d.change)).toEqual(["exemption", "exemption"]);
   });
 
   test("marks programs that aren't counted yet", () => {

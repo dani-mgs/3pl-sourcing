@@ -163,7 +163,7 @@ function ScheduledChangesNote({ estimate, knownToday }: { estimate: EstimateResu
       <ul className="mt-1 flex flex-col gap-1.5">
         {changes.map((c) => (
           <li key={`${c.programKey}-${c.date}-${c.kind}`}>
-            A rate change for {c.programName} is scheduled for {formatRateDate(c.date)} ({c.description}). If entry slips
+            A rate change for {c.programName} is scheduled for {formatRateDate(c.date)}: {c.description}. If entry slips
             to that date or later, duties may change.
           </li>
         ))}
