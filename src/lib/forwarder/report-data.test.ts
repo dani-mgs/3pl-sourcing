@@ -269,3 +269,42 @@ describe("projectColumns: project duration", () => {
     expect(table.rows[0][table.headers.indexOf("Project Duration")]).toBeNull();
   });
 });
+
+describe("quoteColumns: Freight Cost Ratio replaces Annual Savings for clients", () => {
+  const usd = { invoice_value: 60000, invoice_currency: "USD" };
+  const priced = (extra: Partial<QuoteExportFields> = {}) => ({
+    ...quoteResult(extra),
+    freightCostUsd: 9400,
+  });
+
+  test("client version has the ratio and no Annual Savings", () => {
+    const table = buildSectionTable(quoteColumns(usd), "client", [priced()]);
+    expect(table.headers).toContain("Freight Cost Ratio");
+    expect(table.headers).not.toContain("Annual Savings");
+    expect(table.rows[0][table.headers.indexOf("Freight Cost Ratio")]).toBe("15.7%");
+  });
+
+  test("expert version has both", () => {
+    const table = buildSectionTable(quoteColumns(usd), "expert", [priced()]);
+    expect(table.headers).toContain("Freight Cost Ratio");
+    expect(table.headers).toContain("Annual Savings");
+  });
+
+  test("blank when the invoice value is missing, zero or not in USD", () => {
+    for (const invoice of [
+      { invoice_value: null, invoice_currency: "USD" },
+      { invoice_value: 0, invoice_currency: "USD" },
+      { invoice_value: 60000, invoice_currency: "EUR" },
+    ]) {
+      const table = buildSectionTable(quoteColumns(invoice), "client", [priced()]);
+      expect(table.rows[0][table.headers.indexOf("Freight Cost Ratio")]).toBeNull();
+    }
+  });
+
+  test("uses the freight only, not duties or other charges", () => {
+    const table = buildSectionTable(quoteColumns(usd), "client", [
+      priced({ duties_taxes_usd: 5000, other_charges_usd: 700 }),
+    ]);
+    expect(table.rows[0][table.headers.indexOf("Freight Cost Ratio")]).toBe("15.7%");
+  });
+});

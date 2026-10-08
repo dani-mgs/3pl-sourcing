@@ -36,8 +36,7 @@ export default async function ForwarderProjectSummaryPage({
   if (!comparison) {
     notFound();
   }
-  const { project: row, quotes: comparisonQuotes, results, effectiveAnnualShipments } =
-    comparison;
+  const { project: row, quotes: comparisonQuotes, results } = comparison;
   const client = embeddedOne(
     row.clients as { name: string; business_model: string | null } | null,
   );
@@ -146,7 +145,6 @@ export default async function ForwarderProjectSummaryPage({
         project={summaryProject}
         best={best}
         hasQuotes={comparisonQuotes.length > 0}
-        effectiveAnnualShipments={effectiveAnnualShipments}
         pipeline={pipeline}
       />
 
@@ -165,6 +163,10 @@ export default async function ForwarderProjectSummaryPage({
               targetLeadTime={row.target_lead_time_days as number | null}
               today={today}
               finalTerms={projectTerms}
+              invoice={{
+                invoice_value: row.invoice_value as number | null,
+                invoice_currency: row.invoice_currency as string | null,
+              }}
             />
           </SectionCard>
 

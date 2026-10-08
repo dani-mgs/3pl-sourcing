@@ -2,6 +2,7 @@
 // tiles and quote comparison extras). Pure functions over results that
 // cost-comparison.ts already produces — no ranking or savings logic here.
 
+import { invoiceRatioIssue } from "./freight-cost-ratio";
 import {
   NOT_COMPARABLE,
   RANKING_EXCLUDED_STATUSES,
@@ -39,9 +40,8 @@ export function freightInvoiceRatio(
   invoiceValue: number | null,
   invoiceCurrency: string | null,
 ): number | null {
-  if (freightUsd == null || invoiceValue == null || invoiceCurrency !== "USD") return null;
-  if (invoiceValue <= 0) return null;
-  return freightUsd / invoiceValue;
+  if (freightUsd == null || invoiceRatioIssue(invoiceValue, invoiceCurrency) != null) return null;
+  return freightUsd / invoiceValue!;
 }
 
 const dayFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });

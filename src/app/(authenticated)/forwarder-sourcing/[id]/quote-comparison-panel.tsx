@@ -6,10 +6,11 @@ import {
   type ForwarderProjectTerms,
 } from "@/lib/forwarder/cost-comparison";
 import { quoteLabel } from "@/lib/forwarder/quote-label";
+import type { InvoiceBasis } from "@/lib/forwarder/freight-cost-ratio";
 import { projectBarScale, sortForDisplay } from "@/lib/forwarder/project-summary";
 import {
-  AnnualSavingsCell,
   FreightCell,
+  FreightCostRatioCell,
   LeadTimeCell,
   QuoteIdentity,
   ValidUntilCell,
@@ -37,6 +38,7 @@ export function QuoteComparisonPanel({
   targetLeadTime,
   today,
   finalTerms,
+  invoice,
 }: {
   projectId: string;
   results: ComparisonResult[];
@@ -45,6 +47,7 @@ export function QuoteComparisonPanel({
   targetLeadTime: number | null;
   today: string;
   finalTerms: FinalTerms;
+  invoice: InvoiceBasis;
 }) {
   if (results.length === 0) {
     return (
@@ -96,7 +99,7 @@ export function QuoteComparisonPanel({
               <th className={headClass}>Valid Until</th>
               <th className={headClass}>Rank</th>
               <th className={headClass}>vs Baseline</th>
-              <th className={headClass}>Annual Savings</th>
+              <th className={headClass}>Freight Cost Ratio</th>
             </tr>
           </thead>
           <tbody>
@@ -151,7 +154,7 @@ export function QuoteComparisonPanel({
                     <VsBaselineCell result={result} />
                   </td>
                   <td className={cellClass}>
-                    <AnnualSavingsCell result={result} />
+                    <FreightCostRatioCell result={result} invoice={invoice} />
                   </td>
                 </tr>
               );

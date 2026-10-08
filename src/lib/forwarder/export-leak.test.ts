@@ -291,3 +291,17 @@ describe("duty estimates in exports", () => {
     expect(csv).toContain("Duty estimates are informational");
   });
 });
+
+// CSV only: it always prints every header. The PDF and DOCX leave out blank
+// values (this fixture has no invoice value), and share the same column list,
+// which report-data.test.ts covers.
+describe("CSV: Annual Savings is Expert-only; the client version has Freight Cost Ratio", () => {
+  test("headers", async () => {
+    const client = squash(await renderers.CSV("client"));
+    const expert = squash(await renderers.CSV("expert"));
+    expect(client).toContain("FreightCostRatio");
+    expect(client).not.toContain("AnnualSavings");
+    expect(expert).toContain("FreightCostRatio");
+    expect(expert).toContain("AnnualSavings");
+  });
+});

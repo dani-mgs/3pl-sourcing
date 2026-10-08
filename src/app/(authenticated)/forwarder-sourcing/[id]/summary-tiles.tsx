@@ -1,8 +1,8 @@
 import { formatCurrency } from "@/lib/currency";
 import { NOT_COMPARABLE } from "@/lib/forwarder/cost-comparison";
 import { quoteLabel, quoteRoute, quoteTitle } from "@/lib/forwarder/quote-label";
+import { freightCostRatioText, invoiceRatioIssue } from "@/lib/forwarder/freight-cost-ratio";
 import {
-  freightInvoiceRatio,
   leadTimeRange,
   type PipelineCounts,
 } from "@/lib/forwarder/project-summary";
@@ -23,8 +23,6 @@ export type SummaryProject = {
   invoice_value: number | null;
   invoice_currency: string | null;
 };
-
-const numberFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
 function pct(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
@@ -61,13 +59,11 @@ export function SummaryTiles({
   project,
   best,
   hasQuotes,
-  effectiveAnnualShipments,
   pipeline,
 }: {
   project: SummaryProject;
   best: ComparisonResult[];
   hasQuotes: boolean;
-  effectiveAnnualShipments: number | null;
   pipeline: PipelineCounts;
 }) {
   const baseline = project.current_freight_cost_usd;
@@ -85,12 +81,15 @@ export function SummaryTiles({
   const topLead = topLeads.length === 1 ? topLeads[0] : null;
 
   const savingReason = noSavingReason(hasQuotes, best, baseline);
-  const currentRatio = freightInvoiceRatio(baseline, project.invoice_value, project.invoice_currency);
-  const bestRatio = freightInvoiceRatio(
-    top?.freightCostUsd ?? null,
-    project.invoice_value,
-    project.invoice_currency,
-  );
+  // Freight Cost Ratio: freight over the project's USD invoice value.
+  const invoice = { invoice_value: project.invoice_value, invoice_currency: project.invoice_currency };
+  const ratioIssue = invoiceRatioIssue(project.invoice_value, project.invoice_currency);
+  const currentRatioText = freightCostRatioText(baseline, invoice);
+  const bestRatioText = freightCostRatioText(top?.freightCostUsd ?? null, invoice);
+  const currentCents = baseline == null ? null : Math.round(baseline * 100);
+  const bestCents = top?.freightCostUsd == null ? null : Math.round(top.freightCostUsd * 100);
+  const ratioLower = currentCents != null && bestCents != null && bestCents < currentCents;
+  const ratioHigher = currentCents != null && bestCents != null && bestCents > currentCents;
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -154,32 +153,36 @@ export function SummaryTiles({
             <Detail>{top.vsBaseline}</Detail>
           </>
         )}
-        {(currentRatio != null || bestRatio != null) && (
-          <Detail>
-            Freight / invoice:{" "}
-            {currentRatio != null && bestRatio != null
-              ? `${pct(currentRatio)} → ${pct(bestRatio)}`
-              : currentRatio != null
-                ? `${pct(currentRatio)} now`
-                : `${pct(bestRatio!)} best quote`}
-          </Detail>
-        )}
       </Tile>
 
-      <Tile label="Annual saving">
-        {effectiveAnnualShipments == null ? (
-          <Empty>Set shipment volume to estimate</Empty>
-        ) : savingReason || typeof top?.annualCostDifference !== "number" ? (
-          <>
-            <Empty>{savingReason ?? "No comparable quote yet"}</Empty>
-            <Detail>{numberFormat.format(effectiveAnnualShipments)} shipments / yr</Detail>
-          </>
+      <Tile label="Freight cost ratio">
+        {ratioIssue ? (
+          <Empty>{ratioIssue}</Empty>
+        ) : currentRatioText == null && bestRatioText == null ? (
+          <Empty>{hasQuotes ? "No comparable quote yet" : "Awaiting quotes"}</Empty>
         ) : (
           <>
-            <Value className={top.annualCostDifference < 0 ? "text-danger" : "text-move-green"}>
-              {formatCurrency(top.annualCostDifference, "USD")}
+            <Value>
+              {currentRatioText != null && bestRatioText != null ? (
+                <>
+                  {currentRatioText}
+                  <span className="mx-1.5 text-sm font-medium text-neutral-muted">→</span>
+                  <span className={ratioLower ? "text-move-green" : ratioHigher ? "text-danger" : ""}>
+                    {bestRatioText}
+                  </span>
+                </>
+              ) : (
+                (currentRatioText ?? bestRatioText)
+              )}
             </Value>
-            <Detail>on {numberFormat.format(effectiveAnnualShipments)} shipments / yr</Detail>
+            <Detail>
+              {currentRatioText != null && bestRatioText != null
+                ? "Current → best quote"
+                : currentRatioText != null
+                  ? "Current · no comparable quote yet"
+                  : "Best quote · set current freight cost"}
+            </Detail>
+            <Detail>Freight ÷ invoice value</Detail>
           </>
         )}
       </Tile>

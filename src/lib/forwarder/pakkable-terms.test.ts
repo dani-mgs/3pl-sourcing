@@ -8,6 +8,7 @@ import {
   type ForwarderProjectTerms,
 } from "./cost-comparison";
 import { quoteLabel } from "./quote-label";
+import { freightCostRatioText } from "./freight-cost-ratio";
 import {
   pickBestQuotes,
   projectBarScale,
@@ -92,5 +93,33 @@ describe("Pakkable-like project: numbers before and after removing scenario grou
   test("quotes are named by their terms", () => {
     expect(quoteLabel(byId.get("q1")!.quote)).toBe("DDP · Sea · FCL");
     expect(quoteLabel(byId.get("q5")!.quote)).toBe("DDU · Sea · FCL");
+  });
+
+  // Freight Cost Ratio uses the project's invoice value. With 60,000 USD it must
+  // agree with the engine's own per-quote ratio (every quote's cost of goods is
+  // 60,000 in this fixture), for ranked and different-terms quotes alike.
+  test("Freight Cost Ratio matches the engine's ratio when the invoice equals the cost of goods", () => {
+    const invoice = { invoice_value: 60000, invoice_currency: "USD" };
+    const text: Record<string, string> = {
+      q1: "15.0%",
+      q2: "15.7%",
+      q3: "15.7%",
+      q4: "19.2%",
+      q5: "11.7%",
+      q6: "20.8%",
+    };
+    for (const [id, expected] of Object.entries(text)) {
+      const r = byId.get(id)!;
+      expect(freightCostRatioText(r.freightCostUsd, invoice), id).toBe(expected);
+      expect(r.freightCostRatio, id).toBeCloseTo(
+        before.quotes.find((q) => q.id === id)!.freightCostRatio!,
+        10,
+      );
+    }
+  });
+
+  test("the ratio changes no rank, saving or Best quote", () => {
+    // Same figures as the "before" recording: asserted above; the ratio is display only.
+    expect(pickBestQuotes(results).best.map(idOf)).toEqual(before.bestQuoteIds);
   });
 });

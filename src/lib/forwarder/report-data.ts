@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { embeddedOne } from "@/lib/clients";
 import { quoteTitle } from "@/lib/forwarder/quote-label";
+import { freightCostRatioText, type InvoiceBasis } from "@/lib/forwarder/freight-cost-ratio";
 import { formatCurrency } from "@/lib/currency";
 import { buildCsv, buildMultiSectionCsv, toCsvRow } from "./export-csv";
 import { FORWARDER_PROJECT_FIELDS_SELECT } from "./parse-project-form";
@@ -94,6 +95,15 @@ export function projectColumns(): Column<ProjectExportRow>[] {
     }
   }
   return columns;
+}
+
+function invoiceOf(data: { projectRow: Record<string, unknown> }): InvoiceBasis {
+  const value = data.projectRow.invoice_value;
+  const currency = data.projectRow.invoice_currency;
+  return {
+    invoice_value: value == null || value === "" ? null : Number(value),
+    invoice_currency: typeof currency === "string" ? currency : null,
+  };
 }
 
 // ---- Forwarders -------------------------------------------------------------
@@ -196,7 +206,11 @@ export function reportNotes(results: ForwarderQuoteResult<QuoteExportFields>[]):
     : [];
 }
 
-export function quoteColumns(): Column<ForwarderQuoteResult<QuoteExportFields>>[] {
+// invoice: the project's invoice value and currency, which Freight Cost Ratio
+// is measured against (blank when missing or not in USD).
+export function quoteColumns(
+  invoice: InvoiceBasis = { invoice_value: null, invoice_currency: null },
+): Column<ForwarderQuoteResult<QuoteExportFields>>[] {
   return [
     { header: "Forwarder Name", tier: "client", value: (r) => r.quote.forwarder_name },
     {
@@ -221,7 +235,13 @@ export function quoteColumns(): Column<ForwarderQuoteResult<QuoteExportFields>>[
     },
     { header: "Rank", tier: "client", value: rankLabelText },
     { header: "vs Baseline", tier: "client", value: vsBaselineText },
-    { header: "Annual Savings", tier: "client", value: annualSavingsText },
+    {
+      header: "Freight Cost Ratio",
+      tier: "client",
+      value: (r) => freightCostRatioText(r.freightCostUsd, invoice),
+    },
+    // Replaced by Freight Cost Ratio in the client version; the Expert version keeps it.
+    { header: "Annual Savings", tier: "expert", value: annualSavingsText },
     { header: "Lead Time (days)", tier: "client", value: (r) => leadTimeText(r.quote) },
     { header: "Quote Completeness", tier: "client", value: (r) => r.quote.quote_completeness },
     // Only version where an excluded-status forwarder's quote appears at all
@@ -477,7 +497,7 @@ export function buildForwarderReport(
     version,
     filterForwardersForVersion(data.forwarders, version),
   );
-  const quoteTable = buildSectionTable(quoteColumns(), version, quoteResults);
+  const quoteTable = buildSectionTable(quoteColumns(invoiceOf(data)), version, quoteResults);
 
   return {
     clientName: data.clientName,
@@ -518,7 +538,9 @@ export function buildForwarderReportCsv(data: ForwarderReportData, version: Expo
   );
   const estimates = version === "expert" ? (data.dutyEstimates ?? new Map()) : new Map();
   const quoteTable = buildSectionTable(
-    estimates.size > 0 ? [...quoteColumns(), ...dutyEstimateColumns(estimates)] : quoteColumns(),
+    estimates.size > 0
+      ? [...quoteColumns(invoiceOf(data)), ...dutyEstimateColumns(estimates)]
+      : quoteColumns(invoiceOf(data)),
     version,
     quoteResults,
   );

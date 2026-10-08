@@ -6,6 +6,7 @@ import type {
 } from "@/lib/forwarder/load-project-comparison";
 import { rateLockedNote } from "@/lib/fx/rate-provenance";
 import { quoteLabel, quoteRoute } from "@/lib/forwarder/quote-label";
+import { freightCostRatioText, type InvoiceBasis } from "@/lib/forwarder/freight-cost-ratio";
 import {
   exceedsTargetLeadTime,
   leadTimeRange,
@@ -73,14 +74,22 @@ export function VsBaselineCell({ result }: { result: ComparisonResult }) {
   );
 }
 
-export function AnnualSavingsCell({ result }: { result: ComparisonResult }) {
-  if (result.annualCostDifference === NOT_COMPARABLE) {
-    return <span className="text-neutral-muted">Not Comparable</span>;
-  }
-  if (typeof result.annualCostDifference !== "number") {
-    return <span className="text-neutral-muted">—</span>;
-  }
-  return <span>{formatCurrency(result.annualCostDifference, "USD")}</span>;
+// Freight / project invoice value, for every quote that has a price (ranked or
+// not: it's the USD freight shown in the Freight Cost column). "—" when the
+// project's invoice value is missing or isn't in USD.
+export function FreightCostRatioCell({
+  result,
+  invoice,
+}: {
+  result: ComparisonResult;
+  invoice: InvoiceBasis;
+}) {
+  const text = freightCostRatioText(result.freightCostUsd, invoice);
+  return text ? (
+    <span className="whitespace-nowrap tabular-nums">{text}</span>
+  ) : (
+    <span className="text-neutral-muted">—</span>
+  );
 }
 
 function barColor(result: ComparisonResult): string {

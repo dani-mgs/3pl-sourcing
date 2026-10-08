@@ -28,8 +28,15 @@ export function ConceptsSection() {
           but never change rank or savings.
         </li>
         <li>
-          Annual figures use shipments per year, or shipments per month × 12 if per year is
-          blank.
+          <Ui>Freight cost ratio</Ui> (summary tile and Quote Comparison column) is a
+          quote&apos;s freight cost in USD divided by the project&apos;s invoice value, to one
+          decimal; the tile shows current → best quote. Freight only, no duties or other
+          charges, and blank unless the invoice value is above zero and in USD. Quotes with
+          different terms show it too.
+        </li>
+        <li>
+          Annual figures (on a forwarder&apos;s page, and in the Expert export) use shipments
+          per year, or shipments per month × 12 if per year is blank.
         </li>
         <li>Cost per kg uses chargeable weight for Air when it&apos;s set, actual weight otherwise.</li>
       </Bullets>
@@ -200,7 +207,7 @@ export function ExportSection() {
           Action, and Key Notes.
         </li>
         <li>
-          Quotes: Legacy Scenario Group (old quotes only), Forwarder Status, Key Strength, Key Weakness / Risk, Important Assumption,
+          Quotes: Annual Savings, Legacy Scenario Group (old quotes only), Forwarder Status, Key Strength, Key Weakness / Risk, Important Assumption,
           Overall Assessment, Client Decision, and Notes.
         </li>
         <li>Duty estimates: only the Expert CSV has them (not the Expert PDF or DOCX yet).</li>

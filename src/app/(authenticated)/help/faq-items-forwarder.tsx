@@ -32,6 +32,21 @@ export const FORWARDER_AND_GENERAL_FAQ: FaqItem[] = [
     ),
   },
   {
+    id: "freight-cost-ratio",
+    module: "Forwarder Sourcing",
+    question: "What is the Freight Cost Ratio, and why is it blank?",
+    answer: (
+      <>
+        <p>
+          It&apos;s a quote&apos;s freight cost in USD divided by the project&apos;s invoice
+          value, shown to one decimal (for example 15.7%). Duties, taxes, and other charges are
+          left out. It needs an invoice value above zero in USD on the project (Customs &amp;
+          Value, via Edit); otherwise it&apos;s blank and the tile says what to set.
+        </p>
+      </>
+    ),
+  },
+  {
     id: "ranked-vs-baseline",
     module: "Forwarder Sourcing",
     question: "Why is my quote ranked but its vs Baseline says Not Comparable?",
