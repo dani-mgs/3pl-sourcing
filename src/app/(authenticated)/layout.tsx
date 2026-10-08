@@ -60,11 +60,7 @@ export default async function AuthenticatedLayout({
 
         <div className="ml-auto flex min-w-0 items-center gap-2">
           <HelpLink />
-          <UserMenu
-            displayName={displayName}
-            isAdmin={role === "admin"}
-            canEditTariffData={role === "admin" || user?.app_metadata?.tariff_editor === true}
-          />
+          <UserMenu displayName={displayName} isAdmin={role === "admin"} />
         </div>
       </header>
 

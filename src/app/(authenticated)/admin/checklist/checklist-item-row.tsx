@@ -62,7 +62,7 @@ export function ChecklistItemRow({
           <p className="mt-1 text-sm text-neutral-muted">{item.description}</p>
 
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-            {item.link_href && (canChange || item.editable_by === "editor") && (
+            {item.link_href && (
               <Link
                 href={item.link_href}
                 className="rounded font-medium text-move-navy hover:text-move-green hover:underline focus-visible:ring-2 focus-visible:ring-move-green focus-visible:outline-none"

@@ -16,11 +16,9 @@ function getInitial(name: string): string {
 export function UserMenu({
   displayName,
   isAdmin,
-  canEditTariffData = false,
 }: {
   displayName: string;
   isAdmin: boolean;
-  canEditTariffData?: boolean;
 }) {
   return (
     <DropdownMenu>
@@ -37,11 +35,6 @@ export function UserMenu({
         {isAdmin && (
           <DropdownMenuItem render={<Link href="/admin" />}>
             Administration
-          </DropdownMenuItem>
-        )}
-        {(isAdmin || canEditTariffData) && (
-          <DropdownMenuItem render={<Link href="/admin/checklist" />}>
-            Expert checklist
           </DropdownMenuItem>
         )}
         <DropdownMenuItem onClick={() => logout()}>Log Out</DropdownMenuItem>
