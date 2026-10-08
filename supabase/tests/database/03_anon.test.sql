@@ -2,7 +2,7 @@
 -- on any table or view in public, and every read is refused outright.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(27);
+select plan(29);
 
 -- Strict: anon holds no privilege at all on any public table or view. Lists
 -- the offending table and privilege if one creeps back in (e.g. a new table
@@ -23,7 +23,8 @@ select set_eq(
   $$ select c.relname::text from pg_class c join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relkind in ('r', 'v') $$,
   array['additional_duties', 'additional_duty_scope', 'additional_duty_scope_counts', 'clients', 'customs_fees', 'duty_estimates',
-        'duty_program_review_status', 'duty_program_reviews', 'duty_programs', 'forwarder_projects',
+        'duty_program_review_status', 'duty_program_reviews', 'duty_programs', 'expert_checklist_events',
+        'expert_checklist_items', 'forwarder_projects',
         'forwarder_quotes', 'forwarders', 'fx_rates', 'fx_rates_latest', 'hts_chapter99_changes',
         'hts_column2_countries', 'hts_lines', 'hts_releases', 'profiles', 'rate_details',
         'recommendation', 'tariff_data_history', 'three_pl_projects', 'three_pl_providers'],
@@ -40,6 +41,8 @@ select throws_ok('select * from duty_estimates', '42501', null, 'anon cannot rea
 select throws_ok('select * from duty_program_review_status', '42501', null, 'anon cannot read duty_program_review_status');
 select throws_ok('select * from duty_program_reviews', '42501', null, 'anon cannot read duty_program_reviews');
 select throws_ok('select * from duty_programs', '42501', null, 'anon cannot read duty_programs');
+select throws_ok('select * from expert_checklist_events', '42501', null, 'anon cannot read expert_checklist_events');
+select throws_ok('select * from expert_checklist_items', '42501', null, 'anon cannot read expert_checklist_items');
 select throws_ok('select * from forwarder_projects', '42501', null, 'anon cannot read forwarder_projects');
 select throws_ok('select * from forwarder_quotes', '42501', null, 'anon cannot read forwarder_quotes');
 select throws_ok('select * from forwarders', '42501', null, 'anon cannot read forwarders');
