@@ -414,6 +414,18 @@ describe("one row per program: precedence, conditions, unconfirmed and excepted 
     expect(lineFor(r, "section_301_brazil")).toMatchObject({ rateText: "Exempt" });
   });
 
+  test("a more specific unconfirmed row with a LOWER rate is named the same way, and the charged amount doesn't change", () => {
+    const lower = m({ chapter99_heading: "9903.82.22", label: "Listed countries", rate_type: "unconfirmed", rate_pct: 10, scope: [{ hts_prefix: "7208101500", article_description: null }], condition_text: "total or added?" });
+    const without = run([ANY], "BR");
+    const withLower = run([ANY, lower], "BR");
+    expect(lineFor(withLower, "section_232_metals")).toMatchObject({
+      heading: "9903.82.02",
+      amountUsd: 5000,
+      notes: ["Could be +10% (9903.82.22) instead, not yet confirmed: total or added?"],
+    });
+    expect(withLower.total).toBe(without.total);
+  });
+
   test("a less specific unconfirmed row is named as not included", () => {
     const broad = m({ chapter99_heading: "9903.82.22", label: "Broad", rate_type: "unconfirmed", rate_pct: 15, scope: [{ hts_prefix: "72", article_description: null }], condition_text: "total or added?" });
     const tenDigit = m({ chapter99_heading: "9903.82.10", label: "Ten-digit", rate_pct: 15, scope: [{ hts_prefix: "7208101500", article_description: null }] });
