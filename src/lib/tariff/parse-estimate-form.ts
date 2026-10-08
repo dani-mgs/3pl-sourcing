@@ -178,11 +178,13 @@ export function parseLinkFields(formData: FormData): ParseLinkResult {
 export function missingConfirmation(
   confirmed: Set<LinkConfirmation>,
   { deductionOffered, quantityEntered }: { deductionOffered: boolean; quantityEntered: boolean },
+  // What the user was doing when the tick was found missing.
+  action: "calculating" | "saving" = "calculating",
 ): string | null {
   const required: LinkConfirmation[] = ["hts", "origin", "customs_value"];
   if (deductionOffered) required.push("deduction");
   required.push("mode", "entry_date");
   if (quantityEntered) required.push("quantity");
   const missing = required.find((key) => !confirmed.has(key));
-  return missing ? `Confirm the ${LINK_CONFIRMATIONS[missing]} before calculating.` : null;
+  return missing ? `Confirm the ${LINK_CONFIRMATIONS[missing]} before ${action}.` : null;
 }

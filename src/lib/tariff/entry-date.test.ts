@@ -50,14 +50,16 @@ describe("checkEntryDate", () => {
 
   test("a date before yesterday says plainly that past dates aren't supported", () => {
     const result = checkEntryDate("2026-10-05", TODAY);
-    expect(!result.ok && result.error).toMatch(/can't be earlier than 2026-10-06/);
+    expect(!result.ok && result.error).toMatch(/can't be earlier than Oct 6, 2026 \(yesterday, UTC\)/);
+    expect(!result.ok && result.error).not.toMatch(/\d{4}-\d{2}-\d{2}/);
     expect(!result.ok && result.error).toMatch(/Past entry dates aren't supported/);
     expect(!result.ok && result.error).toMatch(/current|today/);
   });
 
   test("a date more than 366 days out names the limit", () => {
     const result = checkEntryDate("2027-10-09", TODAY);
-    expect(!result.ok && result.error).toMatch(/2027-10-08/);
+    expect(!result.ok && result.error).toMatch(/can't be later than Oct 8, 2027/);
+    expect(!result.ok && result.error).not.toMatch(/\d{4}-\d{2}-\d{2}/);
   });
 
   test.each(["2026-02-30", "2026-13-01", "2026-10-7", "10/07/2026", "2026-10-07T00:00:00Z", "tomorrow", "0000-00-00"])(

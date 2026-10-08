@@ -196,6 +196,7 @@ export async function checkLinkedEstimate(
   input: EstimateFormData,
   link: LinkFields,
   today: string,
+  action: "calculating" | "saving" = "calculating",
 ): Promise<CheckedLink> {
   const { canWrite } = await getOwnershipContext(link.projectId, "forwarder_projects");
   if (!canWrite) return { ok: false, error: NOT_ALLOWED };
@@ -211,7 +212,7 @@ export async function checkLinkedEstimate(
       error: "The project's current incoterm doesn't include international freight in the price, so nothing is deducted.",
     };
   }
-  const missing = missingConfirmation(link.confirmed, { deductionOffered, quantityEntered: input.quantity != null });
+  const missing = missingConfirmation(link.confirmed, { deductionOffered, quantityEntered: input.quantity != null }, action);
   if (missing) return { ok: false, error: missing };
 
   const withDeduction = { ...input, deductionUsd: link.deductionUsd };

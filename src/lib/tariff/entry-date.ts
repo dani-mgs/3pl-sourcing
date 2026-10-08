@@ -1,4 +1,5 @@
 import { isRealIsoDate } from "@/lib/forwarder/parse-quote-form";
+import { formatRateDate } from "@/lib/fx/rate-provenance";
 
 // The expected entry date: the day the goods will enter the US, which is the
 // day duty applies. Every date here is a UTC calendar date as YYYY-MM-DD, and
@@ -41,13 +42,13 @@ export function checkEntryDate(value: string, calculatedOn: string): EntryDateRe
   if (value < min) {
     return {
       ok: false,
-      error: `The expected entry date can't be earlier than ${min} (yesterday, UTC). Past entry dates aren't supported: base duty rates come from the HTS schedule in force today only, with no history of earlier rates.`,
+      error: `The expected entry date can't be earlier than ${formatRateDate(min)} (yesterday, UTC). Past entry dates aren't supported: base duty rates come from the HTS schedule in force today only, with no history of earlier rates.`,
     };
   }
   if (value > max) {
     return {
       ok: false,
-      error: `The expected entry date can't be later than ${max} (366 days from today, UTC).`,
+      error: `The expected entry date can't be later than ${formatRateDate(max)} (366 days from today, UTC).`,
     };
   }
   return { ok: true, date: value };

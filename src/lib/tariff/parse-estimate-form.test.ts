@@ -203,6 +203,14 @@ describe("missingConfirmation", () => {
     );
   });
 
+  test("the message names what the user was doing", () => {
+    const noEntry = new Set(all);
+    noEntry.delete("entry_date");
+    const opts = { deductionOffered: false, quantityEntered: false };
+    expect(missingConfirmation(noEntry, opts, "saving")).toBe("Confirm the expected entry date before saving.");
+    expect(missingConfirmation(noEntry, opts, "calculating")).toBe("Confirm the expected entry date before calculating.");
+  });
+
   test("a quantity must be confirmed when one is entered", () => {
     expect(missingConfirmation(new Set(all), { deductionOffered: false, quantityEntered: true })).toBe(
       "Confirm the quantity before calculating.",

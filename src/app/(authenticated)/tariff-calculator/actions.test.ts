@@ -240,7 +240,10 @@ describe("linked duty estimates", () => {
     expect(await previewEstimate(form({ confirm_deduction: "" }))).toEqual({
       error: "Confirm the freight and insurance deduction before calculating.",
     });
-    expect(await saveEstimate(form({ quantity: "1200" }))).toEqual({ error: "Confirm the quantity before calculating." });
+    // Saving says "saving"; calculating says "calculating".
+    expect(await saveEstimate(form({ quantity: "1200" }))).toEqual({ error: "Confirm the quantity before saving." });
+    expect(await saveEstimate(form({ confirm_entry_date: "" }))).toEqual({ error: "Confirm the expected entry date before saving." });
+    expect(await previewEstimate(form({ confirm_entry_date: "" }))).toEqual({ error: "Confirm the expected entry date before calculating." });
     expect(buildEstimate).not.toHaveBeenCalled();
   });
 

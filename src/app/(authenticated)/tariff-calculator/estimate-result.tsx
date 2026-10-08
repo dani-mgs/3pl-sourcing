@@ -96,19 +96,23 @@ function EstimateTotal({ estimate }: { estimate: EstimateResult }) {
         {estimate.additionalDutiesUsd > 0 && <> · Additional duties {usd(estimate.additionalDutiesUsd)}</>} · Fees{" "}
         {usd(estimate.feesUsd)} · Customs value {usd(estimate.customsValueUsd)}
       </p>
-      {notToday && (
+      {notToday && caveats.length > 0 && (
         <div className={`${WARNING_BOX_CLASS} mt-2 text-xs`} role="note" data-testid="entry-date-note">
           <p className="font-semibold">
             Calculated on {formatRateDate(estimate.asOfDate)} for entry on {formatRateDate(estimate.entryDate)}.
           </p>
-          {caveats.length > 0 && (
-            <ul className="mt-1 flex flex-col gap-1">
-              {caveats.map((c) => (
-                <li key={c}>{c}</li>
-              ))}
-            </ul>
-          )}
+          <ul className="mt-1 flex flex-col gap-1">
+            {caveats.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
         </div>
+      )}
+      {notToday && caveats.length === 0 && (
+        // An entry date just before today (no later-date caveats apply): one plain line.
+        <p className="mt-1 text-xs text-neutral-muted" data-testid="entry-date-plain">
+          Calculated on {formatRateDate(estimate.asOfDate)} for entry on {formatRateDate(estimate.entryDate)}.
+        </p>
       )}
       {hasExclusions && (
         <ul className="mt-2 flex flex-col gap-1 border-t border-[#FBBF24]/60 pt-2 text-xs text-[#92400E]">

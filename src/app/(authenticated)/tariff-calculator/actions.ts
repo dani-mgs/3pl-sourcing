@@ -24,6 +24,7 @@ async function parseRequest(
   supabase: Supabase,
   formData: FormData,
   calculatedOn: string,
+  action: "calculating" | "saving",
 ): Promise<{ ok: true; input: EstimateFormData; link: Extract<CheckedLink, { ok: true }> | null } | { ok: false; error: string }> {
   const parsed = parseEstimateForm(formData, calculatedOn);
   if (!parsed.ok) return { ok: false, error: parsed.error };
@@ -32,7 +33,7 @@ async function parseRequest(
   if (!link.linked) return { ok: true, input: parsed.data, link: null };
 
   try {
-    const checked = await checkLinkedEstimate(supabase, parsed.data, link.data, calculatedOn);
+    const checked = await checkLinkedEstimate(supabase, parsed.data, link.data, calculatedOn, action);
     if (!checked.ok) return { ok: false, error: checked.error };
     return { ok: true, input: checked.input, link: checked };
   } catch (error) {
@@ -51,7 +52,7 @@ export async function previewEstimate(formData: FormData): Promise<PreviewState>
 
   // One "today" per request, for the entry-date bounds and the calculation.
   const calculatedOn = todayUtc();
-  const request = await parseRequest(supabase, formData, calculatedOn);
+  const request = await parseRequest(supabase, formData, calculatedOn, "calculating");
   if (!request.ok) return { error: request.error };
 
   const built = await buildEstimate(supabase, request.input, calculatedOn);
@@ -71,7 +72,7 @@ export async function saveEstimate(formData: FormData): Promise<SaveState> {
   if (!user) return { error: SIGN_IN };
 
   const calculatedOn = todayUtc();
-  const request = await parseRequest(supabase, formData, calculatedOn);
+  const request = await parseRequest(supabase, formData, calculatedOn, "saving");
   if (!request.ok) return { error: request.error };
 
   const built = await buildEstimate(supabase, request.input, calculatedOn);
