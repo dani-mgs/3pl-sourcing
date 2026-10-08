@@ -30,6 +30,23 @@ describe("formatProjectValue (feeds the Project Summary and exports)", () => {
   });
 });
 
+describe("formatProjectValue: project duration", () => {
+  const duration = field({ kind: "integer", name: "project_duration_months", unit: "month" });
+  const row = (v: unknown) => ({ project_duration_months: v });
+
+  test("months are pluralised, and empty is a dash", () => {
+    expect(formatProjectValue(duration, row(12))).toBe("12 months");
+    expect(formatProjectValue(duration, row(1))).toBe("1 month");
+    expect(formatProjectValue(duration, row(120))).toBe("120 months");
+    expect(formatProjectValue(duration, row(null))).toBe("—");
+    expect(formatProjectValue(duration, {})).toBe("—");
+  });
+
+  test("an integer field without a unit is unchanged", () => {
+    expect(formatProjectValue(field({ kind: "integer", name: "units" }), { units: 1200 })).toBe("1,200");
+  });
+});
+
 describe("route labels", () => {
   test("long and short forms, with a dash for a missing end", () => {
     const row = { origin_city: "Shenzhen", origin_country: "China", destination_country: "United States" };

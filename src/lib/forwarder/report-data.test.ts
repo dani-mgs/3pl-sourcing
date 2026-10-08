@@ -4,6 +4,7 @@ import {
   filterForwardersForVersion,
   filterQuotesForVersion,
   forwarderColumns,
+  projectColumns,
   quoteColumns,
   reportNotes,
   type QuoteExportFields,
@@ -245,5 +246,26 @@ describe("reportNotes", () => {
     const manual = quoteResult({ original_currency: "KRW", exchange_rate_source: "manual", exchange_rate_date: "2026-10-01" } as Partial<QuoteExportFields>);
     expect(reportNotes([daily, manual])).toEqual([DAILY_FEED_ATTRIBUTION]);
     expect(reportNotes([manual, quoteResult()])).toEqual([]);
+  });
+});
+
+describe("projectColumns: project duration", () => {
+  const row = (v: number | null) => ({
+    clientName: "Acme",
+    businessModel: null,
+    status: "Active",
+    project_duration_months: v,
+  });
+
+  test("is in the client version, labelled without a unit, valued with one", () => {
+    const table = buildSectionTable(projectColumns(), "client", [row(12)]);
+    const i = table.headers.indexOf("Project Duration");
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(table.rows[0][i]).toBe("12 months");
+  });
+
+  test("is blank when not set", () => {
+    const table = buildSectionTable(projectColumns(), "client", [row(null)]);
+    expect(table.rows[0][table.headers.indexOf("Project Duration")]).toBeNull();
   });
 });

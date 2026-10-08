@@ -11,6 +11,7 @@ import {
 } from "@/components/client-picker";
 import type { ClientOption } from "@/lib/clients";
 import {
+  PROJECT_DURATION_ERROR,
   PROJECT_STATUSES,
   SHIPMENT_MODES,
   SHIPMENT_TYPES_BY_MODE,
@@ -124,7 +125,21 @@ export function ForwarderProjectForm({
       case "textarea":
         return <TextAreaField key={field.name} name={field.name} label={field.label} defaultValue={value as string} updated={updated} />;
       case "integer":
-        return <InputField key={field.name} name={field.name} label={field.label} type="number" step="1" defaultValue={value as number} updated={updated} />;
+        return (
+          <InputField
+            key={field.name}
+            name={field.name}
+            label={field.formLabel ?? field.label}
+            type="number"
+            step="1"
+            min={field.min}
+            max={field.max}
+            inputMode="numeric"
+            invalidMessage={field.name === "project_duration_months" ? PROJECT_DURATION_ERROR : undefined}
+            defaultValue={value as number}
+            updated={updated}
+          />
+        );
       case "decimal":
         return <InputField key={field.name} name={field.name} label={field.label} type="number" step={field.step} defaultValue={value as number} updated={updated} />;
       case "money":

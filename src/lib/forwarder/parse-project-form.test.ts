@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { parseForwarderProjectForm } from "./parse-project-form";
+import { FORWARDER_PROJECT_FIELDS_SELECT, parseForwarderProjectForm } from "./parse-project-form";
 import {
+  PROJECT_DURATION_ERROR,
   SHIPMENT_MODES,
   SHIPMENT_TYPES,
   SHIPMENT_TYPES_BY_MODE,
@@ -120,5 +121,45 @@ describe("SHIPMENT_TYPES_BY_MODE", () => {
     expect(isTypeAllowedForMode(null, null)).toBe(true);
     expect(isTypeAllowedForMode("Sea", null)).toBe(true);
     expect(isTypeAllowedForMode(null, "FCL")).toBe(false);
+  });
+});
+
+describe("parseForwarderProjectForm: project duration", () => {
+  const parse = (value?: string) =>
+    parseForwarderProjectForm(form(value === undefined ? {} : { project_duration_months: value }));
+
+  test.each([[undefined], [""], ["   "]])("empty (%j) becomes null", (value) => {
+    const result = parse(value);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.project_duration_months).toBeNull();
+  });
+
+  test.each([
+    ["1", 1],
+    ["12", 12],
+    ["120", 120],
+    [" 24 ", 24],
+  ])("accepts %j as %i months", (value, expected) => {
+    const result = parse(value);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.project_duration_months).toBe(expected);
+  });
+
+  test.each([["0"], ["121"], ["-3"], ["1.5"], ["abc"], ["1e2"], ["NaN"], ["Infinity"], ["+5"], ["0x10"], ["12 months"], ["99999999999999999999"]])(
+    "refuses %j with the duration message",
+    (value) => {
+      const result = parse(value);
+      expect(result).toEqual({ ok: false, error: PROJECT_DURATION_ERROR });
+    },
+  );
+
+  test("other invalid fields still get the generic message", () => {
+    const result = parseForwarderProjectForm(form({ stackable: "Maybe" }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).not.toBe(PROJECT_DURATION_ERROR);
+  });
+
+  test("is part of the select list the edit page and exports load", () => {
+    expect(FORWARDER_PROJECT_FIELDS_SELECT.split(", ")).toContain("project_duration_months");
   });
 });

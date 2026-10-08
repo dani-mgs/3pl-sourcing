@@ -3,6 +3,8 @@ import {
   CURRENCIES,
   INCOTERMS,
   INSURANCE_OPTIONS,
+  PROJECT_DURATION_MAX,
+  PROJECT_DURATION_MIN,
   STACKABLE_OPTIONS,
   YES_NO,
 } from "./project-fields";
@@ -15,7 +17,18 @@ type FieldName = keyof ForwarderProjectFields;
 
 export type ProjectField =
   | { kind: "text" | "textarea"; name: FieldName; label: string }
-  | { kind: "integer"; name: FieldName; label: string }
+  // formLabel is the label on the form when it differs from the read-only
+  // one (e.g. "Project Duration (months)" vs "Project Duration"); unit is the
+  // singular word shown after the value in read-only views ("12 months").
+  | {
+      kind: "integer";
+      name: FieldName;
+      label: string;
+      formLabel?: string;
+      min?: number;
+      max?: number;
+      unit?: string;
+    }
   // step is the column's scale (numeric(p, s)), e.g. "0.001" for kg.
   | { kind: "decimal"; name: FieldName; label: string; step: string }
   // A money amount; currency is a fixed code or the field holding it.
@@ -38,6 +51,20 @@ export type ProjectSection = {
 };
 
 export const PROJECT_SECTIONS: ProjectSection[] = [
+  {
+    title: "Project",
+    fields: [
+      {
+        kind: "integer",
+        name: "project_duration_months",
+        label: "Project Duration",
+        formLabel: "Project Duration (months)",
+        min: PROJECT_DURATION_MIN,
+        max: PROJECT_DURATION_MAX,
+        unit: "month",
+      },
+    ],
+  },
   {
     title: "Route",
     fields: [

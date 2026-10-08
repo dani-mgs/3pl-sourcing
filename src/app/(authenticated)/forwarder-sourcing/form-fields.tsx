@@ -28,6 +28,10 @@ export function InputField({
   defaultValue,
   type = "text",
   step,
+  min,
+  max,
+  inputMode,
+  invalidMessage,
   updated,
 }: {
   name: string;
@@ -35,6 +39,11 @@ export function InputField({
   defaultValue: Value;
   type?: "text" | "number" | "date";
   step?: string;
+  min?: number;
+  max?: number;
+  inputMode?: "numeric" | "decimal";
+  // Replaces the browser's own out-of-range / not-a-whole-number message.
+  invalidMessage?: string;
   updated?: boolean;
 }) {
   return (
@@ -47,9 +56,14 @@ export function InputField({
         id={name}
         name={name}
         type={type}
-        min={type === "number" ? "0" : undefined}
+        min={min ?? (type === "number" ? 0 : undefined)}
+        max={max}
         step={step}
-        inputMode={type === "number" ? "decimal" : undefined}
+        inputMode={inputMode ?? (type === "number" ? "decimal" : undefined)}
+        onInvalid={
+          invalidMessage ? (e) => e.currentTarget.setCustomValidity(invalidMessage) : undefined
+        }
+        onInput={invalidMessage ? (e) => e.currentTarget.setCustomValidity("") : undefined}
         defaultValue={defaultValue ?? ""}
         className={updated ? `${fieldClass} ${updatedFieldClass}` : fieldClass}
       />

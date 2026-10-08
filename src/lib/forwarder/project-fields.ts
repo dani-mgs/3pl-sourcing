@@ -83,3 +83,8 @@ export const CURRENCIES = [
   "SGD",
   "KRW",
 ] as const;
+
+// Project duration, in whole months. Mirrors the column's check constraint.
+export const PROJECT_DURATION_MIN = 1;
+export const PROJECT_DURATION_MAX = 120;
+export const PROJECT_DURATION_ERROR = `Project duration must be a whole number of months from ${PROJECT_DURATION_MIN} to ${PROJECT_DURATION_MAX}, or left empty.`;

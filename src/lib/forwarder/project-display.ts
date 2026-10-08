@@ -43,7 +43,11 @@ export function formatProjectValue(field: ProjectField, row: Row): string {
   switch (field.kind) {
     case "multi":
       return Array.isArray(value) && value.length ? value.join(", ") : "—";
-    case "integer":
+    case "integer": {
+      const text = numberFormat.format(Number(value));
+      if (!field.unit) return text;
+      return `${text} ${field.unit}${Number(value) === 1 ? "" : "s"}`;
+    }
     case "decimal":
       return numberFormat.format(Number(value));
     case "money": {

@@ -103,3 +103,14 @@ describe("mergeForwarderProjectFields: mode/type pairs and incoterms", () => {
     expect([...changed]).toEqual([]);
   });
 });
+
+describe("mergeForwarderProjectFields: project duration", () => {
+  test("a document that doesn't mention it keeps the project's duration", () => {
+    const { merged, changed } = mergeForwarderProjectFields(
+      { ...current, project_duration_months: 18 },
+      { origin_city: "Ningbo" },
+    );
+    expect(merged.project_duration_months).toBe(18);
+    expect(changed.has("project_duration_months")).toBe(false);
+  });
+});

@@ -4,6 +4,9 @@ import {
   CURRENCIES,
   INCOTERMS,
   INSURANCE_OPTIONS,
+  PROJECT_DURATION_ERROR,
+  PROJECT_DURATION_MAX,
+  PROJECT_DURATION_MIN,
   PROJECT_STATUSES,
   SHIPMENT_MODES,
   SHIPMENT_TYPES,
@@ -48,8 +51,20 @@ const integer = z.preprocess(
   z.number().int().min(0).max(INT_MAX).nullable(),
 );
 
+// Digits only, so 1.5, -3, 1e2, 0x10 and text are all refused rather than
+// coerced by Number(). The range matches the column's check constraint.
+const projectDuration = z.preprocess(
+  (value) => {
+    const v = blankToNull(value);
+    if (v == null) return null;
+    return typeof v === "string" && /^\d+$/.test(v) ? Number(v) : NaN;
+  },
+  z.number().int().min(PROJECT_DURATION_MIN).max(PROJECT_DURATION_MAX).nullable(),
+);
+
 const projectSchema = z.object({
   status: z.enum(PROJECT_STATUSES),
+  project_duration_months: projectDuration,
 
   packing_list_available: option(YES_NO),
   packing_list_reference: text(),
@@ -129,6 +144,9 @@ export function parseForwarderProjectForm(formData: FormData): ParseProjectResul
   if (!parsed.success) {
     // Field-level schema detail stays server-side (docs/SECURITY.md).
     console.error("parseForwarderProjectForm validation failed:", parsed.error.issues);
+    if (parsed.error.issues.some((issue) => issue.path[0] === "project_duration_months")) {
+      return { ok: false, error: PROJECT_DURATION_ERROR };
+    }
     return {
       ok: false,
       error: "Some fields have values that aren't allowed. Check the form and try again.",

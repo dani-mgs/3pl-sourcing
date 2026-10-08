@@ -110,6 +110,8 @@ export function ShipmentProfile({ row }: { row: Row }) {
   ]);
   const packingNotes = v("packing_list_notes");
 
+  const duration = v("project_duration_months");
+
   const lane = Boolean(origin || destination || delivery);
   const cargo = Boolean(
     v("cargo_description") || v("packaging_type") || counts || size || cargoTags.length ||
@@ -120,7 +122,7 @@ export function ShipmentProfile({ row }: { row: Row }) {
   const customs = Boolean(v("hs_code") || invoice || invoiceCurrency || customsTags.length);
   const packingGroup = Boolean(packing || packingNotes);
 
-  const anything = lane || cargo || termsGroup || volume || customs || packingGroup;
+  const anything = duration != null || lane || cargo || termsGroup || volume || customs || packingGroup;
 
   return (
     <CollapsibleProfile title="Shipment Profile">
@@ -128,6 +130,12 @@ export function ShipmentProfile({ row }: { row: Row }) {
         <p className="text-sm text-neutral-muted">No shipment details yet.</p>
       ) : (
         <div className="flex flex-col gap-3">
+          {duration && (
+            <Group title="Project">
+              <Line label="Duration">{duration}</Line>
+            </Group>
+          )}
+
           {lane && (
             <Group title="Lane">
               {origin && <Line label="From">{origin}</Line>}
