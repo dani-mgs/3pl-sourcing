@@ -12,7 +12,9 @@ import { HTS_SOURCE_URL } from "@/lib/tariff/calculate";
 import { excludedCount } from "@/lib/tariff/programs";
 import { releaseLabel } from "@/lib/tariff/hts-lookup";
 import { loadLinkContext, type LinkContextResult } from "@/lib/tariff/server-forwarder-link";
+import { loadKeyDates } from "@/lib/tariff/server-key-dates";
 import { EstimateForm } from "./estimate-form";
+import { KeyDatesPanel } from "./key-dates-panel";
 import { WARNING_BOX_CLASS } from "./estimate-result";
 
 const one = (value: string | string[] | undefined) => (typeof value === "string" && value !== "" ? value : null);
@@ -34,7 +36,7 @@ export default async function TariffCalculatorPage({ searchParams }: PageProps<"
     redirect(keep.size > 0 ? `/tariff-calculator?${keep}` : "/tariff-calculator");
   }
   const supabase = await createClient();
-  const [latestRates, releaseResult, estimatesResult, permissions] = await Promise.all([
+  const [latestRates, releaseResult, estimatesResult, permissions, upcomingDates] = await Promise.all([
     loadLatestFxRates(supabase),
     supabase
       .from("hts_releases")
@@ -47,6 +49,7 @@ export default async function TariffCalculatorPage({ searchParams }: PageProps<"
       .order("created_at", { ascending: false })
       .limit(20),
     getTariffPermissions(),
+    loadKeyDates(supabase, todayUtc()),
   ]);
   if (releaseResult.error) console.error("TariffCalculatorPage release error:", releaseResult.error);
   if (estimatesResult.error) console.error("TariffCalculatorPage estimates error:", estimatesResult.error);
@@ -129,6 +132,8 @@ export default async function TariffCalculatorPage({ searchParams }: PageProps<"
             : null
         }
       />
+
+      <KeyDatesPanel dates={upcomingDates} />
 
       <section className="mt-6 rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
         <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">Saved estimates</h2>

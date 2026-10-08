@@ -31,7 +31,7 @@ export async function loadAdditionalDutyData(
   supabase: Supabase,
   htsCode: string,
   asOfDate: string,
-): Promise<{ rows: DutyRow[]; reviews: ProgramReview[] }> {
+): Promise<{ rows: DutyRow[]; reviews: ProgramReview[]; schedule: DutyRow[] }> {
   const SCOPE_COLUMNS = "duty_id, hts_prefix, article_description, excluded";
   const [dutiesResult, scopeResult, childResult, statusResult] = await Promise.all([
     supabase.from("additional_duties").select(DUTY_COLUMNS),
@@ -55,9 +55,15 @@ export async function loadAdditionalDutyData(
     scopeByDuty.set(s.duty_id, list);
   }
   const allRows = (dutiesResult.data ?? []) as unknown as Omit<DutyRow, "scope">[];
-  const rows: DutyRow[] = allRows
-    .filter((r) => inForceOn(r, asOfDate))
-    .map((r) => ({ ...r, excludes_programs: r.excludes_programs ?? [], scope: scopeByDuty.get(r.id) ?? [] }));
+  // Every row (not only those in force on the date) with the scope lines for
+  // this code: `rows` are the ones in force; `schedule` is for the
+  // scheduled-change warning (rows that start or end soon).
+  const schedule: DutyRow[] = allRows.map((r) => ({
+    ...r,
+    excludes_programs: r.excludes_programs ?? [],
+    scope: scopeByDuty.get(r.id) ?? [],
+  }));
+  const rows = schedule.filter((r) => inForceOn(r, asOfDate));
 
   type StatusRow = {
     program_key: string;
@@ -104,5 +110,5 @@ export async function loadAdditionalDutyData(
     };
   });
 
-  return { rows, reviews };
+  return { rows, reviews, schedule };
 }

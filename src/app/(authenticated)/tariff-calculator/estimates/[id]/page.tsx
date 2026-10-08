@@ -8,6 +8,7 @@ import { loadAuthorNames } from "@/lib/tariff/estimate-authors";
 import { SAVED_ESTIMATE_COLUMNS, rowToSavedEstimate } from "@/lib/tariff/saved-estimate";
 import { inputChanges, type InputChange } from "@/lib/tariff/forwarder-link";
 import { loadLinkSources } from "@/lib/tariff/server-forwarder-link";
+import { loadScheduledChangesForEstimate } from "@/lib/tariff/server-scheduled-changes";
 import { EstimateResultView, WARNING_BOX_CLASS } from "../../estimate-result";
 import { DeleteEstimateButton } from "./delete-estimate-button";
 
@@ -27,6 +28,8 @@ export default async function SavedEstimatePage({ params }: { params: Promise<{ 
   if (!row) notFound();
 
   const saved = rowToSavedEstimate(row);
+  // Scheduled changes are read live ("known today"); the estimate stays as locked.
+  if (saved) saved.estimate.scheduledChanges = await loadScheduledChangesForEstimate(supabase, saved.estimate);
   const authors = saved ? await loadAuthorNames(supabase, [saved.createdBy]) : new Map<string, string>();
   const canDelete = saved != null && (auth.user?.id === saved.createdBy || role === "admin");
 
@@ -107,7 +110,7 @@ export default async function SavedEstimatePage({ params }: { params: Promise<{ 
 
       <section className="rounded-2xl border border-neutral-border bg-white p-8 shadow-sm">
         {saved ? (
-          <EstimateResultView estimate={saved.estimate} />
+          <EstimateResultView estimate={saved.estimate} scheduledKnownToday />
         ) : (
           <p className="text-sm text-neutral-muted">This estimate can&apos;t be displayed.</p>
         )}

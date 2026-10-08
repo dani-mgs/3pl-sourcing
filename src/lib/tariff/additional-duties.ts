@@ -178,6 +178,19 @@ function scopeMatch(row: DutyRow, htsCode: string): ScopeMatch | null {
   return { prefixLength: longest, lines: hits.filter((h) => !h.excluded), exceptNumbers };
 }
 
+// Whether the row covers this origin and HTS code at all (scope lines must
+// be loaded for the code; see server-duty-data.ts).
+export function rowApplies(row: DutyRow, origin: string, htsCode: string): boolean {
+  return originMatches(row, origin) && scopeMatch(row, htsCode) !== null;
+}
+
+// "+25%", "a minimum total of 10%", "exempt" or "+100%, rate unconfirmed": what a row does.
+export function describeRowRate(row: Pick<DutyRow, "rate_type" | "rate_pct">): string {
+  if (row.rate_type === "exempt") return "exempt";
+  if (row.rate_type === "unconfirmed") return `${rateText(row)}, rate unconfirmed`;
+  return rateText(row);
+}
+
 // Lines of the row listed only at a longer code than the one entered.
 function childNumbers(row: DutyRow, htsCode: string): string[] {
   if (row.hts_scope === "all" || htsCode.length >= 10) return [];
@@ -195,7 +208,7 @@ type ExclusionState = { state: "applies" | "does_not_apply" | "unknown"; uncerta
 const isConditional = (row: DutyRow) => Boolean(row.condition_text);
 const isAssumed = (row: DutyRow) => isConditional(row) && row.assume_condition === true;
 
-function rateText(row: DutyRow): string {
+function rateText(row: Pick<DutyRow, "rate_type" | "rate_pct">): string {
   const rate = pct(parseDecimal(row.rate_pct ?? "0"), 4);
   if (row.rate_type === "minimum_total") return `a minimum total of ${rate}`;
   return `+${rate}`;
@@ -399,7 +412,7 @@ export type AdditionalDutiesResult = {
   dutyReviews: DutyReviewNote[];
 };
 
-function daysBetween(fromIso: string, toDate: string): number {
+export function daysBetween(fromIso: string, toDate: string): number {
   const from = Date.UTC(+fromIso.slice(0, 4), +fromIso.slice(5, 7) - 1, +fromIso.slice(8, 10));
   const to = Date.UTC(+toDate.slice(0, 4), +toDate.slice(5, 7) - 1, +toDate.slice(8, 10));
   return Math.floor((to - from) / 86_400_000);

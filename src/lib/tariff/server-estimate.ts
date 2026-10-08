@@ -11,6 +11,7 @@ import {
 import { checkEntryDate } from "./entry-date";
 import { formatHtsCode } from "./hts-code";
 import { evaluateAdditionalDuties, type DutyReviewNote } from "./additional-duties";
+import { scheduledChanges, type ScheduledChange } from "./scheduled-changes";
 import type { DutyProgramRow, ProgramWarning } from "./programs";
 import { centsToNumber, parseDecimal, toCents } from "./rational";
 import { loadAdditionalDutyData } from "./server-duty-data";
@@ -67,6 +68,9 @@ export type EstimateResult = {
   warnings: ProgramWarning[];
   // Review state of each program that bears on this line.
   dutyReviews: DutyReviewNote[];
+  // Rate changes scheduled shortly after the entry date (display only; worked
+  // out when the estimate is built or a saved one is opened, never stored).
+  scheduledChanges?: ScheduledChange[];
 };
 
 export type BuildEstimateResult = { ok: true; estimate: EstimateResult } | { ok: false; error: string };
@@ -304,6 +308,13 @@ export async function buildEstimate(
         lines: [baseLine, ...additional.lines, ...feeLines],
         warnings: additional.warnings,
         dutyReviews: additional.dutyReviews,
+        scheduledChanges: scheduledChanges({
+          rows: dutyData.schedule,
+          reviewedPrograms: new Map(additional.dutyReviews.filter((r) => r.status === "reviewed").map((r) => [r.programKey, r.name])),
+          originCountry: input.originCountry,
+          htsCode: line.hts_code,
+          entryDate,
+        }),
       },
     };
   } catch (error) {

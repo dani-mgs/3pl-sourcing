@@ -3,6 +3,7 @@ import { formatCurrency } from "@/lib/currency";
 import { DAILY_FEED_ATTRIBUTION, formatRateDate, rateCaption } from "@/lib/fx/rate-provenance";
 import { ESTIMATE_CAVEATS, ESTIMATE_DISCLAIMER, ESTIMATE_DISCLAIMER_DETAIL } from "@/lib/tariff/caveats";
 import { countryName } from "@/lib/tariff/countries";
+import { effectiveRates, oldestReview } from "@/lib/tariff/effective-rate";
 import { entryDateCaveats } from "@/lib/tariff/entry-date";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
 import { releaseLabel } from "@/lib/tariff/hts-lookup";
@@ -65,6 +66,8 @@ function EstimateTotal({ estimate }: { estimate: EstimateResult }) {
   const excluded = excludedPrograms(estimate.warnings, estimate.customsValueUsd);
   const hasExclusions = excluded.length > 0;
   const notToday = estimate.entryDate !== estimate.asOfDate;
+  const rates = effectiveRates(estimate);
+  const review = oldestReview(estimate);
   const caveats = entryDateCaveats({
     calculatedOn: estimate.asOfDate,
     entryDate: estimate.entryDate,
@@ -96,6 +99,21 @@ function EstimateTotal({ estimate }: { estimate: EstimateResult }) {
         {estimate.additionalDutiesUsd > 0 && <> · Additional duties {usd(estimate.additionalDutiesUsd)}</>} · Fees{" "}
         {usd(estimate.feesUsd)} · Customs value {usd(estimate.customsValueUsd)}
       </p>
+      {rates && (
+        <p className="mt-1 text-xs text-neutral-muted" data-testid="effective-rate">
+          <span className="font-medium text-move-navy">Effective rate on customs value:</span> {rates.duties} duties ·{" "}
+          {rates.allIn} with MPF and HMF{hasExclusions && " (counted duties only)"}
+        </p>
+      )}
+      {review && (
+        <p
+          className={review.stale ? "mt-1 text-xs font-medium text-[#92400E]" : "mt-1 text-xs text-neutral-muted"}
+          data-testid="oldest-review"
+        >
+          {review.text}
+          {review.stale && " — over 30 days; ask a tariff editor to review it"}
+        </p>
+      )}
       {notToday && caveats.length > 0 && (
         <div className={`${WARNING_BOX_CLASS} mt-2 text-xs`} role="note" data-testid="entry-date-note">
           <p className="font-semibold">
@@ -127,6 +145,29 @@ function EstimateTotal({ estimate }: { estimate: EstimateResult }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+// Rate changes scheduled shortly after the entry date, for the programs and
+// products this estimate covers. Nothing is shown when none are loaded.
+function ScheduledChangesNote({ estimate, knownToday }: { estimate: EstimateResult; knownToday: boolean }) {
+  const changes = estimate.scheduledChanges ?? [];
+  if (changes.length === 0) return null;
+  return (
+    <div className={WARNING_BOX_CLASS} role="note" data-testid="scheduled-changes">
+      <p className="flex items-center gap-2 font-semibold">
+        <AlertTriangle aria-hidden="true" className="size-4" />
+        {knownToday ? "Scheduled changes known today" : "A scheduled rate change is close to the entry date"}
+      </p>
+      <ul className="mt-1 flex flex-col gap-1.5">
+        {changes.map((c) => (
+          <li key={`${c.programKey}-${c.date}-${c.kind}`}>
+            A rate change for {c.programName} is scheduled for {formatRateDate(c.date)} ({c.description}). If entry slips
+            to that date or later, duties may change.
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -167,7 +208,14 @@ function DutyDataReviews({ estimate }: { estimate: EstimateResult }) {
   );
 }
 
-export function EstimateResultView({ estimate }: { estimate: EstimateResult }) {
+export function EstimateResultView({
+  estimate,
+  scheduledKnownToday = false,
+}: {
+  estimate: EstimateResult;
+  // A saved estimate: the scheduled changes are read now, not as saved.
+  scheduledKnownToday?: boolean;
+}) {
   const isUsd = estimate.currency === "USD";
   const rate = Number(estimate.exchangeRateToUsd);
   const usesDailyFeed = estimate.exchangeRateSource === "daily_feed";
@@ -199,6 +247,8 @@ export function EstimateResultView({ estimate }: { estimate: EstimateResult }) {
       </div>
 
       <EstimateTotal estimate={estimate} />
+
+      <ScheduledChangesNote estimate={estimate} knownToday={scheduledKnownToday} />
 
       <DutyDataReviews estimate={estimate} />
 

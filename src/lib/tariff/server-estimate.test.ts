@@ -381,6 +381,27 @@ describe("buildEstimate with an expected entry date", () => {
     expect(result.estimate.dutyReviews[0].staleReason).toBeNull();
   });
 
+  test("a rate change scheduled within 45 days after the entry date is reported, never stored or counted", async () => {
+    const later = { ...forcedLabor, id: "d9", chapter99_heading: "9903.05.99", rate_pct: 50, effective_from: "2026-10-20" };
+    const result = await buildEstimate(
+      stubSupabase(tables({ additional_duties: [forcedLabor, later], duty_program_review_status: reviewed })),
+      input({ originCountry: "VN", entryDate: "2026-10-05" }),
+    );
+    if (!result.ok) throw new Error(result.error);
+    expect(result.estimate.scheduledChanges).toEqual([
+      expect.objectContaining({ programKey: "section_301_forced_labor", date: "2026-10-20", kind: "starts", headings: ["9903.05.99"] }),
+    ]);
+    // The amount is the row in force at the entry date; the scheduled row isn't counted.
+    expect(result.estimate.additionalDutiesUsd).toBe(1250);
+    expect(estimateToRow(result.estimate, null)).not.toHaveProperty("scheduledChanges");
+    // No change scheduled: an empty list, nothing to show.
+    const none = await buildEstimate(
+      stubSupabase(tables({ additional_duties: [forcedLabor], duty_program_review_status: reviewed })),
+      input({ originCountry: "VN", entryDate: "2026-10-05" }),
+    );
+    expect(none.ok && none.estimate.scheduledChanges).toEqual([]);
+  });
+
   test("an entry date outside the window is refused with the plain message, not a crash", async () => {
     const past = await buildEstimate(stubSupabase(tables()), input({ entryDate: "2026-09-30" }));
     expect(past).toEqual({ ok: false, error: expect.stringContaining("Past entry dates aren't supported") });
