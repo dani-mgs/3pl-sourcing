@@ -1,5 +1,6 @@
 import { formatCurrency } from "@/lib/currency";
 import { NOT_COMPARABLE } from "@/lib/forwarder/cost-comparison";
+import { currentTileLines } from "@/lib/forwarder/current-tile";
 import { quoteLabel, quoteRoute, quoteTitle } from "@/lib/forwarder/quote-label";
 import { freightCostRatioText, invoiceRatioIssue } from "@/lib/forwarder/freight-cost-ratio";
 import {
@@ -69,6 +70,7 @@ export function SummaryTiles({
   const baseline = project.current_freight_cost_usd;
   const currentTerms = terms(project.current_incoterm, project.shipment_mode, project.shipment_type);
   const currentLead = leadTimeRange(project.current_lead_time_days, null);
+  const currentLines = currentTileLines(project);
   const finalTermsSet =
     project.final_incoterm != null &&
     project.final_shipment_mode != null &&
@@ -103,6 +105,14 @@ export function SummaryTiles({
             ) : (
               <Empty>No current freight cost</Empty>
             )}
+            {currentLines.freight && (
+              <Detail wrap title={currentLines.freight}>
+                {currentLines.freight}
+              </Detail>
+            )}
+            <Detail wrap title={currentLines.invoice}>
+              {currentLines.invoice}
+            </Detail>
             {currentTerms && <Detail>{currentTerms}</Detail>}
             {(project.current_freight_forwarder || currentLead) && (
               <Detail title={project.current_freight_forwarder ?? undefined}>

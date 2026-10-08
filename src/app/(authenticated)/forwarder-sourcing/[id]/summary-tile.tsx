@@ -24,9 +24,22 @@ export function Value({ children, className }: { children: React.ReactNode; clas
   );
 }
 
-export function Detail({ children, title }: { children: React.ReactNode; title?: string }) {
+// One line that truncates with an ellipsis; wrap lets it run onto more lines
+// instead (for text that must stay readable in a narrow tile).
+export function Detail({
+  children,
+  title,
+  wrap,
+}: {
+  children: React.ReactNode;
+  title?: string;
+  wrap?: boolean;
+}) {
   return (
-    <p className="truncate text-xs text-neutral-muted" title={title}>
+    <p
+      className={`${wrap ? "break-words" : "truncate"} text-xs text-neutral-muted`}
+      title={title}
+    >
       {children}
     </p>
   );
