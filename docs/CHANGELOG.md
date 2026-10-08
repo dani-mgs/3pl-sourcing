@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- Removed: the Expert checklist (`/admin/checklist`, its menu and Administration links, Help line and SECURITY.md section). It was a one-off task, now replaced by a handoff document. The code commits are reverted (history kept) and migration `20261008085123_remove_expert_checklist` drops `set_checklist_item()` and the `expert_checklist_items` and `expert_checklist_events` tables; the original migration is unchanged. No duty, program, review or user data is touched.
+- The migration deletes the checklist's ticks, notes and history. Apply it only after the code deploy has finished: **`git push`, wait for Vercel, then `npx supabase db push`.**
 - Feature: Tariff Calculator clarity (display only; no calculated amount changes). The result shows the effective rate (duties, and with MPF/HMF, as a % of customs value), the oldest review among counted programs (amber over the existing 30-day limit), and a caution when a rate change for a reviewed, applicable program starts or ends within 45 days after the entry date (read live on saved estimates, never stored). A collapsible Key dates list on the calculator page shows upcoming dated changes already in the duty data.
 - Fix: a missing confirmation says "before saving" when saving; out-of-range entry date messages use the page's date format; an entry date just before today shows one plain line instead of an empty note box.
 - Tests: the handover spec's five cases and the air-freight check as engine-level tests on synthetic rates (the 2026-07-01 case is skipped: past entry dates are unsupported), and a lower-rate unconfirmed-row wording test. No migration.
