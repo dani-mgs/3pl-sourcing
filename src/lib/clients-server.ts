@@ -15,6 +15,46 @@ export type ResolveClientError = {
   existingClient?: ClientOption;
 };
 
+// The "New client" fields, checked but not saved: the name is required and
+// mustn't match an existing client (the form then offers "Use existing
+// client"). The 3PL intake creates the client together with its project
+// (create_three_pl_project_with_client), only after the whole form is valid.
+export async function checkNewClient(
+  supabase: SupabaseClient,
+  formData: FormData,
+): Promise<{ name: string; businessModel: string | null } | ResolveClientError> {
+  const name = ((formData.get("new_client_name") as string) ?? "").trim();
+  if (!name) {
+    return { error: "Client name is required." };
+  }
+
+  const existing = await findClientByName(supabase, name);
+  if (existing) {
+    return {
+      error: duplicateClientMessage(existing.name),
+      existingClient: existing,
+    };
+  }
+
+  const businessModel = (
+    (formData.get("new_client_business_model") as string) ?? ""
+  ).trim();
+  return { name, businessModel: businessModel || null };
+}
+
+// The answer for a client name that turned out to be taken after
+// checkNewClient (another expert created it in between).
+export async function duplicateClientError(
+  supabase: SupabaseClient,
+  name: string,
+): Promise<ResolveClientError> {
+  const raced = await findClientByName(supabase, name);
+  return {
+    error: duplicateClientMessage(raced?.name ?? name),
+    existingClient: raced ?? undefined,
+  };
+}
+
 // Returns the id of the client a project belongs to, creating the client
 // first when the form chose "New client". Reads the ClientPicker's hidden
 // fields (client_mode, client_id, new_client_name, new_client_business_model).
@@ -33,26 +73,15 @@ export async function resolveClientId(
       return { error: "Choose an existing client for this project." };
     }
 
-    const name = ((formData.get("new_client_name") as string) ?? "").trim();
-    if (!name) {
-      return { error: "Client name is required." };
+    const checked = await checkNewClient(supabase, formData);
+    if (!("name" in checked)) {
+      return checked;
     }
-
-    const existing = await findClientByName(supabase, name);
-    if (existing) {
-      return {
-        error: duplicateClientMessage(existing.name),
-        existingClient: existing,
-      };
-    }
-
-    const businessModel = (
-      (formData.get("new_client_business_model") as string) ?? ""
-    ).trim();
+    const { name, businessModel } = checked;
 
     const { data, error } = await supabase
       .from("clients")
-      .insert({ name, business_model: businessModel || null })
+      .insert({ name, business_model: businessModel })
       .select(CLIENT_SELECT)
       .single();
 
@@ -60,11 +89,7 @@ export async function resolveClientId(
       // Another expert created the same client between our check and insert.
       if (error.code === UNIQUE_VIOLATION) {
         console.error("resolveClientId client unique violation:", error);
-        const raced = await findClientByName(supabase, name);
-        return {
-          error: duplicateClientMessage(raced?.name ?? name),
-          existingClient: raced ?? undefined,
-        };
+        return duplicateClientError(supabase, name);
       }
       console.error("resolveClientId client insert error:", error);
       return { error: "An unexpected error occurred." };

@@ -63,6 +63,10 @@ export type ProjectFields = z.infer<typeof projectSchema>;
 
 const FIELD_NAMES = Object.keys(projectSchema.shape) as (keyof ProjectFields)[];
 
+// The same list is the allow-list of create_three_pl_project_with_client()
+// (a Vitest check compares them), so a new field must be added there too.
+export const THREE_PL_PROJECT_FIELDS: readonly (keyof ProjectFields)[] = FIELD_NAMES;
+
 // Every column the intake/edit form edits, as a Supabase select list.
 export const PROJECT_FIELDS_SELECT = FIELD_NAMES.join(", ");
 
