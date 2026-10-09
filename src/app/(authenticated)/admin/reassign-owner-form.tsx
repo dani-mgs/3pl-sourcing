@@ -45,7 +45,9 @@ export function ReassignOwnerForm({
         name="owner_id"
         defaultValue={currentOwnerId}
         disabled={pending}
-        className={fieldClass}
+        // Capped on phones so "Name (email)" doesn't push the row wider; the
+        // open list still shows it in full.
+        className={`${fieldClass} max-w-40 sm:max-w-none`}
       >
         {profiles.map((profile) => (
           <option key={profile.id} value={profile.id}>

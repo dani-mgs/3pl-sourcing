@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- Fix (security, QA B-3): only admins can change a user's display name. The name moved from `user_metadata` (which any user could rewrite through the auth API) to `app_metadata.first_name`, written only by the admin Edit name and Create user actions; the `profiles` sync and the header read it from there. A Vitest guard bans `user_metadata` in `src/`.
+- Administration lists show the email next to the name: "Name (email)" in Reassign dropdowns and "Currently owned by Name · email" in Project Reassignment, so two users with the same name can be told apart. Non-admin views are unchanged. Help: Administration "manages users and their names".
+- Migration `20261009121503_display_name_admin_only`: the trigger reads `app_metadata` (`search_path=''`) and existing names are copied over unchanged (upgrade-tested; `user_metadata` left in place). New pgTAP 23. **`npx supabase db push && git push`.**
 - Fix (security, QA B-1/B-2): database role checks now follow the current role instead of the session token. A demoted admin or revoked tariff editor is refused on their next request even with an old token (before: up to an hour of API write access), and a promoted user or new editor can save straight away without signing out and in.
 - `is_admin()` and `is_tariff_editor()` now read `auth.users.raw_app_meta_data` (never user-editable `user_metadata`); every policy that calls them picks this up unchanged. Reads are unaffected; writes cost about 3 µs more per row checked.
 - Administration shows "Saved. It takes effect on their next page load or save; they don't need to sign out." after a role or editor change. Help (Permissions) says the same.
