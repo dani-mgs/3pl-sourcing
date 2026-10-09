@@ -17,7 +17,7 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 ## Summary
 
 - **Ran 188 cases:** 185 pass (170 clean, 15 with a linked bug or note), 0 fail outright, 2 not tested (3PL-20 and FWD-08, AI extraction) and 1 deferred (3PL-35, covered by X-01/X-02). "Fail" means the feature doesn't work at all. Every bug below is attached to a case that otherwise works.
-- **Fixed after this run:** B-1 and B-2, on branch `fix/role-checks-live` (see "Fix: B-1 and B-2"), B-3, on branch `fix/admin-only-display-names` (see "Fix: B-3"), and B-9, on branch `fix/3pl-intake-client-creation` (see "Fix: B-9"). The rest are open.
+- **Fixed after this run:** B-1 and B-2, on branch `fix/role-checks-live` (see "Fix: B-1 and B-2"), B-3, on branch `fix/admin-only-display-names` (see "Fix: B-3"), and B-9, on branch `fix/3pl-intake-client-creation` (see "Fix: B-9"), and B-4, B-5 (app level), B-6, B-7, B-8, B-10, B-11 and B-12, on branch `fix/qa-cleanup-batch` (see "Fix: cleanup batch"). Every logged bug is now fixed; one database guard (B-5) is pending.
 - **Bugs: 0 Critical, 1 High, 4 Medium, 7 Low.** No user could read or change another user's data, and no RLS gap or wrong duty, cost or ratio figure was found. Every money figure checked matched a hand calculation, including half-up rounding.
 - **Fixed since 2026-09-28:**
   - Failure #1: deleting a 3PL named in a Recommendation.
@@ -49,7 +49,7 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 **Notes from the gates (not bugs):**
 
 - **N-1:** the default `node` on this machine is v20.20.2, but `.nvmrc` says 22, and `@supabase/*` packages need Node ≥ 22 (`npm ci` prints `EBADENGINE`). Run `nvm use` first.
-- **N-2:** `tsc --noEmit` on a fresh checkout fails until `next typegen` (or `next dev`/`build`) has generated `.next/types`. There's no `typecheck` npm script that does both.
+- **N-2:** `tsc --noEmit` on a fresh checkout fails until `next typegen` (or `next dev`/`build`) has generated `.next/types`. There's no `typecheck` npm script that does both. **Resolved on `fix/qa-cleanup-batch`:** `npm run typecheck` runs `next typegen && tsc --noEmit`.
 
 ## 2. Auth, Administration and RLS
 
@@ -361,6 +361,8 @@ The app's own pages and server actions are safe: they re-check through `getUser(
 
 #### B-11. At 390px wide, buttons and inputs are cut off at the right edge
 
+**Status: ✅ Fixed** on `fix/qa-cleanup-batch`. See "Fix: cleanup batch".
+
 **Steps:** set the browser to 390 × 844 and open each page below.
 
 **Expected:** everything fits, or wraps, inside the screen.
@@ -384,6 +386,8 @@ The cut-off buttons still respond where they're visible, but the labels are lost
 
 #### B-4. Promote to Admin, Demote and Make or Revoke tariff editor apply on one click, with no confirmation
 
+**Status: ✅ Fixed** on `fix/qa-cleanup-batch`: each change opens a confirmation naming the user.
+
 **Steps:** `/admin` → **Promote to Admin** on any user.
 
 **Expected:** a confirmation like Delete has ("…? This cannot be undone.").
@@ -394,6 +398,8 @@ The cut-off buttons still respond where they're visible, but the labels are lost
 
 #### B-5. A recommendation can reference a 3PL from a different project
 
+**Status: ✅ Fixed in the app** on `fix/qa-cleanup-batch`: `saveRecommendation` refuses providers from another project ("Choose 3PLs from this project."). **Pending:** a database guard (trigger or composite FK on `recommendation`), to be done with the forwarder client/project follow-up.
+
 **Steps:** as expert1, insert or update `recommendation` for your own project with `provider_id_1` = a 3PL from expert2's project (PostgREST, or a crafted `saveRecommendation` form post).
 
 **Expected:** refused. The top three should belong to the project.
@@ -403,6 +409,8 @@ The cut-off buttons still respond where they're visible, but the labels are lost
 **Suspected files:** `src/app/(authenticated)/3pl-sourcing/projects/[id]/recommendation/actions.ts` and `src/lib/three-pl/parse-recommendation-form.ts` (no ownership check on the provider IDs). There's also no constraint in the `recommendation` table.
 
 #### B-6. Project search is accent-sensitive
+
+**Status: ✅ Fixed** on `fix/qa-cleanup-batch` (`foldForSearch`).
 
 **Steps:** 3PL Sourcing → search "zzqa cafe".
 
@@ -415,6 +423,8 @@ The cut-off buttons still respond where they're visible, but the labels are lost
 **Suspected files:** `src/app/(authenticated)/3pl-sourcing/dashboard-content.tsx:33` and `src/app/(authenticated)/forwarder-sourcing/forwarder-project-list.tsx:36` (plain `toLowerCase().includes`, no accent folding).
 
 #### B-7. `/help` is missing several rules the app enforces
+
+**Status: ✅ Fixed** on `fix/qa-cleanup-batch`: items 1–4 added; item 5 was resolved with B-2.
 
 **Steps:** read `/help` (and its FAQ) against what the app does.
 
@@ -431,6 +441,8 @@ The cut-off buttons still respond where they're visible, but the labels are lost
 
 #### B-8. The Recommendation "Saved" badge stays after the priority changes
 
+**Status: ✅ Fixed** on `fix/qa-cleanup-batch`.
+
 **Steps:** Recommendation → Save Recommendation ("Saved" appears) → change Priority to Turnaround Time.
 
 **Expected:** "Saved" disappears, or shows unsaved changes, until you save again.
@@ -441,6 +453,8 @@ The cut-off buttons still respond where they're visible, but the labels are lost
 
 #### B-10. Forwarder email isn't validated
 
+**Status: ✅ Fixed** on `fix/qa-cleanup-batch` (forwarders and 3PLs; new or changed emails only, see "Fix: cleanup batch").
+
 **Steps:** Add Forwarder → Email "not-an-email" → save.
 
 **Expected:** "Enter a valid email address." The 3PL form at least uses `type=email`, so the browser checks it there.
@@ -450,6 +464,8 @@ The cut-off buttons still respond where they're visible, but the labels are lost
 **Suspected files:** `src/lib/forwarder/parse-forwarder-form.ts:36` (`email: text(320)`) and the forwarder form input (`type=text`). `parse-provider-form.ts:56` is also plain text, so only the browser check protects the 3PL form.
 
 #### B-12. Notes over 10,000 characters are refused without saying why
+
+**Status: ✅ Fixed** on `fix/qa-cleanup-batch`.
 
 **Steps:** a 3PL project page → paste 10,005 characters into Notes → **Save Notes**.
 
@@ -672,4 +688,69 @@ Names and `auth.users.updated_at` are unchanged for all 9. The migration's `rais
 
 - **Forwarder: the same smaller gap (not changed).** `saveForwarderProject` validates first, so B-9 doesn't happen there. But its client insert and project insert are still two requests: if the project insert fails after the client was created (a database error, or a constraint the parser doesn't cover), the client is left behind. The same one-transaction pattern would close it; the forwarder form has about 3× the fields, so its function would need the same drift guard.
 - **Orphan clients already in production from B-9:** an admin can delete them in Administration → Clients. Deleting a client that's in use is blocked, so that's safe.
+
+## Fix: cleanup batch
+
+Branch `fix/qa-cleanup-batch`. No schema changes.
+
+### B-11: phone width
+
+**Method:** I ran the X-02 check on 29 routes as expert1, the tariff editor and the admin (each as needed): any element whose right edge is past the screen and isn't inside its own scrolling container. Positions at 1280px were compared old code against new code on the same data, element by element (buttons, links, inputs, headings).
+
+**Baseline at 390px (cut off, right edge):**
+
+| Page | Before | After |
+|---|---|---|
+| `/3pl-sourcing` | New Project 423px; table columns Pipeline/Updated to 618px (the table was in an `overflow-hidden` card, so columns were clipped, not scrollable) | 0 |
+| `/forwarder-sourcing` | New Project 423px; Status/Updated columns to 560px (same cause) | 0 |
+| 3PL wizard Step 1 (new, and an existing draft) | Continue to Add 3PLs → 468px / 537px | 0 |
+| 3PL wizard Add 3PLs | phone input 410px, table header 428px, Remove 412px, Continue to Verify → 549px | 0 |
+| 3PL view | Delete 3PL 489px | 0 |
+| 3PL edit | phone input 410px | 0 |
+| `/admin` | user-row Delete buttons 416–429px (Reassign was already fixed with B-3) | 0 |
+| duty-data Fees | no element past the edge, but **the page scrolled sideways** (scroll width 499px): an `sr-only` table header label escaped the scrolling container | 0, scroll width 390px |
+| The other 21 routes | 0 | 0 |
+
+**The extra offenders the sweep found** (not in the original B-11 list): both project tables, the 3PL wizard's Add 3PLs step and existing-draft Step 1, the admin user-row Delete buttons, and the Fees page sideways scroll.
+
+**Fixes:**
+- Rows that couldn't wrap now `flex-wrap`, with buttons aligned right on phones.
+- The list search box is `min-w-0 flex-1` on phones and keeps `w-64` from 640px.
+- The phone input is `min-w-0`, with a narrower country picker on phones only.
+- The project-list and Add 3PLs tables scroll inside their card (`overflow-x-auto` instead of `overflow-hidden`).
+- The Fees table's scroll container is `relative`, so the label stays inside.
+
+**1280px, old vs new:** 26 of 29 routes are identical element for element. The other three differ only as intended:
+- **Add 3PLs:** the phone input is 12px narrower. It used to run 12px past its column on desktop too; `min-w-0` fixed that as well.
+- **3PL project page:** Save Notes moves down 28px, for the new counter (B-12).
+- **Help:** the sections below the new sentences move down (B-7).
+
+### The Low bugs
+
+- **B-4:** Promote to Admin, Make Logistics Expert / Demote, and Make or Revoke tariff editor open a dialog naming the user and what changes, e.g. "Promote ZZQA Target (zzqa-target@example.test) to Admin? They'll be able to manage users, edit and reassign everyone's projects, edit shared clients and change duty data." In the browser, Cancel left the role as it was; Confirm applied it and showed the usual "Saved…" line.
+- **B-5:** `saveRecommendation` checks that every chosen provider ID belongs to the project. Vitest covers it: another project's 3PL, an unknown ID and an empty top three. **Pending:** the database guard.
+- **B-6:** `foldForSearch` (NFD, combining marks removed, lowercase) on both lists. In the browser, "zzqa cafe", "creme" and "unicode" all find "ZZQA Café & Crème Ünïcödé 🚚 Ltd" in 3PL and Forwarder Sourcing.
+- **B-7:** Help now says:
+  - Contract Period (3PL) and Project Duration (Forwarder) are optional, 1–120 whole months, for reference only.
+  - 3PLs with status Unfit, Do not Contact or Withdrawn / No Response are left out of the Cost Comparison.
+  - A 3PL project can't be deleted while it still has 3PLs.
+  - The Permissions sentence, that role and editor changes apply from the next page load or save with no sign-out, is still there.
+- **B-8:** "Saved" shows only while the priority and top three equal what was saved. In the browser it disappeared on changing to Turnaround Time and came back on changing back to Cost Savings.
+- **B-10 (as decided: new or changed emails only):**
+  - **Rule:** the server refuses a new or changed email that doesn't look valid ("Enter a valid email address, or leave it empty."), in forwarders and 3PLs. An unchanged stored email is never blocked. The form shows "This email looks invalid. Please check it." and drops the browser's own email check for that field until it's edited. No data was changed.
+  - **Browser:** an invalid email saved through the old code (simulating legacy data) showed the hint, and the next save with it unchanged worked. Changing it to another invalid value was refused with the message; a valid one saved. This was checked on both the forwarder and the 3PL forms.
+- **B-12:** "Notes can be up to 10,000 characters (this has 10,005).", plus a live "N / 10,000" counter that turns red with "(too long)". There's no `maxLength`, so a long paste isn't silently cut off. Exactly 10,000 characters is accepted.
+
+### Test hygiene and typecheck
+
+- **pgTAP 04** uses its own rate date (2099-01-01) and reads only that row.
+- **pgTAP 07, 10 and 24** move any seeded current HTS release to superseded before adding their own (rolled back).
+- **pgTAP 24** compares what the expert sees with the true row counts instead of fixed numbers, and checks that there is data to hide.
+- **Result:** the full suite, 524 tests, passes after `db reset` and after `npm run qa:seed`.
+- **Typecheck:** `npm run typecheck` = `next typegen && tsc --noEmit`, so a fresh checkout typechecks without a manual step (N-2).
+
+### Pending follow-ups
+
+- **B-5:** a database guard on `recommendation` (trigger or composite FK) refusing providers from another project. It's a schema change; you'll do it together with the forwarder client/project gap below.
+- **Forwarder client/project gap:** see "Fix: B-9 → Follow-ups".
 
