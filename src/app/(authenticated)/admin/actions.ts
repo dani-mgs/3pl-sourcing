@@ -167,6 +167,7 @@ export async function deleteUser(rawUserId: string): Promise<AdminActionState> {
   return { success: true };
 }
 
+// Takes effect on the user's next request, as for updateTariffEditor below.
 export async function updateUserRole(
   rawUserId: string,
   rawRole: UserRole,
@@ -207,7 +208,8 @@ export async function updateUserRole(
 // Grants or revokes the narrow tariff-editor permission (maintains duty and
 // fee data in the Tariff Calculator). Stored in app_metadata, which users
 // can't edit; GoTrue merges app_metadata keys, so the role is untouched, and
-// null removes the key. Takes effect on the user's next token refresh.
+// null removes the key. Takes effect on the user's next request: the app and
+// is_tariff_editor() read the current app_metadata, not the session token.
 export async function updateTariffEditor(
   rawUserId: string,
   rawGrant: boolean,

@@ -5,6 +5,9 @@ create extension if not exists pgtap with schema extensions;
 select plan(7);
 
 insert into fx_rates (rate_date, currency, rate_to_usd) values ('2026-10-01', 'EUR', 1.08);
+-- A real admin: role checks read auth.users, not the token.
+insert into auth.users (id, email, raw_app_meta_data) values
+  ('00000000-0000-4000-8000-0000000000a1', 'admin@test.local', '{"role":"admin"}');
 
 select set_config('request.jwt.claims', json_build_object(
   'sub', '00000000-0000-4000-8000-0000000000a1', 'role', 'authenticated',

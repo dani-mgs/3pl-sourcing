@@ -255,6 +255,10 @@ export function PermissionsSection() {
           admins grant the tariff editor permission in Administration.
         </li>
         <li>
+          When an admin changes someone&apos;s role or tariff editor permission, it applies from
+          that person&apos;s next page load or save. They don&apos;t need to sign out and back in.
+        </li>
+        <li>
           <Ui>View only</Ui>: on anyone else&apos;s project you&apos;ll see &ldquo;Owned by
           … — view only&rdquo; and no edit, add, or delete controls.
         </li>

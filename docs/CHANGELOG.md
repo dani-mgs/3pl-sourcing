@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- Fix (security, QA B-1/B-2): database role checks now follow the current role instead of the session token. A demoted admin or revoked tariff editor is refused on their next request even with an old token (before: up to an hour of API write access), and a promoted user or new editor can save straight away without signing out and in.
+- `is_admin()` and `is_tariff_editor()` now read `auth.users.raw_app_meta_data` (never user-editable `user_metadata`); every policy that calls them picks this up unchanged. Reads are unaffected; writes cost about 3 µs more per row checked.
+- Administration shows "Saved. It takes effect on their next page load or save; they don't need to sign out." after a role or editor change. Help (Permissions) says the same.
+- Migration `20261009114024_role_checks_read_current_role` (functions and grants only, no table or data change). New pgTAP 22; fixtures in 04 and 09 updated. **`npx supabase db push && git push`.**
 - Feature: "Contract Period (months)" on the 3PL project: an optional whole number from 1 to 120 on the Project Info form (new project and edit), shown in Verify Details, on the Project Info page, and in the project page header as "Contract period · 36 months" ("1 month" singular). Blank is hidden in the header, as the forwarder duration is; the Project Info page shows "—".
 - Display and storage only: no change to scoring, ranking or cost calculations, and document upload never reads or overwrites it. There is no 3PL export, so none changed. Help unchanged.
 - Migration `20261008154543_three_pl_contract_period` (additive): nullable `three_pl_projects.contract_period_months smallint` with a 1-120 check, no backfill; RLS and grants unchanged. New pgTAP 21. The app now selects the column, so the migration must be live first: **`npx supabase db push && git push`.**

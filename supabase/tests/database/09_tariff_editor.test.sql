@@ -31,8 +31,12 @@ select is((select tariff_editor from profiles where email = 'editor@test.local')
 -- ---- is_tariff_editor() ------------------------------------------------------
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000a1', '{"role":"logistics_expert"}');
 select is(is_tariff_editor(), false, 'a plain user is not a tariff editor');
-select pg_temp.act_as('00000000-0000-4000-8000-0000000000a1', '{"role":"logistics_expert","tariff_editor":"yes"}');
+reset role;
+update auth.users set raw_app_meta_data = raw_app_meta_data || '{"tariff_editor":"yes"}' where email = 'expert@test.local';
+select pg_temp.act_as('00000000-0000-4000-8000-0000000000a1', '{"role":"logistics_expert"}');
 select is(is_tariff_editor(), false, 'only the boolean true counts');
+reset role;
+update auth.users set raw_app_meta_data = raw_app_meta_data - 'tariff_editor' where email = 'expert@test.local';
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000ad', '{"role":"admin"}');
 select is(is_tariff_editor(), true, 'an admin counts as a tariff editor');
 

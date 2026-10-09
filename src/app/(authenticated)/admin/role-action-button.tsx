@@ -14,14 +14,18 @@ export function RoleActionButton({
   label: string;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function handleClick() {
     setError(null);
+    setSaved(false);
     startTransition(async () => {
       const result = await updateUserRole(userId, newRole);
       if (result?.error) {
         setError(result.error);
+      } else {
+        setSaved(true);
       }
     });
   }
@@ -37,6 +41,11 @@ export function RoleActionButton({
         {isPending ? "Saving..." : label}
       </Button>
       {error && <span className="text-xs text-danger">{error}</span>}
+      {saved && (
+        <span className="text-xs text-neutral-muted" role="status">
+          Saved. It takes effect on their next page load or save; they don&apos;t need to sign out.
+        </span>
+      )}
     </div>
   );
 }
