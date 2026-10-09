@@ -7,6 +7,7 @@ import { parseRecommendationForm } from "@/lib/three-pl/parse-recommendation-for
 export type SaveRecommendationState = { error?: string; success?: boolean };
 
 const NOT_THIS_PROJECT = "Choose 3PLs from this project.";
+const FOREIGN_KEY_VIOLATION = "23503";
 
 export async function saveRecommendation(
   clientRequirementId: string,
@@ -20,7 +21,8 @@ export async function saveRecommendation(
   const supabase = await createClient();
 
   // The top three must be 3PLs of this project (QA B-5): the page only offers
-  // its own Vetted 3PLs, but a crafted post could name any provider id.
+  // its own Vetted 3PLs, but a crafted post could name any provider id. The
+  // database refuses one too (each slot's foreign key includes the project).
   const chosen = [...new Set(
     [parsed.data.provider_id_1, parsed.data.provider_id_2, parsed.data.provider_id_3].filter(
       (id): id is string => id != null,
@@ -62,6 +64,11 @@ export async function saveRecommendation(
     : await supabase.from("recommendation").insert(payload).select();
 
   if (error) {
+    // A chosen 3PL was deleted (or moved) after the check above.
+    if (error.code === FOREIGN_KEY_VIOLATION) {
+      console.error("saveRecommendation foreign key violation:", error);
+      return { error: NOT_THIS_PROJECT };
+    }
     console.error("saveRecommendation error:", error);
     return { error: "An unexpected error occurred." };
   }

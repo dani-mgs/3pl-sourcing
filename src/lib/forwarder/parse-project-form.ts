@@ -122,6 +122,10 @@ export type ForwarderProjectFields = z.infer<typeof projectSchema>;
 
 const FIELD_NAMES = Object.keys(projectSchema.shape) as (keyof ForwarderProjectFields)[];
 
+// Every column the intake form edits. create_forwarder_project_with_client()
+// keeps the same list, minus status (a Vitest check compares them).
+export const FORWARDER_PROJECT_FIELDS: readonly (keyof ForwarderProjectFields)[] = FIELD_NAMES;
+
 // Every column the intake form edits, as a Supabase select list.
 export const FORWARDER_PROJECT_FIELDS_SELECT = FIELD_NAMES.join(", ");
 

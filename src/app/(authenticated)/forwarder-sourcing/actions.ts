@@ -5,10 +5,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
-import { resolveClientId } from "@/lib/clients-server";
+import { UNIQUE_VIOLATION } from "@/lib/clients";
+import { checkNewClient, duplicateClientError, resolveClientId } from "@/lib/clients-server";
 import { explainEmptyDelete } from "@/lib/delete-errors";
 import type { ClientOption } from "@/lib/clients";
-import { parseForwarderProjectForm } from "@/lib/forwarder/parse-project-form";
+import { parseForwarderProjectForm, type ForwarderProjectFields } from "@/lib/forwarder/parse-project-form";
 
 export type SaveForwarderProjectState = {
   error?: string;
@@ -23,7 +24,8 @@ const projectIdSchema = z.string().uuid();
 
 // Creates (projectId null) or updates a forwarder project. Ownership is
 // checked here as well as by RLS, and the form is validated before anything
-// is written, so a bad form never leaves a new client behind.
+// is written. A new client is created only together with its project, in one
+// transaction, so a failed project insert never leaves the client behind.
 export async function saveForwarderProject(
   projectId: string | null,
   formData: FormData,
@@ -51,6 +53,36 @@ export async function saveForwarderProject(
     return { error: parsed.error };
   }
 
+  // A new project with a new client: both are created by one function call.
+  if (projectId === null && formData.get("client_mode") === "new") {
+    const client = await checkNewClient(supabase, formData);
+    if (!("name" in client)) {
+      return client;
+    }
+    // status isn't sent: a new project always starts Active.
+    const project: Partial<ForwarderProjectFields> = { ...parsed.data };
+    delete project.status;
+    const { data, error } = await supabase.rpc("create_forwarder_project_with_client", {
+      p_client_name: client.name,
+      p_client_business_model: client.businessModel,
+      p_project: project,
+    });
+    if (error) {
+      if (error.code === UNIQUE_VIOLATION) {
+        console.error("saveForwarderProject client unique violation:", error);
+        return duplicateClientError(supabase, client.name);
+      }
+      console.error("saveForwarderProject create error:", error);
+      return { error: UNEXPECTED };
+    }
+    if (!data) {
+      return { error: NO_PERMISSION };
+    }
+    revalidatePath("/forwarder-sourcing");
+    redirect(`/forwarder-sourcing/${data}`);
+  }
+
+  // An existing client (or an edit, which can only pick an existing client).
   const resolved = await resolveClientId(supabase, formData, projectId !== null);
   if (!("clientId" in resolved)) {
     return resolved;

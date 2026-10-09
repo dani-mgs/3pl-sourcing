@@ -1,8 +1,6 @@
 // SERVER-ONLY: called from Server Actions with the request's Supabase client.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  CLIENT_SELECT,
-  UNIQUE_VIOLATION,
   duplicateClientMessage,
   findClientByName,
   type ClientOption,
@@ -17,8 +15,9 @@ export type ResolveClientError = {
 
 // The "New client" fields, checked but not saved: the name is required and
 // mustn't match an existing client (the form then offers "Use existing
-// client"). The 3PL intake creates the client together with its project
-// (create_three_pl_project_with_client), only after the whole form is valid.
+// client"). Each intake then creates the client together with its project
+// (create_three_pl_project_with_client, create_forwarder_project_with_client),
+// only after the whole form is valid.
 export async function checkNewClient(
   supabase: SupabaseClient,
   formData: FormData,
@@ -55,49 +54,23 @@ export async function duplicateClientError(
   };
 }
 
-// Returns the id of the client a project belongs to, creating the client
-// first when the form chose "New client". Reads the ClientPicker's hidden
-// fields (client_mode, client_id, new_client_name, new_client_business_model).
-// A project being edited can only be moved to another existing client —
-// creating or renaming a client there isn't allowed. Shared by every
-// module's project save action.
+// Returns the id of the existing client a project belongs to, from the
+// ClientPicker's hidden fields (client_mode, client_id). A new client is never
+// created here: each module's intake creates it together with the project
+// (create_three_pl_project_with_client, create_forwarder_project_with_client),
+// so a failed project insert can't leave it behind. A project being edited
+// can only be moved to another existing client.
 export async function resolveClientId(
   supabase: SupabaseClient,
   formData: FormData,
   isEdit: boolean,
 ): Promise<{ clientId: string } | ResolveClientError> {
-  const mode = formData.get("client_mode") as string;
-
-  if (mode === "new") {
-    if (isEdit) {
-      return { error: "Choose an existing client for this project." };
-    }
-
-    const checked = await checkNewClient(supabase, formData);
-    if (!("name" in checked)) {
-      return checked;
-    }
-    const { name, businessModel } = checked;
-
-    const { data, error } = await supabase
-      .from("clients")
-      .insert({ name, business_model: businessModel })
-      .select(CLIENT_SELECT)
-      .single();
-
-    if (error) {
-      // Another expert created the same client between our check and insert.
-      if (error.code === UNIQUE_VIOLATION) {
-        console.error("resolveClientId client unique violation:", error);
-        return duplicateClientError(supabase, name);
-      }
-      console.error("resolveClientId client insert error:", error);
-      return { error: "An unexpected error occurred." };
-    }
-    if (!data) {
-      return { error: "You don't have permission to make this change." };
-    }
-    return { clientId: data.id };
+  if (formData.get("client_mode") === "new") {
+    return {
+      error: isEdit
+        ? "Choose an existing client for this project."
+        : "An unexpected error occurred.",
+    };
   }
 
   const clientId = formData.get("client_id") as string;
