@@ -20,7 +20,7 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 |---|---|
 | 1. Automated gates | Done |
 | 2. Auth / Admin / RLS | Done |
-| 3. 3PL Sourcing | Pending |
+| 3. 3PL Sourcing | Done |
 | 4. Forwarder Sourcing | Pending |
 | 5. Tariff Calculator | Pending |
 | 6. Help + cross-cutting | Pending |
@@ -90,6 +90,48 @@ Two more observations from the API probes:
 - A user can write `role: "admin"` into their own `user_metadata`. This is harmless: roles are only ever read from `app_metadata` (`get-user-role.ts`, `get-tariff-permissions.ts`, `is_admin()`), and `user_metadata` is used only for `first_name`.
 - Every signed-in user can read every saved duty estimate (`USING (true)`). That matches `/help`: "everyone signed in can … view saved estimates".
 
+## 3. 3PL Sourcing
+
+| ID | Result | Evidence |
+|---|---|---|
+| 3PL-01 | ⚠️ Pass with bug B-6 | My Projects · 4, All Experts · 5, correct. "zzqa CAFÉ" finds the Café client, and the search is case-insensitive. **"zzqa cafe" finds nothing**, so the search is accent-sensitive (B-6). No match shows "No projects match your search." The pipeline text shows the top two statuses, by design (`3pl-sourcing/page.tsx`). |
+| 3PL-02 | ⚠️ Pass with bug B-9 | New client "ZZQA New Client QA é&🚚" plus Step 1. The first submit had Contract Period 0 and failed validation, **but it still created the client**. Every retry then said "A client named … already exists." I had to switch to Existing client to continue (B-9). |
+| 3PL-03 | ✅ Pass | The Existing client list shows all 13 ZZQA clients. Choosing one links the project; no duplicate is created. |
+| 3PL-04 | ✅ Pass | Typing "zzqa existing client co" as a new client → "A client named "ZZQA Existing Client Co" already exists." (case-insensitive). The typed Step 1 fields were kept. |
+| 3PL-05 | ✅ Pass | Step 2: added "ZZQA Wizard Incumbent 3PL" (Incumbent, storage $500, pick & pack $250.55, storage rate 12.5). **Add Another** cleared the form for the next one; "ZZQA Wizard Second 3PL" ($400) was added. |
+| 3PL-06 | ✅ Pass | Verify Details lists the client, business model, geography and both 3PLs. **Finish** → the project page. Cost Comparison: Second $400 is rank 1 and saves "$350.55 (46.7%)"; the Incumbent $750.55 is Baseline. Both figures are right. |
+| 3PL-07 | ✅ Pass | Back to Add 3PLs → Back to Project Info keeps the client and Target Geography. Browser Back returns to Step 2 without errors. Step 2 shows an empty "add another" form; the added 3PLs are listed on Verify. |
+| 3PL-08 | ✅ Pass | Refreshing on Step 2 reloads cleanly. Saved 3PLs are kept. |
+| 3PL-09 | ✅ Pass | Blank → saved as NULL. The header omits the period; Info shows "Contract Period —"; the edit field pre-fills empty. |
+| 3PL-10 | ✅ Pass | 1 → header "Contract period · 1 month", Info "1 month", pre-fill "1". |
+| 3PL-11 | ✅ Pass | 36 → "36 months" in the header and on Info. |
+| 3PL-12 | ✅ Pass | 120 → "120 months". |
+| 3PL-13 | ✅ Pass | 0 → the browser says "Value must be greater than or equal to 1." With browser validation bypassed, the server says "Contract period must be a whole number of months from 1 to 120, or left empty." The other typed fields are kept. |
+| 3PL-14 | ✅ Pass | 121 → the browser's "…less than or equal to 120." Bypassed → the same server message. |
+| 3PL-15 | ✅ Pass | 1.5 → the browser's "Please enter a valid value. The two nearest valid values are 1 and 2." Bypassed, −5 and 1e1 get the server message. |
+| 3PL-16 | ✅ Pass | The field is `type=number` (`step=1`, `inputmode=numeric`). Letters, "12 months" and full-width digits can't reach the form data: the input re-renders as a number field and the browser blanks the value, so it posts empty. The server parser also refuses anything that isn't digits only (`parse-project-form.ts` `/^\d+$/`). Note: a browser that lets you type letters into a number field would save the period as blank without a message. Not reproducible in Chromium. |
+| 3PL-17 | ✅ Pass | The seeded 36-month project shows "Contract period · 36 months" in the header and "36 months" on Info. The Verify Details step has no Contract Period line (minor; not logged). |
+| 3PL-18 | ✅ Pass | Info edits save and redirect to `/info`. Re-opening Edit pre-fills the new values (native inputs re-hydrate). |
+| 3PL-19 | ✅ Pass (note) | There's no Cancel button. "← Back to Project Info" discards changes: the value typed was not saved. |
+| 3PL-20 | ⏭ Not tested | Needs AI extraction (no API key). Covered by `merge-client-intake.test.ts` and `merge-provider-fields.test.ts`. |
+| 3PL-21 | ✅ Pass | `accept=".txt,.pdf,.docx"`. A .csv → "Unsupported file type. Please upload a .txt, .pdf, or .docx file." A .txt with no key → "Document extraction isn't configured right now." Both offer "Continue with a blank form". |
+| 3PL-22 | ⚠️ Pass with bug B-7 | Charlie $700 is rank 1; Tie Alpha and Tie Bravo $800 are ranks 2 and 3 (consecutive, as `/help` says); Incumbent $1,000 is Baseline (rank 4); No Cost Delta says "Not enough data to rank". **Unfit Echo ($100) is left out of the Cost Comparison entirely.** The code excludes Unfit, Do not Contact and Withdrawn (`cost-comparison-panel.tsx:9`), but `/help` doesn't say so (B-7). |
+| 3PL-23 | ✅ Pass | "$300.00 (30.0%) saves" and "$200.00 (20.0%) saves" against $1,000. |
+| 3PL-24 | ✅ Pass | Café & Crème: "3PLs are quoted in different currencies (EUR and USD) — ranking and savings are hidden until all quotes use the same currency." €700.00 and $650.00 are shown unconverted and unranked. |
+| 3PL-25 | ✅ Pass | No incumbent: "Ranked by total cost, lowest first", with no savings line. |
+| 3PL-26 | ✅ Pass | Incumbent with no costs: "The incumbent 3PL has no cost data yet — savings will appear once its costs are entered." The incumbent shows "Not enough data to rank · Baseline". |
+| 3PL-27 | ⚠️ Pass with bug B-8 | Only the Vetted Tie Alpha and Tie Bravo are listed ($800 each, input order). Save → "Saved". **After changing the priority, "Saved" stays visible before you save again** (B-8). |
+| 3PL-28 | ✅ Pass | Turnaround Time: "Turnaround Time can't be automatically ranked from current data." The 3PLs are unnumbered, in the order added. The saved priority survives a reload. |
+| 3PL-29 | ✅ Pass | Added "ZZQA Nine Costs 3PL — Ñandú & Co 🚚" with the 9 costs 1.10–9.10 and the 13 rate details 1–13. The view shows Total Cost $45.90 (right) and every rate. Rank 1, saves "$954.10 (95.4%)". Editing storage to 100 gives $144.80 and "$855.20 (85.5%)". Deleting it asks "…This also deletes its Rate Details…" and removes it. **Deleting Tie Alpha, which is in the saved Recommendation, now works**; the Recommendation then lists only Tie Bravo. Failure #1 from 2026-09-28 is fixed. The row ⋯ menu (View / Edit / Delete) also deletes (Failure #3 fixed). |
+| 3PL-30 | ✅ Pass | Ticking Incumbent on a new 3PL → "Only one 3PL can be marked as incumbent for this project — uncheck the existing incumbent first." The name, all 9 costs and all rate details are kept. |
+| 3PL-31 | ✅ Pass | The owner (expert1) edits info, 3PLs, notes and the recommendation. |
+| 3PL-32 | ✅ Pass | See RLS-01 to RLS-04. |
+| 3PL-33 | ✅ Pass | The admin on expert2's project sees no view-only banner. Edited Target Geography → saved → reverted. |
+| 3PL-34 | ⚠️ Pass with bug B-7 | **Delete Project** while 3PLs exist → "Can't delete this project — This project has 1 3PL(s) attached. Delete them first…". This rule isn't in `/help` (B-7). After deleting the 3PLs: "Delete this 3PL project for ZZQA New Client QA é&🚚? The client itself is kept…" → back to `/3pl-sourcing`; the project URL is 404; the client still exists. |
+| 3PL-35 | ➡️ See X-01/X-02 | Layout is checked in the cross-cutting checkpoint. |
+| 3PL-36 | ✅ Pass | Notes `<script>alert(1)</script> "quotes" & ampersand — é ü ñ 📦` plus a second line were saved and re-loaded byte for byte. Nothing ran. The 3PL name with "— Ñandú & 🚚" displays correctly. |
+| 3PL-37 | ✅ Pass | Double-clicking **Add 3PL** created exactly one row (DB check). |
+
 <!-- MODULE-SECTIONS-END -->
 
 ## Bugs, ranked by severity
@@ -147,6 +189,23 @@ The app's own pages and server actions are safe: they re-check through `getUser(
 
 **Suspected files:** the profile sync trigger, which trusts `raw_user_meta_data ->> 'first_name'` (`supabase/migrations/20261002151158_tariff_editor_permission.sql`). The display name should live in `app_metadata` or `profiles`, written only by the admin action.
 
+#### B-9. A failed Step 1 submit still creates the new client, and every retry is then blocked as a duplicate
+
+**Steps to reproduce**
+1. 3PL Sourcing → New Project → Start from Scratch → **New client** "ZZQA Orphan Test".
+2. Enter Contract Period `0` (or any value the server rejects), with the browser check bypassed or any other server-side error. Click **Continue to Add 3PLs**.
+3. Fix the value and submit again.
+
+**Expected:** nothing is saved until the whole form is valid. The retry succeeds.
+
+**Actual:**
+- Step 2 shows "Contract period must be…", but the client row was already inserted.
+- Step 3 fails with "A client named "ZZQA Orphan Test" already exists."
+- The user has to work out that they need to switch to **Existing client**.
+- If they give up, an orphan client with 0 projects is left behind. Only an admin can delete it.
+
+**Suspected file:** `src/app/(authenticated)/3pl-sourcing/new/actions.ts:22` calls `resolveClientId()`, which inserts the client, *before* `parseProjectForm()` (line 27). `forwarder-sourcing/actions.ts:54` has the same order; see the Forwarder checkpoint.
+
 ### Low
 
 #### B-4. Promote to Admin, Demote and Make or Revoke tariff editor apply on one click, with no confirmation
@@ -168,3 +227,35 @@ The app's own pages and server actions are safe: they re-check through `getUser(
 **Actual:** `201`, saved. The UI only offers the project's own Vetted 3PLs, so normal use is unaffected.
 
 **Suspected files:** `src/app/(authenticated)/3pl-sourcing/projects/[id]/recommendation/actions.ts` and `src/lib/three-pl/parse-recommendation-form.ts` (no ownership check on the provider IDs). There's also no constraint in the `recommendation` table.
+
+#### B-6. Project search is accent-sensitive
+
+**Steps:** 3PL Sourcing → search "zzqa cafe".
+
+**Expected:** finds "ZZQA Café & Crème Ünïcödé 🚚 Ltd", since users type without accents.
+
+**Actual:** "No projects match your search." Only "café" matches.
+
+**Suspected file:** the search filter in `src/app/(authenticated)/3pl-sourcing/dashboard-content.tsx` (plain `toLowerCase().includes`, no `normalize("NFD")`). Check the forwarder list too.
+
+#### B-7. `/help` is missing two 3PL rules the app enforces
+
+**Steps:** open `/help` → "How the Cost Comparison works" and the Permissions section.
+
+**Expected:** every rule the app enforces is in `/help` (AGENTS.md).
+
+**Actual:** two rules aren't mentioned:
+- 3PLs with status **Unfit**, **Do not Contact** or **Withdrawn / No Response** are left out of the Cost Comparison entirely. A seeded Unfit 3PL at $100 doesn't appear.
+- A 3PL project **can't be deleted while it has 3PLs**. `/help` states this rule only for forwarder projects.
+
+**Suspected files:** `src/app/(authenticated)/help/workflow-sections.tsx`; rule sources `3pl-sourcing/projects/[id]/cost-comparison-panel.tsx:9` and the delete-project dialog.
+
+#### B-8. The Recommendation "Saved" badge stays after the priority changes
+
+**Steps:** Recommendation → Save Recommendation ("Saved" appears) → change Priority to Turnaround Time.
+
+**Expected:** "Saved" disappears, or shows unsaved changes, until you save again.
+
+**Actual:** "Saved" stays next to the button although the new priority isn't saved. A reload before saving would show the old priority.
+
+**Suspected file:** `src/app/(authenticated)/3pl-sourcing/projects/[id]/recommendation/recommendation-form.tsx:121-127`.
