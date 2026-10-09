@@ -21,7 +21,7 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 | 1. Automated gates | Done |
 | 2. Auth / Admin / RLS | Done |
 | 3. 3PL Sourcing | Done |
-| 4. Forwarder Sourcing | Pending |
+| 4. Forwarder Sourcing | Done |
 | 5. Tariff Calculator | Pending |
 | 6. Help + cross-cutting | Pending |
 
@@ -132,6 +132,55 @@ Two more observations from the API probes:
 | 3PL-36 | ✅ Pass | Notes `<script>alert(1)</script> "quotes" & ampersand — é ü ñ 📦` plus a second line were saved and re-loaded byte for byte. Nothing ran. The 3PL name with "— Ñandú & 🚚" displays correctly. |
 | 3PL-37 | ✅ Pass | Double-clicking **Add 3PL** created exactly one row (DB check). |
 
+## 4. Forwarder Sourcing
+
+| ID | Result | Evidence |
+|---|---|---|
+| FWD-01 | ⚠️ Pass with bug B-6 | My Projects · 10, All Experts · 11. Search by client ("ZZQA VND") and by route ("hamburg") works. **"creme" doesn't find "Crème"**, the same accent issue (`forwarder-project-list.tsx:36`). |
+| FWD-02 | ✅ Pass (shared code) | Existing-client selection uses the same `resolveClientId` and picker as 3PL-03. Not separately repeated. |
+| FWD-03 | ✅ Pass | New client "ZZQA Fwd New Client". The first submit had Duration 0 (browser check bypassed) → "Project duration must be a whole number of months from 1 to 120, or left empty." Origin City was kept. The retry with 24 created the project, with **one** client. Unlike 3PL (B-9), this action validates before inserting the client (`forwarder-sourcing/actions.ts:49-57`). |
+| FWD-04 | ✅ Pass | 1 → "Duration 1 month"; 120 → "120 months"; 24 → "24 months"; blank → no Duration row. |
+| FWD-05 | ✅ Pass | Browser: 0 "Value must be greater than or equal to 1.", 121 "…less than or equal to 120.", 1.5 "Please enter a valid value…". Server (bypassed): 0, 121, −3 and 1e1 each give the duration message; nothing saved. |
+| FWD-06 | ✅ Pass (note) | A negative weight with the browser's `min=0` bypassed → "Some fields have values that aren't allowed. Check the form and try again." That's plain language but doesn't name the field. In normal use the browser's min check catches it first. |
+| FWD-07 | ✅ Pass | The edit saved current and final terms, freight $3,000, invoice $40,000 USD, weight and 12 shipments a year, and redirected to the project. |
+| FWD-08 | ⏭ Not tested | Needs AI extraction. Covered by `merge-project-fields.test.ts`, `merge-forwarder-fields.test.ts` and `merge-quote-fields.test.ts`. |
+| FWD-09 | ⚠️ Pass with bug B-10 | Added "ZZQA Temp Fwd & Sons 🚢". **Email "not-an-email" was accepted and shown in the profile** (B-10). Editing the status to Shortlisted worked. Delete → "Delete ZZQA Temp Fwd & Sons 🚢? This also deletes all of its quotes." → gone. |
+| FWD-10 | ✅ Pass | A USD DDP·Sea·FCL $3,100 quote saved and was ranked. |
+| FWD-11 | ✅ Pass | Choosing EUR pre-fills 1.08 with "1 EUR = 1.08 USD · as of Oct 9, 2026 · Daily reference rate" and "Rate is locked when the quote is saved." Saved as `daily_feed`, 2026-10-09. €2,800 → $3,024.00 with "rate locked Oct 9, 2026". |
+| FWD-12 | ✅ Pass | EUR with the rate cleared: the browser blocks the submit. Bypassed → "No exchange rate yet — enter the EUR to USD rate before saving." Nothing saved. |
+| FWD-13 | ✅ Pass | The edit pre-fills 3100; changed to 2,900 → now Lowest and "Below Baseline $100.00 (3.3%)". Editing the EUR quote's notes kept rate 1.08, `daily_feed` and 2026-10-09 (DB check). |
+| FWD-14 | ✅ Pass | Quote ⋯ menu (Edit / Estimate duties for this quote / Delete) → "Delete this quote (DDP · Sea · FCL)? This can't be undone." → removed. |
+| FWD-15 | ✅ Pass | Pakkable: Bravo $3,000 is "Lowest Freight Cost (best quote)"; Ocean Alpha $3,200 and Charlie €3,000 × 1.1 = $3,300 show "—"; Delta $3,800 is "Highest Freight Cost". |
+| FWD-16 | ✅ Pass | The 2 DDU quotes are listed below, greyed, with rank "Different terms" and vs Baseline "Not Comparable". They're never the Best quote. Exports call them "Not Comparable", as `/help` says. |
+| FWD-17 | ✅ Pass | Different Terms: Best quote and Saving say "No comparable quote yet". All 3 quotes (FOB, DAP, DDP·LCL) are "Different terms". |
+| FWD-18 | ✅ Pass | High Volume Air: the incomplete Jet Cargo quote has rank and vs Baseline "Not Comparable". The Withdrawn forwarder's quote is "Excluded from ranking" but still shows "Below Baseline $1,200.00 (28.6%)". Pipeline reads "3 quoted · 1 excluded". |
+| FWD-19 | ✅ Pass | Two DDP quotes at $3,024.00 were both "Lowest Freight Cost (best quote)". After one edit, the two $3,024 quotes were both "Highest Freight Cost". |
+| FWD-20 | ✅ Pass | VND and No Currency have one ranked quote each → "Only Comparable Quote". |
+| FWD-21 | ✅ Pass | "$3,500.00 Freight Cost" / "$50,000.00 Commercial Invoice Value" / "DDP · Sea · FCL". |
+| FWD-22 | ✅ Pass | "€40,000.00 Commercial Invoice Value". The profile says "Invoice value €40,000.00 (EUR)". |
+| FWD-23 | ✅ Pass | "₫1,250,000,000 Commercial Invoice Value" (no decimals). |
+| FWD-24 | ✅ Pass | "25,000.00 Commercial Invoice Value", with no symbol. |
+| FWD-25 | ✅ Pass | "Commercial Invoice Value: Not set". |
+| FWD-26 | ✅ Pass | No Quotes: "No current freight cost". There's no "$0". |
+| FWD-27 | ✅ Pass | Tile "7.0% → 6.0%, Current → best quote, Freight ÷ invoice value". Column: 6.0 / 6.4 / 6.6 / 7.6% and DDU 5.4 / 5.8%, all equal to USD ÷ 50,000 to one decimal. Air: 3.5% → 3.3% (3,900 / 120,000 = 3.25%, rounded half-up). |
+| FWD-28 | ✅ Pass | "Set invoice value to calculate"; the column shows "—". |
+| FWD-29 | ✅ Pass | EUR, VND and No Currency → "Invoice must be in USD to calculate"; the column shows "—". |
+| FWD-30 | ✅ Pass | No Quotes: Best quote, Saving and Ratio say "Awaiting quotes"; Quote Comparison says "Quotes will be compared here once forwarders have quoted." Different Terms shows "7.0% · Current · no comparable quote yet". |
+| FWD-31 | ✅ Pass | Rounding Tie: tile "0.2% → 0.1%". Column: $1 → 0.1%, $2.99 → 0.1%, $3 → 0.2%. Saving "$2.00 (66.7%)"; $2.99 "$0.01 (0.3%)"; $3 "Equal to Baseline $0.00 (0.0%)". |
+| FWD-32 | ✅ Pass | "SAVING PER SHIPMENT $500.00 (14.3%) Below Baseline". |
+| FWD-33 | ✅ Pass | Sky Express page: "$156,000.00 / yr on 520 shipments" (= $300 × 520; shipments per year wins). "#1 of 2 quotes". Cost per kg uses chargeable weight 480: $3,900 → $8.13 / kg. Pakkable Expert CSV Annual Savings: $12,000 / $7,200 / $4,800 / −$7,200 (= 24 a year, from 2 a month × 12). |
+| FWD-34 | ✅ Pass | The Expert CSV has a UTF-8 BOM and 3 sections. The project section adds Project Status. Forwarders add Contact Person / Position / Email / Phone / Status / Assessment / Next Action / Key Notes. Quotes add Annual Savings, Forwarder Status, Key Strength, Key Weakness / Risk, Important Assumption, Overall Assessment, Client Decision, Notes and Legacy Scenario Group ("DDP option" / "DDU option" from the seed). Freight Cost Ratio is included. **No duty estimates section was present, because none existed yet;** see TAR-35. |
+| FWD-35 | ✅ Pass | The Client CSV leaves out exactly the columns `/help` lists. Air: the Withdrawn forwarder is absent from both Forwarders and Quote Comparison. The Expert CSV includes it as "Excluded from ranking". |
+| FWD-36 | ✅ Pass | Client and Expert PDFs (4 pages) open and extract cleanly: Project Summary, Forwarders Considered, Quote Comparison. Same values as the CSV, including Exchange Rate "1 EUR = 1.1 USD", Rate Date and Rate Source "Entered manually". Freight Cost Ratio is in both; Annual Savings and Forwarder Status only in the Expert version. |
+| FWD-37 | ✅ Pass | Client and Expert DOCX, the same as the PDFs. |
+| FWD-38 | ✅ Pass | Charlie row: "1 EUR = 1.1 USD", "Oct 9, 2026", "Entered manually". |
+| FWD-39 | ✅ Pass (note) | Café exports: an RFC-4180 parse gives consistent column counts per section (43 / 26 / 21). "ZZQA Café & Crème Ünïcödé 🚚 Ltd", "Fret Français & Fils 🚢" and "Fragile & handle with care — é ü ñ 🚚" are intact, and the long text is quoted correctly. The file name keeps the accents and emoji. Note: negative amounts are written as `'-$7,200.00`. That's the documented formula-injection guard in `export-csv.ts:4-14`; how Excel and Sheets show it wasn't checked (no spreadsheet app locally). |
+| FWD-40 | ✅ Pass | expert2 exported Pakkable's Expert CSV. |
+| FWD-41 | ✅ Pass | expert2 on Pakkable: "view only"; Export only; every ⋯ menu shows just "View". See also RLS-05 / RLS-06. |
+| FWD-42 | ✅ Pass | The admin (target, after re-login, AUTH-06) saved an edit to expert2's forwarder project. |
+| FWD-43 | ✅ Pass | Delete Project while a forwarder exists → "Can't delete this project — This project has 1 forwarder(s) attached…". After deleting the forwarder: "Delete this forwarder project for ZZQA Fwd New Client? The client itself is kept…" → back to the list; the URL is 404. |
+| FWD-44 | ✅ Pass | Valid-until set to today → "Expires today"; yesterday → "Expired". Both quotes stay ranked; `/help` doesn't exclude expired quotes. |
+
 <!-- MODULE-SECTIONS-END -->
 
 ## Bugs, ranked by severity
@@ -204,7 +253,7 @@ The app's own pages and server actions are safe: they re-check through `getUser(
 - The user has to work out that they need to switch to **Existing client**.
 - If they give up, an orphan client with 0 projects is left behind. Only an admin can delete it.
 
-**Suspected file:** `src/app/(authenticated)/3pl-sourcing/new/actions.ts:22` calls `resolveClientId()`, which inserts the client, *before* `parseProjectForm()` (line 27). `forwarder-sourcing/actions.ts:54` has the same order; see the Forwarder checkpoint.
+**Suspected file:** `src/app/(authenticated)/3pl-sourcing/new/actions.ts:22` calls `resolveClientId()`, which inserts the client, *before* `parseProjectForm()` (line 27). The Forwarder action does it in the right order: parse first (`forwarder-sourcing/actions.ts:49`), then `resolveClientId` (line 54). Forwarder isn't affected (FWD-03).
 
 ### Low
 
@@ -236,7 +285,9 @@ The app's own pages and server actions are safe: they re-check through `getUser(
 
 **Actual:** "No projects match your search." Only "café" matches.
 
-**Suspected file:** the search filter in `src/app/(authenticated)/3pl-sourcing/dashboard-content.tsx` (plain `toLowerCase().includes`, no `normalize("NFD")`). Check the forwarder list too.
+**Also in Forwarder Sourcing:** "creme" doesn't find "Crème".
+
+**Suspected files:** `src/app/(authenticated)/3pl-sourcing/dashboard-content.tsx:33` and `src/app/(authenticated)/forwarder-sourcing/forwarder-project-list.tsx:36` (plain `toLowerCase().includes`, no accent folding).
 
 #### B-7. `/help` is missing two 3PL rules the app enforces
 
@@ -259,3 +310,13 @@ The app's own pages and server actions are safe: they re-check through `getUser(
 **Actual:** "Saved" stays next to the button although the new priority isn't saved. A reload before saving would show the old priority.
 
 **Suspected file:** `src/app/(authenticated)/3pl-sourcing/projects/[id]/recommendation/recommendation-form.tsx:121-127`.
+
+#### B-10. Forwarder email isn't validated
+
+**Steps:** Add Forwarder → Email "not-an-email" → save.
+
+**Expected:** "Enter a valid email address." The 3PL form at least uses `type=email`, so the browser checks it there.
+
+**Actual:** it's saved and shown under Forwarder Profile → Contact → Email.
+
+**Suspected files:** `src/lib/forwarder/parse-forwarder-form.ts:36` (`email: text(320)`) and the forwarder form input (`type=text`). `parse-provider-form.ts:56` is also plain text, so only the browser check protects the 3PL form.
