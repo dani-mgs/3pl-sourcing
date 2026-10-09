@@ -489,7 +489,7 @@ Against the old functions, 22 of the 28 fail, including every B-1 and B-2 repro.
 ### Known limits
 
 - **A deleted user's old token still passes ownership checks.** Policies like `owner_id = auth.uid()` take the user id from the token, so a deleted user's token still passes them on rows they owned, until it expires (up to an hour). Admin and editor rights end at once. Not fixed here.
-- **Found while fixing (not fixed): `authenticated` has TRUNCATE on 9 tables.** Supabase's default grants leave `authenticated` with TRUNCATE on `clients`, `forwarder_projects`, `forwarder_quotes`, `forwarders`, `profiles`, `rate_details`, `recommendation`, `three_pl_projects` and `three_pl_providers`. It also keeps unused INSERT/DELETE on `profiles`, which RLS refuses. RLS doesn't apply to TRUNCATE. It isn't reachable today: PostgREST has no TRUNCATE, `authenticated` can't log in directly, and no RPC runs dynamic SQL. It is still worth revoking in a follow-up migration, as was done for `fx_rates`.
+- **✅ Resolved on `fix/signup-hardening` (TRUNCATE revoked; see "Hardening: role gate, signup and TRUNCATE").** **Found while fixing: `authenticated` has TRUNCATE on 9 tables.** Supabase's default grants leave `authenticated` with TRUNCATE on `clients`, `forwarder_projects`, `forwarder_quotes`, `forwarders`, `profiles`, `rate_details`, `recommendation`, `three_pl_projects` and `three_pl_providers`. It also keeps unused INSERT/DELETE on `profiles`, which RLS refuses. RLS doesn't apply to TRUNCATE. It isn't reachable today: PostgREST has no TRUNCATE, `authenticated` can't log in directly, and no RPC runs dynamic SQL. It is still worth revoking in a follow-up migration, as was done for `fx_rates`.
 
 ## Fix: B-3
 
@@ -557,9 +557,76 @@ Against the old functions, 22 of the 28 fail, including every B-1 and B-2 repro.
 
 ### Found while fixing
 
-- **Low: local `config.toml` doesn't match production (signup enabled locally); production verified off on 2026-10-09.**
+- **Low: local `config.toml` doesn't match production (signup enabled locally); production verified off on 2026-10-09.** **✅ Resolved on `fix/signup-hardening`:** `[auth] enable_signup = false` locally (see "Hardening: role gate, signup and TRUNCATE").
   - **Locally:** `supabase/config.toml` has `enable_signup = true` (`[auth]` and `[auth.email]`) with `enable_confirmations = false`. Anyone with the anon key could create an account and get a session at once; a probe confirmed this, and the probe user was deleted.
   - **The docs:** `docs/PROJECT_STATE.md` and `docs/CHANGELOG.md` say invite-only, no public signup.
   - **Production:** the owner checked the dashboard on 2026-10-09: "Allow new users to sign up" is off, and there are no unknown accounts. Production was never exposed.
   - **Suggested follow-up:** set `enable_signup = false` locally so local matches production. Not changed in this task.
+
+## Hardening: role gate, signup and TRUNCATE
+
+Done on `fix/signup-hardening` after the B-1/B-2/B-3 fixes. It resolves the two "Found while fixing" items above, and adds defence in depth.
+
+**What changed** (migration `20261009124712_require_assigned_role`):
+- **Role gate:** `has_app_role()` reads `app_metadata.role` live from `auth.users` and accepts only `admin` and `logistics_expert`. Every one of the 21 RLS tables has a RESTRICTIVE `for all` policy `using/with check ((select public.has_app_role()))`. An account without a role reads 0 rows and can't insert.
+- **Service-role paths:** `save_duty_estimate` and `saveEstimate` refuse an account without a role.
+- **HTS search:** `search_hts_lines` checks the role itself and runs as owner (see Performance).
+- **Profiles:** a missing role now shows as `none`, not `logistics_expert`. Administration shows "no role" with **Make Logistics Expert**, and the hub shows "Your account doesn't have a role yet. Ask an admin."
+- **Backfill:** every existing user without a valid role got `logistics_expert`.
+- **Grants:** TRUNCATE is revoked from `authenticated` and `anon` on the 9 tables, along with the unused INSERT/DELETE on `profiles`.
+- **Signup:** `config.toml` has `[auth] enable_signup = false`. `[auth.email] enable_signup` stays `true`, because the CLI uses that key to switch the whole email provider; with it `false`, sign-in failed with "Email logins are disabled".
+
+**What brand-new users got before:** the database never assigned a role. A user without one was only *displayed* as `logistics_expert` (the `profiles` mirror's fallback) and treated as one by `getUserRole()`. No policy checked the role, so such an account had full expert read and write access. Admin Create user always set a role explicitly (required and validated against `USER_ROLES`); it still does.
+
+**Proof**
+- **pgTAP 24 (32 tests):**
+  - The helpers' security settings and grants.
+  - Every RLS table has the restrictive policy as a subselect.
+  - With no role (missing, only in `user_metadata`, or `"superuser"`): 0 rows across all 21 tables, the views and the HTS search; no client or project inserts; no fee writes even with the editor flag set.
+  - No TRUNCATE for anyone signed in, on any public table.
+  - Experts, admins and editors are unaffected.
+  - The mirror shows `none`, and `save_duty_estimate` refuses an account without a role.
+  - Without the migration, the file fails at its first check.
+- **Real local API:**
+  - Anon `signUp` → `signup_disabled`, while admin `createUser` and email sign-in work.
+  - expert1 sees 13 clients, 5 3PL projects, 11 forwarder projects, 24 quotes, 12 duty programs and 26 HTS lines. An account without a role sees 0 of each, gets 0 HTS search results, and gets 42501 creating a client.
+  - After the admin assigns `logistics_expert`, the same token sees everything.
+- **Browser:**
+  - An account without a role sees the hub notice and empty project lists, and gets 404 on `/admin`. Admin shows it as "· no role" with Make Logistics Expert.
+  - One click, and after a reload the notice is gone and 5 projects show.
+  - expert1 is unchanged.
+  - Create user still works with signup off, and gives the new user `logistics_expert`.
+
+**Upgrade test:** seeded, then 4 users added without a valid role, then `npx supabase migration up`.
+
+| User | Role before (app / profile) | Role after (app / profile) | Editor flag |
+|---|---|---|---|
+| zzqa-admin | admin / admin | admin / admin | no |
+| zzqa-editor | logistics_expert / logistics_expert | unchanged | yes |
+| zzqa-expert1, expert2, target | logistics_expert / logistics_expert | unchanged | no |
+| zzupg-norole (no role key) | — / logistics_expert | logistics_expert / logistics_expert | no |
+| zzupg-badrole (`"superuser"`) | superuser / superuser | logistics_expert / logistics_expert | no |
+| zzupg-userrole (`"admin"` in user_metadata only) | — / logistics_expert | logistics_expert / logistics_expert | no |
+| zzupg-nullrole (`role: null`, editor) | — / logistics_expert | logistics_expert / logistics_expert | yes (kept) |
+
+Names and `auth.users.updated_at` are unchanged for all 9. The migration's `raise notice` reports the count: "gave 2 existing user(s) without a valid role the logistics_expert role" (from a rolled-back rerun of the backfill block with 2 such users).
+
+**Performance:** `EXPLAIN ANALYZE` in a rolled-back transaction as an expert. Medians of 9 runs.
+
+| Query | Before | After |
+|---|---|---|
+| Forwarder project list (5,000, with client) | 1.57 ms | 1.70 ms |
+| Quotes for one project (1,000 through 50 forwarders) | 0.15 ms | 0.22 ms |
+| Duty scope read (~18,900 rows) | 1.10 ms | 1.24 ms |
+| HTS search "footwear rubber" (20,000 lines), invoker version | 3.6 ms | **1,700 ms** |
+| HTS search, final (definer and role check) | 3.6 ms | 3.8 ms |
+| 3PL list with a correlated provider count (2,000 × 3) | 243 ms | 263–306 ms |
+
+- **The role check runs once per query.** Every plan shows it as an `InitPlan` with `loops=1`, even inside the correlated subquery, e.g. `Filter: ((InitPlan 1).col1 AND (client_id = …))`. For a user without a role: `actual rows=0`, `Rows Removed by Filter: 5000`.
+- **HTS search:** the invoker version slowed down because `@@` isn't leakproof. Under a real RLS condition Postgres won't use it as an index condition, so the GIN index was skipped. The other queries only use leakproof operators.
+- **3PL list:** that synthetic query is slow before and after because `three_pl_providers` has no plain index on `three_pl_project_id`, so each count scans all 6,000 providers. The role check adds a cheap `AND` to each of those 12 million row checks. The 3PL page loads providers in one query, not this one. An index on `three_pl_providers(three_pl_project_id)` is a separate, optional follow-up.
+
+**Known limits**
+- **A user without a role still sees the New Project button** and the forms, and saving fails with the generic permission error. In production no such user can exist: signup is off, admins set a role, and the backfill covers older accounts. The hub notice tells them why.
+- **The allowed roles are listed in two places:** `has_app_role()` / `has_app_role_user()` in SQL, and `USER_ROLES` / `assignedRole()` in TypeScript. A Vitest check fails if they differ.
 
