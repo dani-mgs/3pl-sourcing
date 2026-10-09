@@ -17,7 +17,7 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 ## Summary
 
 - **Ran 188 cases:** 185 pass (170 clean, 15 with a linked bug or note), 0 fail outright, 2 not tested (3PL-20 and FWD-08, AI extraction) and 1 deferred (3PL-35, covered by X-01/X-02). "Fail" means the feature doesn't work at all. Every bug below is attached to a case that otherwise works.
-- **Fixed after this run:** B-1 and B-2, on branch `fix/role-checks-live` (see "Fix: B-1 and B-2"), B-3, on branch `fix/admin-only-display-names` (see "Fix: B-3"), and B-9, on branch `fix/3pl-intake-client-creation` (see "Fix: B-9"), and B-4, B-5 (app level), B-6, B-7, B-8, B-10, B-11 and B-12, on branch `fix/qa-cleanup-batch` (see "Fix: cleanup batch"). Every logged bug is now fixed; one database guard (B-5) is pending.
+- **Fixed after this run:** B-1 and B-2, on branch `fix/role-checks-live` (see "Fix: B-1 and B-2"), B-3, on branch `fix/admin-only-display-names` (see "Fix: B-3"), and B-9, on branch `fix/3pl-intake-client-creation` (see "Fix: B-9"), and B-4, B-5 (app level), B-6, B-7, B-8, B-10, B-11 and B-12, on branch `fix/qa-cleanup-batch` (see "Fix: cleanup batch"). The B-5 database guard and the forwarder client/project gap followed on `fix/data-integrity-followups` (see "Fix: data-integrity follow-ups"). Every logged bug and follow-up is now fixed.
 - **Bugs: 0 Critical, 1 High, 4 Medium, 7 Low.** No user could read or change another user's data, and no RLS gap or wrong duty, cost or ratio figure was found. Every money figure checked matched a hand calculation, including half-up rounding.
 - **Fixed since 2026-09-28:**
   - Failure #1: deleting a 3PL named in a Recommendation.
@@ -398,7 +398,7 @@ The cut-off buttons still respond where they're visible, but the labels are lost
 
 #### B-5. A recommendation can reference a 3PL from a different project
 
-**Status: ✅ Fixed in the app** on `fix/qa-cleanup-batch`: `saveRecommendation` refuses providers from another project ("Choose 3PLs from this project."). **Pending:** a database guard (trigger or composite FK on `recommendation`), to be done with the forwarder client/project follow-up.
+**Status: ✅ Fixed** in the app on `fix/qa-cleanup-batch` (`saveRecommendation` refuses providers from another project: "Choose 3PLs from this project.") and in the database on `fix/data-integrity-followups` (composite foreign keys, migration `20261009160424_recommendation_providers_same_project`, pgTAP 26). See "Fix: data-integrity follow-ups".
 
 **Steps:** as expert1, insert or update `recommendation` for your own project with `provider_id_1` = a 3PL from expert2's project (PostgREST, or a crafted `saveRecommendation` form post).
 
@@ -642,7 +642,7 @@ Names and `auth.users.updated_at` are unchanged for all 9. The migration's `rais
 
 - **The role check runs once per query.** Every plan shows it as an `InitPlan` with `loops=1`, even inside the correlated subquery, e.g. `Filter: ((InitPlan 1).col1 AND (client_id = …))`. For a user without a role: `actual rows=0`, `Rows Removed by Filter: 5000`.
 - **HTS search:** the invoker version slowed down because `@@` isn't leakproof. Under a real RLS condition Postgres won't use it as an index condition, so the GIN index was skipped. The other queries only use leakproof operators.
-- **3PL list:** that synthetic query is slow before and after because `three_pl_providers` has no plain index on `three_pl_project_id`, so each count scans all 6,000 providers. The role check adds a cheap `AND` to each of those 12 million row checks. The 3PL page loads providers in one query, not this one. An index on `three_pl_providers(three_pl_project_id)` is a separate, optional follow-up.
+- **3PL list:** that synthetic query is slow before and after because `three_pl_providers` has no plain index on `three_pl_project_id`, so each count scans all 6,000 providers. The role check adds a cheap `AND` to each of those 12 million row checks. The 3PL page loads providers in one query, not this one. An index on `three_pl_providers(three_pl_project_id)` is a separate, optional follow-up. **Resolved:** the B-5 guard's unique `(three_pl_project_id, id)` indexes it (see "Fix: data-integrity follow-ups").
 
 **Known limits**
 - **A user without a role still sees the New Project button** and the forms, and saving fails with the generic permission error. In production no such user can exist: signup is off, admins set a role, and the backfill covers older accounts. The hub notice tells them why.
@@ -686,7 +686,7 @@ Names and `auth.users.updated_at` are unchanged for all 9. The migration's `rais
 
 ### Follow-ups
 
-- **Forwarder: the same smaller gap (not changed).** `saveForwarderProject` validates first, so B-9 doesn't happen there. But its client insert and project insert are still two requests: if the project insert fails after the client was created (a database error, or a constraint the parser doesn't cover), the client is left behind. The same one-transaction pattern would close it; the forwarder form has about 3× the fields, so its function would need the same drift guard.
+- **Forwarder: the same smaller gap. ✅ Resolved** on `fix/data-integrity-followups` (see "Fix: data-integrity follow-ups"). `saveForwarderProject` validates first, so B-9 doesn't happen there. But its client insert and project insert are still two requests: if the project insert fails after the client was created (a database error, or a constraint the parser doesn't cover), the client is left behind. The same one-transaction pattern would close it; the forwarder form has about 3× the fields, so its function would need the same drift guard.
 - **Orphan clients already in production from B-9:** an admin can delete them in Administration → Clients. Deleting a client that's in use is blocked, so that's safe.
 
 ## Fix: cleanup batch
@@ -728,7 +728,7 @@ Branch `fix/qa-cleanup-batch`. No schema changes.
 ### The Low bugs
 
 - **B-4:** Promote to Admin, Make Logistics Expert / Demote, and Make or Revoke tariff editor open a dialog naming the user and what changes, e.g. "Promote ZZQA Target (zzqa-target@example.test) to Admin? They'll be able to manage users, edit and reassign everyone's projects, edit shared clients and change duty data." In the browser, Cancel left the role as it was; Confirm applied it and showed the usual "Saved…" line.
-- **B-5:** `saveRecommendation` checks that every chosen provider ID belongs to the project. Vitest covers it: another project's 3PL, an unknown ID and an empty top three. **Pending:** the database guard.
+- **B-5:** `saveRecommendation` checks that every chosen provider ID belongs to the project. Vitest covers it: another project's 3PL, an unknown ID and an empty top three. The database guard followed (see "Fix: data-integrity follow-ups").
 - **B-6:** `foldForSearch` (NFD, combining marks removed, lowercase) on both lists. In the browser, "zzqa cafe", "creme" and "unicode" all find "ZZQA Café & Crème Ünïcödé 🚚 Ltd" in 3PL and Forwarder Sourcing.
 - **B-7:** Help now says:
   - Contract Period (3PL) and Project Duration (Forwarder) are optional, 1–120 whole months, for reference only.
@@ -749,8 +749,105 @@ Branch `fix/qa-cleanup-batch`. No schema changes.
 - **Result:** the full suite, 524 tests, passes after `db reset` and after `npm run qa:seed`.
 - **Typecheck:** `npm run typecheck` = `next typegen && tsc --noEmit`, so a fresh checkout typechecks without a manual step (N-2).
 
-### Pending follow-ups
+### Follow-ups
 
-- **B-5:** a database guard on `recommendation` (trigger or composite FK) refusing providers from another project. It's a schema change; you'll do it together with the forwarder client/project gap below.
-- **Forwarder client/project gap:** see "Fix: B-9 → Follow-ups".
+- **B-5 database guard** and **the forwarder client/project gap:** both ✅ resolved, see "Fix: data-integrity follow-ups".
 
+
+## Fix: data-integrity follow-ups
+
+Branch `fix/data-integrity-followups`: the B-5 database guard and the forwarder client/project gap. Two migrations, no table or data change beyond a constraint and a function.
+
+### B-5: the database guard
+
+**Choice: composite foreign keys, not a trigger.** The keys are declarative, are checked in both directions, and need no code to maintain. A trigger would have to cover inserts and updates on both `recommendation` and `three_pl_providers` to match.
+
+**Migration `20261009160424_recommendation_providers_same_project`:**
+- **New unique constraint `three_pl_providers_project_id_id_key`** on `(three_pl_project_id, id)`. It's always unique, since `id` is the primary key. It's the target of the slot keys, and its index also covers lookups by project (the optional index follow-up from the hardening section).
+- **New slot keys:** `recommendations_provider_id_1/2/3_fkey` (same names) are now `(three_pl_project_id, provider_id_N) → three_pl_providers (three_pl_project_id, id) on delete set null (provider_id_N)`.
+  - **Deleting a 3PL:** clears only its slot, as before. The column list keeps `three_pl_project_id` intact.
+  - **Empty slots:** aren't checked.
+  - **Moving a referenced 3PL** to another project is refused.
+- **App:** `saveRecommendation` keeps its own check. A 23503 from the database (a 3PL deleted between the check and the save) gives the same message, "Choose 3PLs from this project."
+
+**Production pre-check, read only.** `ADD CONSTRAINT` validates every existing row, so run this on production before `db push`. It must return no rows:
+
+```sql
+begin transaction read only;
+show server_version;  -- 15 or higher, for "set null (column)"
+select r.id as recommendation_id, r.three_pl_project_id, s.slot, s.provider_id,
+       p.three_pl_project_id as provider_project_id
+from public.recommendation r
+cross join lateral (values (1, r.provider_id_1), (2, r.provider_id_2), (3, r.provider_id_3)) s(slot, provider_id)
+join public.three_pl_providers p on p.id = s.provider_id
+where p.three_pl_project_id <> r.three_pl_project_id;
+rollback;
+```
+
+The same query returns 0 rows locally, both fresh and seeded. That proves little, since the seed has no recommendations, so pgTAP 26 also checks that the query does find a row that breaks the rule.
+
+**Proof**
+- **pgTAP 26 (18 tests):**
+  - **The constraints:** the unique key and the three slot keys, with their exact definitions.
+  - **Allowed:** three of the project's own 3PLs save, and so do another of its 3PLs and an empty slot.
+  - **Refused (23503):** another project's 3PL, in each slot and on insert; the refused insert saved nothing.
+  - **Refused even for the database owner (23503):** moving a recommendation to a project its 3PLs aren't in, or moving a referenced 3PL to another project.
+  - **Deleting a 3PL in the top three** works and clears only its slot.
+  - **Deleting a project** removes its recommendation.
+  - **An account without a role** is refused (42501), even for its own project and 3PL.
+  - **The production pre-check query** finds a row that breaks the rule (made with foreign keys off, for this transaction only).
+- **Vitest:** a new case where a 23503 from the save gives "Choose 3PLs from this project."
+- **Browser and API (:3100, as expert1):**
+  - The original repro, a direct API `PATCH` setting `provider_id_1` to expert2's 3PL, now returns **409, 23503** `recommendations_provider_id_1_fkey`; before the fix it returned 201. The project's own 3PL saves (200).
+  - Saving the top three (Alpha, Bravo) shows "Saved". Deleting Bravo at 390px went through, and the recommendation kept Alpha with slot 2 empty.
+  - A form still holding the deleted Bravo is refused with "Choose 3PLs from this project."
+
+### Forwarder: one transaction for a new client and its project
+
+**Migration `20261009160427_forwarder_project_with_client`.** `create_forwarder_project_with_client(p_client_name, p_client_business_model, p_project)`, built like the 3PL function:
+- **Security:** `security invoker`, so RLS and the role gate apply; `search_path=''`; executable by `authenticated` only.
+- **Inputs:** `p_project` keys are limited to the parser's 40 fields minus `status` (22023 otherwise).
+- **Set by the function:** owner, `status = 'Active'` and `client_id`.
+- **Missing incoterms:** an absent `incoterms_to_compare` becomes an empty list.
+
+**App changes:**
+- **`saveForwarderProject`:** checks sign-in, then ownership on an edit, then parses the whole form. For a new client it then runs `checkNewClient` and calls the function; a 23505 gives `duplicateClientError`, which offers "Use existing client".
+- **`resolveClientId`:** no longer creates clients; it only resolves an existing one. "New client" on an edit is still refused with "Choose an existing client for this project."
+- **Existing-client and edit saves** are unchanged.
+
+**Proof**
+- **Vitest, the action (13 tests):**
+  - A form that fails validation creates nothing: duration 0 or 1.5, negative pallets, or a mismatched mode and type.
+  - A blank name creates nothing.
+  - Success is one call with exactly the parser's fields minus `status`, and never `owner_id` or `client_id`.
+  - A `status` sent in the form is ignored.
+  - A retry works.
+  - A project the database refuses leaves no client.
+  - A taken name, and a 23505 from a race, both offer the existing client.
+  - Any other failure gives "An unexpected error occurred."
+  - The existing-client and edit paths are unchanged, and an edit keeps its status.
+  - Against the old action, 6 of the 13 fail.
+- **Vitest, the drift guard (3 tests):** the function's allowed fields and its insert columns equal `FORWARDER_PROJECT_FIELDS` minus `status`, and each value reads its own column, in order.
+- **pgTAP 27 (18 tests):**
+  - The function's security settings and grants.
+  - Client and project are created together: the name trimmed, owned by the caller, Active, with typed values (numbers, an incoterm array, and an HS code with a leading zero).
+  - An empty project works.
+  - A check-constraint failure (duration 0, an incoterm that isn't allowed) or a wrong-type value leaves **no client**, and the retry creates the client once.
+  - A taken name → 23505. `owner_id`, `client_id` or `status` in the payload → 22023. A blank name or a non-object is refused too.
+  - An account without a role is refused (42501), and no refused call left a client.
+- **Browser (:3100, as expert1):**
+  - **Refused, then retried (1280px):** New client "ZZQA Atomic Forwarder Co" with duration 999 (browser check bypassed) gave "Project duration must be a whole number of months from 1 to 120, or left empty." with 0 such clients in the database. Fixing it to 12 created one client with one Active project, owned by expert1 (duration 12, Vietnam, incoterms {FOB}).
+  - **Taken name (390px):** "  zzqa atomic forwarder co " gave 'A client named "ZZQA Atomic Forwarder Co" already exists.' with **Use existing client**. One click picked that client and kept the other fields, and Create Project made a second project for it.
+  - **Edit:** saving it still works.
+  - **390px layout:** 0 offenders on the recommendation, forwarder project, forwarder edit, forwarder list and 3PL project pages.
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| Vitest, 7 timezones | 1,170 pass, 1 skipped (the existing one), in each |
+| pgTAP | 560 pass, on a fresh and a seeded database |
+| Lint | Clean |
+| `npm run typecheck` | Clean |
+
+**Deploy:** run the pre-check above on production first, then `npx supabase db push && git push`.
