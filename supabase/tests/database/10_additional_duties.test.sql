@@ -120,6 +120,8 @@ select is_empty(
 reset role;
 
 -- ---- Chapter 99 change detection on activation --------------------------------
+-- Works on a seeded database too: any current release steps aside (rolled back).
+update hts_releases set status = 'superseded' where status = 'current';
 insert into hts_releases (id, name, status, next_chapter, row_count) values
   ('00000000-0000-4000-8000-00000000f001', 'pgTAPOld', 'current', 100, 2),
   ('00000000-0000-4000-8000-00000000f002', 'pgTAPNew', 'importing', 100, 2);

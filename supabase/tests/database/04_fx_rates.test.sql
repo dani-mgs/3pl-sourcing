@@ -4,7 +4,9 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(7);
 
-insert into fx_rates (rate_date, currency, rate_to_usd) values ('2026-10-01', 'EUR', 1.08);
+-- A date no seeded rate uses, and always the latest, so this also passes on a
+-- seeded database.
+insert into fx_rates (rate_date, currency, rate_to_usd) values ('2099-01-01', 'EUR', 1.08);
 -- A real admin: role checks read auth.users, not the token.
 insert into auth.users (id, email, raw_app_meta_data) values
   ('00000000-0000-4000-8000-0000000000a1', 'admin@test.local', '{"role":"admin"}');
@@ -29,7 +31,7 @@ select throws_ok($$ delete from fx_rates $$, '42501', null, 'a signed-in user ca
 select throws_ok($$ truncate fx_rates $$, '42501', null, 'a signed-in user cannot truncate rates');
 
 reset role;
-select is((select rate_to_usd from fx_rates where currency = 'EUR'), 1.08::numeric, 'the stored rate is unchanged');
+select is((select rate_to_usd from fx_rates where currency = 'EUR' and rate_date = '2099-01-01'), 1.08::numeric, 'the stored rate is unchanged');
 
 select * from finish();
 rollback;

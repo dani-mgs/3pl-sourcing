@@ -20,6 +20,8 @@ insert into auth.users (id, email, raw_app_meta_data) values
   ('00000000-0000-4000-8000-0000000000a1', 'expert@test.local', '{"role":"logistics_expert"}'),
   ('00000000-0000-4000-8000-0000000000ad', 'admin@test.local', '{"role":"admin"}');
 
+-- Works on a seeded database too: any current release steps aside (rolled back).
+update hts_releases set status = 'superseded' where status = 'current';
 insert into hts_releases (id, name, status, next_chapter, row_count) values
   ('00000000-0000-4000-8000-00000000e001', 'pgTAPRev1', 'current', 100, 1);
 insert into hts_lines (release_id, hts_code, chapter, indent, description, general_rate) values

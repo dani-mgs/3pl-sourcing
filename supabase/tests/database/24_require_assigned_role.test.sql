@@ -6,7 +6,7 @@
 -- Rolled back at the end.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(32);
+select plan(33);
 
 create function pg_temp.act_as(uid uuid)
 returns void language plpgsql as $$
@@ -80,9 +80,15 @@ select is(
   true, 'search_hts_lines runs as owner (for the full-text index) and checks the role itself');
 
 -- A current release with one line, to search for.
+-- Works on a seeded database too: any current release steps aside (rolled back).
+update hts_releases set status = 'superseded' where status = 'current';
 insert into hts_releases (id, name, status) values ('00000000-0000-4000-8000-00000000ba01', 'pgTAP', 'current');
 insert into hts_lines (release_id, hts_code, chapter, indent, description) values
   ('00000000-0000-4000-8000-00000000ba01', '6402993110', '64', 2, 'Footwear, rubber soles');
+
+create temp table true_counts as select * from pg_temp.visible_rows();
+grant select on true_counts to authenticated;
+select ok((select sum(n) from pg_temp.true_counts) > 0, 'there is data to hide (the checks below aren''t vacuous)');
 
 -- ---- No role: nothing to read --------------------------------------------------
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000f1');
@@ -139,10 +145,12 @@ select ok(
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000a1');
 select is(has_app_role(), true, 'an expert has a role');
 select is((select count(*)::int from public.search_hts_lines(array['footwear'], null, 10)), 1, 'an expert''s HTS search works');
+-- Compared with the true counts (taken as postgres above), so it also holds on
+-- a seeded database.
 select is(
-  (select array_agg(tbl || '=' || n order by tbl) from pg_temp.visible_rows() where tbl in ('clients', 'forwarder_quotes', 'fx_rates', 'profiles', 'three_pl_providers')),
-  array['clients=1', 'forwarder_quotes=1', 'fx_rates=1', 'profiles=5', 'three_pl_providers=1'],
-  'an expert reads as before');
+  (select array_agg(tbl || '=' || n order by tbl) from pg_temp.visible_rows()),
+  (select array_agg(tbl || '=' || n order by tbl) from pg_temp.true_counts),
+  'an expert reads every row of every RLS table, as before');
 select isnt_empty(
   $$ update forwarder_projects set cargo_description = 'by owner' where id = '00000000-0000-4000-8000-000000000401' returning id $$,
   'an expert still edits their own project');
