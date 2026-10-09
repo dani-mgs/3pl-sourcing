@@ -296,7 +296,7 @@ All on the `ZZQA-local` release. Today = run date (UTC).
 | TAR-34 | Save | Others can view, not delete | expert2 | Open expert1's estimate | Viewable; no Delete |
 | TAR-35 | Save | Linked to forwarder quote | expert1, Pakkable quote | Calculate from or link to the quote; save | Shown beside the quote; doesn't change rank or savings |
 | TAR-36 | Duty data | Editor can edit fees | editor | `/tariff-calculator/duty-data/fees` → edit, then revert | Saved with history; the change appears in new estimates only |
-| TAR-37 | Duty data | Expert can't edit | expert1 | Open duty data pages | View only; no edit controls |
+| TAR-37 | Duty data | Expert can't edit | expert1 | Open `/tariff-calculator/duty-data` and `/fees` | 404 (editor- and admin-only pages); no "Duty data →" link on the calculator |
 | TAR-38 | Double submit | Double-click Save estimate | expert1 | Double-click | One estimate saved |
 
 ## 8. Help and FAQ

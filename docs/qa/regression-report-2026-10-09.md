@@ -22,7 +22,7 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 | 2. Auth / Admin / RLS | Done |
 | 3. 3PL Sourcing | Done |
 | 4. Forwarder Sourcing | Done |
-| 5. Tariff Calculator | Pending |
+| 5. Tariff Calculator | Done |
 | 6. Help + cross-cutting | Pending |
 
 ## 1. Automated gates
@@ -180,6 +180,53 @@ Two more observations from the API probes:
 | FWD-42 | ✅ Pass | The admin (target, after re-login, AUTH-06) saved an edit to expert2's forwarder project. |
 | FWD-43 | ✅ Pass | Delete Project while a forwarder exists → "Can't delete this project — This project has 1 forwarder(s) attached…". After deleting the forwarder: "Delete this forwarder project for ZZQA Fwd New Client? The client itself is kept…" → back to the list; the URL is 404. |
 | FWD-44 | ✅ Pass | Valid-until set to today → "Expires today"; yesterday → "Expired". Both quotes stay ranked; `/help` doesn't exclude expired quotes. |
+
+## 5. Tariff Calculator
+
+All runs used the local `ZZQA-local` release. At the start every duty program was "Pending review", so no additional duty was counted. For TAR-08 and TAR-13 to TAR-17 the tariff editor marked **Section 301 (China)** as reviewed. TAR-32 then edited one China row, which put the program back to pending. This is local reference data only, and it isn't reset by `qa:seed` (re-run `db reset` for a clean state).
+
+| ID | Result | Evidence |
+|---|---|---|
+| TAR-01 | ✅ Pass | Lookup "syringes" → "1 line, in code order (not ranked)", with heading 9018 → 9018.31.00.40 and links to Browse heading and CBP rulings. Choosing it fills in "9018.31.00.40". |
+| TAR-02 | ✅ Pass | "8703" → 2 lines (the heading and its child). |
+| TAR-03 | ✅ Pass | "zzzqqq" → "No lines found. Tariff wording is formal ("footwear", not "shoes")…". |
+| TAR-04 | ✅ Pass | 0101.21.00.10 → "0101.21.00.10 isn't in the current HTS (ZZQA local test release). Check the code." |
+| TAR-05 | ✅ Pass | 87038000 → "HTS 8703.80.00.00 · AS ENTERED … Matched the only 10-digit line under the 8-digit code you entered." |
+| TAR-06 | ✅ Pass | 6109.10.00.12, MX, $10,000, Sea → base 16.5% = $1,650.00; fees $47.14; total $1,697.14; "Special programs listed in the HTS (not applied)". |
+| TAR-07 | ✅ Pass | 2204.21.50.60 (6.3¢/liter) without a quantity → "The rate for 2204.21.50.60 is charged per unit. Enter the quantity in liters." With 1,000 L → base $63.00. The EU forced-labour minimum-total row shows "could add 9.37%" (10% minimum − 0.63% base). |
+| TAR-08 | ✅ Pass | 8703.80.00.00, CN, $10,000. Pending review: "EXCLUDES 3… Not included: Section 301 (China) — could add 100% (9903.91.03); pending expert review", total $297.14. Reviewed: a "+100% $10,000.00" line; total **$10,297.14** = $250 + $10,000 + $47.14; "EXCLUDES 2". |
+| TAR-09 | ✅ Pass | 6109, VN → "Section 301 (forced labour) — could add 12.5% (9903.05.84); pending expert review". MX → 10% (9903.05.55). The conditional USMCA exemption (9903.05.94, `assume_condition=false`) is correctly not applied automatically. |
+| TAR-10 | ✅ Pass | 7318.15.80.66, CN → "EXCLUDES 3 additional duty programs": 301 China 25% (9903.88.03), forced labour (exempt if 232 applies), 232 metals 50% (9903.82.02). N matches the "Not included" lines. |
+| TAR-11 | ✅ Pass | 8471.30.01.00, MX → "EXCLUDES 1" (forced labour, MX), the only triggered program. |
+| TAR-12 | ✅ Pass | CN origin: 8708 → "Section 232 (vehicles and parts)"; 9403 → "Section 232 (timber, lumber and derivatives)"; 8542 → "Section 232 (semiconductors)"; 3004 → "Section 232 (pharmaceuticals)"; 8806 → "Section 232 (unmanned aircraft systems)". Each shows "Not included", with no amount where the program isn't loaded. |
+| TAR-13 | ✅ Pass | 8486.10.00.00, CN, today (reviewed): 301 List 2 +25% counted (total $2,547.14). The exclusion 9903.88.70 is article-specific, so it's listed as "may be exempt if the article is: … Verify before relying on it", and "A rate change for Section 301 (China) is scheduled for Nov 10, 2026: 9903.88.70 USTR product exclusion ends." |
+| TAR-14 | ✅ Pass | The same on 2026-11-09: the exclusion notes and the scheduled-change notice still show. |
+| TAR-15 | ✅ Pass | On 2026-11-10: the exclusion notes are gone, and +25% stays. |
+| TAR-16 | ✅ Pass | 8716.39.00.90, CN, 2026-11-10: the confirmed List 3 **+25% stays counted** ($2,500). The unconfirmed row is shown only as "Could be +100% (9903.91.12) instead, not yet confirmed: intermodal chassis… unless the suspension is extended". The total is $2,857.14, not $10,357.14. |
+| TAR-17 | ✅ Pass | The same line today: "A rate change for Section 301 (China) is scheduled for Nov 10, 2026: 9903.91.12 Intermodal chassis (from November 10, 2026): +100%, rate unconfirmed." Key dates says "(4 upcoming)". |
+| TAR-18 | ✅ Pass | The date input has min 2026-10-08 and max 2027-10-10. Bypassed: 2026-10-07 → "…can't be earlier than Oct 8, 2026 (yesterday, UTC). Past entry dates aren't supported…"; 2027-10-11 → "…can't be later than Oct 10, 2027 (366 days from today, UTC)." 2027-10-10 is accepted. |
+| TAR-19 | ✅ Pass | $2,500.00 → MPF (informal) $2.77, "Assumes an informal entry (value up to $2,500.00)"; HMF $3.13. |
+| TAR-20 | ✅ Pass | $2,500.01 → "0.3464% of $2,500.01; Minimum applied" $34.58. |
+| TAR-21 | ✅ Pass | $9,981.00 → $34.58, "Minimum applied" (calculated $34.57). |
+| TAR-22 | ✅ Pass | $9,982.68 → $34.58 with no "Minimum applied" label. |
+| TAR-23 | ✅ Pass | $50,000 → MPF $173.20; HMF $62.50. |
+| TAR-24 | ✅ Pass | $193,666.28 → $670.86 with no label. |
+| TAR-25 | ✅ Pass | $193,700 and $250,000 → $670.86 "Maximum applied". |
+| TAR-26 | ✅ Pass | Sea $10,000 → HMF $12.50. Half-up rounding checked: $9,981 → $12.48; $193,700 → $242.13. |
+| TAR-27 | ✅ Pass | Air $10,000 → MPF $34.64 only, no HMF line. |
+| TAR-28 | ✅ Pass | Road $10,000 → the same as Air. |
+| TAR-29 | ✅ Pass | EUR 10,000 → "1 EUR = 1.08 USD · as of Oct 9, 2026 · Daily reference rate"; "€10,000.00 → $10,800.00"; MPF $37.41, HMF $13.50; Frankfurter attribution shown. |
+| TAR-30 | ✅ Pass | HTS "12" → "Enter an 8- or 10-digit HTS code (10 digits recommended), e.g. 7208.10.15.00."; "abcd.ef" → "Enter the HTS code as digits…"; value 0 or −1 → "Enter the customs value as a positive amount, e.g. 10000.00."; no origin → the browser's "Please select an item in the list." |
+| TAR-31 | ✅ Pass | Saved "ZZQA est é&🚚 <i>x</i>" (shown literally) → `/tariff-calculator/estimates/<id>` "Locked Oct 9, 2026 by ZZQA Expert One · rates and dates as saved; not recalculated", with the same $10,297.14 and the review stamp "Section 301 (China): last reviewed Oct 9, 2026 by ZZQA Editor". |
+| TAR-32 | ✅ Pass | No edit control; the only button is Delete estimate. The editor then edited the 9903.91.03 note → "Saved. The program is pending review until someone reviews it again." A new calculation for the same line gives **$297.14**, while the saved estimate still shows **$10,297.14**. The owner's PATCH on `duty_estimates` → "permission denied". |
+| TAR-33 | ✅ Pass | "Delete this saved estimate? This cannot be undone." → back to the calculator; the estimate URL is now 404. |
+| TAR-34 | ✅ Pass | expert2 can open expert1's estimate and sees it in "Saved estimates", with no buttons. An API DELETE by expert2 → 0 rows (RLS-09). |
+| TAR-35 | ✅ Pass | Bravo quote ⋯ → "Estimate duties for this quote" → "Pre-filled from ZZQA Pakkable-style Co · ZZQA Bravo Freight Lines · DDP · Sea · FCL… tick Confirmed; nothing is calculated or saved until you do". It pre-fills value $50,000, origin CN, Sea, deduction $3,500 (the freight in the supplier's DDP invoice — by design, `forwarder-link.ts:276`) and entry 2026-11-06 (today + 28-day lead time). Result $47,881.71 = 2.5% × $46,500 + 100% × $46,500 + $219.21 fees. "Save to quote" → "Linked to …". The project page shows "Our estimate $47,881.71 … for entry Nov 6, 2026". Bravo is still $3,000 "Lowest Freight Cost", and the Saving and Ratio tiles are unchanged. The Expert CSV gets Duty Estimate columns plus a NOTES line "Duty estimates are informational: they don't affect rank or savings…"; the Client CSV has none. |
+| TAR-36 | ✅ Pass | Editor: Duty data → Section 301 (China) → **Mark reviewed** → "Reviewed — Last reviewed Oct 9, 2026 by ZZQA Editor". The row note edit is described in TAR-32. The fees page lists HMF, formal and informal MPF with End-date buttons and "Add a fee row". The fees weren't changed, to keep the MPF results stable. |
+| TAR-37 | ✅ Pass (matrix corrected) | Experts get **404** on `/tariff-calculator/duty-data` and see no "Duty data →" link. That's by design (`duty-data/page.tsx:19`), and `/help` says duty data is maintained by "Tariff editors and admins". The matrix expected a view-only page; it's corrected in this branch. |
+| TAR-38 | ✅ Pass | Double-clicking **Save estimate** created one row (DB check). |
+
+Other: two `customs_fees` history rows from 07:43 and 07:46 UTC are from the RLS probes (a no-op `notes` update by the editor, and the stale-token write in B-1). No fee values changed.
 
 <!-- MODULE-SECTIONS-END -->
 
