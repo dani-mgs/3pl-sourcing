@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { assignedRole, NO_ROLE_MESSAGE } from "@/lib/auth/get-user-role";
 import { todayUtc } from "@/lib/fx/server-rates";
 import { parseEstimateForm, parseLinkFields, type EstimateFormData } from "@/lib/tariff/parse-estimate-form";
 import { saveDutyEstimate } from "@/lib/tariff/estimate-store";
@@ -70,6 +71,9 @@ export async function saveEstimate(formData: FormData): Promise<SaveState> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: SIGN_IN };
+  // The store saves with the service role, so RLS's role check doesn't apply;
+  // save_duty_estimate refuses too.
+  if (!assignedRole(user.app_metadata)) return { error: NO_ROLE_MESSAGE };
 
   const calculatedOn = todayUtc();
   const request = await parseRequest(supabase, formData, calculatedOn, "saving");

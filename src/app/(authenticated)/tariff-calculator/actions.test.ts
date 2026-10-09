@@ -41,11 +41,12 @@ const quoteRow = {
 const VERSION = `${projectRow.updated_at}|${quoteRow.updated_at}`;
 
 const inserts: Record<string, unknown>[] = [];
+let userAppMetadata: Record<string, unknown> = { role: "logistics_expert" };
 // Every write other than the estimate insert, by table.
 const otherWrites: string[] = [];
 function stubClient() {
   return {
-    auth: { getUser: async () => ({ data: { user: { id: "u1" } } }) },
+    auth: { getUser: async () => ({ data: { user: { id: "u1", app_metadata: userAppMetadata } } }) },
     from(table: string) {
       const chain = {
         select: () => chain,
@@ -163,6 +164,7 @@ beforeEach(() => {
   otherWrites.length = 0;
   savedFor.length = 0;
   canWrite.mockReturnValue(true);
+  userAppMetadata = { role: "logistics_expert" };
   buildEstimate.mockResolvedValue({ ok: true, estimate: ESTIMATE });
 });
 afterEach(() => vi.clearAllMocks());
@@ -277,6 +279,24 @@ describe("saving through the estimate store", () => {
     expect(await saveEstimate(form())).toEqual({ error: "Couldn't save the estimate right now. Try again." });
     expect(revalidatePath).not.toHaveBeenCalled();
     expect(redirect).not.toHaveBeenCalled();
+  });
+});
+
+describe("an account without a role", () => {
+  test("can't save an estimate: nothing is calculated or saved", async () => {
+    for (const meta of [{}, { role: "superuser" }, { tariff_editor: true }]) {
+      userAppMetadata = meta;
+      expect(await saveEstimate(form())).toEqual({ error: "Your account doesn't have a role yet. Ask an admin." });
+    }
+    expect(buildEstimate).not.toHaveBeenCalled();
+    expect(saveDutyEstimate).not.toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  test("an admin can", async () => {
+    userAppMetadata = { role: "admin" };
+    await expect(saveEstimate(form())).rejects.toThrow("REDIRECT");
+    expect(saveDutyEstimate).toHaveBeenCalledTimes(1);
   });
 });
 

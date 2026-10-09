@@ -48,7 +48,8 @@ select is((select project_duration_months from forwarder_projects where id = '00
 select is(has_column_privilege('anon', 'forwarder_projects', 'project_duration_months', 'select'), false, 'anon cannot read the column');
 select is(has_column_privilege('anon', 'forwarder_projects', 'project_duration_months', 'update'), false, 'anon cannot write the column');
 select is(
-  (select array_agg(policyname::text order by policyname) from pg_policies where tablename = 'forwarder_projects'),
+  -- Permissive only: the restrictive role policy is checked in pgTAP 24.
+  (select array_agg(policyname::text order by policyname) from pg_policies where tablename = 'forwarder_projects' and permissive = 'PERMISSIVE'),
   array[
     'Authenticated users can view all forwarder projects',
     'Owner or admin can create forwarder projects',

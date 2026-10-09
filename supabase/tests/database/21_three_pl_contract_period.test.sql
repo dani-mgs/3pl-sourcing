@@ -48,7 +48,8 @@ select is((select contract_period_months from three_pl_projects where id = '0000
 select is(has_column_privilege('anon', 'three_pl_projects', 'contract_period_months', 'select'), false, 'anon cannot read the column');
 select is(has_column_privilege('anon', 'three_pl_projects', 'contract_period_months', 'update'), false, 'anon cannot write the column');
 select is(
-  (select array_agg(policyname::text order by policyname) from pg_policies where tablename = 'three_pl_projects'),
+  -- Permissive only: the restrictive role policy is checked in pgTAP 24.
+  (select array_agg(policyname::text order by policyname) from pg_policies where tablename = 'three_pl_projects' and permissive = 'PERMISSIVE'),
   array[
     'Authenticated users can create 3PL projects',
     'Authenticated users can view all 3PL projects',

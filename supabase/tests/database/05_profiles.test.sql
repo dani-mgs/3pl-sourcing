@@ -31,9 +31,9 @@ select throws_ok(
   $$ insert into profiles (id, email, role) values (gen_random_uuid(), 'fake@test.local', 'admin') $$,
   '42501', null, 'a user cannot add a profile'
 );
-select is_empty(
-  $$ delete from profiles where id = '00000000-0000-4000-8000-0000000000b1' returning id $$,
-  'a user cannot delete a profile'
+select throws_ok(
+  $$ delete from profiles where id = '00000000-0000-4000-8000-0000000000b1' $$,
+  '42501', null, 'a user cannot delete a profile (no delete privilege)'
 );
 
 reset role;

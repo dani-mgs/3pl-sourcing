@@ -362,7 +362,7 @@ export function TariffSection() {
           A saved estimate is locked with its rates, the day it was calculated, its expected entry
           date, exchange rate and warnings. It never changes; calculate again and save a new one to use newer rates.
         </li>
-        <li>Everyone signed in can view saved estimates. The person who saved one, or an admin, can delete it.</li>
+        <li>Everyone with a role can view saved estimates. The person who saved one, or an admin, can delete it.</li>
       </Bullets>
       <Note>
         HTS data is checked against USITC several times a day. A new release is imported in

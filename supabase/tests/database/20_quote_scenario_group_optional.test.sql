@@ -55,7 +55,8 @@ select throws_ok(
 reset role;
 select is(has_column_privilege('anon', 'forwarder_quotes', 'scenario_group', 'select'), false, 'anon still cannot read the column');
 select is(
-  (select array_agg(policyname::text order by policyname) from pg_policies where tablename = 'forwarder_quotes'),
+  -- Permissive only: the restrictive role policy is checked in pgTAP 24.
+  (select array_agg(policyname::text order by policyname) from pg_policies where tablename = 'forwarder_quotes' and permissive = 'PERMISSIVE'),
   array[
     'Authenticated users can view all forwarder quotes',
     'Owner or admin can delete forwarder quotes',

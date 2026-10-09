@@ -45,7 +45,8 @@ insert into hts_lines (release_id, hts_code, chapter, indent, description, gener
 
 -- ---- What is granted -----------------------------------------------------------------
 select set_eq(
-  $$ select polcmd::text from pg_policy where polrelid = 'public.duty_estimates'::regclass $$,
+  -- Permissive only: the restrictive role policy (pgTAP 24) grants nothing.
+  $$ select polcmd::text from pg_policy where polrelid = 'public.duty_estimates'::regclass and polpermissive $$,
   array['r', 'd'],
   'duty_estimates has a read and a delete policy and no insert policy'
 );

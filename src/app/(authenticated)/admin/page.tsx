@@ -226,7 +226,7 @@ export default async function AdministrationPage() {
                         {profile.first_name?.trim() || profile.email}
                       </p>
                       <p className="text-xs text-neutral-muted">
-                        {profile.email} · {profile.role}
+                        {profile.email} · {profile.role === "none" ? "no role" : profile.role}
                         {profile.role !== "admin" && profile.tariff_editor && " · tariff editor"}
                       </p>
                     </div>
@@ -250,11 +250,21 @@ export default async function AdministrationPage() {
                         />
                       )
                     ) : (
-                      <RoleActionButton
-                        userId={profile.id}
-                        newRole="admin"
-                        label="Promote to Admin"
-                      />
+                      <>
+                        {/* An account without a role sees nothing until an admin assigns one. */}
+                        {profile.role === "none" && (
+                          <RoleActionButton
+                            userId={profile.id}
+                            newRole="logistics_expert"
+                            label="Make Logistics Expert"
+                          />
+                        )}
+                        <RoleActionButton
+                          userId={profile.id}
+                          newRole="admin"
+                          label="Promote to Admin"
+                        />
+                      </>
                     )}
                     {profile.id !== currentUser?.id && (
                       <DeleteUserButton

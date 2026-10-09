@@ -235,7 +235,8 @@ export function PermissionsSection() {
     <HelpSection id="permissions" title="Permissions">
       <Bullets>
         <li>
-          Everyone signed in can open every project, and export any Forwarder Sourcing project.
+          Everyone with a role (Logistics Expert or Admin) can open every project, and export any Forwarder Sourcing
+          project. A new account needs an admin to give it a role in Administration; until then it sees nothing.
         </li>
         <li>
           <Ui>Owner</Ui> (whoever created the project, unless an admin reassigns it): can edit it and add, edit, or delete
@@ -248,7 +249,7 @@ export function PermissionsSection() {
           model can only be changed there).
         </li>
         <li>
-          <Ui>Tariff Calculator</Ui>: everyone signed in can calculate, save, and view saved
+          <Ui>Tariff Calculator</Ui>: everyone with a role can calculate, save, and view saved
           estimates. Only whoever saved an estimate, or an admin, can delete it; nobody can
           change one. Estimates linked to a forwarder project or quote can only be created by the
           project&apos;s owner or an admin. Duty and fee data can only be changed by <Ui>tariff editors</Ui> and admins;
