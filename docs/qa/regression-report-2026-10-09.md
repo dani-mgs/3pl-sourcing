@@ -17,7 +17,7 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 ## Summary
 
 - **Ran 188 cases:** 185 pass (170 clean, 15 with a linked bug or note), 0 fail outright, 2 not tested (3PL-20 and FWD-08, AI extraction) and 1 deferred (3PL-35, covered by X-01/X-02). "Fail" means the feature doesn't work at all. Every bug below is attached to a case that otherwise works.
-- **Fixed after this run:** B-1 and B-2, on branch `fix/role-checks-live` (see "Fix: B-1 and B-2" at the end). The rest are open.
+- **Fixed after this run:** B-1 and B-2, on branch `fix/role-checks-live` (see "Fix: B-1 and B-2"), and B-3, on branch `fix/admin-only-display-names` (see "Fix: B-3"). The rest are open.
 - **Bugs: 0 Critical, 1 High, 4 Medium, 7 Low.** No user could read or change another user's data, and no RLS gap or wrong duty, cost or ratio figure was found. Every money figure checked matched a hand calculation, including half-up rounding.
 - **Fixed since 2026-09-28:**
   - Failure #1: deleting a 3PL named in a Recommendation.
@@ -73,7 +73,7 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 | ADM-04 | ✅ Pass (B-4) | **Promote to Admin** → the row shows "· admin" and "Demote to Logistics Expert". One click, no confirmation. |
 | ADM-05 | ✅ Pass | **Demote to Logistics Expert** → the row is back to logistics_expert. |
 | ADM-06 | ✅ Pass | The admin's own row has no role, editor or delete buttons. |
-| ADM-07 | ✅ Pass | The Edit name dialog pre-fills the current name. An empty name gives "Name is required." Saving `ZZQA Target Renamed é&🚚 <b>x</b>` shows exactly that text, with the `<b>` escaped, in the user list and in every Reassign dropdown. |
+| ADM-07 | ✅ Pass | The Edit name dialog pre-fills the current name. An empty name gives "Name is required." Saving `ZZQA Target Renamed é&🚚 <b>x</b>` shows exactly that text, with the `<b>` escaped, in the user list and in every Reassign dropdown. **B-3 fix:** see ADM-17 for the self-rename case, and "Fix: B-3". |
 | ADM-08 | ✅ Pass | "Enter a valid email address." / "Password must be at least 8 characters." / "A user with that email already exists." |
 | ADM-09 | ✅ Pass | "User Created — zzqa-created@example.test was created successfully." The user is listed. |
 | ADM-10 | ✅ Pass | "Delete zzqa-created@example.test? This cannot be undone." After confirming, the user is gone after a reload. |
@@ -83,6 +83,7 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 | ADM-14 | ✅ Pass | Business model → "B2C & D2C ✓" saved and shown, then reverted. Renaming to "zzqa no quotes inc" gives "A client named "ZZQA No Quotes Inc" already exists." (case-insensitive). An empty name gives "Client name is required." |
 | ADM-15 | ✅ Pass | Clients with projects show "Has 2 projects", and their Delete button is disabled. |
 | ADM-16 | ✅ Pass | As expert1, I posted the real server-action IDs (from the dev manifest) for `updateUserRole`, `updateTariffEditor`, `deleteUser` and `reassignOwner`. Each returned "You don't have permission to make this change." and nothing changed. |
+| ADM-17 | ✅ Pass (added with the B-3 fix) | Before the fix this was B-3. After it: the `user_metadata` rename is accepted by GoTrue but changes nothing, the `app_metadata` attempts get 403, and PostgREST gets 42501. Details in "Fix: B-3". |
 | RLS-01 | ✅ Pass | expert2 opening expert1's 3PL project, Info, a 3PL and the Recommendation page gets 200 with "view only". Notes are disabled. The Recommendation page has no Save button: its priority selector stays enabled for re-ordering, and RLS refuses a direct insert (403). |
 | RLS-02 | ✅ Pass | `/info/edit` → 404 |
 | RLS-03 | ✅ Pass | `/providers/<id>/edit` and `/providers/new` → 404 |
@@ -100,7 +101,7 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 | RLS-15 | ✅ Pass (UI part) | expert2 opening the calculator linked to expert1's Pakkable quote sees "Only the project's owner or an admin can create duty estimates for it. You can still use the calculator below without linking." |
 
 Two more observations from the API probes:
-- A user can write `role: "admin"` into their own `user_metadata`. This is harmless: roles are only ever read from `app_metadata` (`get-user-role.ts`, `get-tariff-permissions.ts`, `is_admin()`), and `user_metadata` is used only for `first_name`.
+- A user can write `role: "admin"` into their own `user_metadata`. This is harmless: roles are only ever read from `app_metadata` (`get-user-role.ts`, `get-tariff-permissions.ts`, `is_admin()`), and `user_metadata` is used only for `first_name`. *(Since the B-3 fix, `user_metadata` isn't used at all, and a Vitest guard bans it in `src/`.)*
 - Every signed-in user can read every saved duty estimate (`USING (true)`). That matches `/help`: "everyone signed in can … view saved estimates".
 
 ## 3. 3PL Sourcing
@@ -326,6 +327,8 @@ The app's own pages and server actions are safe: they re-check through `getUser(
 
 #### B-3. Any user can change their own display name, and so look like another user
 
+**Status: ✅ Fixed** on `fix/admin-only-display-names` (migration `20261009121503_display_name_admin_only`, pgTAP 23). See "Fix: B-3".
+
 **Steps to reproduce:** signed in as target, call `supabase.auth.updateUser({ data: { first_name: "ZZQA Admin" } })` from the browser console or any client using the public anon key.
 
 **Expected:** only an admin can rename users (the Edit name dialog is admin-only).
@@ -487,4 +490,76 @@ Against the old functions, 22 of the 28 fail, including every B-1 and B-2 repro.
 
 - **A deleted user's old token still passes ownership checks.** Policies like `owner_id = auth.uid()` take the user id from the token, so a deleted user's token still passes them on rows they owned, until it expires (up to an hour). Admin and editor rights end at once. Not fixed here.
 - **Found while fixing (not fixed): `authenticated` has TRUNCATE on 9 tables.** Supabase's default grants leave `authenticated` with TRUNCATE on `clients`, `forwarder_projects`, `forwarder_quotes`, `forwarders`, `profiles`, `rate_details`, `recommendation`, `three_pl_projects` and `three_pl_providers`. It also keeps unused INSERT/DELETE on `profiles`, which RLS refuses. RLS doesn't apply to TRUNCATE. It isn't reachable today: PostgREST has no TRUNCATE, `authenticated` can't log in directly, and no RPC runs dynamic SQL. It is still worth revoking in a follow-up migration, as was done for `fx_rates`.
+
+## Fix: B-3
+
+**Root cause:** the display name was `raw_user_meta_data.first_name`. Any signed-in user can rewrite that about themselves with `auth.updateUser`, and the `profiles` sync trigger copied it from there. There was no self-rename UI; the hole was the auth API.
+
+**Fix:** migration `20261009121503_display_name_admin_only` moves the name to `app_metadata.first_name`, like `role` and `tariff_editor`.
+- **Who can write it:** only the service role, used by the admin rename and Create user actions after an admin check.
+- **The trigger** now reads the name from `app_metadata` only, with `search_path=''`. `profiles.first_name` stays as its copy, so none of the ten places that read it changed.
+- **The header** reads the name from `app_metadata`.
+- **The seed script** writes it there.
+- **Guard:** a Vitest test fails if code under `src/` mentions `user_metadata`.
+- **Admin-only lists** show the email next to the name: Reassign shows "Name (email)", and Project Reassignment shows "Currently owned by Name · email". On phones the Reassign select is capped at 10rem so the longer labels don't widen the row; the open list shows them in full.
+- **Help:** Administration now reads "manage users and their names".
+- **Unchanged:** `user_metadata.first_name` is left in place, and nothing reads it.
+
+**Proof**
+- **pgTAP 23 (14 tests):**
+  - A `user_metadata` rename, which is what `auth.updateUser` writes, and clearing that name, change nothing.
+  - Writes to `profiles` (your own row, others', a new row) fail with 42501.
+  - An admin rename changes the name and keeps role and tariff editor.
+  - A role change or an email change keeps the name.
+  - A name supplied only at signup is ignored.
+  - Against the old trigger, 8 of the 14 fail, including the B-3 repro.
+- **Real local auth API:**
+  - `auth.updateUser({ data: { first_name: "ZZE2E Admin" } })` is accepted by GoTrue, but the profile and `getUser().app_metadata` keep the real name.
+  - `auth.updateUser` with `app_metadata` → "Updating app_metadata requires admin privileges". A raw `PUT /auth/v1/user` with `app_metadata` → 403.
+  - PostgREST PATCH and POST on `profiles` → 42501.
+  - The admin `updateUserById({ app_metadata: { first_name } })` stored the new name and kept `role: logistics_expert` and `tariff_editor: true`. The user's own `getUser()` showed it without signing in again.
+- **Browser (:3100):**
+  - Reassign options read "ZZQA Admin (zzqa-admin@example.test)" and so on.
+  - Owner lines on `/admin` read "Currently owned by ZZQA Expert One · zzqa-expert1@example.test".
+  - Target was an editor and was renamed through Edit name. Their row then read "ZZQA Target Renamed · zzqa-target@example.test · logistics_expert · tariff editor", and target's header read "ZZQA Target Renamed" without signing in again.
+  - A non-admin still sees "Owned by ZZQA Expert One — view only".
+  - Create user with First Name "ZZQA Created" listed the user with that name.
+  - At 390px the Reassign button ends at 308px; it was 445px in this run (B-11). The other B-11 items are still open.
+
+**Upgrade test (existing names preserved).**
+
+*Method:*
+1. Reset to the previous migration.
+2. Seed with the old code, which writes names to `user_metadata`.
+3. Add five edge-case users.
+4. Snapshot.
+5. Run `npx supabase migration up`, then snapshot again.
+
+*Result:* the profile name, role and editor flag are identical for all 10 users. The rest of `app_metadata`, all of `user_metadata`, and `auth.users.updated_at` are identical too. Afterwards, 0 profiles differ from `app_metadata.first_name`.
+
+| User | Profile name, before | Profile name, after | `app_metadata.first_name`, after | Role / editor |
+|---|---|---|---|---|
+| zzqa-admin | ZZQA Admin | ZZQA Admin | ZZQA Admin | admin / no |
+| zzqa-editor | ZZQA Editor | ZZQA Editor | ZZQA Editor | expert / yes |
+| zzqa-expert1 | ZZQA Expert One | ZZQA Expert One | ZZQA Expert One | expert / no |
+| zzqa-expert2 | ZZQA Expert Two | ZZQA Expert Two | ZZQA Expert Two | expert / no |
+| zzqa-target | ZZQA Target | ZZQA Target | ZZQA Target | expert / no |
+| zzupg-blank | "" (blank) | "" (blank) | "" (blank) | expert / no |
+| zzupg-none | null | null | not set | expert / no |
+| zzupg-other | Other | Other | Other | expert / yes |
+| zzupg-padded | "  Padded Name  " | "  Padded Name  " | "  Padded Name  " | expert / no |
+| zzupg-unicode | Zoë Trần 🚚 &lt;b&gt;x&lt;/b&gt; | Zoë Trần 🚚 &lt;b&gt;x&lt;/b&gt; | Zoë Trần 🚚 &lt;b&gt;x&lt;/b&gt; | expert / no |
+
+### Known limits
+
+- **A name someone chose for themselves is kept.** The backfill preserves current names exactly, including one a user may already have set for themselves through the old hole. With emails now shown in admin lists, it's worth one look through User & Role Management after deploy.
+- **Deploy window:** between `db push` and the code deploy, the old admin rename writes `user_metadata`, which the trigger now ignores. A rename made in that window would appear to do nothing. `npx supabase db push && git push` keeps the window to minutes.
+
+### Found while fixing
+
+- **Low: local `config.toml` doesn't match production (signup enabled locally); production verified off on 2026-10-09.**
+  - **Locally:** `supabase/config.toml` has `enable_signup = true` (`[auth]` and `[auth.email]`) with `enable_confirmations = false`. Anyone with the anon key could create an account and get a session at once; a probe confirmed this, and the probe user was deleted.
+  - **The docs:** `docs/PROJECT_STATE.md` and `docs/CHANGELOG.md` say invite-only, no public signup.
+  - **Production:** the owner checked the dashboard on 2026-10-09: "Allow new users to sign up" is off, and there are no unknown accounts. Production was never exposed.
+  - **Suggested follow-up:** set `enable_signup = false` locally so local matches production. Not changed in this task.
 

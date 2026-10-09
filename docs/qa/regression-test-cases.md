@@ -132,7 +132,7 @@ Only `zzqa-target` is renamed, promoted, demoted or deleted.
 | ADM-04 | Admin | Promote to Admin | admin, target | Click **Promote to Admin** on target (confirm if asked) | Target shows as admin |
 | ADM-05 | Admin | Demote admin | admin, target | Demote target back to expert | Target shows as logistics expert |
 | ADM-06 | Admin | Admin can't demote or delete themselves | admin | Look for demote/delete on your own row | Not offered, or refused with a plain-language message |
-| ADM-07 | Admin | Rename user | admin, target | Edit name → "ZZQA Target Renamed é&🚚" | Saved; shown everywhere the name appears |
+| ADM-07 | Admin | Rename user | admin, target | Make target a tariff editor, then Edit name → "ZZQA Target Renamed é&🚚". Then check target's header (no re-login), the user list, a Reassign dropdown and an owner line seen by a non-admin | Saved and shown everywhere the name appears: the header, the user list, **Reassign as "Name (email)"**, **"Currently owned by Name · email"** on Project Reassignment, and the name alone on non-admin owner lines. Role and tariff editor are unchanged. (Changed 2026-10-09, B-3 fix: the name is in `app_metadata`; pgTAP 23) |
 | ADM-08 | Admin | Create user, validation | admin | Create with an invalid email, a short password, or a duplicate email | Plain-language errors; duplicate → "A user with that email already exists." |
 | ADM-09 | Admin | Create user | admin | Create `zzqa-created@example.test` | Created; listed |
 | ADM-10 | Admin | Delete user | admin | Delete `zzqa-created` (or target) with no owned projects | Removed from the list |
@@ -142,6 +142,7 @@ Only `zzqa-target` is renamed, promoted, demoted or deleted.
 | ADM-14 | Admin | Edit shared client | admin | Edit the ZZQA Existing Client Co business model, then revert | Saved; shown in both modules |
 | ADM-15 | Admin | Delete client in use | admin | Delete ZZQA Existing Client Co | Blocked with a plain-language reason (it has projects) |
 | ADM-16 | Admin | Admin server action as non-admin | expert1 | Call `updateUserRole`/`updateTariffEditor` from an expert session | Refused ("You don't have permission…"); no change |
+| ADM-17 | Admin | A user can't rename themselves | target JWT | As target, call `auth.updateUser({ data: { first_name: "ZZQA Admin" } })`; also `auth.updateUser` with `app_metadata`, a raw `PUT /auth/v1/user` with `app_metadata`, and PostgREST PATCH/POST on `profiles` | The `user_metadata` update is accepted by GoTrue but changes nothing: `profiles`, the header and Reassign still show target's real name. The `app_metadata` attempts → 403 "requires admin privileges". PostgREST → 42501. (Added 2026-10-09, B-3; pgTAP 23) |
 
 ## 4. RLS and access by URL
 
