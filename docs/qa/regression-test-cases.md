@@ -304,7 +304,7 @@ All on the `ZZQA-local` release. Today = run date (UTC).
 | ID | Module | Scenario | Test data | Steps | Expected result |
 |---|---|---|---|---|---|
 | HELP-01 | Help | Page loads | expert1 | Open `/help` | All sections render; no console errors |
-| HELP-02 | Help | FAQ search/browse | — | Use the FAQ browser | Filters work; empty state when nothing matches |
+| HELP-02 | Help | FAQ browse | — | Switch the FAQ filters (All / Forwarder Sourcing / Tariff Calculator / General) and expand items | The list changes per filter; items expand and collapse (there's no FAQ search) |
 | HELP-03 | Help | Freight Cost Ratio entry | — | Read it | Matches FWD-27–31 (freight only, 1 decimal, blank unless invoice > 0 and USD, current → best) |
 | HELP-04 | Help | Ranking and savings rules | — | Read them | Match FWD-15–20, FWD-32 and 3PL-22–27 |
 | HELP-05 | Help | Contract Period / Project Duration | — | Read them | Present and matching 3PL-09–16 / FWD-04–05, or noted as missing |
@@ -316,7 +316,7 @@ All on the `ZZQA-local` release. Today = run date (UTC).
 | ID | Module | Scenario | Test data | Steps | Expected result |
 |---|---|---|---|---|---|
 | X-01 | Layout | 1280px, every main page | expert1 | Visit each route at 1280px | No horizontal page scroll (`scrollWidth ≤ innerWidth`) |
-| X-02 | Layout | 390px, every main page | expert1 | The same at 390px | No horizontal page scroll; wide tables scroll inside their own container |
+| X-02 | Layout | 390px, every main page | expert1 | The same at 390px. `body` has `overflow-x: clip`, so also look for elements whose right edge is past `innerWidth` and that aren't inside an `overflow-x: auto/scroll` container | No horizontal scroll **and** nothing cut off at the right edge; wide tables scroll inside their own container |
 | X-03 | Layout | Top bar and menus at 390px | — | Open the nav and account menu | Usable; nothing cut off |
 | X-04 | Validation | Plain-language messages | forms | Trigger errors on each form | No raw database, Zod or stack text |
 | X-05 | Empty states | Lists with no data | target (owns nothing) | My Projects in each module | A plain empty state with a next step |

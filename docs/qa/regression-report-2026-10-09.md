@@ -14,6 +14,16 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 - **Browser:** Playwright (Chromium). Screenshots were working evidence in a scratchpad and were deleted at cleanup. This report describes what was seen.
 - **No changes to the app:** no code or schema changes and no fixes. Bugs are logged only.
 
+## Summary
+
+- **Ran 188 cases:** 185 pass (170 clean, 15 with a linked bug or note), 0 fail outright, 2 not tested (3PL-20 and FWD-08, AI extraction) and 1 deferred (3PL-35, covered by X-01/X-02). "Fail" means the feature doesn't work at all. Every bug below is attached to a case that otherwise works.
+- **Bugs: 0 Critical, 1 High, 4 Medium, 7 Low.** No user could read or change another user's data, and no RLS gap or wrong duty, cost or ratio figure was found. Every money figure checked matched a hand calculation, including half-up rounding.
+- **Fixed since 2026-09-28:**
+  - Failure #1: deleting a 3PL named in a Recommendation.
+  - Failure #3: the row-menu Delete.
+  - Failure #4: non-owners reaching the 3PL wizard and edit forms.
+- **Automated gates:** pgTAP 433/433. Vitest 1,106 passing in all 7 timezones. Lint clean. Typecheck clean after `next typegen`.
+
 ## Progress
 
 | Checkpoint | Status |
@@ -23,7 +33,7 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 | 3. 3PL Sourcing | Done |
 | 4. Forwarder Sourcing | Done |
 | 5. Tariff Calculator | Done |
-| 6. Help + cross-cutting | Pending |
+| 6. Help + cross-cutting | Done |
 
 ## 1. Automated gates
 
@@ -80,7 +90,9 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 | RLS-06 | ✅ Pass | `forwarders/new`, `forwarders/<id>/edit`, `quotes/new` and `quotes/<id>/edit` → 404. The project and forwarder pages are 200 "view only". |
 | RLS-07 | ✅ Pass | API as expert2 against expert1's data: PATCH project, PATCH quote, DELETE quote and PATCH `owner_id` to self each changed 0 rows. INSERT forwarder → 403 RLS. Re-reading the rows with the service role confirmed nothing changed. |
 | RLS-08 | ✅ Pass | PATCH a 3PL project or DELETE its 3PLs → 0 rows. INSERT a 3PL → 403. The owner can't hand their own project to someone else either (403 on `owner_id`). |
-| RLS-10 / 11 | ✅ Pass | `duty_estimates` INSERT → "permission denied". `rpc('save_duty_estimate')` → "permission denied for function". The UI parts of RLS-09/10 are tested in the Tariff checkpoint. |
+| RLS-09 | ✅ Pass | An API DELETE by expert2 on expert1's saved estimate → 0 rows; the estimate is still there. In the UI expert2 gets no Delete button (TAR-34). |
+| RLS-10 | ✅ Pass | The owner's PATCH on their own `duty_estimates` row → "permission denied for table duty_estimates" (repeated in TAR-32). |
+| RLS-11 | ✅ Pass | `duty_estimates` INSERT → "permission denied"; `rpc('save_duty_estimate')` → "permission denied for function". |
 | RLS-12 | ✅ Pass | As expert1: PATCH `customs_fees` and `additional_duties` → 0 rows; INSERT `hts_lines` and `fx_rates` → permission denied. A profile role change, for self or others → permission denied. Clients: PATCH/DELETE → 0 rows. |
 | RLS-13 | ✅ Pass | Anon SELECT on 15 tables (clients, forwarder_*, three_pl_*, rate_details, recommendation, duty_estimates, profiles, fx_rates, hts_lines, customs_fees, additional_duties, tariff_data_history) → 401 "permission denied". Anon INSERT into clients → 401. |
 | RLS-14 | ✅ Pass | `/api/cron/fx-rates` and `/api/cron/hts-release` → 401, with no header and with a wrong Bearer token. |
@@ -228,6 +240,41 @@ All runs used the local `ZZQA-local` release. At the start every duty program wa
 
 Other: two `customs_fees` history rows from 07:43 and 07:46 UTC are from the RLS probes (a no-op `notes` update by the editor, and the stale-token write in B-1). No fee values changed.
 
+## 6. Help and cross-cutting
+
+| ID | Result | Evidence |
+|---|---|---|
+| HELP-01 | ✅ Pass | `/help` returns 200 with 28 sections (workflows, Cost Comparison, Recommendation, Tariff Calculator in 9 parts, Forwarder key concepts, AI upload, exchange rates, exports, permissions, FAQ). No console errors. |
+| HELP-02 | ✅ Pass | The FAQ filters (All / Forwarder Sourcing / Tariff Calculator / General) switch the list. The 36 questions (11 forwarder, 25 tariff) expand, e.g. "Why does the Tariff Calculator ask for a quantity?". There's no FAQ search box, so the matrix case is browse-only. |
+| HELP-03 | ✅ Pass | "Freight cost ratio … a quote's freight cost in USD divided by the project's invoice value, to one decimal; the tile shows current → best quote. Freight only … blank unless the invoice value is above zero and in USD. Quotes with different terms show it too." Matches FWD-27 to FWD-31. |
+| HELP-04 | ⚠️ Pass with bug B-7 | The forwarder ranking text (current vs final terms, Different terms, Excluded, Lowest/Highest ties to the cent, Only Comparable Quote) matches FWD-15 to FWD-20. The 3PL Cost Comparison text matches 3PL-22 to 3PL-27, except that the Unfit / Do not Contact / Withdrawn exclusion is missing (B-7). |
+| HELP-05 | ⚠️ Pass with bug B-7 | **Neither Contract Period (3PL) nor Project Duration (Forwarder) is mentioned anywhere** in `/help` or its source, including the 1–120 whole-month rule (B-7). |
+| HELP-06 | ⚠️ Pass with bug B-7 | The Permissions text matches: owner / admin / view only, estimates deletable by their saver or an admin, nobody can change one, linked estimates only by the owner or an admin, tariff editors. It doesn't say that role or editor changes need a sign-out and sign-in (B-2 / B-7). |
+| HELP-07 | ✅ Pass | MPF ("between its minimum and maximum… Values up to the informal-entry limit pay the flat informal fee"), HMF ("ocean shipments only") and the entry window ("from yesterday (UTC) to 366 days ahead … for a quote, today plus the quote's longest lead time") match TAR-18 to TAR-28 and TAR-35. |
+| X-01 | ✅ Pass | 24 routes at 1280px (hub, both modules' lists / new / project / info / edit / 3PL / forwarder / quote pages, calculator, saved estimate, help, admin): nothing reaches past the viewport. |
+| X-02 | ⚠️ Pass with bug B-11 | The page never scrolls sideways at 390px, **because `body` has `overflow-x: clip`**, which hides overflow instead. A second pass looking for elements past the viewport edge found content cut off on 6 pages (B-11). Wide tables (Quote Comparison, project lists) scroll inside their own container, as intended. |
+| X-03 | ✅ Pass | At 390px the top bar collapses to "Modules ▾", a Help icon and the account avatar. The Modules menu (6 items with SOON tags) and the account menu ("Log Out") open fully inside the viewport. |
+| X-04 | ⚠️ Pass (notes) | Every field-specific message is plain language (see 3PL-13, FWD-05, FWD-12, TAR-18, TAR-30, ADM-08). Two server-side fallbacks are generic, "Some fields have values that aren't allowed. Check the form and try again.": a negative weight with the browser check bypassed (FWD-06), and notes over 10,000 characters (B-12). No raw database or Zod text appeared anywhere. |
+| X-05 | ✅ Pass | Target (owns nothing): "My Projects · 0 — No projects yet. Create your first one to get started." and "No forwarder projects yet. Create your first one to get started." Other plain empty states: "No duty estimates yet.", "Quotes will be compared here once forwarders have quoted.", "No quotes yet. Add one once this forwarder has quoted." |
+| X-06 | ✅ Pass | Saving Info edit → `/info`; browser Back → the edit form showing the **saved** value. No resubmit prompt. |
+| X-07 | ✅ Pass | Refreshing after a calculation gives no "resubmit form" dialog. The calculator reloads blank. |
+| X-08 | ✅ Pass | Double-clicks on Add 3PL (3PL-37), Save estimate (TAR-38) and Add Forwarder each created exactly one row. |
+| X-09 | ⚠️ Pass with bug B-12 | 3PL notes of 5,000 characters saved and reloaded at full length with no overflow. 10,005 characters → the generic message, and nothing saved (B-12). Long client and 3PL names wrap in headers and breadcrumbs at 390px. |
+| X-10 | ✅ Pass | `<script>alert(1)</script>` in notes, `<b>x</b>` in a user name and `<i>x</i>` in an estimate label all display literally. No script ran and no dialog fired. |
+| X-11 | ✅ Pass | No console errors on any of the 46 page loads in X-01/X-02. The only errors seen during the run were the browser's own 404 resource messages on deliberate 404 pages. |
+| X-12 | ✅ Pass | Unknown UUIDs for a 3PL project, its Info, a forwarder project, a forwarder and an estimate → 404 "This page could not be found." inside the app shell. |
+| X-13 | ✅ Pass | `/forwarder-sourcing/abc`, `/3pl-sourcing/projects/abc`, `/tariff-calculator/estimates/abc` and `/tariff-calculator/duty-data/not_a_program` → 404, never a 500. |
+| X-14 | ✅ Pass | `/dashboard` → `/3pl-sourcing`; `/dashboard/new` → `/3pl-sourcing/new`; `/projects/<id>` → `/3pl-sourcing/projects/<id>/info`. |
+
+## Not tested, and why
+
+- **Document AI extraction** (3PL-20, FWD-08, and the upload-merge "never blanks a stored value" rule). There was no `ANTHROPIC_API_KEY`, by agreement. The merge rules are covered by `merge-client-intake.test.ts`, `merge-provider-fields.test.ts`, `merge-project-fields.test.ts`, `merge-forwarder-fields.test.ts` and `merge-quote-fields.test.ts` (all passing in GATE-02). The UI path was checked only up to "Document extraction isn't configured right now." (3PL-21).
+- **Live USITC HTS import and the Frankfurter FX feed.** Both are external. I used a seeded `ZZQA-local` release and seeded `fx_rates` instead. Only the cron routes' auth rejection was tested (RLS-14).
+- **How Excel and Google Sheets show the `'-$7,200.00` formula-guard cells** (FWD-39). No spreadsheet app was available locally.
+- **Browsers other than Chromium, and real phones.** "390px" means Chromium emulation. Firefox and Safari number inputs accept letters, so the 3PL-16 behaviour there (letters silently becoming blank) is unverified.
+- **Production-only behaviour:** Vercel cron schedules, deploys and rollback, and auth emails (confirmation and password reset).
+- **Fee edits** (end-date and add a fee row). The fees page was viewed as editor but no fee row was changed, to keep the MPF boundary results comparable to the seeded fees.
+
 <!-- MODULE-SECTIONS-END -->
 
 ## Bugs, ranked by severity
@@ -302,6 +349,27 @@ The app's own pages and server actions are safe: they re-check through `getUser(
 
 **Suspected file:** `src/app/(authenticated)/3pl-sourcing/new/actions.ts:22` calls `resolveClientId()`, which inserts the client, *before* `parseProjectForm()` (line 27). The Forwarder action does it in the right order: parse first (`forwarder-sourcing/actions.ts:49`), then `resolveClientId` (line 54). Forwarder isn't affected (FWD-03).
 
+#### B-11. At 390px wide, buttons and inputs are cut off at the right edge
+
+**Steps:** set the browser to 390 × 844 and open each page below.
+
+**Expected:** everything fits, or wraps, inside the screen.
+
+**Actual:** `body` has `overflow-x: clip`, so the page doesn't scroll, but these elements reach past the viewport and are cut off:
+
+| Page | Element | Right edge |
+|---|---|---|
+| `/3pl-sourcing` | **New Project** button | 423px |
+| `/forwarder-sourcing` | **New Project** button | 423px |
+| 3PL wizard Step 1 (`/3pl-sourcing/new/manual`) | **Continue to Add 3PLs →** (reads "Continue to Ad…") | 468px |
+| 3PL view | **Delete 3PL** | 400px |
+| 3PL edit | Phone number input | 410px, runs past its card |
+| `/admin` | Every **Reassign** button | 445px |
+
+The cut-off buttons still respond where they're visible, but the labels are lost, and on a narrower phone they'd disappear.
+
+**Suspected files:** the header/action rows in `src/app/(authenticated)/3pl-sourcing/dashboard-content.tsx`, `forwarder-sourcing/forwarder-project-list.tsx`, `3pl-sourcing/new/client-intake-form.tsx`, the 3PL provider view/edit pages, and `admin/reassign-owner-form.tsx` (flex rows without wrapping). `overflow-x: clip` on `body` (global CSS) hides the symptom from scroll-width checks.
+
 ### Low
 
 #### B-4. Promote to Admin, Demote and Make or Revoke tariff editor apply on one click, with no confirmation
@@ -336,17 +404,20 @@ The app's own pages and server actions are safe: they re-check through `getUser(
 
 **Suspected files:** `src/app/(authenticated)/3pl-sourcing/dashboard-content.tsx:33` and `src/app/(authenticated)/forwarder-sourcing/forwarder-project-list.tsx:36` (plain `toLowerCase().includes`, no accent folding).
 
-#### B-7. `/help` is missing two 3PL rules the app enforces
+#### B-7. `/help` is missing several rules the app enforces
 
-**Steps:** open `/help` → "How the Cost Comparison works" and the Permissions section.
+**Steps:** read `/help` (and its FAQ) against what the app does.
 
-**Expected:** every rule the app enforces is in `/help` (AGENTS.md).
+**Expected:** every rule the app enforces is described (AGENTS.md: "When behavior described there changes, update /help in the same change").
 
-**Actual:** two rules aren't mentioned:
-- 3PLs with status **Unfit**, **Do not Contact** or **Withdrawn / No Response** are left out of the Cost Comparison entirely. A seeded Unfit 3PL at $100 doesn't appear.
-- A 3PL project **can't be deleted while it has 3PLs**. `/help` states this rule only for forwarder projects.
+**Actual:** five rules are missing:
+1. 3PLs with status **Unfit**, **Do not Contact** or **Withdrawn / No Response** are left out of the 3PL Cost Comparison entirely (3PL-22).
+2. A 3PL project **can't be deleted while it has 3PLs** (3PL-34). `/help` states this only for forwarder projects.
+3. **Contract Period** (3PL, optional, whole months 1–120) isn't mentioned anywhere (HELP-05). It was added in `76bb1a7`.
+4. **Project Duration** (Forwarder, optional, whole months 1–120) isn't mentioned (HELP-05).
+5. A role or tariff-editor change **only takes full effect after signing out and in again** (B-2). This isn't mentioned in Permissions.
 
-**Suspected files:** `src/app/(authenticated)/help/workflow-sections.tsx`; rule sources `3pl-sourcing/projects/[id]/cost-comparison-panel.tsx:9` and the delete-project dialog.
+**Suspected files:** `src/app/(authenticated)/help/workflow-sections.tsx` and `concept-sections.tsx`. The rule sources are `3pl-sourcing/projects/[id]/cost-comparison-panel.tsx:9`, `src/lib/three-pl/contract-period.ts` and `src/lib/forwarder/parse-project-form.ts:56`.
 
 #### B-8. The Recommendation "Saved" badge stays after the priority changes
 
@@ -367,3 +438,13 @@ The app's own pages and server actions are safe: they re-check through `getUser(
 **Actual:** it's saved and shown under Forwarder Profile → Contact → Email.
 
 **Suspected files:** `src/lib/forwarder/parse-forwarder-form.ts:36` (`email: text(320)`) and the forwarder form input (`type=text`). `parse-provider-form.ts:56` is also plain text, so only the browser check protects the 3PL form.
+
+#### B-12. Notes over 10,000 characters are refused without saying why
+
+**Steps:** a 3PL project page → paste 10,005 characters into Notes → **Save Notes**.
+
+**Expected:** "Notes can be up to 10,000 characters." Better still, a `maxLength` or counter on the field.
+
+**Actual:** "Some fields have values that aren't allowed. Check the form and try again." Nothing is saved, and the textarea has no limit or counter.
+
+**Suspected files:** `src/lib/three-pl/parse-project-form.ts` (`SUMMARY_NOTES_MAX = 10000`, generic error) and the notes textarea on the project page.
