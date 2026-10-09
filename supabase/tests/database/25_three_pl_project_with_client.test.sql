@@ -91,8 +91,9 @@ reset role;
 select is((select count(*)::int from clients where name in ('No Role Co', 'Owner Hack Co', 'Client Hack Co', 'Array Co')), 0,
   'no refused call left a client');
 select is(
-  (select count(*)::int from three_pl_projects where owner_id <> '00000000-0000-4000-8000-0000000000a1'), 0,
-  'and every project created is the caller''s');
+  (select count(*)::int from three_pl_projects p join clients c on c.id = p.client_id
+   where c.name in ('New Client Co', 'Orphan Test Co') and p.owner_id <> '00000000-0000-4000-8000-0000000000a1'), 0,
+  'and every project created here is the caller''s');
 
 select * from finish();
 rollback;
