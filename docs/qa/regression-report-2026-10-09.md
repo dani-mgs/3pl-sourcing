@@ -17,6 +17,7 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 ## Summary
 
 - **Ran 188 cases:** 185 pass (170 clean, 15 with a linked bug or note), 0 fail outright, 2 not tested (3PL-20 and FWD-08, AI extraction) and 1 deferred (3PL-35, covered by X-01/X-02). "Fail" means the feature doesn't work at all. Every bug below is attached to a case that otherwise works.
+- **Fixed after this run:** B-1 and B-2, on branch `fix/role-checks-live` (see "Fix: B-1 and B-2" at the end). The rest are open.
 - **Bugs: 0 Critical, 1 High, 4 Medium, 7 Low.** No user could read or change another user's data, and no RLS gap or wrong duty, cost or ratio figure was found. Every money figure checked matched a hand calculation, including half-up rounding.
 - **Fixed since 2026-09-28:**
   - Failure #1: deleting a 3PL named in a Recommendation.
@@ -59,8 +60,8 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 | AUTH-03 | ✅ Pass | The browser's "Please fill out this field." shows on both inputs. Nothing is submitted. |
 | AUTH-04 | ✅ Pass | Log Out is the only item in the expert's account menu. Signing out clears the session; later runs signed in fresh each time. |
 | AUTH-05 | ✅ Pass | Signed out, `/`, `/3pl-sourcing`, `/forwarder-sourcing`, `/tariff-calculator`, `/help`, `/admin`, a project URL and `/tariff-calculator/duty-data` all return 307 → `/login`. |
-| AUTH-06 | ⚠️ Pass with bug B-2 | Target was signed in, then the admin clicked **Promote to Admin**. On the next page load, target got `/admin` (200) and the edit form for expert2's forwarder project. Saving that form failed with "You don't have permission to make this change." After signing out and in, the same save worked. Nothing tells either user that a re-login is needed. |
-| AUTH-07 | ⚠️ Pass with bugs B-1, B-2 | **Grant:** after **Make tariff editor**, target's existing session opened Duty data (200) straight away, but writes would still fail until re-login (same split as AUTH-06). **Revoke:** a token issued before the revoke still updated `customs_fees` through the API (200, 1 row) — see B-1. |
+| AUTH-06 | ⚠️ Pass with bug B-2 | Target was signed in, then the admin clicked **Promote to Admin**. On the next page load, target got `/admin` (200) and the edit form for expert2's forwarder project. Saving that form failed with "You don't have permission to make this change." After signing out and in, the same save worked. Nothing tells either user that a re-login is needed. **Fixed (B-1/B-2):** the matrix row now expects the change to apply without re-login. |
+| AUTH-07 | ⚠️ Pass with bugs B-1, B-2 | **Grant:** after **Make tariff editor**, target's existing session opened Duty data (200) straight away, but writes would still fail until re-login (same split as AUTH-06). **Revoke:** a token issued before the revoke still updated `customs_fees` through the API (200, 1 row) — see B-1. **Fixed (B-1/B-2):** the matrix row now expects the change to apply without re-login. |
 | AUTH-08 | ✅ Pass | expert1 → `/admin` returns 404. The account menu shows only "Log Out". |
 | AUTH-09 | ✅ Pass | editor → `/admin` returns 404. The menu shows only "Log Out". |
 | AUTH-10 | ✅ Pass | The admin's menu shows "Administration" and "Log Out", and `/admin` returns 200. |
@@ -249,7 +250,7 @@ Other: two `customs_fees` history rows from 07:43 and 07:46 UTC are from the RLS
 | HELP-03 | ✅ Pass | "Freight cost ratio … a quote's freight cost in USD divided by the project's invoice value, to one decimal; the tile shows current → best quote. Freight only … blank unless the invoice value is above zero and in USD. Quotes with different terms show it too." Matches FWD-27 to FWD-31. |
 | HELP-04 | ⚠️ Pass with bug B-7 | The forwarder ranking text (current vs final terms, Different terms, Excluded, Lowest/Highest ties to the cent, Only Comparable Quote) matches FWD-15 to FWD-20. The 3PL Cost Comparison text matches 3PL-22 to 3PL-27, except that the Unfit / Do not Contact / Withdrawn exclusion is missing (B-7). |
 | HELP-05 | ⚠️ Pass with bug B-7 | **Neither Contract Period (3PL) nor Project Duration (Forwarder) is mentioned anywhere** in `/help` or its source, including the 1–120 whole-month rule (B-7). |
-| HELP-06 | ⚠️ Pass with bug B-7 | The Permissions text matches: owner / admin / view only, estimates deletable by their saver or an admin, nobody can change one, linked estimates only by the owner or an admin, tariff editors. It doesn't say that role or editor changes need a sign-out and sign-in (B-2 / B-7). |
+| HELP-06 | ⚠️ Pass with bug B-7 | The Permissions text matches: owner / admin / view only, estimates deletable by their saver or an admin, nobody can change one, linked estimates only by the owner or an admin, tariff editors. It doesn't say that role or editor changes need a sign-out and sign-in (B-2 / B-7). **Fixed with B-2:** Permissions now says role and editor changes apply on the next page load or save, with no sign-out. |
 | HELP-07 | ✅ Pass | MPF ("between its minimum and maximum… Values up to the informal-entry limit pay the flat informal fee"), HMF ("ocean shipments only") and the entry window ("from yesterday (UTC) to 366 days ahead … for a quote, today plus the quote's longest lead time") match TAR-18 to TAR-28 and TAR-35. |
 | X-01 | ✅ Pass | 24 routes at 1280px (hub, both modules' lists / new / project / info / edit / 3PL / forwarder / quote pages, calculator, saved estimate, help, admin): nothing reaches past the viewport. |
 | X-02 | ⚠️ Pass with bug B-11 | The page never scrolls sideways at 390px, **because `body` has `overflow-x: clip`**, which hides overflow instead. A second pass looking for elements past the viewport edge found content cut off on 6 pages (B-11). Wide tables (Quote Comparison, project lists) scroll inside their own container, as intended. |
@@ -285,6 +286,8 @@ No Critical bugs so far.
 
 #### B-1. A revoked tariff editor or demoted admin keeps database write access for up to an hour
 
+**Status: ✅ Fixed** on `fix/role-checks-live` (migration `20261009114024_role_checks_read_current_role`, pgTAP 22). See "Fix: B-1 and B-2".
+
 **Steps to reproduce**
 1. Sign in as `zzqa-target` while they are a tariff editor. Keep the session's access token (any API client, or the browser's `sb-` cookie).
 2. As admin, click **Revoke tariff editor** on target. The same applies to **Demote to Logistics Expert**.
@@ -305,6 +308,8 @@ The app's own pages and server actions are safe: they re-check through `getUser(
 ### Medium
 
 #### B-2. Role and editor changes show up in the UI at once, but database permission only follows after re-login, and nobody is told
+
+**Status: ✅ Fixed** with B-1: the database now follows the current role, so no re-login is needed. Administration and Help say so.
 
 **Steps to reproduce**
 1. Sign in as target (logistics expert).
@@ -415,7 +420,7 @@ The cut-off buttons still respond where they're visible, but the labels are lost
 2. A 3PL project **can't be deleted while it has 3PLs** (3PL-34). `/help` states this only for forwarder projects.
 3. **Contract Period** (3PL, optional, whole months 1–120) isn't mentioned anywhere (HELP-05). It was added in `76bb1a7`.
 4. **Project Duration** (Forwarder, optional, whole months 1–120) isn't mentioned (HELP-05).
-5. A role or tariff-editor change **only takes full effect after signing out and in again** (B-2). This isn't mentioned in Permissions.
+5. A role or tariff-editor change **only takes full effect after signing out and in again** (B-2). This isn't mentioned in Permissions. **Resolved with B-2:** no re-login is needed any more, and Permissions says so. Items 1–4 are still open.
 
 **Suspected files:** `src/app/(authenticated)/help/workflow-sections.tsx` and `concept-sections.tsx`. The rule sources are `3pl-sourcing/projects/[id]/cost-comparison-panel.tsx:9`, `src/lib/three-pl/contract-period.ts` and `src/lib/forwarder/parse-project-form.ts:56`.
 
@@ -448,3 +453,38 @@ The cut-off buttons still respond where they're visible, but the labels are lost
 **Actual:** "Some fields have values that aren't allowed. Check the form and try again." Nothing is saved, and the textarea has no limit or counter.
 
 **Suspected files:** `src/lib/three-pl/parse-project-form.ts` (`SUMMARY_NOTES_MAX = 10000`, generic error) and the notes textarea on the project page.
+
+## Fix: B-1 and B-2
+
+**Root cause:** `is_admin()` and `is_tariff_editor()` read the role from the session token (`auth.jwt() -> 'app_metadata'`), which is only rebuilt when a user signs in or the token refreshes. The app's pages read the current role through `getUser()`, so the two could disagree for up to an hour. No policy read the token directly, and `save_duty_estimate` already used `is_admin_user()`, which reads `auth.users`.
+
+**Fix:** migration `20261009114024_role_checks_read_current_role` replaces both functions. They now read `auth.users.raw_app_meta_data` for `auth.uid()`, never `raw_user_meta_data`. They are `security definer`, stable and `search_path=''`, executable by `authenticated` and `service_role`, and revoked from `anon`. Every policy that calls them picks this up unchanged. Administration now shows "Saved. It takes effect on their next page load or save; they don't need to sign out." Help (Permissions) and docs/SECURITY.md say the same.
+
+**Proof:** pgTAP 22 has 28 tests. Each one reuses the same old token while the role is changed in `auth.users`:
+- A revoked editor and a demoted admin are refused at once.
+- A promoted admin and a newly granted editor can write at once.
+- Claims in the token, and `role` / `tariff_editor` in `user_metadata`, count for nothing.
+- `authenticated` can't update `profiles.role` / `tariff_editor` or touch `auth.users`.
+- A token for a deleted user is neither admin nor editor.
+
+Against the old functions, 22 of the 28 fail, including every B-1 and B-2 repro.
+
+**Performance:** `EXPLAIN ANALYZE` in a rolled-back transaction with 5,000 forwarder projects. Each figure is the median of 7 runs.
+
+| Query | Before | After |
+|---|---|---|
+| Expert lists all 5,000 projects (read) | 0.29 ms | 0.30 ms |
+| Expert tries to update 5,000 projects they don't own (0 rows) | 4.8 ms | 18.9 ms |
+| Admin updates 5,000 projects they don't own | 58.9 ms | 93.5 ms |
+| Owner updates their own 5,000 projects | 55.1 ms | 60.1 ms |
+| Editor updates all ~18,900 `additional_duty_scope` rows (3 runs) | 740 ms | 757 ms |
+
+- **Reads don't change:** no SELECT policy calls either function.
+- **Writes:** the cost is about 3 µs per row a write checks. The app saves one row at a time, so the `(select is_admin())` policy rewrite isn't needed.
+- **Editor updates:** `is_tariff_editor()` is evaluated once per query, and the history triggers dominate.
+
+### Known limits
+
+- **A deleted user's old token still passes ownership checks.** Policies like `owner_id = auth.uid()` take the user id from the token, so a deleted user's token still passes them on rows they owned, until it expires (up to an hour). Admin and editor rights end at once. Not fixed here.
+- **Found while fixing (not fixed): `authenticated` has TRUNCATE on 9 tables.** Supabase's default grants leave `authenticated` with TRUNCATE on `clients`, `forwarder_projects`, `forwarder_quotes`, `forwarders`, `profiles`, `rate_details`, `recommendation`, `three_pl_projects` and `three_pl_providers`. It also keeps unused INSERT/DELETE on `profiles`, which RLS refuses. RLS doesn't apply to TRUNCATE. It isn't reachable today: PostgREST has no TRUNCATE, `authenticated` can't log in directly, and no RPC runs dynamic SQL. It is still worth revoking in a follow-up migration, as was done for `fx_rates`.
+
