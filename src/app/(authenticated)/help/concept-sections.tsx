@@ -243,7 +243,7 @@ export function PermissionsSection() {
         </li>
         <li>
           <Ui>Admin</Ui>: can do everything an owner can on every project, plus{" "}
-          <Ui>Administration</Ui> in the account menu: manage users, reassign a project&apos;s
+          <Ui>Administration</Ui> in the account menu: manage users and their names, reassign a project&apos;s
           owner, and edit or delete shared client records (a client&apos;s name and business
           model can only be changed there).
         </li>

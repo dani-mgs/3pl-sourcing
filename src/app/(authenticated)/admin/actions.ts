@@ -67,9 +67,12 @@ export async function updateUserDisplayName(
     return { error: parsed.error };
   }
 
+  // The name lives in app_metadata, which users can't edit (user_metadata they
+  // can, through auth.updateUser). GoTrue merges app_metadata keys, so role and
+  // tariff_editor are untouched; the profiles trigger mirrors it.
   const adminClient = createAdminClient();
   const { error } = await adminClient.auth.admin.updateUserById(parsed.data.userId, {
-    user_metadata: { first_name: parsed.data.name },
+    app_metadata: { first_name: parsed.data.name },
   });
 
   if (error) {
@@ -102,8 +105,7 @@ export async function createUser(
     email: input.email,
     password: input.password,
     email_confirm: true,
-    user_metadata: input.firstName ? { first_name: input.firstName } : {},
-    app_metadata: { role: input.role },
+    app_metadata: input.firstName ? { role: input.role, first_name: input.firstName } : { role: input.role },
   });
 
   if (error) {

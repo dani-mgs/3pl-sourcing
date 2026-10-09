@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth/get-user-role";
 import { ReassignOwnerForm, type ProfileOption } from "./reassign-owner-form";
+import { adminUserLabel } from "@/lib/admin/user-label";
 import { RoleActionButton } from "./role-action-button";
 import { TariffEditorButton } from "./tariff-editor-button";
 import { EditNameButton } from "./edit-name-button";
@@ -87,7 +88,7 @@ export default async function AdministrationPage() {
   }));
 
   const ownerDisplayById = new Map(
-    (profiles ?? []).map((p) => [p.id, p.first_name?.trim() || p.email]),
+    (profiles ?? []).map((p) => [p.id, adminUserLabel(p.first_name, p.email, "dot")]),
   );
 
   const ownedProjectCountById = new Map<string, number>();

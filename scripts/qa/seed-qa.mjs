@@ -100,8 +100,8 @@ async function upsertUsers(db, password) {
     const attrs = {
       password,
       email_confirm: true,
-      user_metadata: { first_name: u.firstName },
-      app_metadata: { role: u.role, tariff_editor: u.tariffEditor ? true : null },
+      // Names are in app_metadata (admin-only), like the role.
+      app_metadata: { role: u.role, tariff_editor: u.tariffEditor ? true : null, first_name: u.firstName },
     };
     const found = existing.get(u.email);
     const data = found

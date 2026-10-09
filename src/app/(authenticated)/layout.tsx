@@ -6,11 +6,12 @@ import { HelpLink } from "./help-link";
 import { ModuleNav } from "./module-nav";
 import { APP_NAME, APP_SHORT_NAME } from "@/lib/modules";
 
+// The name is in app_metadata (set by admins only), never user_metadata.
 function getDisplayName(user: {
   email?: string | null;
-  user_metadata?: Record<string, unknown>;
+  app_metadata?: Record<string, unknown>;
 } | null): string {
-  const firstName = user?.user_metadata?.first_name;
+  const firstName = user?.app_metadata?.first_name;
   if (typeof firstName === "string" && firstName.trim()) {
     return firstName.trim();
   }
