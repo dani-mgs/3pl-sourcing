@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- Fix (QA B-9): the 3PL New Project form no longer leaves a client behind when a submit fails. The whole form is checked first, and a new client is created together with its project in one transaction (`create_three_pl_project_with_client`), so a failure saves neither and the retry just works. A name that already exists still shows "A client named … already exists." with **Use existing client** (one click keeps the rest of the form); clients are never reused silently.
+- Existing-client and edit saves, and the Forwarder form, are unchanged. Help unchanged.
+- Migration `20261009134233_three_pl_project_with_client` (one function, security invoker; no table changes). New pgTAP 25, Vitest for the action, and a check that keeps the function's field lists equal to the form's. **`npx supabase db push && git push`.**
 - Hardening (security): reading or changing any data now needs a role an admin assigned. An account without one (e.g. made in the Supabase dashboard) sees nothing, can't create anything, and is told "Your account doesn't have a role yet. Ask an admin."; Administration shows it as "no role" with **Make Logistics Expert**. Existing accounts without a valid role were given Logistics Expert, so nobody loses access. Help (Permissions) updated.
 - Signed-in users can no longer TRUNCATE tables (RLS doesn't cover it). Local `supabase/config.toml` has signup off (`[auth] enable_signup = false`), matching production; `[auth.email]` stays on, or email sign-in would stop. The HTS search runs as owner with the role check built in, keeping its speed (4 ms; it would be 1.7 s under the new policy).
 - Migration `20261009124712_require_assigned_role` (functions, policies, grants, role backfill; no tables or columns). New pgTAP 24; fixtures in 05, 16, 19, 20, 21 updated. **`npx supabase db push && git push`.**

@@ -17,7 +17,7 @@ Full QA regression before the Landed Cost Calculator work. Case IDs refer to [re
 ## Summary
 
 - **Ran 188 cases:** 185 pass (170 clean, 15 with a linked bug or note), 0 fail outright, 2 not tested (3PL-20 and FWD-08, AI extraction) and 1 deferred (3PL-35, covered by X-01/X-02). "Fail" means the feature doesn't work at all. Every bug below is attached to a case that otherwise works.
-- **Fixed after this run:** B-1 and B-2, on branch `fix/role-checks-live` (see "Fix: B-1 and B-2"), and B-3, on branch `fix/admin-only-display-names` (see "Fix: B-3"). The rest are open.
+- **Fixed after this run:** B-1 and B-2, on branch `fix/role-checks-live` (see "Fix: B-1 and B-2"), B-3, on branch `fix/admin-only-display-names` (see "Fix: B-3"), and B-9, on branch `fix/3pl-intake-client-creation` (see "Fix: B-9"). The rest are open.
 - **Bugs: 0 Critical, 1 High, 4 Medium, 7 Low.** No user could read or change another user's data, and no RLS gap or wrong duty, cost or ratio figure was found. Every money figure checked matched a hand calculation, including half-up rounding.
 - **Fixed since 2026-09-28:**
   - Failure #1: deleting a 3PL named in a Recommendation.
@@ -342,6 +342,8 @@ The app's own pages and server actions are safe: they re-check through `getUser(
 
 #### B-9. A failed Step 1 submit still creates the new client, and every retry is then blocked as a duplicate
 
+**Status: ✅ Fixed** on `fix/3pl-intake-client-creation` (migration `20261009134233_three_pl_project_with_client`, pgTAP 25). See "Fix: B-9".
+
 **Steps to reproduce**
 1. 3PL Sourcing → New Project → Start from Scratch → **New client** "ZZQA Orphan Test".
 2. Enter Contract Period `0` (or any value the server rejects), with the browser check bypassed or any other server-side error. Click **Continue to Add 3PLs**.
@@ -629,4 +631,45 @@ Names and `auth.users.updated_at` are unchanged for all 9. The migration's `rais
 **Known limits**
 - **A user without a role still sees the New Project button** and the forms, and saving fails with the generic permission error. In production no such user can exist: signup is off, admins set a role, and the backfill covers older accounts. The hub notice tells them why.
 - **The allowed roles are listed in two places:** `has_app_role()` / `has_app_role_user()` in SQL, and `USER_ROLES` / `assignedRole()` in TypeScript. A Vitest check fails if they differ.
+
+## Fix: B-9
+
+**Root cause:** `saveClientIntake` (3PL New Project, Step 1) called `resolveClientId()` first. For "New client" that **inserts** the client. Only after that did it run `parseProjectForm()` and insert the project, so a submit that failed validation left the client behind, and every retry was refused as a duplicate. The forwarder action parses first. Both actions still had a smaller gap: the client and the project were two separate requests, so a project insert that failed for any other reason left the client behind too.
+
+**Fix**
+- **Order:** the 3PL action now checks sign-in, then parses the whole form, then checks the client fields *without saving*. `resolveClientId` is split: `checkNewClient` (name required, duplicate lookup) and the insert, which the forwarder flow still uses exactly as before.
+- **One transaction:** a new client and its project are created by one function, `create_three_pl_project_with_client`. If the project fails, the client is rolled back with it.
+  - **Security:** `security invoker` (RLS applies as for the two separate inserts, including the role gate), `search_path=''`, executable by `authenticated` only.
+  - **Inputs:** `p_project` keys are allow-listed to the 16 form fields (22023 otherwise); `owner_id`, `status` and `client_id` are set inside.
+  - **Why not create-then-clean-up:** only admins may delete clients, so a cleanup would need the service role or a new delete permission.
+- **Existing client, and edits:** the plain insert or update, now after validation.
+- **Duplicate names:** a name that already exists shows the same message, with the **Use existing client** button. Clients are never reused silently: they're shared across experts and modules, and without a `created_by` column there's no way to tell an orphan from someone's real client. If the name is taken between the check and the save, the function's 23505 gives the same answer.
+- **Drift guard:** a Vitest check keeps the function's allow-list and its insert columns equal to `THREE_PL_PROJECT_FIELDS` from the form parser.
+
+**Proof**
+- **Vitest, the action (12 tests):**
+  - A submit that fails validation creates nothing: no RPC and no insert, for contract period 0, a negative count, a decimal, or a blank name.
+  - Success makes one RPC call carrying exactly the 16 fields, and never `owner_id` or `client_id`.
+  - A draft redirects to the list. A retry after a failure works and creates the client once.
+  - A taken name returns the message plus `existingClient`, with no RPC call; a 23505 from the function gives the same.
+  - Any other error gives "An unexpected error occurred." and no redirect.
+  - The existing-client and edit paths are unchanged.
+  - Against the old action, 6 of the 12 fail, including the B-9 repro.
+- **Vitest, the drift guard:** 2 tests.
+- **pgTAP 25 (16 tests):**
+  - The function's security settings and grants.
+  - Client and project are created together: the name trimmed, owned by the caller, status Active.
+  - A project that fails a check constraint (23514) or has a value of the wrong type (22P02) leaves **no client**, and the retry creates it once.
+  - A taken name (any case or spacing) → 23505.
+  - `owner_id`, `client_id` or `status` in `p_project` → 22023. A blank name or a non-object is refused too.
+  - An account without a role is refused (42501), and no refused call left a client.
+- **Browser (:3100, the original repro):**
+  - New client "ZZQA Orphan Test" with Contract Period `0`, browser check bypassed: "Contract period must be a whole number of months from 1 to 120, or left empty." Fixing it to 36 and submitting again went straight to Add 3PLs. The database then had one "ZZQA Orphan Test" client with one project.
+  - A second failed submit ("ZZQA Second Orphan", 121) left 0 clients.
+  - A new client named "  zzqa existing client co " showed 'A client named "ZZQA Existing Client Co" already exists.' with **Use existing client**. One click switched the picker and kept the other fields, and Continue went to Add 3PLs. The database still has one such client, with the new project attached.
+
+### Follow-ups
+
+- **Forwarder: the same smaller gap (not changed).** `saveForwarderProject` validates first, so B-9 doesn't happen there. But its client insert and project insert are still two requests: if the project insert fails after the client was created (a database error, or a constraint the parser doesn't cover), the client is left behind. The same one-transaction pattern would close it; the forwarder form has about 3× the fields, so its function would need the same drift guard.
+- **Orphan clients already in production from B-9:** an admin can delete them in Administration → Clients. Deleting a client that's in use is blocked, so that's safe.
 
