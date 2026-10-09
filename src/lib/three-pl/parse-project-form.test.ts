@@ -61,11 +61,19 @@ describe("parseSummaryNotesForm", () => {
     }
   });
 
-  test("rejects notes over the length cap", () => {
+  test("rejects notes over the length cap, saying why (B-12)", () => {
     const result = parseSummaryNotesForm(
-      formData({ summary_notes: "x".repeat(10001) }),
+      formData({ summary_notes: "x".repeat(10005) }),
     );
-    expect(result.ok).toBe(false);
+    expect(result).toEqual({
+      ok: false,
+      error: "Notes can be up to 10,000 characters (this has 10,005).",
+    });
+  });
+
+  test("exactly 10,000 characters is fine, and surrounding spaces don't count", () => {
+    expect(parseSummaryNotesForm(formData({ summary_notes: "x".repeat(10000) })).ok).toBe(true);
+    expect(parseSummaryNotesForm(formData({ summary_notes: `  ${"x".repeat(10000)}  ` })).ok).toBe(true);
   });
 });
 

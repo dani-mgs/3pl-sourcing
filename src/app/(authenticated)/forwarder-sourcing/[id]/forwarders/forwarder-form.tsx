@@ -13,6 +13,7 @@ import type { ForwarderFields } from "@/lib/forwarder/parse-forwarder-form";
 import { mergeForwarderFields } from "@/lib/forwarder/merge-forwarder-fields";
 import {
   BooleanChipsField,
+  EmailField,
   InputField,
   SelectField,
   TextAreaField,
@@ -204,7 +205,7 @@ export function ForwarderForm({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <InputField name="contact_person" label="Contact Person" defaultValue={values.contact_person} updated={highlighted.has("contact_person")} />
               <InputField name="contact_position" label="Contact Position" defaultValue={values.contact_position} updated={highlighted.has("contact_position")} />
-              <InputField name="email" label="Email" type="text" defaultValue={values.email} updated={highlighted.has("email")} />
+              <EmailField name="email" label="Email" defaultValue={values.email} updated={highlighted.has("email")} />
               <InputField name="phone" label="Phone" defaultValue={values.phone} updated={highlighted.has("phone")} />
             </div>
           </SectionCard>

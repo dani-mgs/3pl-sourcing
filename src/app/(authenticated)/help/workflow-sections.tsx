@@ -49,7 +49,9 @@ export function ThreePlSection() {
         </li>
         <li>
           Work through the three steps: <Ui>Project Info</Ui> (client and requirements) →{" "}
-          <Ui>Add 3PLs</Ui> → <Ui>Verify Details</Ui>.
+          <Ui>Add 3PLs</Ui> → <Ui>Verify Details</Ui>. <Ui>Contract Period (months)</Ui> is
+          optional: a whole number from 1 to 120, shown on the project for reference only (it
+          doesn&apos;t change any cost or ranking).
         </li>
         <li>
           Open each 3PL to fill in capabilities, the nine cost fields, and{" "}
@@ -70,6 +72,10 @@ export function ThreePlSection() {
 
       <SubHeading>How the Cost Comparison works</SubHeading>
       <Bullets>
+        <li>
+          3PLs with status Unfit, Do not Contact, or Withdrawn / No Response are left out of
+          the Cost Comparison entirely.
+        </li>
         <li>
           Total cost is the sum of the nine cost fields. A blank field counts as 0, but a 3PL
           with all nine blank has no total and isn&apos;t ranked.
@@ -94,6 +100,9 @@ export function ThreePlSection() {
           listed in the order they were added. The first three are saved as the top three.
         </li>
       </Bullets>
+      <Bullets>
+        <li>A 3PL project can&apos;t be deleted while it still has 3PLs. Delete them first.</li>
+      </Bullets>
       <Note>
         There&apos;s no button for the Recommendation page yet: add{" "}
         <code className="rounded bg-neutral-bg px-1">/recommendation</code> to the 3PL
@@ -110,7 +119,9 @@ export function ForwarderSection() {
         <li>
           <Ui>Forwarder Sourcing</Ui> → <Ui>New Project</Ui>, from a document or from scratch.
           Fill in the route, cargo, current shipping (the baseline), volume, final terms, and
-          customs.
+          customs. <Ui>Project Duration (months)</Ui> is optional: a whole number from 1 to 120,
+          shown on the project and in exports for reference only (it doesn&apos;t change ranking
+          or savings).
         </li>
         <li>
           <Ui>Add Forwarder</Ui> for each forwarder you&apos;re approaching, with its

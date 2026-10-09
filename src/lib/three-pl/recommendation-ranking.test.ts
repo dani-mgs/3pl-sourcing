@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { COST_FIELDS, type CostInputs } from "@/lib/cost-comparison";
-import { rankProviders } from "./recommendation-ranking";
+import { rankProviders, recommendationKey } from "./recommendation-ranking";
 
 // The Recommendation page highlights the first three entries of `ranked`.
 
@@ -53,4 +53,20 @@ describe("rankProviders", () => {
       expect(ranked.every((r) => r.rank === null)).toBe(true);
     },
   );
+});
+
+describe("recommendationKey", () => {
+  test("equal when the priority and top three are the same", () => {
+    expect(recommendationKey("Cost Savings", ["a", "b", "c"])).toBe(recommendationKey("Cost Savings", ["a", "b", "c"]));
+  });
+
+  test("changes with the priority or the order of the top three (B-8)", () => {
+    const saved = recommendationKey("Cost Savings", ["a", "b", "c"]);
+    expect(recommendationKey("Turnaround Time", ["a", "b", "c"])).not.toBe(saved);
+    expect(recommendationKey("Cost Savings", ["b", "a", "c"])).not.toBe(saved);
+  });
+
+  test("blank slots are the same however they're given", () => {
+    expect(recommendationKey("Cost Savings", ["a"])).toBe(recommendationKey("Cost Savings", ["a", null, ""]));
+  });
 });

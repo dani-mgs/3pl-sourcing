@@ -2,6 +2,7 @@ import { z } from "zod";
 import { RATE_FIELDS, type RateDetails, type RateField } from "@/lib/rate-details";
 import { CURRENCY_OPTIONS } from "@/lib/currency";
 import { ASSESSMENT_OPTIONS, STATUS_OPTIONS } from "./three-pl-fields";
+import { emailSaveError } from "@/lib/email";
 
 // Turns the add/edit/quick-add 3PL provider form into a validated
 // three_pl_providers row plus its 1:1 rate_details row. Field names in the
@@ -147,7 +148,12 @@ function buildProviderRaw(formData: FormData): Record<string, unknown> {
   return raw;
 }
 
-export function parseProviderForm(formData: FormData): ParseProviderResult {
+// previousEmail: the stored email when editing, so an unchanged one is never
+// blocked (emailSaveError).
+export function parseProviderForm(
+  formData: FormData,
+  options: { previousEmail?: string | null } = {},
+): ParseProviderResult {
   const raw = buildProviderRaw(formData);
   const parsedProvider = providerSchema.safeParse(raw);
 
@@ -175,6 +181,11 @@ export function parseProviderForm(formData: FormData): ParseProviderResult {
       ok: false,
       error: "Some fields have values that aren't allowed. Check the form and try again.",
     };
+  }
+
+  const emailError = emailSaveError(parsedProvider.data.email, options.previousEmail);
+  if (emailError) {
+    return { ok: false, error: emailError };
   }
 
   return { ok: true, data: parsedProvider.data, rates: parsedRates.data as RateDetails };

@@ -117,7 +117,7 @@ export default async function ProviderDetailsPage({
         <span>{provider.company_name}</span>
       </div>
 
-      <div className="mt-2 mb-2 flex items-center gap-3">
+      <div className="mt-2 mb-2 flex flex-wrap items-center gap-3">
         <h1 className="font-display text-2xl font-semibold text-move-navy">
           {provider.company_name}
         </h1>

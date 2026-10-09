@@ -6,6 +6,8 @@ import { parseRecommendationForm } from "@/lib/three-pl/parse-recommendation-for
 
 export type SaveRecommendationState = { error?: string; success?: boolean };
 
+const NOT_THIS_PROJECT = "Choose 3PLs from this project.";
+
 export async function saveRecommendation(
   clientRequirementId: string,
   formData: FormData,
@@ -16,6 +18,28 @@ export async function saveRecommendation(
   }
 
   const supabase = await createClient();
+
+  // The top three must be 3PLs of this project (QA B-5): the page only offers
+  // its own Vetted 3PLs, but a crafted post could name any provider id.
+  const chosen = [...new Set(
+    [parsed.data.provider_id_1, parsed.data.provider_id_2, parsed.data.provider_id_3].filter(
+      (id): id is string => id != null,
+    ),
+  )];
+  if (chosen.length > 0) {
+    const { data: own, error: ownError } = await supabase
+      .from("three_pl_providers")
+      .select("id")
+      .eq("three_pl_project_id", clientRequirementId)
+      .in("id", chosen);
+    if (ownError) {
+      console.error("saveRecommendation provider check error:", ownError);
+      return { error: "An unexpected error occurred." };
+    }
+    if ((own ?? []).length !== chosen.length) {
+      return { error: NOT_THIS_PROJECT };
+    }
+  }
 
   const payload = {
     three_pl_project_id: clientRequirementId,

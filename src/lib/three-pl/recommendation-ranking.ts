@@ -46,3 +46,11 @@ export function rankProviders<T extends CostInputs & { id: string }>(
   ];
   return { ranked, mixedCurrencies, distinctCurrencies };
 }
+
+// Identifies a recommendation as the form would save it: the priority and the
+// top three provider ids in order (blank slots as empty). Two equal keys mean
+// nothing has changed since the save.
+export function recommendationKey(priority: string | null, topThreeIds: (string | null | undefined)[]): string {
+  const ids = [0, 1, 2].map((i) => topThreeIds[i] || "");
+  return [priority ?? "", ...ids].join("|");
+}

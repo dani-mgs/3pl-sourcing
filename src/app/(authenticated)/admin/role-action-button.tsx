@@ -1,51 +1,42 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
+import { ConfirmActionButton } from "./confirm-action-button";
 import { updateUserRole } from "./actions";
+
+const COPY = {
+  admin: {
+    title: "Promote to Admin",
+    description: (user: string) =>
+      `Promote ${user} to Admin? They'll be able to manage users, edit and reassign everyone's projects, edit shared clients and change duty data.`,
+    confirm: "Promote",
+  },
+  logistics_expert: {
+    title: "Logistics Expert",
+    description: (user: string) =>
+      `Make ${user} a Logistics Expert? If they're an admin now, they lose Administration and admin rights on other people's projects.`,
+    confirm: "Confirm",
+  },
+} as const;
 
 export function RoleActionButton({
   userId,
+  userLabel,
   newRole,
   label,
 }: {
   userId: string;
+  userLabel: string;
   newRole: "admin" | "logistics_expert";
   label: string;
 }) {
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [isPending, startTransition] = useTransition();
-
-  function handleClick() {
-    setError(null);
-    setSaved(false);
-    startTransition(async () => {
-      const result = await updateUserRole(userId, newRole);
-      if (result?.error) {
-        setError(result.error);
-      } else {
-        setSaved(true);
-      }
-    });
-  }
-
+  const copy = COPY[newRole];
   return (
-    <div className="flex flex-col items-end gap-1">
-      <Button
-        type="button"
-        variant="outline"
-        disabled={isPending}
-        onClick={handleClick}
-      >
-        {isPending ? "Saving..." : label}
-      </Button>
-      {error && <span className="text-xs text-danger">{error}</span>}
-      {saved && (
-        <span className="text-xs text-neutral-muted" role="status">
-          Saved. It takes effect on their next page load or save; they don&apos;t need to sign out.
-        </span>
-      )}
-    </div>
+    <ConfirmActionButton
+      label={label}
+      title={copy.title}
+      description={copy.description(userLabel)}
+      confirmLabel={copy.confirm}
+      onConfirm={() => updateUserRole(userId, newRole)}
+    />
   );
 }

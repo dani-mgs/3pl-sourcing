@@ -14,12 +14,17 @@ export async function updateProvider(
   providerId: string,
   formData: FormData,
 ): Promise<UpdateProviderState> {
-  const parsed = parseProviderForm(formData);
+  const supabase = await createClient();
+  const { data: stored } = await supabase
+    .from("three_pl_providers")
+    .select("email")
+    .eq("id", providerId)
+    .maybeSingle();
+
+  const parsed = parseProviderForm(formData, { previousEmail: stored?.email ?? null });
   if (!parsed.ok) {
     return { error: parsed.error };
   }
-
-  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("three_pl_providers")

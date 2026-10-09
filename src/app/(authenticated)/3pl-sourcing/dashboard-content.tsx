@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { matchesSearch } from "@/lib/search-text";
 
 export type DashboardRow = {
   id: string;
@@ -30,13 +31,12 @@ export function DashboardContent({ rows }: { rows: DashboardRow[] }) {
   const filteredRows = useMemo(() => {
     const scoped = tab === "mine" ? rows.filter((r) => r.isMine) : rows;
 
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return scoped;
+    if (!query.trim()) return scoped;
 
     return scoped.filter(
       (row) =>
-        row.clientName.toLowerCase().includes(normalizedQuery) ||
-        row.region?.toLowerCase().includes(normalizedQuery),
+        matchesSearch(row.clientName, query) ||
+        (row.region != null && matchesSearch(row.region, query)),
     );
   }, [rows, tab, query]);
 
@@ -51,12 +51,12 @@ export function DashboardContent({ rows }: { rows: DashboardRow[] }) {
             Projects
           </h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full items-center gap-3 sm:w-auto">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search projects or clients"
-            className="w-64 rounded-xl border-neutral-border"
+            className="min-w-0 flex-1 rounded-xl border-neutral-border sm:w-64 sm:flex-none"
           />
           <Button
             className="whitespace-nowrap px-5 py-2.5"
@@ -102,7 +102,7 @@ export function DashboardContent({ rows }: { rows: DashboardRow[] }) {
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-neutral-border bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-border bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-neutral-border">

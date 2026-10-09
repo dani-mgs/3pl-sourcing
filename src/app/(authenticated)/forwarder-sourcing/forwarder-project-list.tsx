@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProjectStatusBadge } from "./project-status-badge";
+import { matchesSearch } from "@/lib/search-text";
 
 export type ForwarderProjectRow = {
   id: string;
@@ -33,12 +34,11 @@ export function ForwarderProjectList({ rows }: { rows: ForwarderProjectRow[] }) 
 
   const filteredRows = useMemo(() => {
     const scoped = tab === "mine" ? rows.filter((r) => r.isMine) : rows;
-    const q = query.trim().toLowerCase();
-    if (!q) return scoped;
+    if (!query.trim()) return scoped;
     return scoped.filter(
       (row) =>
-        row.clientName.toLowerCase().includes(q) ||
-        row.route?.toLowerCase().includes(q),
+        matchesSearch(row.clientName, query) ||
+        (row.route != null && matchesSearch(row.route, query)),
     );
   }, [rows, tab, query]);
 
@@ -58,13 +58,13 @@ export function ForwarderProjectList({ rows }: { rows: ForwarderProjectRow[] }) 
             Projects
           </h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full items-center gap-3 sm:w-auto">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search clients or routes"
             aria-label="Search clients or routes"
-            className="w-64 rounded-xl border-neutral-border"
+            className="min-w-0 flex-1 rounded-xl border-neutral-border sm:w-64 sm:flex-none"
           />
           <Button
             className="whitespace-nowrap px-5 py-2.5"
@@ -94,7 +94,7 @@ export function ForwarderProjectList({ rows }: { rows: ForwarderProjectRow[] }) 
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-neutral-border bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-border bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-neutral-border">

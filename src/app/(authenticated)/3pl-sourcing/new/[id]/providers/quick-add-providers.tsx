@@ -170,7 +170,7 @@ export function QuickAddProviders({
       </div>
 
       {providers.length > 0 && (
-        <div className="overflow-hidden rounded-2xl border border-neutral-border bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-border bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-neutral-border">
@@ -218,7 +218,7 @@ export function QuickAddProviders({
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Button
           type="button"
           variant="outline"
@@ -229,7 +229,7 @@ export function QuickAddProviders({
           ← Back to Project Info
         </Button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3 max-sm:ml-auto">
           <Button
             type="button"
             variant="outline"

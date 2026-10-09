@@ -28,12 +28,15 @@ export async function quickAddProvider(
   formData: FormData,
   existingProviderId?: string,
 ): Promise<QuickAddProviderState> {
-  const parsed = parseProviderForm(formData);
+  const supabase = await createClient();
+  const stored = existingProviderId
+    ? (await supabase.from("three_pl_providers").select("email").eq("id", existingProviderId).maybeSingle()).data
+    : null;
+
+  const parsed = parseProviderForm(formData, { previousEmail: stored?.email ?? null });
   if (!parsed.ok) {
     return { error: parsed.error };
   }
-
-  const supabase = await createClient();
 
   const { data, error } = existingProviderId
     ? await supabase

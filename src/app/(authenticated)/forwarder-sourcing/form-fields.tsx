@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ChangeEvent } from "react";
+import { INVALID_EMAIL_HINT, showStoredEmailHint } from "@/lib/email";
 
 // Native inputs throughout: these fields are pre-filled from the server
 // (AGENTS.md "Form Input Conventions"). Styling matches the 3PL forms.
@@ -67,6 +68,48 @@ export function InputField({
         defaultValue={defaultValue ?? ""}
         className={updated ? `${fieldClass} ${updatedFieldClass}` : fieldClass}
       />
+    </div>
+  );
+}
+
+// An email field (QA B-10). The browser checks a new or changed address; a
+// stored one that doesn't look valid isn't blocked while it's unchanged, only
+// flagged, and the server applies the same rule (emailSaveError).
+export function EmailField({
+  name,
+  label,
+  defaultValue,
+  updated,
+}: {
+  name: string;
+  label: string;
+  defaultValue: string | null | undefined;
+  updated?: boolean;
+}) {
+  const [value, setValue] = useState(defaultValue ?? "");
+  const storedHint = showStoredEmailHint(value, defaultValue);
+  return (
+    <div className="flex flex-col gap-2">
+      <label htmlFor={name} className={labelClass}>
+        {label}
+        {updated && <UpdatedBadge />}
+      </label>
+      <input
+        id={name}
+        name={name}
+        type={storedHint ? "text" : "email"}
+        inputMode="email"
+        autoComplete="off"
+        defaultValue={defaultValue ?? ""}
+        onChange={(e) => setValue(e.target.value)}
+        aria-describedby={storedHint ? `${name}-hint` : undefined}
+        className={updated ? `${fieldClass} ${updatedFieldClass}` : fieldClass}
+      />
+      {storedHint && (
+        <p id={`${name}-hint`} className="text-xs text-[#92400E]" role="note">
+          {INVALID_EMAIL_HINT}
+        </p>
+      )}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { totalCost, type CostInputs } from "@/lib/cost-comparison";
 import {
   PRIORITY_OPTIONS,
   rankProviders,
+  recommendationKey,
   type Priority,
 } from "@/lib/three-pl/recommendation-ranking";
 
@@ -45,10 +46,16 @@ export function RecommendationForm({
   recommendation: RecommendationRow | null;
   canWrite: boolean;
 }) {
+  // savedKey is what was saved, so "Saved" only shows while the form still
+  // matches it (QA B-8: it used to stay after the priority changed).
   const [state, formAction, pending] = useActionState<
-    SaveRecommendationState,
+    SaveRecommendationState & { savedKey?: string },
     FormData
-  >(async (_prevState, formData) => saveRecommendation(projectId, formData), {});
+  >(async (_prevState, formData) => {
+    const result = await saveRecommendation(projectId, formData);
+    const ids = ["provider_id_1", "provider_id_2", "provider_id_3"].map((name) => (formData.get(name) as string) || null);
+    return { ...result, savedKey: recommendationKey(formData.get("priority") as string, ids) };
+  }, {});
 
   const [priority, setPriority] = useState<Priority>(
     (recommendation?.priority as Priority | undefined) ?? "Cost Savings",
@@ -60,6 +67,7 @@ export function RecommendationForm({
   );
 
   const topThreeIds = ranked.slice(0, 3).map((entry) => entry.provider.id);
+  const showSaved = state.success === true && state.savedKey === recommendationKey(priority, topThreeIds);
 
   return (
     <div className="flex flex-col gap-6">
@@ -122,7 +130,7 @@ export function RecommendationForm({
               {pending ? "Saving..." : "Save Recommendation"}
             </Button>
 
-            {state.success && (
+            {showSaved && (
               <span className="text-sm font-medium text-move-green">
                 Saved
               </span>

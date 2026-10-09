@@ -4,6 +4,7 @@ import {
   FORWARDER_ASSESSMENT_OPTIONS,
   FORWARDER_STATUS_OPTIONS,
 } from "./forwarder-fields";
+import { emailSaveError } from "@/lib/email";
 
 // Turns the add/edit forwarder form into a validated `forwarders` row
 // (everything except forwarder_project_id, which the action sets). Field
@@ -68,7 +69,12 @@ export type ParseForwarderResult =
   | { ok: true; data: ForwarderFields }
   | { ok: false; error: string };
 
-export function parseForwarderForm(formData: FormData): ParseForwarderResult {
+// previousEmail: the stored email when editing, so an unchanged one is never
+// blocked (emailSaveError).
+export function parseForwarderForm(
+  formData: FormData,
+  options: { previousEmail?: string | null } = {},
+): ParseForwarderResult {
   const raw: Record<string, unknown> = {};
   for (const name of FIELD_NAMES) {
     raw[name] = formData.get(name);
@@ -91,6 +97,11 @@ export function parseForwarderForm(formData: FormData): ParseForwarderResult {
       ok: false,
       error: "Some fields have values that aren't allowed. Check the form and try again.",
     };
+  }
+
+  const emailError = emailSaveError(parsed.data.email, options.previousEmail);
+  if (emailError) {
+    return { ok: false, error: emailError };
   }
 
   return { ok: true, data: parsed.data };

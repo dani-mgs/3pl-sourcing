@@ -27,12 +27,17 @@ export async function updateForwarder(
     return { error: NO_PERMISSION };
   }
 
-  const parsed = parseForwarderForm(formData);
+  const supabase = await createClient();
+  const { data: stored } = await supabase
+    .from("forwarders")
+    .select("email")
+    .eq("id", forwarderId)
+    .maybeSingle();
+
+  const parsed = parseForwarderForm(formData, { previousEmail: stored?.email ?? null });
   if (!parsed.ok) {
     return { error: parsed.error };
   }
-
-  const supabase = await createClient();
   const { data, error } = await supabase
     .from("forwarders")
     .update(parsed.data)

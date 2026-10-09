@@ -96,7 +96,12 @@ export function parseProjectForm(formData: FormData): ParseProjectResult {
   return { ok: true, data: parsed.data };
 }
 
-const SUMMARY_NOTES_MAX = 10000;
+export const SUMMARY_NOTES_MAX = 10000;
+
+// Says why long notes are refused (QA B-12: the message used to be generic).
+export function summaryNotesTooLongMessage(length: number): string {
+  return `Notes can be up to ${SUMMARY_NOTES_MAX.toLocaleString("en-US")} characters (this has ${length.toLocaleString("en-US")}).`;
+}
 const summaryNotesSchema = z.object({
   summary_notes: text(SUMMARY_NOTES_MAX),
 });
@@ -106,6 +111,11 @@ export type ParseSummaryNotesResult =
   | { ok: false; error: string };
 
 export function parseSummaryNotesForm(formData: FormData): ParseSummaryNotesResult {
+  const raw = formData.get("summary_notes");
+  const length = typeof raw === "string" ? raw.trim().length : 0;
+  if (length > SUMMARY_NOTES_MAX) {
+    return { ok: false, error: summaryNotesTooLongMessage(length) };
+  }
   const parsed = summaryNotesSchema.safeParse({
     summary_notes: formData.get("summary_notes"),
   });

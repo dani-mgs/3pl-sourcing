@@ -1,35 +1,32 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
+import { ConfirmActionButton } from "./confirm-action-button";
 import { updateTariffEditor } from "./actions";
 
-export function TariffEditorButton({ userId, isEditor }: { userId: string; isEditor: boolean }) {
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [isPending, startTransition] = useTransition();
-
-  function handleClick() {
-    setError(null);
-    setSaved(false);
-    startTransition(async () => {
-      const result = await updateTariffEditor(userId, !isEditor);
-      if (result?.error) setError(result.error);
-      else setSaved(true);
-    });
-  }
-
-  return (
-    <div className="flex flex-col items-end gap-1">
-      <Button type="button" variant="outline" disabled={isPending} onClick={handleClick}>
-        {isPending ? "Saving..." : isEditor ? "Revoke tariff editor" : "Make tariff editor"}
-      </Button>
-      {error && <span className="text-xs text-danger">{error}</span>}
-      {saved && (
-        <span className="text-xs text-neutral-muted" role="status">
-          Saved. It takes effect on their next page load or save; they don&apos;t need to sign out.
-        </span>
-      )}
-    </div>
+export function TariffEditorButton({
+  userId,
+  userLabel,
+  isEditor,
+}: {
+  userId: string;
+  userLabel: string;
+  isEditor: boolean;
+}) {
+  return isEditor ? (
+    <ConfirmActionButton
+      label="Revoke tariff editor"
+      title="Revoke tariff editor"
+      description={`Revoke the tariff editor permission from ${userLabel}? They'll no longer be able to change duty and fee data.`}
+      confirmLabel="Revoke"
+      onConfirm={() => updateTariffEditor(userId, false)}
+    />
+  ) : (
+    <ConfirmActionButton
+      label="Make tariff editor"
+      title="Make tariff editor"
+      description={`Make ${userLabel} a tariff editor? They'll be able to change duty and fee data, which every estimate uses.`}
+      confirmLabel="Make tariff editor"
+      onConfirm={() => updateTariffEditor(userId, true)}
+    />
   );
 }

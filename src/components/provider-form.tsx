@@ -24,6 +24,7 @@ import {
   STATUS_OPTIONS,
   ASSESSMENT_OPTIONS,
 } from "@/lib/three-pl/three-pl-fields";
+import { INVALID_EMAIL_HINT, isValidEmail, showStoredEmailHint } from "@/lib/email";
 
 // Re-exported so existing importers (e.g. project-summary-table.tsx) don't
 // need to change paths; three-pl-fields.ts is the single source of truth,
@@ -90,7 +91,6 @@ const fieldErrorClass = "text-xs text-danger";
 const sectionTitleClass = "font-display text-lg font-semibold text-move-navy";
 const checkboxLabelClass = "flex items-center gap-2 text-sm text-move-navy";
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const updatedFieldClass = "ring-2 ring-move-green/40";
 
@@ -435,6 +435,7 @@ export function ProviderForm({
   const [values, setValues] = useState<FormFieldValues>(() =>
     initialFieldValues(defaultValues),
   );
+  const storedEmailHint = showStoredEmailHint(values.email ?? "", defaultValues?.email);
 
   function updateField<K extends keyof FormFieldValues>(
     key: K,
@@ -595,8 +596,11 @@ export function ProviderForm({
             <input
               id="email"
               name="email"
-              type="email"
+              // An unchanged stored email that looks invalid isn't blocked,
+              // only flagged (QA B-10); the server applies the same rule.
+              type={storedEmailHint ? "text" : "email"}
               placeholder="e.g. jane@acmelogistics.com"
+              aria-describedby={storedEmailHint ? "email-hint" : undefined}
               value={values.email}
               onChange={(e) => updateField("email", e.target.value)}
               className={
@@ -607,13 +611,18 @@ export function ProviderForm({
               onBlur={(e) => {
                 const value = e.target.value.trim();
                 setEmailError(
-                  value && !EMAIL_PATTERN.test(value)
+                  value && !isValidEmail(value) && !showStoredEmailHint(value, defaultValues?.email)
                     ? "Enter a valid email"
                     : null,
                 );
               }}
             />
             {emailError && <p className={fieldErrorClass}>{emailError}</p>}
+            {storedEmailHint && (
+              <p id="email-hint" className="text-xs text-[#92400E]" role="note">
+                {INVALID_EMAIL_HINT}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1">
@@ -630,7 +639,7 @@ export function ProviderForm({
               >
                 <SelectTrigger
                   id="phone_country"
-                  className="w-40 shrink-0 rounded-xl border-neutral-border"
+                  className="w-32 shrink-0 rounded-xl border-neutral-border sm:w-40"
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -653,8 +662,8 @@ export function ProviderForm({
                 }
                 className={
                   isUpdated("phone")
-                    ? `${fieldClass} ${updatedFieldClass} flex-1`
-                    : `${fieldClass} flex-1`
+                    ? `${fieldClass} ${updatedFieldClass} min-w-0 flex-1`
+                    : `${fieldClass} min-w-0 flex-1`
                 }
               />
             </div>

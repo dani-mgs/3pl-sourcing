@@ -99,7 +99,7 @@ export function ClientIntakeForm({
         </p>
       )}
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Button
           type="button"
           variant="outline"
@@ -110,7 +110,7 @@ export function ClientIntakeForm({
           {backLabel}
         </Button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3 max-sm:ml-auto">
           <Button
             type="submit"
             name="intent"

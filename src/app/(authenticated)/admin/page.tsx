@@ -236,15 +236,20 @@ export default async function AdministrationPage() {
                       displayLabel={profile.first_name?.trim() || profile.email}
                     />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {/* Admins can already edit duty data; the flag only matters for others. */}
                     {profile.role !== "admin" && (
-                      <TariffEditorButton userId={profile.id} isEditor={profile.tariff_editor === true} />
+                      <TariffEditorButton
+                        userId={profile.id}
+                        userLabel={adminUserLabel(profile.first_name, profile.email, "parens")}
+                        isEditor={profile.tariff_editor === true}
+                      />
                     )}
                     {profile.role === "admin" ? (
                       profile.id !== currentUser?.id && (
                         <RoleActionButton
                           userId={profile.id}
+                          userLabel={adminUserLabel(profile.first_name, profile.email, "parens")}
                           newRole="logistics_expert"
                           label="Demote to Logistics Expert"
                         />
@@ -255,12 +260,14 @@ export default async function AdministrationPage() {
                         {profile.role === "none" && (
                           <RoleActionButton
                             userId={profile.id}
+                            userLabel={adminUserLabel(profile.first_name, profile.email, "parens")}
                             newRole="logistics_expert"
                             label="Make Logistics Expert"
                           />
                         )}
                         <RoleActionButton
                           userId={profile.id}
+                          userLabel={adminUserLabel(profile.first_name, profile.email, "parens")}
                           newRole="admin"
                           label="Promote to Admin"
                         />

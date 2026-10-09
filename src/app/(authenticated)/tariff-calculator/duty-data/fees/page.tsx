@@ -65,7 +65,7 @@ export default async function FeesPage() {
       </p>
 
       <section className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full text-left text-sm text-move-navy">
             <thead>
               <tr className="border-b border-neutral-border text-xs tracking-wide text-neutral-muted uppercase">
