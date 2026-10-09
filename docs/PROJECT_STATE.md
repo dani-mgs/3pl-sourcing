@@ -1,157 +1,124 @@
 # MOVE Supply Chain Decision Hub — Project State & Handover
 
-_Last updated: 2026-09-29 by Dani_
+_Last updated: 2026-10-10 by Dani (as of `fix/data-integrity-followups`)_
+
+**Live:** 3PL Sourcing, Forwarder Sourcing, Tariff Calculator. **Next:** Landed Cost Calculator. **Deferred:** 3PL Audit, Forwarder Audit, client dashboard.
+
+History is in git and `docs/CHANGELOG.md`; this file is the short version.
 
 ---
 
 ## 1. One-line project summary
-Internal tool for Move Supply Chain Logistics Experts to manage 3PL sourcing engagements end-to-end: client intake, 3PL discovery/vetting, cost comparison, and recommendations — one record per client.
+Internal hub for Move Supply Chain Logistics Experts: source and compare 3PLs and freight forwarders for a client, and estimate US import duties. Clients are shared records; each module has its own projects.
 
 ## 2. Tech stack
-- Frontend: Next.js (App Router) + TypeScript + Tailwind CSS v4 (CSS-first @theme config, no tailwind.config.js) + shadcn/ui
-- Backend/API: Next.js Server Actions (no separate API layer)
-- DB: Supabase Postgres — project ref vnidvcskfsyfytdjbiji
-- Auth: Supabase Auth (email/password, invite-only, no public signup). Roles (admin / logistics_expert) stored in auth.users.raw_app_meta_data.role, synced one-way into a public profiles table via trigger.
-- Infra/hosting: Vercel — walkthrough was given, NOT yet confirmed deployed. Still local-dev only as of last session. Deploying a change with migrations: `npx supabase db push && git push` (never push the code if the migration fails); rollback via Vercel → Deployments → previous production deployment → Promote to Production. See AGENTS.md, "Database Changes".
-- Repo: github.com/dani-mgs/3pl-sourcing
-- Package manager/runtime: npm, Node 22 via nvm (.nvmrc)
-- AI: @anthropic-ai/sdk for document extraction, pdf-parse + mammoth for PDF/DOCX text extraction
-- Dev tooling: Playwright MCP (Claude Code self-verifies UI changes via real browser screenshots before reporting done)
-
----
+- Next.js 16 + TypeScript + Tailwind v4 + shadcn/ui; Supabase Postgres + Auth (ref vnidvcskfsyfytdjbiji)
+- Vercel: pushing `main` deploys production; crons in `vercel.json`. Node 22 (`.nvmrc`). Repo: github.com/dani-mgs/3pl-sourcing
 
 ## 3. SESSION RESTART CHECKLIST
+- `nvm use`, start Docker Desktop fully, start `claude` (check `/mcp` shows playwright), `npm run dev` on :3000.
+- Have Claude read this file, `CHANGELOG.md`, `TECH_DEBT.md`, `SECURITY.md` and `DESIGN_SYSTEM.md` first.
+- Gotchas: run `git status` after Supabase CLI work (migrations have been left uncommitted); LegacyPlatformAuthRequiredError → `npx supabase login`; after global CSS changes, `rm -rf .next`.
 
-- cd into project root
-- nvm use (Terminal 1 and Terminal 2)
-- Start Docker Desktop (required for supabase db reset's local shadow DB) — must be fully started before running any supabase db command, or it fails with a socket-connection error
-- Terminal 1: claude, then run /mcp and confirm "playwright" shows as connected — if missing, run claude mcp list in Terminal 2 to diagnose before relying on it for verification this session
-- Tell Claude Code to read docs/PROJECT_STATE.md, docs/CHANGELOG.md, docs/TECH_DEBT.md, docs/DESIGN_SYSTEM.md before doing anything
-- Terminal 2: npm run dev, confirm http://localhost:3000 loads and you can log in
+## 4. CURRENT STATE
 
-Known gotchas:
-- supabase db reset fails silently-ish with a socket error if Docker Desktop isn't fully started yet — wait for the whale icon to settle.
-- Migration files get created and applied but NOT committed to git more often than expected — always run git status after any Supabase CLI work and confirm the new .sql file shows as committed before moving on. This has happened at least 4 times in this project.
-- npx supabase login session can expire/loop on a Keychain prompt — if db push/projects list throws LegacyPlatformAuthRequiredError, just re-run npx supabase login.
-- After any Tailwind/font/global-CSS structural change, run rm -rf .next before npm run dev — Turbopack's dev cache can serve stale styles otherwise.
-- Playwright MCP has previously shown as "already exists in local config" while not actually appearing in a live session's /mcp list — if this happens, exiting and restarting the claude session (or re-adding with --scope project) has resolved it before.
+**Shipped since 2026-09-29**
+- **Tariff Calculator v1:**
+  - Base duty, MPF and HMF.
+  - Additional duties with an expert review workflow.
+  - China 301 and Section 232 metals seeded pending review.
+  - HTS lookup.
+  - Locked saved estimates.
+  - "Estimate duties" from Forwarder Sourcing.
+- **Tariff Calculator:** an expected entry date. An unconfirmed duty row never displaces a confirmed, in-force one.
+- **Tariff Calculator clarity:** effective rate, oldest review, a 45-day scheduled-change warning, and a Key dates list.
+- **Expert checklist:** added, then removed (code reverted, tables dropped) and replaced by a handoff document.
+- **Forwarder:** Project Duration (optional, 1–120 months), on the form, the summary and the exports.
+- **Forwarder:** Scenario Group removed. A project's quotes with matching terms rank together; other terms show as "Different terms".
+- **Forwarder:** Freight Cost Ratio replaces Annual Saving on the project summary and in client exports. Expert exports keep Annual Savings beside it.
+- **Forwarder:** the Current tile adds Freight Cost and Commercial Invoice Value.
+- **3PL:** Contract Period (optional, 1–120 months).
+- **Also:** daily FX feed with locked quote rates; `/help` and FAQ; forwarder summary and detail redesign; security headers, a CSV formula-injection guard, Zod on 3PL and admin actions.
 
----
+**QA**
+- **Full regression, 2026-10-09:** 188 cases, 0 Critical; report in `docs/qa/regression-report-2026-10-09.md`.
+- **Fixes:** every logged bug, B-1 to B-12, is fixed. So are the three follow-ups:
+  - the B-5 database guard (composite foreign keys);
+  - one-transaction create for forwarder projects;
+  - the provider-by-project index.
+- **Reusable matrix:** `docs/qa/regression-test-cases.md`.
+- **`npm run qa:seed`:** creates ZZQA test users and data. It refuses any URL but the local stack, and prints a new password each run.
 
-## 4. CURRENT STATE — what's done
+**Security model** (details in `docs/SECURITY.md`)
+- **Role checks** (`is_admin()`, `is_tariff_editor()`) read the live role from `auth.users`, not the session token. Changes apply on the next page load or save; no re-login is needed.
+- **Display names** are admin-only, stored in `app_metadata.first_name`. `profiles` is a one-way mirror of them.
+- **All data access needs an admin-assigned role.** Every RLS table has a restrictive `has_app_role()` policy, so an account without a role sees and writes nothing.
+- **Signup is off** (`[auth] enable_signup = false`; production verified off on 2026-10-09).
+- **TRUNCATE is revoked** from `authenticated` and `anon`.
+- **Client and project are created in one transaction**, in both modules (`create_three_pl_project_with_client`, `create_forwarder_project_with_client`). A failed save leaves no orphan client.
+- **Service role is used only** by the two cron routes, the `saveEstimate` path and the admin actions behind an admin check (enforced by `service-role-use.test.ts`).
 
-- Auth, roles (admin/logistics_expert), RLS: reads open to all authenticated users, writes (insert/update/delete) restricted to owner-or-admin across three_pl_projects, three_pl_providers, rate_details, recommendation. clients: any authenticated user can read and create; only admins can update or delete. Every mutation Server Action checks .select() result is non-empty before reporting success (RLS silently returns zero rows on rejection, doesn't throw).
-- Owner-only pages: every page that edits a project or its 3PLs (Project Info edit, 3PL edit, Add 3PL, wizard Steps 1–3 for an existing project) returns 404 unless getOwnershipContext says canWrite; the blank /3pl-sourcing/new stays open. Non-owners see a shared "Owned by {name} — view only" banner (src/components/view-only-banner.tsx) on Project Summary, Project Info, 3PL View and Recommendation. Deletes that remove nothing say "This item no longer exists — refresh the page." when the row is gone, and the permission message only when it still exists (src/lib/delete-errors.ts).
-- Clients/projects model (shared-client refactor, 2026-09-28): a client (company) is one shared `clients` row (name unique case-insensitively after trimming, business_model). Each 3PL sourcing engagement is a `three_pl_projects` row (was client_requirements) with client_id → clients (ON DELETE RESTRICT), owner_id, and the project's intake fields; three_pl_providers and recommendation point at it via three_pl_project_id. A client can have many projects. Client name and business model are client-level: shown on every project, editable only by admins (Project Info "Edit client" dialog, Administration → Clients).
-- Schema history: three_pl_projects (was client_requirements, was projects, absorbed the old requirements_summary), three_pl_providers (was providers, 40+ fields: 15 capability booleans, 9 cost fields + currency, is_incumbent, status/assessment), rate_details (1:1 per provider, 13 rate line items in the 3PL's own currency), recommendation (was recommendations), clients (new 2026-09-28). documents/provider_documents dropped — file storage deferred.
-- Top navy bar (replaced the old sidebar): wordmark to dashboard, randomized time-aware greeting, avatar dropdown (Log Out, Administration for admins).
-- Dashboard (project list): search (client name via the clients join, or region), "My Projects"/"All Experts" tabs, per-project pipeline visualization, relative "updated" time; the business-model subtitle comes from the client.
-- 3-step New Project wizard: Project Info (starts with "Which client?" — a searchable picker of existing clients, or "New client" with Name + Business Model; a name matching an existing client case-insensitively shows "A client named X already exists" with "Use existing client", and the server returns the same message on a 23505 race; editing an existing project can only switch it to another existing client; plus an "Upload a Document" choice using AI extraction that preselects a matching client or pre-fills "New client") then Add 3PLs (full provider form, reused) then Verify Details. Auto-saves in-progress data on every way out of Step 2.
-- Project Summary page: breadcrumb, 3 stat boxes (Sourced/Quotes In/Shortlisted), filter bar (search + Status/Service/Assessment dropdowns with select-all/clear-all, active-state styling), toggleable columns, per-row ellipsis menu (View/Edit/Delete), standalone Notes section, Add 3PL action, and a Cost Comparison panel (see below).
-- Project Info (was Client Info): read-only View (breadcrumb, client name + business model at the top with an admin-only "Edit client" dialog, section cards, non-interactive toggle-chips) plus a separate /info/edit route for the project's own fields. Delete Project button (deletes the three_pl_projects row, keeps the client), blocked if any 3PLs exist.
-- 3PL pages: unified Add/Edit form (toggle-chip capabilities, sectioned), View page (breadcrumb, section cards, including a Rate Details card), Delete with confirmation. Rate details are edited in a Rate Details section of the same form and saved by the same Server Actions (Add 3PL, Edit 3PL, wizard Step 2) via src/lib/rate-details.ts — no empty rate_details rows are created, and clearing every rate nulls the row rather than deleting it. The standalone Rate Details page was removed 2026-09-28; old `/rates` URLs redirect to the 3PL's View page.
-- Cost Comparison panel on Project Summary (replaced the standalone Comparison page, removed 2026-09-28; old `/comparison` URLs redirect to Project Summary): 3PLs ranked by Total Cost (sum of all 9 cost fields, rank 1 = lowest), excluding Unfit / Do not Contact / Withdrawn / No Response except the incumbent, which always shows as the Baseline row. The baseline is the 3PL flagged Incumbent (is_incumbent; the old current_incumbent_3pl column was dropped 2026-09-28): Savings vs Baseline (amount + %, green/red) when that 3PL has cost data; amber "Pending" note when it has none; no savings when no 3PL is flagged (N/A); ranking and savings hidden with a warning when 3PLs use different currencies. Sits right of the 3PL table (340px, sticky) from 1,480px, stacked above it below that. All math lives in src/lib/cost-comparison.ts, which Recommendation's Cost Savings ranking also uses.
-- Recommendation page: priority selector — Cost Savings ranks by Total Cost; Quality of Service and Turnaround Time show an unranked list with a disclaimer (no numeric turnaround field exists in the schema). "AI Summary" per provider is still a placeholder, not implemented.
-- Administration page (admin-only): project reassignment, a Clients section (every client with its project count; edit name/business model with the same duplicate check; delete only when it has zero projects, otherwise the button is disabled with the reason shown), promote/demote user role, create/delete users (blocked if the user owns any projects), edit any user's display name.
-- Design system: Move brand colors (Green #44B048, Navy #192E5B, Orange #FF5E43 accent), Plus Jakarta Sans + Inter — documented in docs/DESIGN_SYSTEM.md.
-- shadcn/ui adopted as the component foundation; Playwright MCP configured for Claude Code to self-verify UI work.
-- Supabase CLI + migrations fully set up — all schema changes go through supabase/migrations/, never raw SQL against the live project.
-- Document-upload AI extraction fully built and verified live across all four surfaces: New Project wizard Step 1 (blank-slate client intake pre-fill) and Step 2 (incumbent 3PL pre-fill), Client Info edit (merge-mode, only overwrites explicitly-stated fields), and Add 3PL (blank-slate)/Edit 3PL (merge-mode) covering the full 33-field provider set. Shared plumbing lives in src/lib/document-extraction.ts (file parsing + Anthropic tool-use call) and src/lib/merge-fields.ts (scalar merge diff). A real bug where merge-mode flagged restated-but-unchanged values as updates was fixed by passing the record's current field values into the extraction prompt so the model can distinguish "same" from "genuinely new" (merge-mode only; blank-slate flows unaffected).
-
-## 5. IN PROGRESS
-
-**Tariff Calculator (US imports, v1).** Plan approved 2026-10-02 in three PRs. **PR 1 done (this change):** `/tariff-calculator` with base duty (HTS general or column 2), MPF and HMF, locked saved estimates, warnings for every not-yet-loaded additional-duty program, and the resumable HTS import cron (`/api/cron/hts-release`). Code in `src/lib/tariff/` (parser, exact arithmetic, calculation, import job/store, server-side builder) and `src/app/(authenticated)/tariff-calculator/`. Rules: rates are never hardcoded (HTS from USITC; fees, column 2 countries and duty programs in tables with sources and effective dates); every estimate shows its rate dates and sources and "Estimate — verify with your customs broker"; classification is the importer's responsibility. Don't import Chapter 99 duty text as live duties: the HTS still prints IEEPA (9903.01.xx) and Section 122 (9903.03.xx) headings that CBP no longer collects.
-
-
-Forwarder Sourcing (Phase 3A + 3B + 3C, Phase 4A + 4B + 4C AI autofill, Phase 5A CSV export, Phase 5B combined CSV + PDF/DOCX export) done. **5B:** Combined the 5A CSVs into one file per version, and added PDF/DOCX export. The Export bar (`export-bar.tsx`) now has 6 buttons — Client/Expert × CSV/PDF/DOCX — no shared toggle, so each button is fully explicit about what it produces. All three formats share one module, `src/lib/forwarder/report-data.ts`: `projectColumns()`/`forwarderColumns()`/`quoteColumns()` (the tier-based client/expert column definitions), `filterQuotesForVersion()` (excluded-status-quote row filtering), `buildSectionTable()` (applies both to produce headers+rows), and `fetchForwarderReportData()` (the single combined Supabase fetch + `buildForwarderCostComparison()` call, replacing 5A's three separate per-section fetches) — so client/expert correctness is defined exactly once regardless of output format, per the user's explicit requirement. `buildForwarderReport()` builds the shared PDF/DOCX report content (title block + ordered sections: Project Summary → Forwarders Considered → Quote Comparison) on top of the same column/filter functions CSV uses. New dependencies: `pdfkit@0.20.2` (+ `@types/pdfkit@0.17.6` dev), `docx@9.8.1` — both pure JS, no headless browser. `render-report-pdf.ts`/`render-report-docx.ts` are pure renderers (report data in, `Buffer` out), each round-trip-tested via the app's existing `pdf-parse`/`mammoth` dependencies rather than only eyeballed — this caught a real defect during development: an early version rendered Forwarders/Quote Comparison as wide grids, and pdfkit hard-broke long words (e.g. a contact's name) into garbage once a section had ~20+ columns (the Forwarders section has up to 26 with all 11 capability booleans). Fixed by rendering those sections as stacked label:value blocks per row instead of a grid — no column-width ceiling, reads correctly at any column count. Live verification then caught one more real bug: pdfkit's built-in Helvetica font can't render the route separator "→" (not in WinAnsiEncoding), corrupting the PDF header — fixed with a small ASCII-fallback sanitizer (`pdfSafeText()` in `render-report-pdf.ts`) and regression-tested; DOCX was unaffected (embeds Unicode natively). Added `vitest.config.ts` to resolve the `"@/"` path alias for vitest, needed once `report-data.ts` (imported by several `"@/"`-aliased modules) became directly unit-tested. **5A (superseded by 5B's single-file format, described above):** original CSV export shipped as three separate files with a page-level toggle; the tier-based column definitions and exclusion-filtering design from that phase carried forward unchanged into `report-data.ts`. Testing note that still applies: on a freshly-created project, every quote shows "Not Comparable" for rank/vs-baseline/annual-savings until the project's Final Incoterm/Mode/Type are all set — that's the ranking gate in `cost-comparison.ts` working as designed (comparability requires matching final agreed terms), not a bug, but easy to mistake for one while testing. **4C:** AI-extraction autofill for quotes — same upload/merge UX as 4A/4B, targeting `forwarder_quotes`. New: `src/lib/forwarder/merge-quote-fields.ts`, `.../quotes/new/extract-actions.ts`, `.../quotes/new/new-quote-entry.tsx`, `src/lib/forwarder/quote-extraction.ts` (scenario-group canonicalization + date parsing, unit-tested — split out from the "use server" extract-actions file specifically so it's directly testable). Exchange-rate handling got extra scrutiny since `exchange_rate_to_usd` feeds `freightCostUsd()` (cost-comparison.ts) directly: a USD quote's rate is deterministically discarded regardless of what the model returns (a USD rate is definitionally 1 — no prompt dependency), and a genuinely-missing non-USD rate now surfaces as truly empty (previously the form silently defaulted an unset rate to "1", indistinguishable from a real "1") with a blocking amber warning until the user enters one manually — a guessed-but-plausible rate is worse than a blank field since it silently corrupts ranking/savings. `scenario_group` matches an existing scenario group on the project case-insensitively before proposing new text and canonicalizes to the exact existing string, since `cost-comparison.ts` groups quotes by exact string equality. Live verification caught the same placeholder-leak class as 4A (`<UNKNOWN>` reaching `scenario_group` on a garbled document, since `canonicalizeScenarioGroup` wasn't running the value through `cleanExtractedText()` yet) — fixed and re-verified; the lesson (also noted under 4A) is that every free-text field needs the placeholder filter, not just the ones that seemed likely to need it. **4B:** AI-extraction autofill for forwarder records — same upload/merge UX as 4A, targeting the `forwarders` table (company info, contact, coverage, 11 capability booleans) instead of project fields. New: `src/lib/forwarder/merge-forwarder-fields.ts`, `.../forwarders/new/extract-actions.ts`, `.../forwarders/new/new-forwarder-entry.tsx`, plus an edit-mode upload panel inside `forwarder-form.tsx`. Capability booleans merge symmetrically (either true→false or false→true is flagged as "Updated," never auto-applied) — a deliberate difference from 3PL's provider-capability merge, which only ever flips false→true since that older schema never asserts absence; here the extraction prompt is responsible for only asserting a capability value when a document explicitly confirms or denies it, never on silence. `status`/`assessment`/`next_action`/`key_notes` excluded from extraction (internal tracking judgment); `company_name` pre-fills on create but is excluded from edit-mode merge (identity protection). Reuses 4A's `cleanExtractedText()` unchanged. Known UX gap (not introduced by 4B, not fixed): the capability toggle chip is a strict two-state control, so an explicitly-denied capability looks identical to one the source document simply never mentioned — worth a look if this becomes confusing in practice. **4A:** AI-extraction autofill for project intake — upload a document to pre-fill a new project or merge-and-diff into an existing one, mirroring 3PL's extraction feature. New: `src/lib/forwarder/merge-project-fields.ts` (merge/diff, including mode→type pairing revalidation after merge), `src/app/(authenticated)/forwarder-sourcing/new/extract-actions.ts` (tool schema + Server Action), `new-forwarder-project-entry.tsx` (create-flow choice screen), and an edit-mode upload panel inside `forwarder-project-form.tsx`. `document-extraction.ts` gained `cleanExtractedText()`, a small deterministic filter for the model's own "couldn't extract" placeholder tokens (e.g. `<UNKNOWN>`) — added after live testing caught one leaking into a text field. Quote-record AI extraction is still manual-only — a possible Phase 4C. Phase 3 (through cost comparison) is feature-complete. **3A:** project list (`/forwarder-sourcing`), intake form (create + edit, single page), Project Summary skeleton. Module enabled in the hub and nav. Ranking rules changed from the spreadsheet: rejected-status forwarders (Unfit, Do Not Contact, Withdrawn / No Response) are excluded from ranking, and ties are labelled symmetrically (`RANKING_EXCLUDED_STATUSES` in src/lib/forwarder/cost-comparison.ts). Shared code refactored for reuse: `resolveClientId` in src/lib/clients-server.ts, `getOwnershipContext`/`getClientOwner`/`ViewOnlyBanner` take a `table` parameter, `formatRelativeTime` in src/lib/relative-time.ts. **3B:** forwarder management — add/edit/view a forwarder, and a real Forwarders table on Project Summary (search, Status/Capability filters, toggleable columns incl. Assessment, row menu View/Edit/Delete) replacing the placeholder. Deleting a forwarder is never blocked (forwarder_quotes.forwarder_id is ON DELETE CASCADE, unlike the project→forwarders RESTRICT), so the confirm dialog says up front that it also deletes the forwarder's quotes. Forwarder status/assessment strings differ from 3PL's (two extra statuses, different capitalization), so they have their own option lists and badge components (src/lib/forwarder/forwarder-fields.ts, forwarder-status-badge.tsx) rather than sharing 3PL's. New Server Actions use Zod (src/lib/forwarder/parse-forwarder-form.ts). **3C:** quote management — add/edit/delete a quote on a forwarder, and a real Quotes table on the forwarder detail page replacing its placeholder; a Quote Comparison panel on Project Summary (grouped by scenario group, sorted by rank within each) replacing its placeholder, calling `buildForwarderCostComparison` unmodified. The quote form reuses 3A's mode→type pairing and adds a live "1 {currency} = __ USD" label as `exchange_rate_to_usd` is typed, plus a scenario-group `<datalist>` (from every quote already on the project) to steer toward exact-match reuse. `quote_completeness`/`overall_assessment`/`client_decision` are Zod enums matching the migration's check constraints exactly (src/lib/forwarder/quote-fields.ts, parse-quote-form.ts).
+## 5. HOW TO WORK
+- **Deploy:**
+  - **Schema changes:** migrations only (AGENTS.md), and additive where possible.
+  - **Adding:** migration first, then code: `npx supabase db push && git push`.
+  - **Removing:** code first (`git push`, wait for Vercel), then `db push`.
+- **Rollback:** in Vercel, promote the previous production deployment. That restores code only; undo a database change with a new migration.
+- **Gates before merging:**
+  - Vitest in 7 timezones: UTC, America/Los_Angeles, Asia/Ho_Chi_Minh, Pacific/Kiritimati, Pacific/Pago_Pago, Australia/Lord_Howe and Asia/Manila.
+  - pgTAP on a fresh database (`db reset`) AND a seeded one (`qa:seed`).
+  - `npm run lint`.
+  - `npm run typecheck` (runs `next typegen` first).
+- **Local QA rules:**
+  - Local only.
+  - Run the app from a git worktree on :3100 with keys from `npx supabase status -o env`.
+  - Never read or load `.env` files.
+  - No screenshots or passwords in the repo.
+- **`/help`:** update it in the same change as any behaviour it describes.
 
 ## 6. NEXT TASK
+Landed Cost Calculator (not started; no plan yet).
 
-Tariff Calculator **PR 2a done** (merged): tariff editor permission, additional duties with the review workflow, forced-labour and Brazil Section 301, Duty data screens, Chapter 99 change detection, staleness warnings. **PR 2b done** (branch `feat/tariff-china301-232`): China Section 301 and Section 232 metals seeded pending review by generated migrations (`scripts/tariff/`, sources pinned by hash, cross-check report and spot-check sample in `docs/tariff-data/`), conditional/unconfirmed rows and excepted statistical numbers (merged). **PR 3 done** (branch `feat/tariff-forwarder-estimates`): "Estimate duties" from Forwarder Sourcing — calculator pre-filled from a project or quote with per-input confirmation, linked locked estimates with an input snapshot ("Inputs changed since this estimate"), Duty estimates card beside quotes (forwarder quoted vs our estimate, $100/15% flag), Expert CSV columns; no effect on ranking/savings. **Next:** expert review of both programs (and the open items in TECH_DEBT), then the remaining 232 programs (vehicles, timber, semiconductors, pharmaceuticals, drones), Canada 338 and the image-only exemption lists. A bulk list upload in Duty data would help editors maintain long lists (the form takes 5,000 lines).
-
-
-No task currently assigned for Forwarder Sourcing — Phase 3 (through cost comparison), all of Phase 4's AI autofill (4A project intake, 4B forwarder records, 4C quotes), and Phase 5 export (5A CSV, 5B combined CSV + PDF/DOCX) are done. No further phase is currently planned. Before starting new work here, read docs/CHANGELOG.md and docs/TECH_DEBT.md (the forwarder ranking basis — Freight Cost vs Total Comparable Logistics Cost — is still an open decision there, unchanged by any of 3C/4A/4B/4C/5A).
-
-## 7. OPEN DECISIONS / QUESTIONS
-
-- Extending AI extraction beyond New Project intake (e.g. pre-filling a 3PL update from a discovery call transcript) — deliberately deferred until intake extraction is proven reliable.
-- CSV structured import — deferred as a separate feature from AI text extraction (different technical approach: column-mapping, not LLM extraction).
-- Whether/when to actually deploy to Vercel — instructions exist, deployment itself hasn't happened yet.
-- Forwarder ranking basis: Cost Rank and savings use Freight Cost only (as in the spreadsheet); Total Comparable Logistics Cost may be fairer against a DDP baseline. Owner: Dani, revisit before Forwarder Sourcing goes live (docs/TECH_DEBT.md).
-- 3PL Server Actions don't use Zod validation yet, unlike the new forwarder actions — docs/TECH_DEBT.md.
-- rate_details (granular per-service rates) isn't wired into the cost comparison math yet — the Cost Comparison panel and Recommendation use the 9 summary cost fields on three_pl_providers directly, not the more granular rate_details breakdown.
+## 7. OPEN ITEMS
+- **Expert tasks:**
+  - Grant tariff editor with the Administration buttons.
+  - Review the pending duty programs.
+  - Settle the 9903.82.22 rate: is the 15% a total or an added rate? (TECH_DEBT)
+  - Load the remaining Section 232 programs and scheduled changes from the expert handoff doc: https://claude.ai/code/artifact/a10e50f2-3b46-44ef-9283-45a8095e5330
+- **Decisions for Move:**
+  - Forwarder ranking basis: Freight Cost only, or Total Comparable Logistics Cost.
+  - Multi-SKU entries: the calculator estimates one line, with MPF min/max applied to that line.
+- **Optional follow-ups:**
+  - Revoke `INSERT` on `duty_estimates` from `service_role`, so even the key can save estimates only through `save_duty_estimate` (SECURITY.md: "not done").
+  - Delete stale test accounts and merged branches.
+- **Known limits:**
+  - A deleted user's old token was valid for up to 1 hour on their own rows (report, B-1/B-2). The later role gate should close this: `has_app_role()` finds no `auth.users` row, so every RLS table refuses the token. This comes from the function's definition, not a dedicated test.
+  - Others are in `docs/TECH_DEBT.md`.
 
 ## 8. KEY ARCHITECTURE DECISIONS
-
-- 2026-08-19 — Chose Next.js + Supabase (DB/Auth/Storage) to minimize infra surface for a first-time solo dev.
-- 2026-09-04 — Full schema refactor: renamed tables to match business terminology (client_requirements, three_pl_providers), merged requirements_summary in, dropped document-upload tables (deferred), added rate_details as a 1:1 companion table rather than a freeform rate-line-item table.
-- 2026-09-04 — Chose is_incumbent flag (one per client, enforced via partial unique index) over a separate baseline-cost field, so the baseline is always a real, complete provider record rather than a duplicated number.
-- 2026-09-05 — Roles stored in app_metadata (not user_metadata, which holds first_name) since app_metadata can't be edited by the user themselves — correct place for anything authorization-relevant.
-- 2026-09-05 — Reads stay open to all authenticated Logistics Experts (matches original POC requirement); only writes are owner-or-admin restricted.
-- 2026-09-06 — Adopted shadcn/ui + Playwright MCP together after repeated UI/contrast bugs from hand-written Tailwind; established the native-input-for-server-hydrated-forms rule after a real Base-UI uncontrolled-state bug.
-- 2026-09-08 — AI document extraction scoped to New Project intake only (v1), transient file processing (no permanent storage), text/PDF/DOCX only (CSV deferred as a separate feature).
-- 2026-09-28 — Split clients from projects: `clients` is a shared, admin-managed record (unique case-insensitive name), and each 3PL sourcing engagement is a `three_pl_projects` row pointing at it. This lets one client have several projects (and later other modules) without re-typing or drifting client names. Client name/business model are never changed by document extraction in merge mode.
-- 2026-09-10 — Merge-mode extraction (Project Info edit, Edit 3PL) passes the record's current field values into the extraction prompt, not just the document text, so a restated-but-unchanged value isn't flagged as an update — the model has no other way to tell a restatement from a genuine change.
-- 2026-09-29 — Forwarder Sourcing gained AI autofill (Phase 4A), reusing 3PL's extraction pipeline (`document-extraction.ts`) unchanged rather than forking it, since it was already schema-agnostic. Live verification found the model can fabricate a numeric default (e.g. a pallet count of 1) or leak its own "couldn't extract" placeholder text into a field — the fix is a deterministic server-side filter (`cleanExtractedText`) plus a stricter prompt, not reliance on prompt wording alone; worth checking whether 3PL's older extraction has the same placeholder-leak exposure next time it's touched.
-- 2026-09-29 — Forwarder Sourcing's PDF/DOCX report export (Phase 5B) renders any section with many columns (Forwarders, Quote Comparison) as stacked label:value blocks per row rather than a table/grid. A grid-based first attempt was caught, via an automated pdf-parse round-trip test, hard-breaking long words into garbage once a section had ~20+ columns (Forwarders has up to 26 with all 11 capability booleans) — no page width keeps every column's content readable at a legible font size once there are that many. Stacked blocks have no column-width ceiling, so this reads correctly regardless of how many fields a future section ends up with; worth remembering if a future export format is tempted to go back to a grid layout for these two sections.
+- 2026-09-05: authorization lives in `app_metadata`, which users can't edit. Reads are open to every role-holder; writes are owner-or-admin.
+- 2026-09-28: `clients` is a shared, admin-managed record (unique case-insensitive name), and each module's projects point at it.
+- 2026-10-02: tariff rates are data with sources and dates, never hardcoded. Every estimate says "Estimate — verify with your customs broker".
+- 2026-10-09: database checks read live `auth.users`, not the JWT. A restrictive role policy on every table. Multi-row creates run in a single SECURITY INVOKER function, so RLS still applies.
 
 ## 9. FILE MAP
-
 | Area | Path |
 |---|---|
-| DB schema / migrations | supabase/migrations/ |
-| Auth/role helpers | src/lib/auth/get-user-role.ts, src/lib/auth/get-ownership-context.ts (module-agnostic: takes a `table` param, default three_pl_projects) |
-| Supabase clients | src/lib/supabase/client.ts (browser), server.ts (server), admin-client.ts (service-role, server-only, bypasses RLS) |
-| Shared form components | src/components/client-intake-form.tsx (a project's intake fields), client-picker.tsx ("Which client?"), edit-client-dialog.tsx (admin), provider-form.tsx, wizard-steps.tsx, toggle-chip picker, section-card wrapper, status-badge |
-| Clients helpers (name lookup, duplicate message, join normalizer) | src/lib/clients.ts (client-safe) + src/lib/clients-server.ts (resolveClientId — creates/looks up the client a project save should point at; used by every module's save action) |
-| View-only banner (non-owners) | src/components/view-only-banner.tsx (takes a `table` param) |
-| Relative time formatting ("2h ago") | src/lib/relative-time.ts |
-| Design tokens | src/styles/globals.css (@theme block), docs/DESIGN_SYSTEM.md |
-| Hub home (`/`) + top bar/module nav | src/app/(authenticated)/page.tsx, layout.tsx, module-nav.tsx; module list in src/lib/modules.ts |
-| 3PL Sourcing project list (`/3pl-sourcing`) | src/app/(authenticated)/3pl-sourcing/page.tsx, dashboard-content.tsx |
-| Project pages (`/3pl-sourcing/projects/[id]/...`) | src/app/(authenticated)/3pl-sourcing/projects/[id]/* (summary + Cost Comparison panel in cost-comparison-panel.tsx, info = Project Info + delete-project-*, info/edit, recommendation) |
-| 3PL pages (`/3pl-sourcing/projects/[id]/providers/...`) | src/app/(authenticated)/3pl-sourcing/projects/[id]/providers/* (new, [providerId] View incl. Rate Details card, [providerId]/edit) |
-| New Project wizard (`/3pl-sourcing/new/...`) | src/app/(authenticated)/3pl-sourcing/new/* |
-| Shared cost math (Total Cost, rank, savings, currency check) | src/lib/cost-comparison.ts |
-| Rate Details fields + save logic (shared by all 3PL save actions) | src/lib/rate-details.ts |
-| Legacy URL redirects (`/dashboard/*`, `/projects/*`, `.../comparison` → Project Summary, `.../providers/[providerId]/rates` → 3PL View) | next.config.ts `redirects()` |
-| Admin (`/admin`, hub-level) | src/app/(authenticated)/admin/* (client-actions.ts + delete-client-button.tsx for the Clients section; actions.ts reassigns owners and counts owned/client projects across both three_pl_projects and forwarder_projects) |
-| Forwarder cost math (freight in USD, gates, savings, ranking) | src/lib/forwarder/cost-comparison.ts |
-| Forwarder project option lists, mode→type pairing, section layout | src/lib/forwarder/project-fields.ts, project-sections.ts |
-| Forwarder project form validation (Zod) | src/lib/forwarder/parse-project-form.ts |
-| Forwarder project list (`/forwarder-sourcing`) | src/app/(authenticated)/forwarder-sourcing/page.tsx, forwarder-project-list.tsx |
-| Forwarder project pages (new/edit/summary) | src/app/(authenticated)/forwarder-sourcing/new/, [id]/, [id]/edit/, forwarder-project-form.tsx, actions.ts, form-fields.tsx |
-| Forwarder option lists, capability labels, Zod form validation | src/lib/forwarder/forwarder-fields.ts, parse-forwarder-form.ts |
-| Forwarder status/assessment badges (own colors — status strings differ from 3PL's) | src/app/(authenticated)/forwarder-sourcing/[id]/forwarder-status-badge.tsx |
-| Forwarders table on Project Summary (search/filter/columns/row menu) | src/app/(authenticated)/forwarder-sourcing/[id]/forwarders-table.tsx |
-| Forwarder add/edit/view pages | src/app/(authenticated)/forwarder-sourcing/[id]/forwarders/* (new/, [forwarderId]/, [forwarderId]/edit/, forwarder-form.tsx) |
-| Forwarder quote option lists, Zod form validation | src/lib/forwarder/quote-fields.ts, parse-quote-form.ts |
-| Quotes table on a forwarder's detail page | src/app/(authenticated)/forwarder-sourcing/[id]/forwarders/[forwarderId]/quotes-table.tsx |
-| Quote add/edit pages (no standalone view page) | src/app/(authenticated)/forwarder-sourcing/[id]/forwarders/[forwarderId]/quotes/* (new/, [quoteId]/, [quoteId]/edit/, quote-form.tsx) |
-| Quote Comparison panel on Project Summary (grouped by scenario group) | src/app/(authenticated)/forwarder-sourcing/[id]/quote-comparison-panel.tsx |
-| Forwarder project AI-extraction merge/diff logic | src/lib/forwarder/merge-project-fields.ts |
-| Forwarder project AI-extraction tool schema + Server Action | src/app/(authenticated)/forwarder-sourcing/new/extract-actions.ts |
-| Forwarder new-project entry (upload vs. blank choice screen) | src/app/(authenticated)/forwarder-sourcing/new/new-forwarder-project-entry.tsx |
-| Forwarder record AI-extraction merge/diff logic | src/lib/forwarder/merge-forwarder-fields.ts |
-| Forwarder record AI-extraction tool schema + Server Action | src/app/(authenticated)/forwarder-sourcing/[id]/forwarders/new/extract-actions.ts |
-| Forwarder new-record entry (upload vs. blank choice screen) | src/app/(authenticated)/forwarder-sourcing/[id]/forwarders/new/new-forwarder-entry.tsx |
-| Quote AI-extraction merge/diff logic | src/lib/forwarder/merge-quote-fields.ts |
-| Quote AI-extraction tool schema + Server Action | src/app/(authenticated)/forwarder-sourcing/[id]/forwarders/[forwarderId]/quotes/new/extract-actions.ts |
-| Quote scenario-group canonicalization + date parsing (unit-tested) | src/lib/forwarder/quote-extraction.ts |
-| Quote new-record entry (upload vs. blank choice screen) | src/app/(authenticated)/forwarder-sourcing/[id]/forwarders/[forwarderId]/quotes/new/new-quote-entry.tsx |
-| Shared extraction pipeline (file parsing, Anthropic call, placeholder-text filtering) | src/lib/document-extraction.ts |
-| CSV building utility (escaping, multi-section stacking, filename sanitizing, unit-tested) | src/lib/forwarder/export-csv.ts |
-| Shared export data: tier-based column definitions, excluded-status filtering, combined Supabase fetch, PDF/DOCX report-content builder (unit-tested) | src/lib/forwarder/report-data.ts |
-| CSV/PDF/DOCX export Server Actions | src/app/(authenticated)/forwarder-sourcing/[id]/export-actions.ts |
-| PDF report renderer (pure, pdfkit; round-trip-tested via pdf-parse) | src/lib/forwarder/render-report-pdf.ts |
-| DOCX report renderer (pure, docx; round-trip-tested via mammoth) | src/lib/forwarder/render-report-docx.ts |
-| Export bar UI (6 buttons: Client/Expert × CSV/PDF/DOCX) | src/app/(authenticated)/forwarder-sourcing/[id]/export-bar.tsx |
-| Tests | `npm test` (vitest, alias resolved via vitest.config.ts): src/lib/forwarder/cost-comparison.test.ts checks the forwarder math against a spreadsheet-computed golden fixture (src/lib/forwarder/__fixtures__/); report-data.test.ts covers export tier/exclusion filtering; render-report-pdf.test.ts/render-report-docx.test.ts round-trip actual rendered PDF/DOCX bytes through pdf-parse/mammoth rather than only checking the pre-render data. UI is still verified manually with Playwright MCP per feature. |
+| Migrations / pgTAP | `supabase/migrations/`, `supabase/tests/database/` |
+| Auth and ownership helpers | `src/lib/auth/` |
+| Supabase clients | `src/lib/supabase/` (`admin-client.ts` = service role, server-only) |
+| Clients (lookup, duplicate check) | `src/lib/clients.ts`, `src/lib/clients-server.ts` |
+| 3PL Sourcing | `src/app/(authenticated)/3pl-sourcing/`, `src/lib/three-pl/`, `src/lib/cost-comparison.ts` |
+| Forwarder Sourcing | `src/app/(authenticated)/forwarder-sourcing/`, `src/lib/forwarder/` |
+| Tariff Calculator | `src/app/(authenticated)/tariff-calculator/`, `src/lib/tariff/`, `scripts/tariff/`, `docs/tariff-data/` |
+| Admin, Help | `src/app/(authenticated)/admin/`, `src/app/(authenticated)/help/` |
+| AI extraction | `src/lib/document-extraction.ts` |
+| QA | `scripts/qa/seed-qa.mjs`, `docs/qa/` |
 
 ## 10. DO NOT TOUCH / FRAGILE AREAS
-
-- The storage.objects RLS policy's regex UUID guard — fixes a real bug where casting a non-UUID path segment to uuid threw a runtime error and silently blocked unrelated policies. Don't remove the guard.
-- Every insert/update/delete Server Action MUST chain .select() and check the result isn't empty before reporting success — RLS-blocked writes fail silently (zero rows, no error) otherwise. Any new mutation added without this check will have the same false-success bug found and fixed earlier.
-- The one_incumbent_per_client partial unique index on three_pl_providers — drives all Cost Comparison panel/Recommendation baseline math. Don't remove without redesigning that logic.
-- profiles table is synced ONE-WAY from auth.users via trigger. Never write to profiles.role or profiles.first_name directly — always go through supabase.auth.admin.updateUserById() via the service-role client so the trigger stays the single source of truth.
-- The toggle-chip picker's storage format was fixed to be delimiter-safe (handles preset labels containing commas, e.g. "Fulfillment (Pick, Check, Pack)") — don't revert to a naive comma-join/split.
+- Every insert, update or delete action chains `.select()` and checks for rows; an RLS refusal returns no rows and no error.
+- Never write `profiles` directly. Roles and names go through `supabase.auth.admin.updateUserById()` (`app_metadata`), and the trigger mirrors them.
+- The restrictive `has_app_role()` policy must be on every RLS table; pgTAP 24 fails if a table lacks it.
+- The `create_*_project_with_client` field lists must match the form parsers; Vitest drift checks enforce it.
+- The `one_incumbent_per_client` partial unique index drives 3PL baseline math.
+- The toggle-chip value format (`src/lib/chip-value.ts`) is delimiter-safe; labels contain commas, e.g. "Fulfillment (Pick, Check, Pack)".
