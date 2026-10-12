@@ -135,6 +135,15 @@ export default async function ProjectSummaryPage({
         <div className="flex items-center gap-2">
           {canWrite && (
             <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href={`/3pl-sourcing/projects/${id}/share`} />}
+            >
+              Share update with client
+            </Button>
+          )}
+          {canWrite && (
+            <Button
               nativeButton={false}
               render={<Link href={`/3pl-sourcing/projects/${id}/providers/new`} />}
             >

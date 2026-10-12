@@ -17,6 +17,21 @@
   --color-neutral-muted: #6b7280;
   --color-danger: #dc2626;
 
+  /* Client portal (src/lib/client-updates/portal-palette.ts; contrast is
+     checked in portal-palette.test.ts). Teal = forwarder projects, purple =
+     3PL projects, always paired with a text label. */
+  --color-portal-ink: #1a2033;
+  --color-portal-muted: #4a5468;
+  --color-portal-line: #c3c9d8;
+  --color-portal-teal: #0b5560;
+  --color-portal-teal-bg: #e3f2f3;
+  --color-portal-purple: #5b2e91;
+  --color-portal-purple-bg: #f1eaf9;
+  --color-portal-amber: #8a4b00;
+  --color-portal-amber-bg: #fff4e5;
+  --color-portal-good: #237a33;
+  --color-portal-grey: #5f6675;
+
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 

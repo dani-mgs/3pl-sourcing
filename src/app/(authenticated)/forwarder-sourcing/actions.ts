@@ -11,6 +11,7 @@ import { explainEmptyDelete } from "@/lib/delete-errors";
 import type { ClientOption } from "@/lib/clients";
 import { parseForwarderProjectForm, type ForwarderProjectFields } from "@/lib/forwarder/parse-project-form";
 import { requireStaff } from "@/lib/auth/require-staff";
+import { CLIENT_FIXED_AFTER_PUBLISH } from "@/lib/client-updates/share-text";
 
 export type SaveForwarderProjectState = {
   error?: string;
@@ -99,6 +100,9 @@ export async function saveForwarderProject(
       .select("id");
 
     if (error) {
+      // The database refuses a new client once updates were shared with the
+      // current one (refuse_client_change_after_publish).
+      if (error.code === "P0001") return { error: CLIENT_FIXED_AFTER_PUBLISH };
       console.error("saveForwarderProject update error:", error);
       return { error: UNEXPECTED };
     }
