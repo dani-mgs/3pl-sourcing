@@ -82,12 +82,15 @@ describe("ProjectPanel", () => {
     expect(t).toContain("Stage 5 of 7 · Recommendation ready");
     expect(t).toContain("Freight per shipment: up to 10% below what you pay today");
     expect(t).toContain("16.7% → 15.0%");
+    expect(t).toContain("freight costs $16.70 today, and $15.00 with Pacific Bridge Logistics.");
     expect(t).toContain("Next: Your decision, by Oct 17");
     expect(t).toContain("Needs your input");
     expect(t).toContain("Move recommends");
     expect(t).toContain("Figures are estimates");
     expect(t).toContain("Updated Oct 9 by Beah, Move");
     expect(t).toContain("Your Move contact for this project: Beah · team@move.example");
+    // Step labels sit in a container query, so a narrow panel shows only the current stage.
+    expect(html).toContain("@container");
     // Every chart can be switched to a table.
     const charts = (html.match(/<figure/g) ?? []).length;
     expect(charts).toBeGreaterThanOrEqual(3);

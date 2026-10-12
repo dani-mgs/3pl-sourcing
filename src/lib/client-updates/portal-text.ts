@@ -133,6 +133,11 @@ export function forwarderEmptyCost(c: ForwarderPayload["comparison"]): string | 
 
 export const NO_BASELINE_NOTE = "Share your current freight cost with us to see savings.";
 
+// "16.7%" -> "$16.70": the ratio read as dollars of freight per $100 of goods.
+function per100(ratio: string): string {
+  return `$${Number(ratio.replace("%", "")).toFixed(2)}`;
+}
+
 export function fcrText(c: ForwarderPayload["comparison"]): { title: string; caption: string } | { empty: string } {
   if (c.fcrIssue === "missing") return { empty: "Shown once your invoice value is confirmed." };
   if (c.fcrIssue === "not_usd") return { empty: "Shown once your invoice value is confirmed in US dollars." };
@@ -140,10 +145,10 @@ export function fcrText(c: ForwarderPayload["comparison"]): { title: string; cap
   if (c.today.fcrPct && best?.fcrPct) {
     return {
       title: `${c.today.fcrPct} → ${best.fcrPct}`,
-      caption: `For every $100 of goods you ship, freight costs $${c.today.fcrPct.replace("%", "")} today, and $${best.fcrPct.replace("%", "")} with ${best.name}.`,
+      caption: `For every $100 of goods you ship, freight costs ${per100(c.today.fcrPct)} today, and ${per100(best.fcrPct)} with ${best.name}.`,
     };
   }
-  if (c.today.fcrPct) return { title: c.today.fcrPct, caption: `For every $100 of goods you ship, freight costs $${c.today.fcrPct.replace("%", "")} today.` };
+  if (c.today.fcrPct) return { title: c.today.fcrPct, caption: `For every $100 of goods you ship, freight costs ${per100(c.today.fcrPct)} today.` };
   return { empty: "Shown once we have a comparable quote." };
 }
 
