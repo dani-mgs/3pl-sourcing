@@ -166,4 +166,11 @@ describe("buildForwarderPayload", () => {
   test("the contact is the owner's first name plus the email typed on the form", () => {
     expect(build({ contactEmail: null }).contact).toEqual({ firstName: "Beah", email: null });
   });
+
+  test("first names only: a full name in the profile is cut to its first word", () => {
+    const source = toForwarderSource(forwarderProjectRow(), forwarderRows(), quoteRows());
+    const result = buildForwarderPayload(source, inputs(), { authorFirstName: "Alex  Moreno", ownerFirstName: " Priya Nair " }, TODAY);
+    if (!result.ok) throw new Error(result.error);
+    expect([result.payload.author.firstName, result.payload.contact.firstName]).toEqual(["Alex", "Priya"]);
+  });
 });

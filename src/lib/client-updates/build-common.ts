@@ -17,9 +17,11 @@ export type BuildResult<P> = { ok: true; payload: P } | { ok: false; error: stri
 export const NOT_SHORTLISTED =
   "Only shortlisted partners can be named to the client. Reload the page and choose again.";
 
+// First word only: profiles.first_name can hold a full name, and clients
+// see first names, never last names.
 function name(value: string | null): string | null {
-  const trimmed = value?.trim() ?? "";
-  return trimmed === "" ? null : trimmed.slice(0, 60);
+  const first = value?.trim().split(/\s+/)[0] ?? "";
+  return first === "" ? null : first.slice(0, 60);
 }
 
 export function commonParts(

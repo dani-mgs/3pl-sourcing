@@ -11,8 +11,8 @@
 
 export const DRAFT_CANARY = "DRAFT-CANARY";
 
-const ALEX = "Alex Moreno";
-const PRIYA = "Priya Nair";
+const ALEX = "Alex";
+const PRIYA = "Priya";
 const TEAM_EMAIL = "sourcing@move.example";
 
 function payload(kind, { route, facts, author, contactEmail = TEAM_EMAIL, milestones = [], funnel = null, comparison, recommendation = null }) {

@@ -299,7 +299,7 @@ function RecommendationCard({ update, context, tone }: { update: ClientUpdateVie
   const rec = update.payload.recommendation;
   const border = tone === "teal" ? "border-portal-teal" : "border-portal-purple";
   const accentText = tone === "teal" ? "text-portal-teal" : "text-portal-purple";
-  const contact = update.payload.contact.firstName;
+  const { firstName, email } = update.payload.contact;
   return (
     <div className={`rounded-xl border-2 ${border} px-5 py-4`}>
       <p className={`text-xs font-bold uppercase tracking-wide ${accentText}`}>Move recommends</p>
@@ -329,7 +329,18 @@ function RecommendationCard({ update, context, tone }: { update: ClientUpdateVie
           )}
           {rec.basedOn && <p className="text-sm text-portal-muted">{rec.basedOn}</p>}
           <p className="text-sm text-portal-muted">
-            To approve or ask for changes, reply to {contact ? `${contact} at Move` : "your Move contact"}.
+            To approve, reply to your Move contact
+            {firstName ? `: ${firstName}` : ""}
+            {email && (
+              <>
+                {" ("}
+                <a className="text-move-navy underline" href={`mailto:${email}`}>
+                  {email}
+                </a>
+                {")"}
+              </>
+            )}
+            .
           </p>
         </div>
       ) : (

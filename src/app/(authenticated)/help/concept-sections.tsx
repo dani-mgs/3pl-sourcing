@@ -293,8 +293,9 @@ export function SharingSection() {
       <Bullets>
         <li>
           <Ui>Share update with client</Ui> on a 3PL or forwarder project page (owner or admin) publishes an update to
-          that project&apos;s client. Clients only ever see what you publish, never live data. They can&apos;t see shared
-          updates yet: the client portal starts showing them in the next release.
+          that project&apos;s client. Clients only ever see what you publish, never live data or drafts, and see it in
+          their portal straight away. <Ui>View as client</Ui> (in Client access, or on the Share page) shows a
+          client&apos;s portal exactly as their users see it, read-only.
         </li>
         <li>
           You choose the stage (1 to 7, the same for both modules), write the headline, &ldquo;where we are&rdquo; and the
@@ -329,6 +330,13 @@ export function SharingSection() {
         </li>
         <li>
           {PUBLISH_CONFIRM} Once an update has been published, the project&apos;s client can&apos;t be changed.
+        </li>
+        <li>
+          In the portal, clients see each project&apos;s latest update (with its history), what needs them, key figures
+          and a timeline. Before anything is published they see &ldquo;Your Move team is getting started&rdquo; with the
+          first names of the staff who own their projects. The Market Report tab is locked on the free plan; on the
+          paid plan it says the report is being prepared (it arrives in a later release). Approving and asking
+          questions in the portal come later too: for now the recommendation card says to reply to the contact.
         </li>
         <li>
           Dates like &ldquo;today&rdquo; and quote validity use the server&apos;s date (UTC), so before 8am in Manila
