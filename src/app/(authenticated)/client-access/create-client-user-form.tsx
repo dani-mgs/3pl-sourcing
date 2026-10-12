@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { createClientUser, type ClientUserActionState } from "./actions";
 import { OneTimePasswordNotice } from "./one-time-password-notice";
 
+// w-full + min-w-0 on the wrappers: a long client name in the picker must not
+// widen the form past a phone screen.
 const fieldClass =
-  "rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy placeholder:italic placeholder:text-gray-400 focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green";
+  "w-full min-w-0 rounded-xl border border-neutral-border px-3 py-2 text-sm text-move-navy placeholder:italic placeholder:text-gray-400 focus:border-move-green focus:outline-none focus:ring-2 focus:ring-move-green";
 const labelClass = "text-sm font-medium text-move-navy";
 
 const initialState: ClientUserActionState = {};
@@ -31,7 +33,7 @@ export function CreateClientUserForm({ clients }: { clients: { id: string; name:
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <label htmlFor="client-user-client" className={labelClass}>
             Client
           </label>
@@ -46,7 +48,7 @@ export function CreateClientUserForm({ clients }: { clients: { id: string; name:
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <label htmlFor="client-user-email" className={labelClass}>
             Email
           </label>
@@ -60,7 +62,7 @@ export function CreateClientUserForm({ clients }: { clients: { id: string; name:
             className={fieldClass}
           />
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <label htmlFor="client-user-first-name" className={labelClass}>
             First name
           </label>
