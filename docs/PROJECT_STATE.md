@@ -48,6 +48,8 @@ Internal hub for Move Supply Chain Logistics Experts: source and compare 3PLs an
   - the provider-by-project index.
 - **Reusable matrix:** `docs/qa/regression-test-cases.md`.
 - **`npm run qa:seed`:** creates ZZQA test users and data. It refuses any URL but the local stack, and prints a new password each run.
+- **`npm run demo:seed`:** six realistic demo clients for the client dashboard (Northwind, Brightline, Kettle & Pine, Solace, Ridgeway, Harbor), owned by two `@demo.example.test` experts. Same local-only guard and per-run password; independent of `qa:seed`. Internal-only fields hold `INTERNAL-CANARY`.
+- **Production cleanup candidates:** `docs/qa/cleanup-candidates.sql`, one read-only SELECT to run in the SQL Editor; delete through the app, never SQL.
 
 **Security model** (details in `docs/SECURITY.md`)
 - **Role checks** (`is_admin()`, `is_tariff_editor()`) read the live role from `auth.users`, not the session token. Changes apply on the next page load or save; no re-login is needed.
@@ -66,7 +68,7 @@ Internal hub for Move Supply Chain Logistics Experts: source and compare 3PLs an
 - **Rollback:** in Vercel, promote the previous production deployment. That restores code only; undo a database change with a new migration.
 - **Gates before merging:**
   - Vitest in 7 timezones: UTC, America/Los_Angeles, Asia/Ho_Chi_Minh, Pacific/Kiritimati, Pacific/Pago_Pago, Australia/Lord_Howe and Asia/Manila.
-  - pgTAP on a fresh database (`db reset`) AND a seeded one (`qa:seed`).
+  - pgTAP on a fresh database (`db reset`) AND a seeded one (`qa:seed`, then `demo:seed`).
   - `npm run lint`.
   - `npm run typecheck` (runs `next typegen` first).
 - **Local QA rules:**

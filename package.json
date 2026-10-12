@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:db": "npx supabase test db --local",
     "qa:seed": "node scripts/qa/seed-qa.mjs",
+    "demo:seed": "node scripts/qa/seed-demo.mjs",
     "tariff:fetch": "node scripts/tariff/fetch-sources.mjs",
     "tariff:extract": "node scripts/tariff/extract-2a.mjs && node scripts/tariff/extract-2b.mjs",
     "tariff:seed": "node scripts/tariff/generate-seeds.mjs",
