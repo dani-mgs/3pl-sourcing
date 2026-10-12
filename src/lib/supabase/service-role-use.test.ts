@@ -4,14 +4,17 @@ import { describe, expect, test } from "vitest";
 
 // The service-role client bypasses RLS, so where it's used is an allow-list
 // (docs/SECURITY.md): the two cron routes, the /admin pages after an admin
-// check, and the estimate store (save_duty_estimate only). A new use fails
-// here until it's reviewed and listed.
+// check, the estimate store (save_duty_estimate only), and the client-user
+// file (creating client users, admin-only password resets; its own checks
+// are in create-client-user.test.ts). A new use fails here until it's
+// reviewed and listed.
 
 const ALLOWED = [
   "src/app/(authenticated)/admin/actions.ts",
   "src/app/(authenticated)/admin/page.tsx",
   "src/app/api/cron/fx-rates/route.ts",
   "src/app/api/cron/hts-release/route.ts",
+  "src/lib/client-users/create-client-user.ts",
   "src/lib/supabase/admin-client.ts",
   "src/lib/tariff/estimate-store.ts",
 ];

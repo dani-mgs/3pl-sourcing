@@ -18,6 +18,16 @@ import {
 
 export type AdminActionState = { error?: string; success?: boolean };
 
+const CLIENT_USER_ROLE_CHANGE =
+  "Client users can't be given a staff role or the tariff editor permission. Create a separate staff account instead.";
+
+// The role as stored now (profiles mirrors app_metadata), read as the admin.
+async function currentRoleOf(userId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+  return data?.role ?? null;
+}
+
 export async function reassignOwner(
   clientRequirementId: string,
   newOwnerId: string,
@@ -32,6 +42,12 @@ export async function reassignOwner(
     return { error: parsed.error };
   }
   const { projectId, newOwnerId: ownerId, table: projectTable } = parsed.data;
+
+  // Projects belong to staff; a client user can never own one.
+  const ownerRole = await currentRoleOf(ownerId);
+  if (ownerRole !== "admin" && ownerRole !== "logistics_expert") {
+    return { error: "Choose a staff member as the new owner." };
+  }
 
   const supabase = await createClient();
 
@@ -184,6 +200,10 @@ export async function updateUserRole(
   }
   const { userId, newRole } = parsed.data;
 
+  if ((await currentRoleOf(userId)) === "client") {
+    return { error: CLIENT_USER_ROLE_CHANGE };
+  }
+
   const supabase = await createClient();
   const {
     data: { user: currentUser },
@@ -225,6 +245,10 @@ export async function updateTariffEditor(
     return { error: parsed.error };
   }
   const { userId, grant } = parsed.data;
+
+  if ((await currentRoleOf(userId)) === "client") {
+    return { error: CLIENT_USER_ROLE_CHANGE };
+  }
 
   const adminClient = createAdminClient();
   const { error } = await adminClient.auth.admin.updateUserById(userId, {

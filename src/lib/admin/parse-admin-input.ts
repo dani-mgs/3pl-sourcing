@@ -64,6 +64,23 @@ const createUserSchema = z.object({
 
 const userIdSchema = z.object({ userId: id });
 
+// Paid tiers per client (client_entitlements.tier). No row means free.
+export const CLIENT_TIERS = ["free", "market_report"] as const;
+export type ClientTier = (typeof CLIENT_TIERS)[number];
+
+// Client users (portal logins): the role is always 'client', fixed on the
+// server, so it isn't an input at all. The password is generated, not typed.
+const createClientUserSchema = z.object({
+  clientId: z.uuid({ error: "Choose a client from the list." }),
+  email: createUserSchema.shape.email,
+  firstName: requiredName("First name"),
+});
+
+const setClientTierSchema = z.object({
+  clientId: id,
+  tier: z.enum(CLIENT_TIERS, { error: "Choose a valid plan." }),
+});
+
 const updateUserRoleSchema = z.object({
   userId: id,
   newRole: z.enum(STAFF_ROLES, { error: "Choose a valid role." }),
@@ -136,4 +153,16 @@ export function parseUpdateClient(raw: { clientId: unknown; name: unknown; busin
 
 export function parseDeleteClient(raw: { clientId: unknown }) {
   return parse(clientIdSchema, raw, "deleteClient");
+}
+
+export function parseCreateClientUser(raw: { clientId: unknown; email: unknown; firstName: unknown }) {
+  return parse(createClientUserSchema, raw, "createClientUser");
+}
+
+export function parseResetClientUserPassword(raw: { userId: unknown }) {
+  return parse(userIdSchema, raw, "resetClientUserPassword");
+}
+
+export function parseSetClientTier(raw: { clientId: unknown; tier: unknown }) {
+  return parse(setClientTierSchema, raw, "setClientTier");
 }

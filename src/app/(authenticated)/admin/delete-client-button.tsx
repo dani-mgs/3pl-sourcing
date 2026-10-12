@@ -13,27 +13,33 @@ import {
 } from "@/components/ui/dialog";
 import { deleteClient } from "./client-actions";
 
-// Only a client with no projects can be deleted. While it has any, the
-// button stays disabled and the reason is shown next to it.
+// Only a client with no projects and no portal users can be deleted. While it
+// has any, the button stays disabled and the reason is shown next to it.
 export function DeleteClientButton({
   clientId,
   clientName,
   projectCount,
+  portalUserCount = 0,
 }: {
   clientId: string;
   clientName: string;
   projectCount: number;
+  portalUserCount?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  if (projectCount > 0) {
+  if (projectCount > 0 || portalUserCount > 0) {
     const reasonId = `delete-client-reason-${clientId}`;
+    const reasons = [
+      projectCount > 0 && `${projectCount} project${projectCount === 1 ? "" : "s"}`,
+      portalUserCount > 0 && `${portalUserCount} portal user${portalUserCount === 1 ? "" : "s"}`,
+    ].filter(Boolean);
     return (
       <div className="flex items-center gap-2">
         <span id={reasonId} className="text-xs text-neutral-muted">
-          Has {projectCount} project{projectCount === 1 ? "" : "s"}
+          Has {reasons.join(" and ")}
         </span>
         <Button
           type="button"
@@ -73,7 +79,7 @@ export function DeleteClientButton({
         <DialogHeader>
           <DialogTitle>Delete Client</DialogTitle>
           <DialogDescription>
-            Delete {clientName}? It has no projects. This cannot be undone.
+            Delete {clientName}? It has no projects or portal users. This cannot be undone.
           </DialogDescription>
         </DialogHeader>
 

@@ -9,7 +9,7 @@ import {
   findClientByName,
 } from "@/lib/clients";
 import { explainEmptyDelete } from "@/lib/delete-errors";
-import { parseDeleteClient, parseUpdateClient } from "@/lib/admin/parse-admin-input";
+import { parseDeleteClient, parseSetClientTier, parseUpdateClient } from "@/lib/admin/parse-admin-input";
 
 export type ClientActionState = { error?: string; success?: boolean };
 
@@ -111,6 +111,21 @@ export async function deleteClient(
     };
   }
 
+  // Portal users point at the client too (profiles.client_id, RESTRICT).
+  const { count: portalUsers, error: portalError } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("client_id", clientId);
+  if (portalError) {
+    console.error("deleteClient portal user count error:", portalError);
+    return { error: "An unexpected error occurred." };
+  }
+  if ((portalUsers ?? 0) > 0) {
+    return {
+      error: `This client has ${portalUsers} portal user(s). Delete them in User & Role Management first, then delete this client.`,
+    };
+  }
+
   const { data, error } = await supabase
     .from("clients")
     .delete()
@@ -122,7 +137,7 @@ export async function deleteClient(
       console.error("deleteClient foreign key violation:", error);
       return {
         error:
-          "This client has project(s). Delete them first, then delete this client.",
+          "This client still has projects or portal users. Remove them first, then delete this client.",
       };
     }
     console.error("deleteClient error:", error);
@@ -134,5 +149,37 @@ export async function deleteClient(
   }
 
   revalidatePath("/admin");
+  return { success: true };
+}
+
+// The client's plan: free (the Move summary) or market_report (the paid
+// Market Report). Admins only; RLS allows only admins to write it too, and
+// records who granted it. No end date is set from here.
+export async function setClientTier(
+  rawClientId: string,
+  rawTier: string,
+): Promise<ClientActionState> {
+  if ((await getUserRole()) !== "admin") {
+    return { error: NO_PERMISSION };
+  }
+
+  const parsed = parseSetClientTier({ clientId: rawClientId, tier: rawTier });
+  if (!parsed.ok) {
+    return { error: parsed.error };
+  }
+  const { clientId, tier } = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("client_entitlements")
+    .upsert({ client_id: clientId, tier, valid_until: null }, { onConflict: "client_id" });
+
+  if (error) {
+    console.error("setClientTier error:", error);
+    return { error: "An unexpected error occurred." };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/client-access");
   return { success: true };
 }
