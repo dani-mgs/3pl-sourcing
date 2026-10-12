@@ -132,6 +132,11 @@ async function resetData(db, userIds) {
     ...(await idsWhere(db.from("three_pl_projects").select("id").in("client_id", clientIds), "find 3PL projects")),
   ]);
 
+  // Portal users made in the UI for a ZZQA client block its delete
+  // (profiles.client_id, RESTRICT), so they go first.
+  const portalIds = await idsWhere(db.from("profiles").select("id").in("client_id", clientIds), "find portal users");
+  for (const id of portalIds) check(await db.auth.admin.deleteUser(id), "delete portal user");
+
   check(await db.from("duty_estimates").delete().in("created_by", owners), "delete estimates");
   if (fpIds.size) {
     const ids = [...fpIds];

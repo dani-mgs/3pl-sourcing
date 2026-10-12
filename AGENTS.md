@@ -35,6 +35,12 @@ Routes under `/api/cron/` skip the login redirect in the proxy (`src/proxy.ts`, 
 ## Service-role exception: saving estimates
 One more place may use the service-role client without an admin check: `src/lib/tariff/estimate-store.ts`, called only by `saveEstimate` after its user checks, and only to run `save_duty_estimate()` (executable by `service_role` only). Don't use the service-role client anywhere else, and don't add other calls to that file (`src/lib/supabase/service-role-use.test.ts` enforces the list). See docs/SECURITY.md, "Service-role exception: saveEstimate".
 
+## Service-role exception: client users
+The third and last approved exception: `src/lib/client-users/create-client-user.ts`, called only by the `/client-access` Server Actions after `requireStaff()`. It creates client users (role fixed to `client`, admins for any client, logistics experts only for clients of projects they own) and lets admins reset a client user's password, with exactly three Auth admin calls: `createUser`, `getUserById`, `updateUserById`. Don't add other calls to that file or widen what it writes; `create-client-user.test.ts` and `service-role-use.test.ts` enforce it. See docs/SECURITY.md, "Service-role exception: client users".
+
+## Client users
+`client` is a role but never a staff role. Never add it to `has_staff_role()`, `STAFF_ROLES` or `staffRole()`: that opens every internal table to external users (`role-list-sync.test.ts` fails if you try). Every staff Server Action starts with `await requireStaff()` and every portal one with `await requireClient()` (`server-action-guard.test.ts`). A new table a client may read must be named on purpose in pgTAP 24 and 28. See docs/SECURITY.md, "Client users (external)".
+
 ## Form Input Conventions
 Always use plain native `<input>`/`<textarea>` elements for any form field holding actual data that gets pre-filled from server data (`defaultValue` driven by a server fetch). Do not use shadcn's `Input` component for these — it's built on Base UI primitives that manage their own internal uncontrolled state and will not pick up updated `defaultValue` after a server-driven revalidation (e.g. after a Server Action + `revalidatePath`), causing stale-looking data and a console warning. shadcn's `Input`/`Select`/`Checkbox` are fine for presentational or purely client-driven inputs (e.g. filter controls, search boxes) where the value isn't being re-hydrated from a server fetch after mount.
 ## Help Page

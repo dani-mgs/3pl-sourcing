@@ -3,7 +3,9 @@
 // Creates six realistic demo clients for the client dashboard (plan sections
 // 11-12, mockup v2), each with internal 3PL and/or Forwarder data at a set
 // stage, all dated relative to today. Owned by two demo experts at
-// @demo.example.test, independent of qa:seed. Every run deletes the previous
+// @demo.example.test, independent of qa:seed. Each client also gets portal
+// users (role client; two for Northwind) and Brightline gets the paid Market
+// Report (Ridgeway is explicitly free, the rest have no row: free). Every run deletes the previous
 // demo data first (by the demo users and the fixed client names below), then
 // inserts it again, and gives the demo users a new random password, which is
 // printed once and never written to disk.
@@ -98,6 +100,25 @@ const CLIENTS = {
   harbor: { name: "Harbor Pet Supply", business_model: "B2C" },
 };
 
+// Portal logins (role client). Same password as the demo experts. Solace's
+// user must change it at first sign-in, to demo that flow.
+const CLIENT_USERS = [
+  { client: "northwind", email: `northwind-ops@${EMAIL_DOMAIN}`, firstName: "Maya" },
+  { client: "northwind", email: `northwind-finance@${EMAIL_DOMAIN}`, firstName: "Owen" },
+  { client: "brightline", email: `brightline-ops@${EMAIL_DOMAIN}`, firstName: "Lena" },
+  { client: "kettle", email: `kettle-ops@${EMAIL_DOMAIN}`, firstName: "Sam" },
+  { client: "solace", email: `solace-ops@${EMAIL_DOMAIN}`, firstName: "Iris", mustChangePassword: true },
+  { client: "ridgeway", email: `ridgeway-ops@${EMAIL_DOMAIN}`, firstName: "Tomás" },
+  { client: "harbor", email: `harbor-ops@${EMAIL_DOMAIN}`, firstName: "Grace" },
+];
+
+// Brightline: the paid Market Report. Ridgeway: an explicit free row (the
+// locked example). Everyone else: no row, which also means free.
+const ENTITLEMENTS = [
+  { client: "brightline", tier: "market_report" },
+  { client: "ridgeway", tier: "free" },
+];
+
 async function allUsers(db) {
   const users = [];
   for (let page = 1; ; page++) {
@@ -147,6 +168,15 @@ async function resetData(db, userIds) {
     ...(await idsWhere(db.from("three_pl_projects").select("id").in("owner_id", owners), "find 3PL projects")),
     ...(await idsWhere(db.from("three_pl_projects").select("id").in("client_id", clientIds), "find 3PL projects")),
   ]);
+
+  // Portal users point at their client (profiles.client_id, RESTRICT), so
+  // they go first: anyone on a demo client, and the fixed demo emails.
+  const portalIds = new Set(
+    await idsWhere(db.from("profiles").select("id").in("client_id", clientIds), "find portal users"),
+  );
+  const demoEmails = new Set(CLIENT_USERS.map((u) => u.email));
+  for (const u of await allUsers(db)) if (demoEmails.has(u.email)) portalIds.add(u.id);
+  for (const id of portalIds) check(await db.auth.admin.deleteUser(id), "delete portal user");
 
   check(await db.from("duty_estimates").delete().in("created_by", owners), "delete estimates");
   if (fpIds.size) {
@@ -616,11 +646,9 @@ async function seedRidgeway(db, users, clients) {
 }
 
 // ---------------------------------------------------------------------------
-// Portal data (tables don't exist yet; seeded in later phases).
+// Portal data. Client users and entitlements are seeded below (Phase 1); the
+// rest waits for its tables.
 //
-// TODO(Phase 1): client users (role client + app_metadata.client_id),
-//   @demo.example.test: 2 for Northwind (coworkers see the same thing),
-//   1 for each other client.
 // TODO(Phase 2): client_updates. 2-4 published per engagement, spread over
 //   the past weeks, with stage, headline, summary, next step and due date:
 //   Northwind 3PL stage 5 (approval due T+5, needs action), Brightline
@@ -633,10 +661,31 @@ async function seedRidgeway(db, users, clients) {
 //   "Weekend delivery to Ontario?" answered ("Yes for Pacific Bridge and
 //   Lotus (+$150). Saigon Harbor: weekdays only."), Brightline 3PL "Call me
 //   about contract length" seen (wants_call), one sent, and Kettle & Pine's
-//   3PL approval dated T-7.
-// TODO(Market Report): client_entitlements. Brightline entitled to the paid
-//   Market Report for its forwarder project; every other client (Ridgeway
-//   included, the locked example) on the free tier.
+//   3PL approval dated T-7. Solace's user still has must_change_password:
+//   Phase 3 must refuse its requests and approvals until it's cleared
+//   (docs/SECURITY.md).
+
+async function seedClientUsers(db, clients, password) {
+  for (const u of CLIENT_USERS) {
+    check(await db.auth.admin.createUser({
+      email: u.email,
+      password,
+      email_confirm: true,
+      app_metadata: {
+        role: "client",
+        client_id: clients[u.client],
+        first_name: u.firstName,
+        ...(u.mustChangePassword ? { must_change_password: true } : {}),
+      },
+    }), `create ${u.email}`);
+  }
+}
+
+async function seedEntitlements(db, clients) {
+  check(await db.from("client_entitlements").insert(
+    ENTITLEMENTS.map((e) => ({ client_id: clients[e.client], tier: e.tier })),
+  ), "insert client_entitlements");
+}
 
 // Self-check: the Brightline numbers the mockup depends on.
 function checkBrightline() {
@@ -670,12 +719,18 @@ async function main() {
   await seedSolace(db, users, clients);
   await seedRidgeway(db, users, clients);
   await seedHarbor(db, users, clients);
+  await seedClientUsers(db, clients, password);
+  await seedEntitlements(db, clients);
 
   console.log(`demo:seed: seeded ${url}`);
   console.log(`  ${Object.keys(CLIENTS).length} clients: ${Object.values(CLIENTS).map((c) => c.name).join(", ")}`);
   console.log(`  Brightline forwarder: ${brightline.forwarders} forwarders, ${brightline.likeForLike} like-for-like, median $${brightline.median.toLocaleString("en-US")}`);
   console.log("Demo users (password changes every run, not saved anywhere):");
-  for (const u of USERS) console.log(`  ${u.email.padEnd(32)} logistics_expert (${u.firstName})`);
+  for (const u of USERS) console.log(`  ${u.email.padEnd(36)} logistics_expert (${u.firstName})`);
+  for (const u of CLIENT_USERS) {
+    console.log(`  ${u.email.padEnd(36)} client: ${CLIENTS[u.client].name}${u.mustChangePassword ? " (must change password)" : ""}`);
+  }
+  console.log(`  plans: ${ENTITLEMENTS.map((e) => `${CLIENTS[e.client].name} ${e.tier}`).join(", ")}; others free (no row)`);
   console.log(`  password: ${password}`);
 }
 

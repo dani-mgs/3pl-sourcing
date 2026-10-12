@@ -263,6 +263,24 @@ export function PermissionsSection() {
           <Ui>View only</Ui>: on anyone else&apos;s project you&apos;ll see &ldquo;Owned by
           … — view only&rdquo; and no edit, add, or delete controls.
         </li>
+        <li>
+          <Ui>Client users</Ui> are portal logins for a client&apos;s own staff. They never see
+          internal data: no projects, 3PLs, forwarders, quotes, notes or other clients. They only
+          reach the client portal (coming soon), never these pages. A client user is never a
+          Logistics Expert or Admin, and can&apos;t be made one.
+        </li>
+        <li>
+          <Ui>Client access</Ui> in the account menu: admins add client users for any client;
+          Logistics Experts only for clients of projects they own. No email is sent: you get a
+          one-time password, shown once, to pass on yourself. At their first sign-in they must
+          choose their own password before they see anything. Only admins can reset a client
+          user&apos;s password (a new one-time password) or remove a client user.
+        </li>
+        <li>
+          <Ui>Client plans</Ui>: each client is on the free plan (the Move summary) unless an
+          admin gives it the paid Market Report in Administration → Clients. A client with
+          client users can&apos;t be deleted until they&apos;re removed.
+        </li>
       </Bullets>
     </HelpSection>
   );

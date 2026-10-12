@@ -1,7 +1,9 @@
 // Run on every request by src/proxy.ts (Next.js 16's replacement for
-// middleware.ts): session refresh, the login redirect, and security headers.
+// middleware.ts): session refresh, the login redirect, routing client users
+// into /portal (and everyone else out of it), and security headers.
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { portalRoute } from "@/lib/auth/portal-routing";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -44,6 +46,13 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
       "max-age=63072000; includeSubDomains; preload",
     );
   }
+  return response;
+}
+
+// A refreshed session is written to supabaseResponse's cookies; a response
+// built instead of it must carry them, or the user would be signed out.
+function withSessionCookies(response: NextResponse, from: NextResponse): NextResponse {
+  for (const cookie of from.cookies.getAll()) response.cookies.set(cookie);
   return response;
 }
 
@@ -93,6 +102,24 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return applySecurityHeaders(NextResponse.redirect(url));
+  }
+
+  // Client users only reach /portal (a 404 anywhere else, Server Action POSTs
+  // included); staff get a 404 for /portal. See src/lib/auth/portal-routing.ts.
+  // app_metadata comes from getUser() above, i.e. live from Supabase Auth.
+  if (user) {
+    const decision = portalRoute(request.nextUrl.pathname, user.app_metadata);
+    if (decision.kind === "redirect") {
+      const url = request.nextUrl.clone();
+      url.pathname = decision.to;
+      url.search = "";
+      return applySecurityHeaders(withSessionCookies(NextResponse.redirect(url), supabaseResponse));
+    }
+    if (decision.kind === "notFound") {
+      return applySecurityHeaders(
+        withSessionCookies(new NextResponse("Not found", { status: 404, headers: { "Content-Type": "text/plain" } }), supabaseResponse),
+      );
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is

@@ -3,7 +3,7 @@
 -- granted_by is always the signed-in admin, anon gets nothing. Rolled back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(31);
+select plan(32);
 
 create function pg_temp.act_as(uid uuid)
 returns void language plpgsql as $$
@@ -72,9 +72,20 @@ select isnt_empty(
   'an admin sets an end date');
 reset role;
 
+create temp table all_entitlements as select id from client_entitlements;
+grant select on all_entitlements to authenticated;
+
 -- ---- Expert: reads all, writes nothing ------------------------------------------------
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000a1');
-select is((select count(*)::int from client_entitlements), 2, 'an expert reads every row');
+-- Only this test's clients are counted, so it also holds on a seeded database.
+select is(
+  (select count(*)::int from client_entitlements
+   where client_id in ('00000000-0000-4000-8000-00000000c001', '00000000-0000-4000-8000-00000000c002')),
+  2, 'an expert reads every row');
+select is(
+  (select count(*)::int from client_entitlements),
+  (select count(*)::int from pg_temp.all_entitlements),
+  'including any other client''s');
 select throws_ok(
   $$ insert into client_entitlements (client_id, tier) values ('00000000-0000-4000-8000-00000000c003', 'market_report') $$,
   '42501', null, 'an expert cannot grant a tier');

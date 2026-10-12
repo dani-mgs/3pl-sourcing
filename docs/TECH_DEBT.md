@@ -4,6 +4,28 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### No invite or password-reset emails for client users (no custom SMTP)
+- **Added:** 2026-10-12 (client dashboard Phase 1)
+- **What:** Production has no custom SMTP, so client users get no invite or password-reset emails. Staff create them with a one-time password shown once, which they pass on themselves; admins issue a new one-time password when a client loses theirs. There's no "forgot password" link, and email-change confirmations can't be delivered either.
+- **Why deferred:** Decision on 2026-10-12 to skip SMTP for now. Supabase's default sender is rate-limited and only meant for team addresses.
+- **Severity:** Medium (a manual step for every client user; the one-time password is seen by staff, which is why first sign-in forces a change and Phase 3 must refuse client writes until then: see the next entry and docs/SECURITY.md)
+- **Where:** `src/lib/client-users/create-client-user.ts`, `/client-access`; the fix is custom SMTP in Supabase Auth, then invite and reset emails instead of one-time passwords.
+
+### Phase 3: client approvals and requests must be refused while `must_change_password` is set
+- **Added:** 2026-10-12 (client dashboard Phase 1, for Phase 3)
+- **What:** Whoever creates a client user, or resets its password, sees the one-time password. Until the client has chosen their own password, an approval or request made "as the client" could really be that staff member. Phase 3 (client_requests, approvals) must refuse every client write while `app_metadata.must_change_password` is true. Enforce it in the database (the insert policy or function reads the flag live from `auth.users`), test it with pgTAP, and check it in the Server Action too.
+- **Why deferred:** Phase 3's tables don't exist yet. Phase 1 already keeps a flagged user on `/portal/change-password` only, but the database rule belongs with those tables.
+- **Severity:** High (if missed, a staff member could approve as a client)
+- **Where:** docs/SECURITY.md, "Client users (external)"; future `client_requests` migration.
+
+### Staff Server Actions make one extra Auth call for the role check
+- **Added:** 2026-10-12 (client dashboard Phase 1)
+- **What:** `requireStaff()` calls `auth.getUser()` (a round trip to Supabase Auth) before each staff Server Action, and most actions call `getUser()` again for their own logic.
+- **Why deferred:** Correctness first: the role must be read live. Passing the user from the guard into each action would save the second call, but touches all 37 actions.
+- **Severity:** Low
+- **Where:** `src/lib/auth/require-staff.ts`
+
+
 ### Tariff Calculator: scheduled-change warning knows only loaded rows; fees not covered
 - **Added:** 2026-10-08
 - **What:** The 45-day warning and the Key dates list come from dated `additional_duties` rows already in the database, so a change that hasn't been loaded isn't shown (nothing is shown when none is loaded). `customs_fees` rows (MPF/HMF, re-set each 1 October) are left out; the fiscal-year caveat covers them. On a saved estimate the warning is read live when the page opens ("known today"), so it can differ from what it would have said when saved.
@@ -84,7 +106,7 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 ### No rate limiting on AI-extraction Server Actions
 - **Added:** 2026-09-30 (security audit)
 - **What:** The five document-extraction Server Actions (3PL project intake, 3PL provider, forwarder project, forwarder, quote) each make a paid Anthropic API call per invocation with no per-user rate limit, so a buggy client loop or a misused account could run up cost. docs/SECURITY.md flags side-effecting actions for rate-limiting review.
-- **Why deferred:** Only authenticated internal users can reach these, and usage volume is unknown; pick a limit once real usage gives a baseline.
+- **Why deferred:** Only staff can reach these (since 2026-10-12, `requireStaff()` runs before any extraction; before that any signed-in account could, role or not), and usage volume is unknown; pick a limit once real usage gives a baseline.
 - **Severity:** Medium
 - **Where:** `extract-actions.ts` / `extract-provider-actions.ts` under `src/app/(authenticated)/3pl-sourcing/` and `src/app/(authenticated)/forwarder-sourcing/`
 
