@@ -17,7 +17,9 @@ const EMAIL_MAX = 254;
 const PASSWORD_MIN = 8;
 const PASSWORD_MAX = 72;
 
-export const USER_ROLES = ["admin", "logistics_expert"] as const;
+// Staff roles only. Never add "client" here: has_staff_role() in SQL must stay the
+// same list (role-list-sync.test.ts), and it gates every internal table.
+export const STAFF_ROLES = ["admin", "logistics_expert"] as const;
 export const PROJECT_TABLES = ["three_pl_projects", "forwarder_projects"] as const;
 
 const id = z.uuid({ error: INVALID_REQUEST });
@@ -57,14 +59,14 @@ const createUserSchema = z.object({
     .string({ error: INVALID_REQUEST })
     .trim()
     .max(NAME_MAX, `First name must be ${NAME_MAX} characters or fewer.`),
-  role: z.enum(USER_ROLES, { error: "Choose a valid role." }),
+  role: z.enum(STAFF_ROLES, { error: "Choose a valid role." }),
 });
 
 const userIdSchema = z.object({ userId: id });
 
 const updateUserRoleSchema = z.object({
   userId: id,
-  newRole: z.enum(USER_ROLES, { error: "Choose a valid role." }),
+  newRole: z.enum(STAFF_ROLES, { error: "Choose a valid role." }),
 });
 
 const updateTariffEditorSchema = z.object({

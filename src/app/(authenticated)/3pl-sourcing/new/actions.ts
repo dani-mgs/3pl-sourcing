@@ -6,6 +6,7 @@ import type { ClientOption } from "@/lib/clients";
 import { UNIQUE_VIOLATION } from "@/lib/clients";
 import { checkNewClient, duplicateClientError, resolveClientId } from "@/lib/clients-server";
 import { parseProjectForm } from "@/lib/three-pl/parse-project-form";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 const UNEXPECTED = "An unexpected error occurred.";
 
@@ -20,6 +21,7 @@ export async function saveClientIntake(
   projectId: string | null,
   formData: FormData,
 ): Promise<SaveClientIntakeState> {
+  await requireStaff();
   const supabase = await createClient();
   const {
     data: { user },

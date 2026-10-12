@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { explainEmptyDelete } from "@/lib/delete-errors";
 import { RATE_DETAILS_NOT_SAVED_ERROR, saveRateDetails } from "@/lib/rate-details";
 import { parseProviderForm } from "@/lib/three-pl/parse-provider-form";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 const UNIQUE_VIOLATION = "23505";
 
@@ -28,6 +29,7 @@ export async function quickAddProvider(
   formData: FormData,
   existingProviderId?: string,
 ): Promise<QuickAddProviderState> {
+  await requireStaff();
   const supabase = await createClient();
   const stored = existingProviderId
     ? (await supabase.from("three_pl_providers").select("email").eq("id", existingProviderId).maybeSingle()).data
@@ -92,6 +94,7 @@ export async function removeQuickAddedProvider(
   clientRequirementId: string,
   providerId: string,
 ): Promise<RemoveQuickAddedProviderState> {
+  await requireStaff();
   const supabase = await createClient();
 
   const { data, error } = await supabase

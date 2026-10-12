@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { parseLookupQuery, type LookupLine } from "@/lib/tariff/hts-lookup";
 import { browseHeading, searchHts } from "@/lib/tariff/server-hts-lookup";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 // HTS lookup for the calculator's popup. Read-only, as the signed-in user
 // (RLS applies, never the service role). Input is validated here: the query
@@ -26,6 +27,7 @@ async function signedIn() {
 }
 
 export async function searchHtsAction(query: unknown): Promise<LookupActionResult> {
+  await requireStaff();
   const parsed = parseLookupQuery(query);
   if (parsed.kind === "empty") return { ok: false, error: "Enter words or an HTS code to search for." };
   if (parsed.kind === "invalid") return { ok: false, error: parsed.error };
@@ -42,6 +44,7 @@ export async function searchHtsAction(query: unknown): Promise<LookupActionResul
 }
 
 export async function browseHtsHeadingAction(heading: unknown): Promise<LookupActionResult> {
+  await requireStaff();
   if (typeof heading !== "string" || !/^[0-9]{4}$/.test(heading)) {
     return { ok: false, error: "Choose a 4-digit heading, e.g. 6402." };
   }

@@ -17,6 +17,7 @@ import {
 } from "@/lib/three-pl/clean-extraction";
 import { createClient } from "@/lib/supabase/server";
 import { findClientByName, type ClientOption } from "@/lib/clients";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 // `client` is the client the document names (New Project only): matchedClient
 // is set when that name already exists, so the wizard preselects it instead
@@ -89,6 +90,7 @@ export async function extractClientIntake(
   formData: FormData,
   currentValues?: ClientIntakeFields,
 ): Promise<ExtractIntakeState> {
+  await requireStaff();
   const file = formData.get("document") as File | null;
 
   if (!file || file.size === 0) {

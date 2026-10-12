@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { parseForwarderForm } from "@/lib/forwarder/parse-forwarder-form";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 export type SaveForwarderState = { error?: string };
 
@@ -17,6 +18,7 @@ export async function createForwarder(
   projectId: string,
   formData: FormData,
 ): Promise<SaveForwarderState> {
+  await requireStaff();
   if (!uuid.safeParse(projectId).success) {
     return { error: NO_PERMISSION };
   }

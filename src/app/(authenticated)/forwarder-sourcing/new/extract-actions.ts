@@ -26,6 +26,7 @@ import {
 } from "@/lib/forwarder/extraction-mapping";
 import { createClient } from "@/lib/supabase/server";
 import { findClientByName, type ClientOption } from "@/lib/clients";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 // `client` is the client the document names (New Project only): matchedClient
 // is set when that name already exists, so the entry screen preselects it
@@ -121,6 +122,7 @@ export async function extractForwarderProjectIntake(
   formData: FormData,
   currentValues?: ExtractedForwarderProjectFields,
 ): Promise<ExtractForwarderProjectState> {
+  await requireStaff();
   const file = formData.get("document") as File | null;
 
   if (!file || file.size === 0) {

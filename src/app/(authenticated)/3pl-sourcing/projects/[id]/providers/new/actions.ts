@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { RATE_DETAILS_NOT_SAVED_ERROR, saveRateDetails } from "@/lib/rate-details";
 import { parseProviderForm } from "@/lib/three-pl/parse-provider-form";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 // savedProviderId is set when the 3PL row was created but its rate details
 // weren't — the form then retries as an update so it never duplicates the 3PL.
@@ -15,6 +16,7 @@ export async function createProvider(
   clientRequirementId: string,
   formData: FormData,
 ): Promise<CreateProviderState> {
+  await requireStaff();
   const parsed = parseProviderForm(formData);
   if (!parsed.ok) {
     return { error: parsed.error };

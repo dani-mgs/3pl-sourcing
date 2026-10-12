@@ -61,6 +61,9 @@ function stubClient() {
 }
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => stubClient() }));
+// The staff guard is tested in require-staff.test.ts; here the caller is staff.
+const requireStaff = vi.fn(async () => "logistics_expert");
+vi.mock("@/lib/auth/require-staff", () => ({ requireStaff }));
 const redirect = vi.fn((url: string) => {
   throw new Error(`REDIRECT ${url}`);
 });

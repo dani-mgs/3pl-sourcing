@@ -61,6 +61,9 @@ function stubClient() {
 }
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => stubClient() }));
+// The staff guard is tested in require-staff.test.ts; here the caller is staff.
+const requireStaff = vi.fn(async () => "logistics_expert");
+vi.mock("@/lib/auth/require-staff", () => ({ requireStaff }));
 vi.mock("@/lib/auth/get-ownership-context", () => ({
   getOwnershipContext: async () => ({ isOwner: true, isAdmin: false, canWrite: true }),
 }));
@@ -226,5 +229,15 @@ describe("an existing client, or an edit", () => {
     ).rejects.toThrow(`REDIRECT /forwarder-sourcing/${EDIT_ID}`);
     expect(writes.map((w) => w.op)).toEqual(["update forwarder_projects"]);
     expect(writes[0].row).toMatchObject({ client_id: "c-acme", status: "On Hold" });
+  });
+});
+
+describe("a client user", () => {
+  test("is refused before anything is read or written", async () => {
+    requireStaff.mockRejectedValueOnce(new Error("NEXT_HTTP_ERROR_FALLBACK;404"));
+    await expect(saveForwarderProject(null, form())).rejects.toThrow("NEXT_HTTP_ERROR_FALLBACK;404");
+    expect(rpcCalls).toEqual([]);
+    expect(writes).toEqual([]);
+    expect(redirect).not.toHaveBeenCalled();
   });
 });

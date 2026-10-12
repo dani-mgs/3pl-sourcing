@@ -10,6 +10,7 @@ import {
   parseNewDuty,
   parseNewFee,
 } from "@/lib/tariff/parse-duty-data-forms";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 // Duty and fee data maintenance, for tariff editors and admins. Each action
 // checks the permission here (getUser via getTariffPermissions) and RLS
@@ -49,6 +50,7 @@ function refresh(programKey?: string) {
 // Records that the program's rows were checked against their sources, without
 // changing any rate. Any later change puts it back to pending review.
 export async function markProgramReviewed(formData: FormData): Promise<DutyDataActionState> {
+  await requireStaff();
   const supabase = await editorClient();
   if (!supabase) return { error: NO_PERMISSION };
   const parsed = parseMarkReviewed(formData);
@@ -73,6 +75,7 @@ export async function markProgramReviewed(formData: FormData): Promise<DutyDataA
 }
 
 export async function endDateDuty(formData: FormData): Promise<DutyDataActionState> {
+  await requireStaff();
   const supabase = await editorClient();
   if (!supabase) return { error: NO_PERMISSION };
   const parsed = parseEndDate(formData);
@@ -91,6 +94,7 @@ export async function endDateDuty(formData: FormData): Promise<DutyDataActionSta
 }
 
 export async function updateDutyDetails(formData: FormData): Promise<DutyDataActionState> {
+  await requireStaff();
   const supabase = await editorClient();
   if (!supabase) return { error: NO_PERMISSION };
   const parsed = parseDutyDetails(formData);
@@ -132,6 +136,7 @@ export async function updateDutyDetails(formData: FormData): Promise<DutyDataAct
 }
 
 export async function addDuty(formData: FormData): Promise<DutyDataActionState> {
+  await requireStaff();
   const supabase = await editorClient();
   if (!supabase) return { error: NO_PERMISSION };
   const parsed = parseNewDuty(formData);
@@ -184,6 +189,7 @@ export async function addDuty(formData: FormData): Promise<DutyDataActionState> 
 }
 
 export async function endDateFee(formData: FormData): Promise<DutyDataActionState> {
+  await requireStaff();
   const supabase = await editorClient();
   if (!supabase) return { error: NO_PERMISSION };
   const parsed = parseEndDate(formData);
@@ -203,6 +209,7 @@ export async function endDateFee(formData: FormData): Promise<DutyDataActionStat
 }
 
 export async function addFee(formData: FormData): Promise<DutyDataActionState> {
+  await requireStaff();
   const supabase = await editorClient();
   if (!supabase) return { error: NO_PERMISSION };
   const parsed = parseNewFee(formData);

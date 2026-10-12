@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 const NO_PERMISSION = "You don't have permission to delete this estimate.";
 const UNEXPECTED = "An unexpected error occurred.";
@@ -11,6 +12,7 @@ const UNEXPECTED = "An unexpected error occurred.";
 // The owner or an admin can delete a saved estimate (RLS enforces it; a
 // delete that matches no row means the user wasn't allowed).
 export async function deleteEstimate(estimateId: string): Promise<{ error?: string }> {
+  await requireStaff();
   if (!z.string().uuid().safeParse(estimateId).success) return { error: NO_PERMISSION };
 
   const supabase = await createClient();

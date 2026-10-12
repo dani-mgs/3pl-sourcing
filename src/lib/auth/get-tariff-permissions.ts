@@ -15,7 +15,8 @@ export async function getTariffPermissions(): Promise<TariffPermissions> {
   } = await supabase.auth.getUser();
   const meta = user?.app_metadata ?? {};
   const isAdmin = meta.role === "admin";
-  // The editor flag only counts on top of an assigned role (has_app_role()).
+  // The editor flag only counts on top of a staff role (has_staff_role()); a
+  // client user never has one, whatever its metadata says.
   const hasRole = isAdmin || meta.role === "logistics_expert";
   return {
     userId: user?.id ?? null,

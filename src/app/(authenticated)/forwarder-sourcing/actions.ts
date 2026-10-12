@@ -10,6 +10,7 @@ import { checkNewClient, duplicateClientError, resolveClientId } from "@/lib/cli
 import { explainEmptyDelete } from "@/lib/delete-errors";
 import type { ClientOption } from "@/lib/clients";
 import { parseForwarderProjectForm, type ForwarderProjectFields } from "@/lib/forwarder/parse-project-form";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 export type SaveForwarderProjectState = {
   error?: string;
@@ -30,6 +31,7 @@ export async function saveForwarderProject(
   projectId: string | null,
   formData: FormData,
 ): Promise<SaveForwarderProjectState> {
+  await requireStaff();
   const supabase = await createClient();
   const {
     data: { user },
@@ -136,6 +138,7 @@ export type DeleteForwarderProjectState = { error?: string };
 export async function deleteForwarderProject(
   projectId: string,
 ): Promise<DeleteForwarderProjectState> {
+  await requireStaff();
   if (!projectIdSchema.safeParse(projectId).success) {
     return { error: NO_PERMISSION };
   }

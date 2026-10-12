@@ -5,6 +5,7 @@ import { pickNonNull } from "@/lib/merge-fields";
 import type { ExtractedProviderFields } from "@/lib/merge-provider-fields";
 import { cleanProviderExtraction } from "@/lib/three-pl/clean-extraction";
 import type { ProviderFormDefaults } from "@/components/provider-form";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 export type ExtractProviderState =
   | { fields: ExtractedProviderFields }
@@ -136,6 +137,7 @@ export async function extractProviderIntake(
   formData: FormData,
   currentValues?: ProviderFormDefaults,
 ): Promise<ExtractProviderState> {
+  await requireStaff();
   const file = formData.get("document") as File | null;
 
   if (!file || file.size === 0) {

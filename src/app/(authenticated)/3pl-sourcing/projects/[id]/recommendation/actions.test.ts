@@ -46,6 +46,9 @@ function stubClient() {
 }
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => stubClient() }));
+// The staff guard is tested in require-staff.test.ts; here the caller is staff.
+const requireStaff = vi.fn(async () => "logistics_expert");
+vi.mock("@/lib/auth/require-staff", () => ({ requireStaff }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 const { saveRecommendation } = await import("./actions");
 

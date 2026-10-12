@@ -15,6 +15,7 @@ import {
   type ExtractedForwarderFields,
 } from "@/lib/forwarder/merge-forwarder-fields";
 import { CAPABILITY_FIELDS } from "@/lib/forwarder/forwarder-fields";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 export type ExtractForwarderState =
   | { fields: ExtractedForwarderFields; company_name?: string }
@@ -63,6 +64,7 @@ export async function extractForwarderDetails(
   formData: FormData,
   currentValues?: ExtractedForwarderFields,
 ): Promise<ExtractForwarderState> {
+  await requireStaff();
   const file = formData.get("document") as File | null;
 
   if (!file || file.size === 0) {

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { getUserRole } from "@/lib/auth/get-user-role";
 import type { ProjectTable } from "@/lib/auth/get-ownership-context";
-import type { UserRole } from "@/lib/auth/get-user-role";
+import type { StaffRole } from "@/lib/auth/get-user-role";
 import {
   PROJECT_TABLES,
   parseCreateUser,
@@ -88,7 +88,7 @@ export async function createUser(
   email: string,
   password: string,
   firstName: string,
-  role: UserRole,
+  role: StaffRole,
 ): Promise<AdminActionState> {
   if ((await getUserRole()) !== "admin") {
     return { error: "You don't have permission to make this change." };
@@ -172,7 +172,7 @@ export async function deleteUser(rawUserId: string): Promise<AdminActionState> {
 // Takes effect on the user's next request, as for updateTariffEditor below.
 export async function updateUserRole(
   rawUserId: string,
-  rawRole: UserRole,
+  rawRole: StaffRole,
 ): Promise<AdminActionState> {
   if ((await getUserRole()) !== "admin") {
     return { error: "You don't have permission to make this change." };
