@@ -41,6 +41,9 @@ The third and last approved exception: `src/lib/client-users/create-client-user.
 ## Client users
 `client` is a role but never a staff role. Never add it to `has_staff_role()`, `STAFF_ROLES` or `staffRole()`: that opens every internal table to external users (`role-list-sync.test.ts` fails if you try). Every staff Server Action starts with `await requireStaff()` and every portal one with `await requireClient()` (`server-action-guard.test.ts`). A new table a client may read must be named on purpose in pgTAP 24 and 28. See docs/SECURITY.md, "Client users (external)".
 
+## Client updates
+What a client sees about a project comes only from `client_updates.payload`, built on the server by `src/lib/client-updates/build-*-payload.ts` from an allow-list. Never copy an internal column into it (notes, assessment, next action, key notes, sources, status words, contact details, ids, 3PL amounts). A new payload key must be added to the strict schema (`payload-schema.ts`), to the path lists in `payload-allow-list.test.ts`, and for a top-level key to `client_update_payload_ok()` in a migration. Only shortlisted partners are named. See docs/SECURITY.md, "Client updates".
+
 ## Form Input Conventions
 Always use plain native `<input>`/`<textarea>` elements for any form field holding actual data that gets pre-filled from server data (`defaultValue` driven by a server fetch). Do not use shadcn's `Input` component for these — it's built on Base UI primitives that manage their own internal uncontrolled state and will not pick up updated `defaultValue` after a server-driven revalidation (e.g. after a Server Action + `revalidatePath`), causing stale-looking data and a console warning. shadcn's `Input`/`Select`/`Checkbox` are fine for presentational or purely client-driven inputs (e.g. filter controls, search boxes) where the value isn't being re-hydrated from a server fetch after mount.
 ## Help Page

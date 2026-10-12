@@ -122,6 +122,9 @@ export function forwarderEmptyCost(c: ForwarderPayload["comparison"]): string | 
   if (c.emptyCost === "only_different_terms") {
     return "The quotes so far use different delivery terms, so they can't be compared fairly yet.";
   }
+  if (c.emptyCost === "no_shortlist") {
+    return `We have ${plural(c.counts.likeForLike, "like-for-like quote")} and are comparing them. The comparison appears here once we've drawn up your shortlist.`;
+  }
   if (c.emptyCost === "too_few") {
     return `We've received ${plural(c.counts.likeForLike, "like-for-like quote")} so far. The comparison appears once we have at least 2.`;
   }

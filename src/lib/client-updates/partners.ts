@@ -8,6 +8,14 @@ import type { FunnelStep } from "./payload-schema";
 // shrink and nothing hints at why.
 
 const NOT_CONTACTED = "Potential / Not Contacted";
+const DO_NOT_CONTACT = new Set(["Do Not Contact", "Do not Contact"]);
+
+// Contacted: anyone past "Potential / Not Contacted", except a Do Not
+// Contact partner that never sent a price (Move didn't contact it).
+function wasContacted(status: string, id: string, pricedIds: Set<string>): boolean {
+  if (status === NOT_CONTACTED) return false;
+  return !DO_NOT_CONTACT.has(status) || pricedIds.has(id);
+}
 
 // 3PL statuses are spelled slightly differently from the forwarder ones
 // ("Do not Contact"), so both spellings count as excluded.
@@ -30,16 +38,17 @@ export function isShortlistedForwarder(f: ForwarderPartner): boolean {
   return f.status === "Shortlisted" || f.assessment === "Move Recommended";
 }
 
+// pricedIds: every forwarder with a priced quote, in the running or not.
 export function forwarderFunnel(
   forwarders: ForwarderPartner[],
-  quotedIds: Set<string>,
+  pricedIds: Set<string>,
   likeForLikeIds: Set<string>,
   recommended: boolean,
 ): FunnelCount[] {
   const live = forwarders.filter((f) => !isExcludedStatus(f.status));
   return [
-    { step: "contacted", count: forwarders.filter((f) => f.status !== NOT_CONTACTED).length },
-    { step: "quoted", count: live.filter((f) => quotedIds.has(f.id)).length },
+    { step: "contacted", count: forwarders.filter((f) => wasContacted(f.status, f.id, pricedIds)).length },
+    { step: "quoted", count: live.filter((f) => pricedIds.has(f.id)).length },
     { step: "like_for_like", count: live.filter((f) => likeForLikeIds.has(f.id)).length },
     { step: "shortlisted", count: forwarders.filter(isShortlistedForwarder).length },
     { step: "recommended", count: recommended ? 1 : 0 },
@@ -76,6 +85,7 @@ export function threePlShortlist(providers: ThreePlPartner[], recommendationIds:
   );
 }
 
+// quotedIds: every candidate with rates, in the running or not.
 export function threePlFunnel(
   providers: ThreePlPartner[],
   quotedIds: Set<string>,
@@ -85,7 +95,7 @@ export function threePlFunnel(
   const candidates = providers.filter(isCandidate);
   const live = candidates.filter((p) => !isExcludedStatus(p.status));
   return [
-    { step: "contacted", count: candidates.filter((p) => p.status !== NOT_CONTACTED).length },
+    { step: "contacted", count: candidates.filter((p) => wasContacted(p.status, p.id, quotedIds)).length },
     { step: "replied", count: live.filter((p) => REPLIED.has(p.status) || quotedIds.has(p.id)).length },
     { step: "quoted", count: live.filter((p) => quotedIds.has(p.id)).length },
     { step: "shortlisted", count: shortlistCount },

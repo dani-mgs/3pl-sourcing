@@ -2,6 +2,7 @@ import {
   ConceptsSection,
   ExportSection,
   PermissionsSection,
+  SharingSection,
   UploadSection,
 } from "./concept-sections";
 import { FaqSection } from "./faq-section";
@@ -17,6 +18,7 @@ const CONTENTS = [
   { id: "upload", label: "AI document upload" },
   { id: "exports", label: "Exports" },
   { id: "permissions", label: "Permissions" },
+  { id: "sharing", label: "Sharing with clients" },
   { id: "faq", label: "FAQ" },
 ];
 
@@ -59,6 +61,7 @@ export default function HelpPage() {
           <UploadSection />
           <ExportSection />
           <PermissionsSection />
+          <SharingSection />
           <FaqSection />
         </div>
       </div>

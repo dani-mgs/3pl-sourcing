@@ -115,7 +115,8 @@ export function buildForwarderPayload(
   // Counts cover forwarders still in the running.
   const live = forwarders.filter((f) => !isExcludedStatus(f.status));
   const repOf = (id: string) => reps.get(id) ?? null;
-  const quotedIds = new Set(live.filter((f) => repOf(f.id) != null).map((f) => f.id));
+  const pricedIds = new Set(forwarders.filter((f) => repOf(f.id) != null).map((f) => f.id));
+  const quotedIds = new Set(live.filter((f) => pricedIds.has(f.id)).map((f) => f.id));
   const likeIds = new Set(live.filter((f) => repOf(f.id)?.comparability === "like_for_like").map((f) => f.id));
   const counts = {
     quoted: quotedIds.size,
@@ -132,11 +133,13 @@ export function buildForwarderPayload(
   const { sections } = inputs;
   const emptyCost = !sections.cost
     ? null
-    : counts.likeForLike >= 2
-      ? null
-      : counts.likeForLike === 0 && counts.differentTerms > 0
+    : counts.likeForLike < 2
+      ? counts.likeForLike === 0 && counts.differentTerms > 0
         ? ("only_different_terms" as const)
-        : ("too_few" as const);
+        : ("too_few" as const)
+      : inputs.partnerIds.length === 0
+        ? ("no_shortlist" as const)
+        : null;
   const showCost = sections.cost && emptyCost == null;
   const showFcr = sections.fcr;
 
@@ -206,7 +209,7 @@ export function buildForwarderPayload(
     kind: "forwarder",
     project: { route: shortRouteLabel(project), facts },
     ...commonParts(inputs, people, recommendedName),
-    funnel: sections.funnel ? forwarderFunnel(forwarders, quotedIds, likeIds, recommendedName != null) : null,
+    funnel: sections.funnel ? forwarderFunnel(forwarders, pricedIds, likeIds, recommendedName != null) : null,
     comparison: {
       kind: "forwarder",
       counts,

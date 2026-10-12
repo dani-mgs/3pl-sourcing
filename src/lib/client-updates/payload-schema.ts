@@ -4,7 +4,7 @@ import { isIsoDate } from "./dates";
 // The client-update payload: the ONLY shape of data that leaves Move for a
 // client. Every object is strict, so a key that isn't listed here is refused
 // before it's stored (and again when it's rendered). Adding a key means
-// adding it here, to ALLOWED_PAYLOAD_PATHS in payload-allow-list.test.ts and,
+// adding it here, to the path lists in payload-allow-list.test.ts and,
 // for a top-level key, to client_update_payload_ok() in a migration.
 //
 // Never put internal columns here: notes, assessment, next action, key
@@ -111,7 +111,7 @@ const forwarderComparisonSchema = z.strictObject({
   today: z.strictObject({ costUsd: money.nullable(), leadTimeDays: days.nullable(), fcrPct: percentText.nullable() }),
   targetLeadTimeDays: days.nullable(),
   options: z.array(forwarderOptionSchema).max(10),
-  emptyCost: z.enum(["too_few", "only_different_terms"]).nullable(),
+  emptyCost: z.enum(["too_few", "only_different_terms", "no_shortlist"]).nullable(),
   savingsNote: z.enum(["no_baseline"]).nullable(),
   fcrIssue: z.enum(["missing", "not_usd"]).nullable(),
   bestSaving: z.strictObject({ name: text(120), pct: fraction, usd: signedMoney }).nullable(),

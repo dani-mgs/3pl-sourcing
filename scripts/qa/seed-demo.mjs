@@ -21,6 +21,7 @@
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { demoClientUpdates } from "./demo-portal-data.mjs";
 
 const EMAIL_DOMAIN = "demo.example.test";
 const CANARY = "INTERNAL-CANARY";
@@ -192,7 +193,12 @@ async function resetData(db, userIds) {
     check(await db.from("three_pl_providers").delete().in("three_pl_project_id", ids), "delete 3PLs");
     check(await db.from("three_pl_projects").delete().in("id", ids), "delete 3PL projects");
   }
-  if (clientIds.length) check(await db.from("clients").delete().in("id", clientIds), "delete clients");
+  if (clientIds.length) {
+    // Updates go with their projects; this also catches any left on a project
+    // that has since moved to another client (client_id is RESTRICT).
+    check(await db.from("client_updates").delete().in("client_id", clientIds), "delete client updates");
+    check(await db.from("clients").delete().in("id", clientIds), "delete clients");
+  }
 }
 
 async function insertOne(db, table, row) {
@@ -646,17 +652,12 @@ async function seedRidgeway(db, users, clients) {
 }
 
 // ---------------------------------------------------------------------------
-// Portal data. Client users and entitlements are seeded below (Phase 1); the
-// rest waits for its tables.
+// Portal data: client users and entitlements (Phase 1), client updates
+// (Phase 2a).
 //
-// TODO(Phase 2): client_updates. 2-4 published per engagement, spread over
-//   the past weeks, with stage, headline, summary, next step and due date:
-//   Northwind 3PL stage 5 (approval due T+5, needs action), Brightline
-//   forwarder stage 5 (decision due T+5, needs action) and 3PL stage 3
-//   (remaining quotes due T+12), Kettle & Pine 3PL stage 6 and forwarder
-//   stage 3, Solace 3PL stage 2, Ridgeway forwarder stage 4, Harbor 3PL
-//   stage 7. Plus one DRAFT update on the Kettle & Pine forwarder project
-//   (must stay invisible to clients).
+// Client updates (Phase 2a): 2-4 published per engagement over the past
+//   weeks, plus one draft on the Kettle & Pine forwarder project, written out
+//   in demo-portal-data.mjs (checked against the app's schema in Vitest).
 // TODO(Phase 3): client_requests in each state: Brightline forwarder
 //   "Weekend delivery to Ontario?" answered ("Yes for Pacific Bridge and
 //   Lotus (+$150). Saigon Harbor: weekdays only."), Brightline 3PL "Call me
@@ -664,6 +665,44 @@ async function seedRidgeway(db, users, clients) {
 //   3PL approval dated T-7. Solace's user still has must_change_password:
 //   Phase 3 must refuse its requests and approvals until it's cleared
 //   (docs/SECURITY.md).
+
+const ENGAGEMENTS = {
+  northwind3pl: ["three_pl_projects", "three_pl_project_id", "northwind"],
+  brightline3pl: ["three_pl_projects", "three_pl_project_id", "brightline"],
+  kettle3pl: ["three_pl_projects", "three_pl_project_id", "kettle"],
+  solace3pl: ["three_pl_projects", "three_pl_project_id", "solace"],
+  harbor3pl: ["three_pl_projects", "three_pl_project_id", "harbor"],
+  brightlineFwd: ["forwarder_projects", "forwarder_project_id", "brightline"],
+  kettleFwd: ["forwarder_projects", "forwarder_project_id", "kettle"],
+  ridgewayFwd: ["forwarder_projects", "forwarder_project_id", "ridgeway"],
+};
+
+// Inserted with the service role (no signed-in user), so the published dates
+// in the past are kept; client_id comes from the project (trigger).
+async function seedClientUpdates(db, clients) {
+  const projectIds = {};
+  for (const [key, [table, , client]] of Object.entries(ENGAGEMENTS)) {
+    const ids = await idsWhere(db.from(table).select("id").eq("client_id", clients[client]), `find ${key}`);
+    if (ids.length !== 1) fail(`expected one project for ${key}, found ${ids.length}`);
+    projectIds[key] = ids[0];
+  }
+  const updates = demoClientUpdates({ isoDate });
+  check(await db.from("client_updates").insert(updates.map((u) => ({
+    [ENGAGEMENTS[u.engagement][1]]: projectIds[u.engagement],
+    stage: u.stage,
+    headline: u.headline,
+    summary: u.summary,
+    next_step: u.next_step,
+    next_step_due: u.next_step_due,
+    needs_client_action: u.needs_client_action,
+    payload: u.payload,
+    is_draft: u.isDraft === true,
+    published_at: u.isDraft ? null : at(-u.daysAgo),
+    created_at: at(-u.daysAgo),
+    updated_at: at(-u.daysAgo),
+  }))), "insert client_updates");
+  return { published: updates.filter((u) => !u.isDraft).length, drafts: updates.filter((u) => u.isDraft).length };
+}
 
 async function seedClientUsers(db, clients, password) {
   for (const u of CLIENT_USERS) {
@@ -721,6 +760,7 @@ async function main() {
   await seedHarbor(db, users, clients);
   await seedClientUsers(db, clients, password);
   await seedEntitlements(db, clients);
+  const updates = await seedClientUpdates(db, clients);
 
   console.log(`demo:seed: seeded ${url}`);
   console.log(`  ${Object.keys(CLIENTS).length} clients: ${Object.values(CLIENTS).map((c) => c.name).join(", ")}`);
@@ -730,6 +770,7 @@ async function main() {
   for (const u of CLIENT_USERS) {
     console.log(`  ${u.email.padEnd(36)} client: ${CLIENTS[u.client].name}${u.mustChangePassword ? " (must change password)" : ""}`);
   }
+  console.log(`  client updates: ${updates.published} published, ${updates.drafts} draft (Kettle & Pine forwarder)`);
   console.log(`  plans: ${ENTITLEMENTS.map((e) => `${CLIENTS[e.client].name} ${e.tier}`).join(", ")}; others free (no row)`);
   console.log(`  password: ${password}`);
 }

@@ -107,6 +107,14 @@ describe("buildForwarderPayload", () => {
     expect(build({}, {}, list).comparison.emptyCost).toBe("only_different_terms");
   });
 
+  test("enough like-for-like quotes but nobody shortlisted yet: no chart of just today's cost", () => {
+    const { comparison } = build({ partnerIds: [], recommendedId: null });
+    expect(comparison.emptyCost).toBe("no_shortlist");
+    expect(comparison.show.cost).toBe(false);
+    expect(comparison.options).toEqual([]);
+    expect(comparison.today.costUsd).toBeNull();
+  });
+
   test("no baseline: prices still compare, savings are hidden", () => {
     const { comparison } = build({}, { current_freight_cost_usd: null });
     expect(comparison.show.cost).toBe(true);
