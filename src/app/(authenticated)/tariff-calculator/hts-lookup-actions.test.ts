@@ -9,6 +9,9 @@ const rpc = vi.fn();
 const getUser = vi.fn();
 const createClient = vi.fn(async () => ({ auth: { getUser }, rpc }));
 vi.mock("@/lib/supabase/server", () => ({ createClient }));
+// The staff guard is tested in require-staff.test.ts; here the caller is staff.
+const requireStaff = vi.fn(async () => "logistics_expert");
+vi.mock("@/lib/auth/require-staff", () => ({ requireStaff }));
 vi.mock("@/lib/supabase/admin-client", () => {
   throw new Error("the lookup must never use the service role");
 });

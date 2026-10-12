@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { explainEmptyDelete } from "@/lib/delete-errors";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 export type DeleteProviderState = { error?: string };
 
@@ -10,6 +11,7 @@ export async function deleteProvider(
   projectId: string,
   providerId: string,
 ): Promise<DeleteProviderState> {
+  await requireStaff();
   const supabase = await createClient();
 
   const { data, error } = await supabase

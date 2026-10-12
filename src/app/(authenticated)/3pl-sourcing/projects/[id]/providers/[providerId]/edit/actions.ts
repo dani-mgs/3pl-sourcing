@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { RATE_DETAILS_NOT_SAVED_ERROR, saveRateDetails } from "@/lib/rate-details";
 import { parseProviderForm } from "@/lib/three-pl/parse-provider-form";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 export type UpdateProviderState = { error?: string };
 
@@ -14,6 +15,7 @@ export async function updateProvider(
   providerId: string,
   formData: FormData,
 ): Promise<UpdateProviderState> {
+  await requireStaff();
   const supabase = await createClient();
   const { data: stored } = await supabase
     .from("three_pl_providers")

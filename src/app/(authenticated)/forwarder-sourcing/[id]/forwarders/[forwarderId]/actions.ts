@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { explainEmptyDelete } from "@/lib/delete-errors";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 export type DeleteForwarderState = { error?: string };
 
@@ -20,6 +21,7 @@ export async function deleteForwarder(
   projectId: string,
   forwarderId: string,
 ): Promise<DeleteForwarderState> {
+  await requireStaff();
   if (!uuid.safeParse(projectId).success || !uuid.safeParse(forwarderId).success) {
     return { error: NO_PERMISSION };
   }

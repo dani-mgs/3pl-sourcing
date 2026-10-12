@@ -16,6 +16,7 @@ import {
   SHIPMENT_MODES,
   SHIPMENT_TYPES,
 } from "@/lib/forwarder/project-fields";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 export type ExtractQuoteState =
   | { fields: ExtractedQuoteFields }
@@ -70,6 +71,7 @@ export async function extractQuoteDetails(
   formData: FormData,
   currentValues?: ExtractedQuoteFields,
 ): Promise<ExtractQuoteState> {
+  await requireStaff();
   const file = formData.get("document") as File | null;
 
   if (!file || file.size === 0) {

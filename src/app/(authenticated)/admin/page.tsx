@@ -9,6 +9,8 @@ import { EditNameButton } from "./edit-name-button";
 import { CreateUserButton } from "./create-user-button";
 import { DeleteUserButton } from "./delete-user-button";
 import { DeleteClientButton } from "./delete-client-button";
+import { ClientTierToggle } from "./client-tier-toggle";
+import { TIER_LABELS, tiersByClientId } from "@/lib/client-tiers";
 import { EditClientDialog } from "@/components/edit-client-dialog";
 import { embeddedOne, listClients } from "@/lib/clients";
 
@@ -25,7 +27,7 @@ export default async function AdministrationPage() {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
 
-  const [{ data: projectRows }, { data: forwarderRows }, clients] =
+  const [{ data: projectRows }, { data: forwarderRows }, clients, { data: entitlements }] =
     await Promise.all([
       supabase
         .from("three_pl_projects")
@@ -36,7 +38,12 @@ export default async function AdministrationPage() {
           "id, owner_id, client_id, origin_country, destination_country, clients(name)",
         ),
       listClients(supabase),
+      supabase.from("client_entitlements").select("client_id, tier, valid_until"),
     ]);
+
+  // No row, or an end date in the past, is the free plan.
+  const tierByClientId = tiersByClientId(entitlements);
+  const clientNameById = new Map(clients.map((c) => [c.id, c.name]));
 
   // Every module's projects, labelled by module, for reassignment and for
   // the per-client and per-owner counts that block deletes.
@@ -78,10 +85,11 @@ export default async function AdministrationPage() {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, email, first_name, role, tariff_editor")
+    .select("id, email, first_name, role, tariff_editor, client_id")
     .order("email", { ascending: true });
 
-  const profileOptions: ProfileOption[] = (profiles ?? []).map((p) => ({
+  // Projects belong to staff: client users are never offered as owners.
+  const profileOptions: ProfileOption[] = (profiles ?? []).filter((p) => p.role !== "client").map((p) => ({
     id: p.id,
     email: p.email,
     first_name: p.first_name,
@@ -90,6 +98,13 @@ export default async function AdministrationPage() {
   const ownerDisplayById = new Map(
     (profiles ?? []).map((p) => [p.id, adminUserLabel(p.first_name, p.email, "dot")]),
   );
+
+  const portalUserCountByClientId = new Map<string, number>();
+  for (const profile of profiles ?? []) {
+    if (profile.client_id) {
+      portalUserCountByClientId.set(profile.client_id, (portalUserCountByClientId.get(profile.client_id) ?? 0) + 1);
+    }
+  }
 
   const ownedProjectCountById = new Map<string, number>();
   for (const project of projects) {
@@ -161,7 +176,8 @@ export default async function AdministrationPage() {
           </h2>
           <p className="mb-4 text-xs text-neutral-muted">
             Shared across projects. A client can only be deleted once it has
-            no projects.
+            no projects and no portal users. The plan decides what its portal
+            users see: the free Move summary, or the paid Market Report.
           </p>
 
           {clients.length === 0 ? (
@@ -170,6 +186,8 @@ export default async function AdministrationPage() {
             <div className="flex flex-col gap-4">
               {clients.map((client) => {
                 const projectCount = projectCountByClientId.get(client.id) ?? 0;
+                const portalUserCount = portalUserCountByClientId.get(client.id) ?? 0;
+                const tier = tierByClientId.get(client.id) ?? "free";
                 return (
                   <div
                     key={client.id}
@@ -181,10 +199,13 @@ export default async function AdministrationPage() {
                       </p>
                       <p className="text-xs text-neutral-muted">
                         {client.business_model || "No business model"} ·{" "}
-                        {projectCount} project{projectCount === 1 ? "" : "s"}
+                        {projectCount} project{projectCount === 1 ? "" : "s"} ·{" "}
+                        {portalUserCount} portal user{portalUserCount === 1 ? "" : "s"} ·{" "}
+                        {TIER_LABELS[tier]}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <ClientTierToggle clientId={client.id} clientName={client.name} tier={tier} />
                       <EditClientDialog
                         clientId={client.id}
                         currentName={client.name}
@@ -194,6 +215,7 @@ export default async function AdministrationPage() {
                         clientId={client.id}
                         clientName={client.name}
                         projectCount={projectCount}
+                        portalUserCount={portalUserCount}
                       />
                     </div>
                   </div>
@@ -226,8 +248,13 @@ export default async function AdministrationPage() {
                         {profile.first_name?.trim() || profile.email}
                       </p>
                       <p className="text-xs text-neutral-muted">
-                        {profile.email} · {profile.role === "none" ? "no role" : profile.role}
-                        {profile.role !== "admin" && profile.tariff_editor && " · tariff editor"}
+                        {profile.email} ·{" "}
+                        {profile.role === "none"
+                          ? "no role"
+                          : profile.role === "client"
+                            ? `client user · ${clientNameById.get(profile.client_id ?? "") ?? "unknown client"}`
+                            : profile.role}
+                        {profile.role !== "admin" && profile.role !== "client" && profile.tariff_editor && " · tariff editor"}
                       </p>
                     </div>
                     <EditNameButton
@@ -237,8 +264,9 @@ export default async function AdministrationPage() {
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* Admins can already edit duty data; the flag only matters for others. */}
-                    {profile.role !== "admin" && (
+                    {/* Admins can already edit duty data; the flag only matters for
+                        staff. Client users never get staff permissions. */}
+                    {profile.role !== "admin" && profile.role !== "client" && (
                       <TariffEditorButton
                         userId={profile.id}
                         userLabel={adminUserLabel(profile.first_name, profile.email, "parens")}
@@ -254,7 +282,7 @@ export default async function AdministrationPage() {
                           label="Demote to Logistics Expert"
                         />
                       )
-                    ) : (
+                    ) : profile.role === "client" ? null : (
                       <>
                         {/* An account without a role sees nothing until an admin assigns one. */}
                         {profile.role === "none" && (

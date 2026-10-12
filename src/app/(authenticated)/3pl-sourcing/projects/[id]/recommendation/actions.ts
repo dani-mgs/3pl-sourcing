@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { parseRecommendationForm } from "@/lib/three-pl/parse-recommendation-form";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 export type SaveRecommendationState = { error?: string; success?: boolean };
 
@@ -13,6 +14,7 @@ export async function saveRecommendation(
   clientRequirementId: string,
   formData: FormData,
 ): Promise<SaveRecommendationState> {
+  await requireStaff();
   const parsed = parseRecommendationForm(formData);
   if (!parsed.ok) {
     return { error: parsed.error };

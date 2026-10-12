@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { parseProjectForm } from "@/lib/three-pl/parse-project-form";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 export type SaveClientRequirementsState = {
   error?: string;
@@ -13,6 +14,7 @@ export async function updateClientRequirements(
   clientRequirementId: string,
   formData: FormData,
 ): Promise<SaveClientRequirementsState> {
+  await requireStaff();
   const { canWrite } = await getOwnershipContext(clientRequirementId);
   if (!canWrite) {
     return { error: "You don't have permission to make this change." };

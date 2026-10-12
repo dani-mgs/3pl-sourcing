@@ -3,12 +3,13 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { assignedRole, NO_ROLE_MESSAGE } from "@/lib/auth/get-user-role";
+import { staffRole, NO_ROLE_MESSAGE } from "@/lib/auth/get-user-role";
 import { todayUtc } from "@/lib/fx/server-rates";
 import { parseEstimateForm, parseLinkFields, type EstimateFormData } from "@/lib/tariff/parse-estimate-form";
 import { saveDutyEstimate } from "@/lib/tariff/estimate-store";
 import { buildEstimate, estimateToRow, type EstimateResult } from "@/lib/tariff/server-estimate";
 import { checkLinkedEstimate, type CheckedLink } from "@/lib/tariff/server-forwarder-link";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 export type PreviewState = { result?: EstimateResult; error?: string };
 export type SaveState = { error?: string };
@@ -45,6 +46,7 @@ async function parseRequest(
 
 // Calculates without saving. Any signed-in user may estimate; reads only.
 export async function previewEstimate(formData: FormData): Promise<PreviewState> {
+  await requireStaff();
   const supabase = await createClient();
   const {
     data: { user },
@@ -66,6 +68,7 @@ export async function previewEstimate(formData: FormData): Promise<PreviewState>
 // Flagged for rate-limiting review with the other inserting actions
 // (docs/SECURITY.md).
 export async function saveEstimate(formData: FormData): Promise<SaveState> {
+  await requireStaff();
   const supabase = await createClient();
   const {
     data: { user },
@@ -73,7 +76,7 @@ export async function saveEstimate(formData: FormData): Promise<SaveState> {
   if (!user) return { error: SIGN_IN };
   // The store saves with the service role, so RLS's role check doesn't apply;
   // save_duty_estimate refuses too.
-  if (!assignedRole(user.app_metadata)) return { error: NO_ROLE_MESSAGE };
+  if (!staffRole(user.app_metadata)) return { error: NO_ROLE_MESSAGE };
 
   const calculatedOn = todayUtc();
   const request = await parseRequest(supabase, formData, calculatedOn, "saving");

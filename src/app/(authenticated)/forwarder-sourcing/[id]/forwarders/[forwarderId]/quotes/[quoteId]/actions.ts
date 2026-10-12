@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { explainEmptyDelete } from "@/lib/delete-errors";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 export type DeleteQuoteState = { error?: string };
 
@@ -19,6 +20,7 @@ export async function deleteQuote(
   forwarderId: string,
   quoteId: string,
 ): Promise<DeleteQuoteState> {
+  await requireStaff();
   if (
     !uuid.safeParse(projectId).success ||
     !uuid.safeParse(forwarderId).success ||

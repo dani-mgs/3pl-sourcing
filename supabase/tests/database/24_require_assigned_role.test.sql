@@ -1,5 +1,6 @@
--- Access needs a role an admin assigned (app_metadata.role is admin or
--- logistics_expert, read live from auth.users). A signed-in account without
+-- Access needs a staff role an admin assigned (app_metadata.role is admin or
+-- logistics_expert, read live from auth.users; has_staff_role(), renamed from
+-- has_app_role() when the client role arrived). A signed-in account without
 -- one reads nothing and writes nothing on every RLS table; nobody signed in
 -- can TRUNCATE; experts and admins are unaffected. The backfill of existing
 -- users is checked by an upgrade run, since this suite starts with no users.
@@ -50,30 +51,32 @@ insert into fx_rates (rate_date, currency, rate_to_usd) values ('2026-10-01', 'E
 -- ---- The helpers ----------------------------------------------------------------
 select is(
   (select array_agg(p.proname::text || ':' || p.prosecdef || ':' || p.provolatile::text || ':' || array_to_string(p.proconfig, ',') order by p.proname)
-   from pg_proc p where p.oid in ('public.has_app_role()'::regprocedure, 'public.has_app_role_user(uuid)'::regprocedure)),
-  array['has_app_role:true:s:search_path=""', 'has_app_role_user:true:s:search_path=""'],
+   from pg_proc p where p.oid in ('public.has_staff_role()'::regprocedure, 'public.has_staff_role_user(uuid)'::regprocedure)),
+  array['has_staff_role:true:s:search_path=""', 'has_staff_role_user:true:s:search_path=""'],
   'both helpers are security definer, stable, with an empty search_path');
 select ok(
-  has_function_privilege('authenticated', 'public.has_app_role()', 'execute')
-    and not has_function_privilege('anon', 'public.has_app_role()', 'execute'),
-  'has_app_role(): signed-in users can run it (policies do), anon cannot');
+  has_function_privilege('authenticated', 'public.has_staff_role()', 'execute')
+    and not has_function_privilege('anon', 'public.has_staff_role()', 'execute'),
+  'has_staff_role(): signed-in users can run it (policies do), anon cannot');
 select ok(
-  has_function_privilege('service_role', 'public.has_app_role_user(uuid)', 'execute')
-    and not has_function_privilege('authenticated', 'public.has_app_role_user(uuid)', 'execute')
-    and not has_function_privilege('anon', 'public.has_app_role_user(uuid)', 'execute'),
-  'has_app_role_user(): service role only');
+  has_function_privilege('service_role', 'public.has_staff_role_user(uuid)', 'execute')
+    and not has_function_privilege('authenticated', 'public.has_staff_role_user(uuid)', 'execute')
+    and not has_function_privilege('anon', 'public.has_staff_role_user(uuid)', 'execute'),
+  'has_staff_role_user(): service role only');
 select is(
   (select count(*)::int from pg_class c join pg_namespace s on s.oid = c.relnamespace
    where s.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity
      and not exists (select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname
                      and p.permissive = 'RESTRICTIVE' and p.cmd = 'ALL'
-                     and p.qual = '( SELECT has_app_role() AS has_app_role)'
-                     and p.with_check = '( SELECT has_app_role() AS has_app_role)')),
-  0, 'every RLS table has the restrictive role policy, as a once-per-query subselect');
+                     and p.qual = '( SELECT has_staff_role() AS has_staff_role)'
+                     and p.with_check = '( SELECT has_staff_role() AS has_staff_role)')
+     -- The one client-readable table has its own restrictive policy (pgTAP 29).
+     and c.relname <> 'client_entitlements'),
+  0, 'every RLS table but client_entitlements has the restrictive staff policy, as a once-per-query subselect');
 select is(
   (select count(*)::int from pg_class c join pg_namespace s on s.oid = c.relnamespace
    where s.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity),
-  21, 'there are 21 RLS tables (a new one needs the policy too)');
+  22, 'there are 22 RLS tables (a new one needs the policy too)');
 
 select is(
   (select prosecdef from pg_proc where oid = 'public.search_hts_lines(text[], text, integer)'::regprocedure),
@@ -92,10 +95,10 @@ select ok((select sum(n) from pg_temp.true_counts) > 0, 'there is data to hide (
 
 -- ---- No role: nothing to read --------------------------------------------------
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000f1');
-select is(has_app_role(), false, 'no role in app_metadata (only in user_metadata) is no role');
+select is(has_staff_role(), false, 'no role in app_metadata (only in user_metadata) is no role');
 select is(
   (select coalesce(sum(n), 0)::int from pg_temp.visible_rows()), 0,
-  'an account without a role reads 0 rows from all 21 RLS tables');
+  'an account without a role reads 0 rows from all 22 RLS tables');
 select is_empty($$ select * from fx_rates_latest $$, 'nor through the views');
 select is_empty($$ select * from public.search_hts_lines(array['footwear'], null, 10) $$, 'nor through the HTS search');
 select is_empty($$ select * from public.search_hts_lines(null, '6402', 10) $$, 'nor by HTS code');
@@ -106,7 +109,7 @@ select is_empty(
 reset role;
 
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000f2');
-select is(has_app_role(), false, 'an unknown role ("superuser") is no role');
+select is(has_staff_role(), false, 'an unknown role ("superuser") is no role');
 select is((select coalesce(sum(n), 0)::int from pg_temp.visible_rows()), 0, 'and reads 0 rows');
 
 -- ---- No role: nothing to write ------------------------------------------------
@@ -143,7 +146,7 @@ select ok(
 
 -- ---- Roles are unaffected ------------------------------------------------------
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000a1');
-select is(has_app_role(), true, 'an expert has a role');
+select is(has_staff_role(), true, 'an expert has a role');
 select is((select count(*)::int from public.search_hts_lines(array['footwear'], null, 10)), 1, 'an expert''s HTS search works');
 -- Compared with the true counts (taken as postgres above), so it also holds on
 -- a seeded database.

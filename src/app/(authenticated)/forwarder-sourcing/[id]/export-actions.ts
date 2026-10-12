@@ -10,6 +10,7 @@ import {
 } from "@/lib/forwarder/report-data";
 import { renderForwarderReportPdf } from "@/lib/forwarder/render-report-pdf";
 import { renderForwarderReportDocx } from "@/lib/forwarder/render-report-docx";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 // Reads are open to every authenticated user project-wide (PROJECT_STATE.md
 // §8) — the Project Summary page itself has no read-side ownership gate, only
@@ -30,6 +31,7 @@ export async function exportForwarderReportCsv(
   projectId: string,
   version: ExportVersion,
 ): Promise<ExportCsvState> {
+  await requireStaff();
   if (!uuid.safeParse(projectId).success) return { error: UNEXPECTED };
 
   const result = await fetchForwarderReportData(projectId);
@@ -46,6 +48,7 @@ export async function exportForwarderReportPdf(
   projectId: string,
   version: ExportVersion,
 ): Promise<ExportBinaryState> {
+  await requireStaff();
   if (!uuid.safeParse(projectId).success) return { error: UNEXPECTED };
 
   const result = await fetchForwarderReportData(projectId);
@@ -64,6 +67,7 @@ export async function exportForwarderReportDocx(
   projectId: string,
   version: ExportVersion,
 ): Promise<ExportBinaryState> {
+  await requireStaff();
   if (!uuid.safeParse(projectId).success) return { error: UNEXPECTED };
 
   const result = await fetchForwarderReportData(projectId);

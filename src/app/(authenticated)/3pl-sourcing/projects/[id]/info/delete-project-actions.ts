@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { explainEmptyDelete } from "@/lib/delete-errors";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 export type DeleteProjectState = { error?: string };
 
@@ -14,6 +15,7 @@ const FOREIGN_KEY_VIOLATION = "23503";
 export async function deleteProject(
   projectId: string,
 ): Promise<DeleteProjectState> {
+  await requireStaff();
   const supabase = await createClient();
 
   const { data, error } = await supabase

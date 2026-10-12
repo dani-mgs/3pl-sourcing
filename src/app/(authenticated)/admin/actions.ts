@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { getUserRole } from "@/lib/auth/get-user-role";
 import type { ProjectTable } from "@/lib/auth/get-ownership-context";
-import type { UserRole } from "@/lib/auth/get-user-role";
+import type { StaffRole } from "@/lib/auth/get-user-role";
 import {
   PROJECT_TABLES,
   parseCreateUser,
@@ -17,6 +17,16 @@ import {
 } from "@/lib/admin/parse-admin-input";
 
 export type AdminActionState = { error?: string; success?: boolean };
+
+const CLIENT_USER_ROLE_CHANGE =
+  "Client users can't be given a staff role or the tariff editor permission. Create a separate staff account instead.";
+
+// The role as stored now (profiles mirrors app_metadata), read as the admin.
+async function currentRoleOf(userId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+  return data?.role ?? null;
+}
 
 export async function reassignOwner(
   clientRequirementId: string,
@@ -32,6 +42,12 @@ export async function reassignOwner(
     return { error: parsed.error };
   }
   const { projectId, newOwnerId: ownerId, table: projectTable } = parsed.data;
+
+  // Projects belong to staff; a client user can never own one.
+  const ownerRole = await currentRoleOf(ownerId);
+  if (ownerRole !== "admin" && ownerRole !== "logistics_expert") {
+    return { error: "Choose a staff member as the new owner." };
+  }
 
   const supabase = await createClient();
 
@@ -88,7 +104,7 @@ export async function createUser(
   email: string,
   password: string,
   firstName: string,
-  role: UserRole,
+  role: StaffRole,
 ): Promise<AdminActionState> {
   if ((await getUserRole()) !== "admin") {
     return { error: "You don't have permission to make this change." };
@@ -172,7 +188,7 @@ export async function deleteUser(rawUserId: string): Promise<AdminActionState> {
 // Takes effect on the user's next request, as for updateTariffEditor below.
 export async function updateUserRole(
   rawUserId: string,
-  rawRole: UserRole,
+  rawRole: StaffRole,
 ): Promise<AdminActionState> {
   if ((await getUserRole()) !== "admin") {
     return { error: "You don't have permission to make this change." };
@@ -183,6 +199,10 @@ export async function updateUserRole(
     return { error: parsed.error };
   }
   const { userId, newRole } = parsed.data;
+
+  if ((await currentRoleOf(userId)) === "client") {
+    return { error: CLIENT_USER_ROLE_CHANGE };
+  }
 
   const supabase = await createClient();
   const {
@@ -225,6 +245,10 @@ export async function updateTariffEditor(
     return { error: parsed.error };
   }
   const { userId, grant } = parsed.data;
+
+  if ((await currentRoleOf(userId)) === "client") {
+    return { error: CLIENT_USER_ROLE_CHANGE };
+  }
 
   const adminClient = createAdminClient();
   const { error } = await adminClient.auth.admin.updateUserById(userId, {

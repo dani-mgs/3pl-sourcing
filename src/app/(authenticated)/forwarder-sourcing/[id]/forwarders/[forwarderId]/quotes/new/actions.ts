@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOwnershipContext } from "@/lib/auth/get-ownership-context";
 import { parseQuoteForm } from "@/lib/forwarder/parse-quote-form";
 import { withVerifiedRateProvenance } from "@/lib/fx/server-rates";
+import { requireStaff } from "@/lib/auth/require-staff";
 
 export type SaveQuoteState = { error?: string };
 
@@ -19,6 +20,7 @@ export async function createQuote(
   forwarderId: string,
   formData: FormData,
 ): Promise<SaveQuoteState> {
+  await requireStaff();
   if (!uuid.safeParse(projectId).success || !uuid.safeParse(forwarderId).success) {
     return { error: NO_PERMISSION };
   }

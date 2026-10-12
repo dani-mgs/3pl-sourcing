@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth/get-user-role";
 import { UserMenu } from "./user-menu";
@@ -36,6 +37,9 @@ export default async function AuthenticatedLayout({
 
   const displayName = getDisplayName(user);
   const role = await getUserRole();
+  // Client users never see staff pages. The proxy already sends them to
+  // /portal; this is the second layer, in case a route slips past it.
+  if (role === "client") notFound();
 
   return (
     <div className="min-h-svh bg-neutral-bg">

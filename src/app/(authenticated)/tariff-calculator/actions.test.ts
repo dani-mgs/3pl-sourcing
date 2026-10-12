@@ -89,6 +89,9 @@ vi.mock("@/lib/tariff/estimate-store", () => ({ saveDutyEstimate }));
 
 const canWrite = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => stubClient() }));
+// The staff guard is tested in require-staff.test.ts; here the caller is staff.
+const requireStaff = vi.fn(async () => "logistics_expert");
+vi.mock("@/lib/auth/require-staff", () => ({ requireStaff }));
 vi.mock("@/lib/auth/get-ownership-context", () => ({
   getOwnershipContext: async () => ({ canWrite: canWrite(), isOwner: false, isAdmin: false }),
 }));
@@ -282,9 +285,17 @@ describe("saving through the estimate store", () => {
   });
 });
 
+describe("a client user", () => {
+  test("is refused before anything is calculated or saved", async () => {
+    requireStaff.mockRejectedValueOnce(new Error("NEXT_HTTP_ERROR_FALLBACK;404"));
+    await expect(saveEstimate(form())).rejects.toThrow("NEXT_HTTP_ERROR_FALLBACK;404");
+    expect(saveDutyEstimate).not.toHaveBeenCalled();
+  });
+});
+
 describe("an account without a role", () => {
   test("can't save an estimate: nothing is calculated or saved", async () => {
-    for (const meta of [{}, { role: "superuser" }, { tariff_editor: true }]) {
+    for (const meta of [{}, { role: "superuser" }, { tariff_editor: true }, { role: "client", client_id: "c1" }]) {
       userAppMetadata = meta;
       expect(await saveEstimate(form())).toEqual({ error: "Your account doesn't have a role yet. Ask an admin." });
     }

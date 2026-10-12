@@ -37,6 +37,9 @@ export function UserMenu({
             Administration
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem render={<Link href="/client-access" />}>
+          Client access
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => logout()}>Log Out</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

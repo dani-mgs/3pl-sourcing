@@ -17,7 +17,9 @@ const EMAIL_MAX = 254;
 const PASSWORD_MIN = 8;
 const PASSWORD_MAX = 72;
 
-export const USER_ROLES = ["admin", "logistics_expert"] as const;
+// Staff roles only. Never add "client" here: has_staff_role() in SQL must stay the
+// same list (role-list-sync.test.ts), and it gates every internal table.
+export const STAFF_ROLES = ["admin", "logistics_expert"] as const;
 export const PROJECT_TABLES = ["three_pl_projects", "forwarder_projects"] as const;
 
 const id = z.uuid({ error: INVALID_REQUEST });
@@ -57,14 +59,31 @@ const createUserSchema = z.object({
     .string({ error: INVALID_REQUEST })
     .trim()
     .max(NAME_MAX, `First name must be ${NAME_MAX} characters or fewer.`),
-  role: z.enum(USER_ROLES, { error: "Choose a valid role." }),
+  role: z.enum(STAFF_ROLES, { error: "Choose a valid role." }),
 });
 
 const userIdSchema = z.object({ userId: id });
 
+// Paid tiers per client (client_entitlements.tier). No row means free.
+export const CLIENT_TIERS = ["free", "market_report"] as const;
+export type ClientTier = (typeof CLIENT_TIERS)[number];
+
+// Client users (portal logins): the role is always 'client', fixed on the
+// server, so it isn't an input at all. The password is generated, not typed.
+const createClientUserSchema = z.object({
+  clientId: z.uuid({ error: "Choose a client from the list." }),
+  email: createUserSchema.shape.email,
+  firstName: requiredName("First name"),
+});
+
+const setClientTierSchema = z.object({
+  clientId: id,
+  tier: z.enum(CLIENT_TIERS, { error: "Choose a valid plan." }),
+});
+
 const updateUserRoleSchema = z.object({
   userId: id,
-  newRole: z.enum(USER_ROLES, { error: "Choose a valid role." }),
+  newRole: z.enum(STAFF_ROLES, { error: "Choose a valid role." }),
 });
 
 const updateTariffEditorSchema = z.object({
@@ -134,4 +153,16 @@ export function parseUpdateClient(raw: { clientId: unknown; name: unknown; busin
 
 export function parseDeleteClient(raw: { clientId: unknown }) {
   return parse(clientIdSchema, raw, "deleteClient");
+}
+
+export function parseCreateClientUser(raw: { clientId: unknown; email: unknown; firstName: unknown }) {
+  return parse(createClientUserSchema, raw, "createClientUser");
+}
+
+export function parseResetClientUserPassword(raw: { userId: unknown }) {
+  return parse(userIdSchema, raw, "resetClientUserPassword");
+}
+
+export function parseSetClientTier(raw: { clientId: unknown; tier: unknown }) {
+  return parse(setClientTierSchema, raw, "setClientTier");
 }
