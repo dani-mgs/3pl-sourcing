@@ -18,6 +18,27 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** High (if missed, a staff member could approve as a client)
 - **Where:** docs/SECURITY.md, "Client users (external)"; future `client_requests` migration.
 
+### Portal "today" is UTC
+- **Added:** 2026-10-13 (client dashboard Phase 2a)
+- **What:** Client updates use the server's UTC date as "today": an expired quote is decided on the UTC date at publish, and the portal's validity countdown, "today" line and expired labels use it too. In Manila (UTC+8), between 00:00 and 08:00 local time that date is still yesterday's, so a countdown can read one day more than local time would and a quote expiring that day still shows as valid. Date-only values (due dates, milestones, validity dates) are never shifted; timestamps ("Updated Oct 9") show in the viewer's own timezone.
+- **Why deferred:** Accepted by Dani on 2026-10-12. Matches the staff pages, which already use the server's UTC date for rate expiry.
+- **Severity:** Low
+- **Where:** `src/lib/client-updates/dates.ts` (`utcToday`), `portal-text.ts` (`validityText`, `displayComparability`). Fix: a fixed business timezone (or the client's), passed in as "today".
+
+### Demo seed client updates are hand-written
+- **Added:** 2026-10-13 (client dashboard Phase 2a)
+- **What:** `scripts/qa/demo-portal-data.mjs` writes the demo payloads out by hand, because the seed (plain Node) can't run the TypeScript builders without a new dependency. A change to the builders isn't reflected there automatically.
+- **Why deferred:** No new dependencies. Vitest (`demo-portal-data.test.ts`) checks every payload against the strict schema and that the latest Brightline forwarder update equals the builder's output for the same data, so drift fails a test.
+- **Severity:** Low
+- **Where:** `scripts/qa/demo-portal-data.mjs`.
+
+### No nudge when a project changes after its last published update
+- **Added:** 2026-10-13 (client dashboard Phase 2a, planned for Phase 4)
+- **What:** Clients see the figures as they were when an update was published. If quotes or rates change afterwards, nothing tells the expert the shared update is out of date.
+- **Why deferred:** Plan section 15: "Last updated" on every client page for now; a staff-side nudge is Phase 4.
+- **Severity:** Low
+- **Where:** `/…/share` pages.
+
 ### Staff Server Actions make one extra Auth call for the role check
 - **Added:** 2026-10-12 (client dashboard Phase 1)
 - **What:** `requireStaff()` calls `auth.getUser()` (a round trip to Supabase Auth) before each staff Server Action, and most actions call `getUser()` again for their own logic.

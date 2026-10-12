@@ -76,7 +76,7 @@ select is(
 select is(
   (select count(*)::int from pg_class c join pg_namespace s on s.oid = c.relnamespace
    where s.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity),
-  22, 'there are 22 RLS tables (a new one needs the policy too)');
+  24, 'there are 24 RLS tables (a new one needs the policy too)');
 
 select is(
   (select prosecdef from pg_proc where oid = 'public.search_hts_lines(text[], text, integer)'::regprocedure),
@@ -98,7 +98,7 @@ select pg_temp.act_as('00000000-0000-4000-8000-0000000000f1');
 select is(has_staff_role(), false, 'no role in app_metadata (only in user_metadata) is no role');
 select is(
   (select coalesce(sum(n), 0)::int from pg_temp.visible_rows()), 0,
-  'an account without a role reads 0 rows from all 22 RLS tables');
+  'an account without a role reads 0 rows from all 24 RLS tables');
 select is_empty($$ select * from fx_rates_latest $$, 'nor through the views');
 select is_empty($$ select * from public.search_hts_lines(array['footwear'], null, 10) $$, 'nor through the HTS search');
 select is_empty($$ select * from public.search_hts_lines(null, '6402', 10) $$, 'nor by HTS code');

@@ -2,7 +2,7 @@
 
 _Last updated: 2026-10-10 by Dani (as of `fix/data-integrity-followups`)_
 
-**Live:** 3PL Sourcing, Forwarder Sourcing, Tariff Calculator. **Next:** Landed Cost Calculator. **Deferred:** 3PL Audit, Forwarder Audit, client dashboard.
+**Live:** 3PL Sourcing, Forwarder Sourcing, Tariff Calculator. **Next:** Landed Cost Calculator. **In progress:** client dashboard (Phase 2a shipped locally: publishing client updates; the portal reads them in 2b). **Deferred:** 3PL Audit, Forwarder Audit.
 
 History is in git and `docs/CHANGELOG.md`; this file is the short version.
 
@@ -56,6 +56,7 @@ Internal hub for Move Supply Chain Logistics Experts: source and compare 3PLs an
 - **Display names** are admin-only, stored in `app_metadata.first_name`. `profiles` is a one-way mirror of them.
 - **All data access needs an admin-assigned staff role.** Every internal RLS table has a restrictive `has_staff_role()` policy (renamed from `has_app_role()` on 2026-10-12), so an account without a staff role (no role, or a client user) sees and writes nothing.
 - **Client users** (role `client` + `app_metadata.client_id`, external) reach only `/portal`; every staff Server Action starts with `requireStaff()`. They can read one table: their client's `client_entitlements` row. Created on `/client-access` (admins: any client; experts: clients of projects they own) with a one-time password and a forced change at first sign-in; no email (no SMTP).
+- **Client updates** (`client_updates`, Phase 2a): "Share update with client" on each project page publishes a snapshot whose payload is built on the server from an allow-list (`src/lib/client-updates/`); only shortlisted partners are named, 3PL comparisons are percentages only. Staff-only until Phase 2b opens published rows to their own client. `client_update_inputs` (form inputs, internal ids) is staff-only for good.
 - **Signup is off** (`[auth] enable_signup = false`; production verified off on 2026-10-09).
 - **TRUNCATE is revoked** from `authenticated` and `anon`.
 - **Client and project are created in one transaction**, in both modules (`create_three_pl_project_with_client`, `create_forwarder_project_with_client`). A failed save leaves no orphan client.
@@ -121,7 +122,7 @@ Landed Cost Calculator (not started; no plan yet).
 ## 10. DO NOT TOUCH / FRAGILE AREAS
 - Every insert, update or delete action chains `.select()` and checks for rows; an RLS refusal returns no rows and no error.
 - Never write `profiles` directly. Roles and names go through `supabase.auth.admin.updateUserById()` (`app_metadata`), and the trigger mirrors them.
-- The restrictive `has_staff_role()` policy must be on every internal RLS table; pgTAP 24 and 28 fail if a table lacks it (`client_entitlements` is the one named exception).
+- The restrictive `has_staff_role()` policy must be on every internal RLS table; pgTAP 24 and 28 fail if a table lacks it (`client_entitlements` is the one named exception; `client_updates` joins it in Phase 2b).
 - The `create_*_project_with_client` field lists must match the form parsers; Vitest drift checks enforce it.
 - The `one_incumbent_per_client` partial unique index drives 3PL baseline math.
 - The toggle-chip value format (`src/lib/chip-value.ts`) is delimiter-safe; labels contain commas, e.g. "Fulfillment (Pick, Check, Pack)".

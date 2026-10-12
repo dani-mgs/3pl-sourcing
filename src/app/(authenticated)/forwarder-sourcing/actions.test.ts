@@ -13,6 +13,8 @@ let clients: Client[] = [];
 type RpcResult = { data: unknown; error: { code?: string; message: string } | null };
 // Replaces the function's default (successful) behaviour for one test.
 let rpcImpl: ((args: Record<string, unknown>) => RpcResult) | null = null;
+// Replaces the update's default (successful) result for one test.
+let updateError: { code: string; message: string } | null = null;
 const rpcCalls: { fn: string; args: Record<string, unknown> }[] = [];
 const writes: { op: string; row?: Record<string, unknown> }[] = [];
 
@@ -52,7 +54,9 @@ function stubClient() {
         },
         update: (row: Record<string, unknown>) => {
           writes.push({ op: `update ${table}`, row });
-          return { eq: () => ({ select: async () => ({ data: [{ id: "f-edit" }], error: null }) }) };
+          return {
+            eq: () => ({ select: async () => (updateError ? { data: null, error: updateError } : { data: [{ id: "f-edit" }], error: null }) }),
+          };
         },
       };
       return chain;
@@ -101,6 +105,7 @@ const names = () => clients.map((c) => c.name);
 beforeEach(() => {
   clients = [{ id: "c-acme", name: "Acme Co", business_model: "B2B" }];
   rpcImpl = null;
+  updateError = null;
   rpcCalls.length = 0;
   writes.length = 0;
 });
@@ -229,6 +234,16 @@ describe("an existing client, or an edit", () => {
     ).rejects.toThrow(`REDIRECT /forwarder-sourcing/${EDIT_ID}`);
     expect(writes.map((w) => w.op)).toEqual(["update forwarder_projects"]);
     expect(writes[0].row).toMatchObject({ client_id: "c-acme", status: "On Hold" });
+  });
+
+  test("once updates were shared with the client, a new client is refused with a clear message", async () => {
+    updateError = { code: "P0001", message: "anything the database says" };
+    const result = await saveForwarderProject(EDIT_ID, form({ client_mode: "existing", client_id: "c-acme" }));
+    expect(result).toEqual({
+      error:
+        "Updates for this project have been shared with its client, so its client can't be changed. If it's linked to the wrong client, ask an admin to remove the shared updates first.",
+    });
+    expect(redirect).not.toHaveBeenCalled();
   });
 });
 

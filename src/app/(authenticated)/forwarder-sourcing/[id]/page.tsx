@@ -104,7 +104,16 @@ export default async function ForwarderProjectSummaryPage({
             {new Date(row.updated_at).toLocaleDateString()}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {canWrite && (
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href={`/forwarder-sourcing/${id}/share`} />}
+            >
+              Share update with client
+            </Button>
+          )}
           {canWrite && (
             <Button
               variant="outline"

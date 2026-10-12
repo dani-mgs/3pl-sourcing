@@ -1,4 +1,5 @@
 import { Bullets, HelpSection, Note, SubHeading, Ui } from "./help-parts";
+import { PUBLISH_CONFIRM } from "@/lib/client-updates/share-text";
 
 // Sections 4–7. Sources: src/lib/forwarder/cost-comparison.ts,
 // project-summary.ts, requirement-fit.ts, report-data.ts, parse-quote-form.ts,
@@ -266,7 +267,7 @@ export function PermissionsSection() {
         <li>
           <Ui>Client users</Ui> are portal logins for a client&apos;s own staff. They never see
           internal data: no projects, 3PLs, forwarders, quotes, notes or other clients. They only
-          reach the client portal (coming soon), never these pages. A client user is never a
+          reach the client portal, never these pages. A client user is never a
           Logistics Expert or Admin, and can&apos;t be made one.
         </li>
         <li>
@@ -280,6 +281,58 @@ export function PermissionsSection() {
           <Ui>Client plans</Ui>: each client is on the free plan (the Move summary) unless an
           admin gives it the paid Market Report in Administration → Clients. A client with
           client users can&apos;t be deleted until they&apos;re removed.
+        </li>
+      </Bullets>
+    </HelpSection>
+  );
+}
+
+export function SharingSection() {
+  return (
+    <HelpSection id="sharing" title="Sharing updates with clients">
+      <Bullets>
+        <li>
+          <Ui>Share update with client</Ui> on a 3PL or forwarder project page (owner or admin) publishes an update to
+          that project&apos;s client. Clients only ever see what you publish, never live data. They can&apos;t see shared
+          updates yet: the client portal starts showing them in the next release.
+        </li>
+        <li>
+          You choose the stage (1 to 7, the same for both modules), write the headline, &ldquo;where we are&rdquo; and the
+          next step, and mark whether the client needs to do something. Milestones have planned and actual dates.
+        </li>
+        <li>
+          The figures are worked out from the project when you press <Ui>Preview</Ui>, and the preview is exactly what
+          the client will see. You can only publish a current preview: change the form (or the project&apos;s figures)
+          and you&apos;ll need to preview again. <Ui>Save draft</Ui> keeps your work; clients never see drafts.
+        </li>
+        <li>
+          Only shortlisted partners are named (3PLs in the recommendation&apos;s top three or Shortlisted; forwarders
+          Shortlisted or Move Recommended). Everyone else appears only in the counts, and partners you&apos;ve ruled out
+          (Unfit, Do Not Contact, Withdrawn / No Response) count as contacted only. Internal notes, assessments, key
+          notes, sources and status words are never shared. The recommendation&apos;s reasons and trade-offs are what
+          you write, never copied from internal fields.
+        </li>
+        <li>
+          Forwarder figures follow the same ranking rule as the project page: only like-for-like quotes (the agreed
+          terms, still in the running, not expired) can be &ldquo;best&rdquo; or show a saving. Quotes on other terms or
+          past their validity date are shown greyed and labelled. Annual savings are only shared if you tick{" "}
+          <Ui>Include annual estimate</Ui>.
+        </li>
+        <li>
+          3PL comparisons show only the percentage against the current 3PL&apos;s rate card, never amounts, with a note
+          that it isn&apos;t a monthly bill. Without a current 3PL with rates (or with rate cards in different
+          currencies), the client sees an explanation instead of a chart. Charts are never drawn from too little data.
+        </li>
+        <li>
+          The contact line shows the project owner&apos;s first name and, optionally, a contact email you type on the
+          form (a shared Move address is fine).
+        </li>
+        <li>
+          {PUBLISH_CONFIRM} Once an update has been published, the project&apos;s client can&apos;t be changed.
+        </li>
+        <li>
+          Dates like &ldquo;today&rdquo; and quote validity use the server&apos;s date (UTC), so before 8am in Manila
+          they can be a day behind.
         </li>
       </Bullets>
     </HelpSection>
