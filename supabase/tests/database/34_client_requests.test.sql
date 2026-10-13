@@ -198,11 +198,11 @@ select throws_ok($$ select withdraw_client_request_reply(gen_random_uuid()) $$, 
 reset role;
 
 select is(
-  (select decision_snapshot - 'publishedAt' from client_requests where kind = 'approve'),
+  (select decision_snapshot - 'publishedAt' from client_requests where client_id = '00000000-0000-4000-8000-00000000c001' and kind = 'approve'),
   '{"route": null, "headline": "One latest", "projectKind": "three_pl", "recommendation": {"name": "Harborline"}}'::jsonb,
   'the approval stores a frozen copy of the recommendation it approved');
 select is(
-  (select array[created_by::text, status, (created_at = now())::text, client_id::text] from client_requests where kind = 'approve'),
+  (select array[created_by::text, status, (created_at = now())::text, client_id::text] from client_requests where client_id = '00000000-0000-4000-8000-00000000c001' and kind = 'approve'),
   array['00000000-0000-4000-8000-0000000000c1', 'sent', 'true', '00000000-0000-4000-8000-00000000c001'],
   'the client, the author, the time and the status are set by the database');
 
@@ -253,7 +253,7 @@ select throws_ok($$ select * from client_requests $$, '42501', null, 'or read th
 reset role;
 
 -- ---- Staff: seen, reply (owner or admin), badge ----------------------------------------------
-create temp table q as select id from public.client_requests where kind = 'question';
+create temp table q as select id from public.client_requests where client_id = '00000000-0000-4000-8000-00000000c001' and kind = 'question';
 grant select on q to authenticated;
 create temp table client_one_rows as
   select request_key, kind, message, status, false as from_me
@@ -288,11 +288,11 @@ select throws_ok($$ select withdraw_client_request_reply((select id from pg_temp
   'only an admin can withdraw a reply');
 reset role;
 
-select throws_ok($$ update client_requests set staff_reply = 'edited' where kind = 'question' $$, 'P0001', null,
+select throws_ok($$ update client_requests set staff_reply = 'edited' where client_id = '00000000-0000-4000-8000-00000000c001' and kind = 'question' $$, 'P0001', null,
   'a reply can''t be edited even by the table owner');
-select throws_ok($$ update client_requests set message = 'edited' where kind = 'approve' $$, 'P0001', null,
+select throws_ok($$ update client_requests set message = 'edited' where client_id = '00000000-0000-4000-8000-00000000c001' and kind = 'approve' $$, 'P0001', null,
   'what a client sent can''t change');
-select throws_ok($$ update client_requests set decision_snapshot = '{}' where kind = 'approve' $$, 'P0001', null,
+select throws_ok($$ update client_requests set decision_snapshot = '{}' where client_id = '00000000-0000-4000-8000-00000000c001' and kind = 'approve' $$, 'P0001', null,
   'an approval''s frozen copy can''t change');
 
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000c2');
@@ -314,7 +314,8 @@ select is(
   array['seen', 'none', 'Yes for Pacific Bridge (+$150). WITHDRAWN-CANARY', '00000000-0000-4000-8000-0000000000ad',
         '00000000-0000-4000-8000-0000000000a1'],
   'back to seen; the withdrawn text and who wrote and withdrew it stay in the staff-only history');
-select is(my_client_request_badge(), 1, 'withdrawing doesn''t make it unseen');
+select is(my_client_request_badge(), (select count(*)::int from client_requests where status = 'sent' and id <> (select id from pg_temp.q)),
+  'an admin''s badge counts every unseen request, and withdrawing doesn''t make one unseen');
 reset role;
 
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000c1');
@@ -330,7 +331,7 @@ select is_empty(
   $$ select 1 from client_requests_for_client('00000000-0000-4000-8000-00000000c001') r where row_to_json(r)::text like '%WITHDRAWN-CANARY%' $$,
   'nor in View as client');
 reset role;
-select throws_ok($$ update client_requests set reply_history = '[]' where kind = 'question' $$, 'P0001', null,
+select throws_ok($$ update client_requests set reply_history = '[]' where client_id = '00000000-0000-4000-8000-00000000c001' and kind = 'question' $$, 'P0001', null,
   'the withdrawn history can''t be rewritten');
 
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000a1');
@@ -375,7 +376,7 @@ reset role;
 select pg_temp.as_postgres();
 delete from client_updates where headline = 'One latest';
 select is(
-  (select decision_snapshot -> 'recommendation' ->> 'name' from client_requests where kind = 'approve'),
+  (select decision_snapshot -> 'recommendation' ->> 'name' from client_requests where client_id = '00000000-0000-4000-8000-00000000c001' and kind = 'approve'),
   'Harborline', 'removing the approved update keeps the approval and its frozen copy');
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000c1');
 select results_eq(
