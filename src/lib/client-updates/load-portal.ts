@@ -1,6 +1,7 @@
 import type { createClient } from "@/lib/supabase/server";
 import type { ClientTier } from "@/lib/admin/parse-admin-input";
 import { effectiveTier } from "@/lib/client-tiers";
+import { toRequestViews, type ClientRequestView, type RequestRow } from "@/lib/client-requests/requests";
 import { toPortalData, type PortalData, type PortalRow } from "./portal-data";
 
 // The one loader behind the client portal and staff "View as client". Both
@@ -13,7 +14,14 @@ import { toPortalData, type PortalData, type PortalRow } from "./portal-data";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
-export type PortalLoad = PortalData & { tier: ClientTier; contactNames: string[]; reportKeys: string[] };
+export type PortalLoad = PortalData & {
+  tier: ClientTier;
+  contactNames: string[];
+  reportKeys: string[];
+  // The client's requests and Move's replies (my_client_requests() /
+  // client_requests_for_client()), newest first.
+  requests: ClientRequestView[];
+};
 
 export type PortalViewer = { as: "client" } | { as: "staff"; clientId: string };
 
@@ -24,12 +32,14 @@ function firstWord(name: string | null): string | null {
 
 export async function loadPortal(supabase: Supabase, viewer: PortalViewer): Promise<PortalLoad> {
   if (viewer.as === "client") {
-    const [updates, names, entitlement] = await Promise.all([
+    const [updates, names, entitlement, requests] = await Promise.all([
       supabase.rpc("my_portal_updates"),
       supabase.rpc("my_move_contact_names"),
       // RLS: a client reads only its own client's row.
       supabase.from("client_entitlements").select("tier, valid_until").maybeSingle(),
+      supabase.rpc("my_client_requests"),
     ]);
+    if (requests.error) console.error("my_client_requests failed:", requests.error.code);
     if (updates.error) console.error("my_portal_updates failed:", updates.error.code);
     const tier = effectiveTier(entitlement.data);
     return {
@@ -37,17 +47,20 @@ export async function loadPortal(supabase: Supabase, viewer: PortalViewer): Prom
       tier,
       contactNames: ((names.data ?? []) as { first_name: string }[]).map((n) => n.first_name),
       reportKeys: tier === "free" ? [] : keysOf(await supabase.rpc("my_market_reports").select("engagement_key")),
+      requests: toRequestViews((requests.data ?? []) as RequestRow[]),
     };
   }
 
   // Staff: the same rows through the staff function, and the same contact
   // rule (first word of each staff owner's name) from tables staff can read.
-  const [updates, entitlement, threePl, forwarder] = await Promise.all([
+  const [updates, entitlement, threePl, forwarder, requests] = await Promise.all([
     supabase.rpc("portal_updates_for_client", { p_client_id: viewer.clientId }),
     supabase.from("client_entitlements").select("tier, valid_until").eq("client_id", viewer.clientId).maybeSingle(),
     supabase.from("three_pl_projects").select("owner_id").eq("client_id", viewer.clientId),
     supabase.from("forwarder_projects").select("owner_id").eq("client_id", viewer.clientId),
+    supabase.rpc("client_requests_for_client", { p_client_id: viewer.clientId }),
   ]);
+  if (requests.error) console.error("client_requests_for_client failed:", requests.error.code);
   if (updates.error) console.error("portal_updates_for_client failed:", updates.error.code);
   const ownerIds = [...new Set([...(threePl.data ?? []), ...(forwarder.data ?? [])].map((p) => p.owner_id as string))];
   const { data: owners } = ownerIds.length
@@ -70,6 +83,7 @@ export async function loadPortal(supabase: Supabase, viewer: PortalViewer): Prom
       tier === "free"
         ? []
         : keysOf(await supabase.rpc("market_reports_for_client", { p_client_id: viewer.clientId }).select("engagement_key")),
+    requests: toRequestViews((requests.data ?? []) as RequestRow[]),
   };
 }
 

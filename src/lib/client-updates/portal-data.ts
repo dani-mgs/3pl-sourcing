@@ -19,6 +19,8 @@ export type PortalRow = {
   needs_client_action: boolean;
   published_at: string;
   payload: unknown;
+  // Phase 3a: the update's opaque key (to approve exactly that update).
+  update_key?: string | null;
 };
 
 export type Engagement = {
@@ -28,6 +30,7 @@ export type Engagement = {
   // Newest first, the latest included.
   history: ClientUpdateView[];
   complete: boolean;
+  latestUpdateKey: string | null;
 };
 
 export type PortalData = {
@@ -53,6 +56,7 @@ function toView(row: PortalRow, payload: ClientUpdatePayload): ClientUpdateView 
 // most recently updated), completed ones last.
 export function toPortalData(rows: PortalRow[]): PortalData {
   const groups = new Map<string, ClientUpdateView[]>();
+  const keys = new Map<ClientUpdateView, string | null>();
   let unreadable = 0;
   for (const row of rows) {
     const payload = parsePayload(row.payload);
@@ -61,13 +65,15 @@ export function toPortalData(rows: PortalRow[]): PortalData {
       continue;
     }
     const list = groups.get(row.engagement_key) ?? [];
-    list.push(toView(row, payload));
+    const view = toView(row, payload);
+    keys.set(view, row.update_key ?? null);
+    list.push(view);
     groups.set(row.engagement_key, list);
   }
   const engagements = [...groups.entries()].map(([key, views]) => {
     const history = [...views].sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
     const latest = history[0];
-    return { key, kind: latest.payload.kind, latest, history, complete: latest.stage === 7 };
+    return { key, kind: latest.payload.kind, latest, history, complete: latest.stage === 7, latestUpdateKey: keys.get(latest) ?? null };
   });
   engagements.sort(
     (a, b) =>
@@ -88,7 +94,8 @@ export type KeyFigures = {
   bestSaving: { pct: number; kind: ClientUpdatePayload["kind"]; context: string } | null;
 };
 
-export function keyFigures(engagements: Engagement[]): KeyFigures {
+// decided: projects whose latest update the client already decided on.
+export function keyFigures(engagements: Engagement[], decided: Set<string> = new Set()): KeyFigures {
   const active = engagements.filter((e) => !e.complete);
   let contacted: number | null = null;
   let bestSaving: KeyFigures["bestSaving"] = null;
@@ -104,7 +111,7 @@ export function keyFigures(engagements: Engagement[]): KeyFigures {
   }
   return {
     active: active.length,
-    waiting: active.filter((e) => e.latest.needsClientAction).length,
+    waiting: active.filter((e) => e.latest.needsClientAction && !decided.has(e.key)).length,
     contacted,
     bestSaving,
   };
@@ -114,9 +121,11 @@ export function keyFigures(engagements: Engagement[]): KeyFigures {
 
 export type NeedsYouItem = { key: string; text: string };
 
-export function needsYou(engagements: Engagement[], today: string): NeedsYouItem[] {
+// A decision (approve or request changes) on the latest update clears it
+// until the next update.
+export function needsYou(engagements: Engagement[], today: string, decided: Set<string> = new Set()): NeedsYouItem[] {
   return engagements
-    .filter((e) => !e.complete && e.latest.needsClientAction)
+    .filter((e) => !e.complete && e.latest.needsClientAction && !decided.has(e.key))
     .map((e) => {
       const what = nextStepText(e.latest, today) ?? "Something needs your input";
       return { key: e.key, text: `${what} (your ${kindLabel(e.kind).charAt(0).toLowerCase()}${kindLabel(e.kind).slice(1)})` };

@@ -85,7 +85,7 @@ select ok(
   'signed-in users can call the three wrappers (each checks the caller)');
 select is(
   pg_get_function_result('public.my_portal_updates()'::regprocedure),
-  'TABLE(engagement_key text, project_kind text, stage smallint, headline text, summary text, next_step text, next_step_due date, needs_client_action boolean, published_at timestamp with time zone, payload jsonb)',
+  'TABLE(engagement_key text, project_kind text, stage smallint, headline text, summary text, next_step text, next_step_due date, needs_client_action boolean, published_at timestamp with time zone, payload jsonb, update_key text)',
   'a client gets exactly these columns: no update, project, client or staff ids');
 select is(
   pg_get_function_result('public.my_move_contact_names()'::regprocedure),
@@ -97,10 +97,12 @@ select is(
    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prosecdef and p.prorettype <> 'trigger'::regtype
      and has_function_privilege('authenticated', p.oid, 'execute')),
-  array['client_has_paid_tier(uuid)', 'complete_password_change()', 'has_staff_role()', 'is_admin()', 'is_client_user()',
-        'is_tariff_editor()', 'market_reports_for_client(uuid)', 'my_client_id()', 'my_market_reports()',
+  array['client_has_paid_tier(uuid)', 'client_requests_for_client(uuid)', 'complete_password_change()', 'has_staff_role()',
+        'is_admin()', 'is_client_user()', 'is_tariff_editor()', 'mark_client_request_seen(uuid)',
+        'market_reports_for_client(uuid)', 'my_client_id()', 'my_client_requests()', 'my_market_reports()',
         'my_move_contact_names()', 'my_portal_updates()', 'portal_updates_for_client(uuid)',
-        'search_hts_lines(text[],text,integer)'],
+        'reply_to_client_request(uuid,text)', 'search_hts_lines(text[],text,integer)',
+        'submit_client_request(text,text,text,text,boolean)', 'withdraw_client_request_reply(uuid)'],
   'the security-definer functions a signed-in user can call are exactly these');
 
 -- ---- A client: its own published updates only --------------------------------------------

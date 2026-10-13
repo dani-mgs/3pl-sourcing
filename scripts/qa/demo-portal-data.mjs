@@ -457,3 +457,37 @@ export function demoMarketReports() {
       }) },
   ];
 }
+
+// ---------------------------------------------------------------------------
+// Client requests (Phase 3a): one in every state, from the mockup's examples.
+// `from` is the client user's email local part; `by` the expert's key.
+// Ridgeway's question had a reply that an admin withdrew: its text carries
+// WITHDRAWN-CANARY, which must never reach any portal (the scan checks).
+// Brightline's and Northwind's latest recommendations are left undecided,
+// so the browser pass can approve them.
+
+export const WITHDRAWN_CANARY = "WITHDRAWN-CANARY";
+
+export function demoClientRequests() {
+  return [
+    { engagement: "brightlineFwd", from: "brightline-ops", kind: "question", daysAgo: 2,
+      message: "Weekend delivery to Ontario?", wantsCall: false,
+      status: "answered", seenDaysAgo: 2, by: "alex", repliedDaysAgo: 1,
+      reply: "Yes for Pacific Bridge and Lotus (+$150). Saigon Harbor: weekdays only." },
+    { engagement: "brightline3pl", from: "brightline-ops", kind: "question", daysAgo: 1,
+      message: "Call me about contract length", wantsCall: true,
+      status: "seen", seenDaysAgo: 1, by: "alex" },
+    { engagement: "northwind3pl", from: "northwind-finance", kind: "question", daysAgo: 1,
+      message: "Can the recommended warehouse take our holiday peak from mid-November?", wantsCall: false,
+      status: "sent" },
+    { engagement: "kettle3pl", from: "kettle-ops", kind: "approve", daysAgo: 8,
+      decidedOn: "We recommend Piedmont Fulfillment Co.",
+      message: "Please start after our stocktake on the 20th.",
+      status: "answered", seenDaysAgo: 8, by: "alex", repliedDaysAgo: 7,
+      reply: "Thanks Sam. We'll plan the move-in for after the 20th." },
+    { engagement: "ridgewayFwd", from: "ridgeway-ops", kind: "question", daysAgo: 5,
+      message: "Do any of these quotes include cargo insurance?", wantsCall: false,
+      status: "seen", seenDaysAgo: 5, by: "priya",
+      withdrawn: { reply: `${WITHDRAWN_CANARY}: Lusitania includes insurance up to EUR 50,000.`, repliedDaysAgo: 4, withdrawnDaysAgo: 3 } },
+  ];
+}

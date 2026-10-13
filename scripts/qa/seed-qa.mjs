@@ -152,10 +152,11 @@ async function resetData(db, userIds) {
     check(await db.from("three_pl_projects").delete().in("id", ids), "delete 3PL projects");
   }
   if (clientIds.length) {
-    // Client updates and Market Reports on ZZQA clients (published in a QA
-    // pass) block deleting the client (client_id is RESTRICT).
+    // Client updates, Market Reports and client requests on ZZQA clients (made
+    // in a QA pass) block deleting the client (client_id is RESTRICT).
     check(await db.from("client_updates").delete().in("client_id", clientIds), "delete client updates");
     check(await db.from("client_market_reports").delete().in("client_id", clientIds), "delete market reports");
+    check(await db.from("client_requests").delete().in("client_id", clientIds), "delete client requests");
     check(await db.from("clients").delete().in("id", clientIds), "delete clients");
   }
 }

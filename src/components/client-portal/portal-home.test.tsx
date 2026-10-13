@@ -4,7 +4,8 @@ import { toPortalData } from "@/lib/client-updates/portal-data";
 import type { PortalLoad } from "@/lib/client-updates/load-portal";
 import { CLIENT_ENGAGEMENTS, DRAFT_CANARY, rowsFor } from "@/lib/client-updates/__fixtures__/portal-rows";
 import { TODAY } from "@/lib/client-updates/__fixtures__/sources";
-import { MarketReportPlaceholder, PortalHome } from "./portal-home";
+import type { ClientRequestView } from "@/lib/client-requests/requests";
+import { MarketReportPlaceholder, PortalHome, type PortalMode } from "./portal-home";
 
 // The portal as HTML for each demo client (free and paid), built from the
 // demo seed's published updates.
@@ -21,11 +22,39 @@ const CLIENT_NAMES = [
 const NEVER_NAMED = ["Meridian Ocean", "Redwood Gateway", "Swift Tide", "Golden Lantern", "Anchor Point", "QuickShip", "Northstar", "Atlantic Pick"];
 const STATUS_WORDS = /Unfit|Do Not Contact|Do not Contact|Withdrawn|No Response|Vetted|Under Assessment|Move Recommended|Reviewing Quotation/;
 
-function render(client: string, tier: PortalLoad["tier"] = "free", rows = rowsFor(client), reportKeys: string[] = []) {
-  const data: PortalLoad = { ...toPortalData(rows), tier, contactNames: ["Alex"], reportKeys };
+function render(
+  client: string,
+  tier: PortalLoad["tier"] = "free",
+  rows = rowsFor(client),
+  reportKeys: string[] = [],
+  requests: ClientRequestView[] = [],
+  mode: PortalMode = "client",
+) {
+  const data: PortalLoad = { ...toPortalData(rows), tier, contactNames: ["Alex"], reportKeys, requests };
   return renderToStaticMarkup(
-    <PortalHome data={data} today={TODAY} greetingName="Lena" summaryHref="/portal" reportHref="/portal/market-report" />,
+    <PortalHome data={data} today={TODAY} greetingName="Lena" summaryHref="/portal" reportHref="/portal/market-report" mode={mode} />,
   );
+}
+
+function request(over: Partial<ClientRequestView>): ClientRequestView {
+  return {
+    key: "r1",
+    engagementKey: "key-brightlineFwd",
+    updateKey: null,
+    projectKind: "forwarder",
+    kind: "question",
+    message: "A question",
+    wantsCall: false,
+    status: "sent",
+    createdAt: "2026-10-11T09:00:00Z",
+    from: "You",
+    decisionName: null,
+    reply: null,
+    repliedAt: null,
+    replier: null,
+    replyWithdrawn: false,
+    ...over,
+  };
 }
 
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/&amp;/g, "&").replace(/\s+/g, " ");
@@ -46,8 +75,48 @@ describe("PortalHome", () => {
     expect(t).toContain("Timeline across your projects");
     expect(t).toContain("Market Report (your plan)");
     expect(t).toContain("Your Market Report for this project is being prepared.");
-    expect(t).toContain("To approve, reply to your Move contact");
-    expect(t).not.toMatch(/Approve recommendation|Request changes|Ask a question/);
+    // The client's own portal: the three actions on the latest recommendation.
+    expect(t).toContain("Approve recommendation Request changes Ask a question");
+  });
+
+  test("View as client: no buttons and no forms, only what the client would see", () => {
+    const html = render("brightline", "market_report", rowsFor("brightline"), [], [], "view");
+    expect(html).not.toMatch(/<button[^>]*>(Approve recommendation|Request changes|Ask a question|New question)/);
+    expect(html).not.toMatch(/<form|<textarea/);
+    expect(text(html)).toContain("Here the client sees Approve recommendation, Request changes and Ask a question.");
+  });
+
+  test("after a decision on the latest update: who and when, no buttons, and it no longer needs the client", () => {
+    const approval = request({ kind: "approve", updateKey: "ukey-brightlineFwd-3", message: "Start after the 20th", decisionName: "Pacific Bridge Logistics", from: "Maya" });
+    const html = render("brightline", "market_report", rowsFor("brightline"), [], [approval]);
+    const t = text(html);
+    expect(t).toMatch(/Approved .* by Maya\. Note: Start after the 20th Status: Sent/);
+    expect(t).not.toContain("Approve recommendation Request changes");
+    expect(t).not.toContain("1 item needs you");
+    expect(t).toMatch(/Waiting on you 0 /);
+    // The viewer's own decision reads "by you" mid-sentence.
+    const mine = text(render("brightline", "market_report", rowsFor("brightline"), [], [{ ...approval, from: "You" }]));
+    expect(mine).toMatch(/Approved .* by you\./);
+  });
+
+  test("a decision on an older update doesn't count: the latest still needs the client", () => {
+    const old = request({ kind: "request_changes", updateKey: "ukey-brightlineFwd-12", message: "West Coast option" });
+    const t = text(render("brightline", "market_report", rowsFor("brightline"), [], [old]));
+    expect(t).toContain("1 item needs you");
+    expect(t).toContain("Approve recommendation Request changes Ask a question");
+  });
+
+  test("Your questions: status, who sent it, Move's reply, and a withdrawn reply without its text", () => {
+    const answered = request({ key: "a", message: "Weekend delivery to Ontario?", status: "answered", reply: "Yes, +$150.", replier: "Alex", from: "You", wantsCall: true });
+    const withdrawn = request({ key: "b", message: "Insurance?", status: "seen", replyWithdrawn: true, from: "Owen" });
+    const t = text(render("brightline", "market_report", rowsFor("brightline"), [], [answered, withdrawn]));
+    expect(t).toContain("Weekend delivery to Ontario?");
+    expect(t).toContain("Answered");
+    expect(t).toMatch(/You · .* · Asked for a call/);
+    expect(t).toContain("Yes, +$150. Alex, Move");
+    expect(t).toContain("Seen by Move");
+    expect(t).toMatch(/Owen · /);
+    expect(t).toContain("Move withdrew this reply; a new one is coming.");
   });
 
   test("paid plan with a published report: the teaser links to that project's report by its opaque key", () => {

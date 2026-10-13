@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { formatDateOnly } from "@/lib/client-updates/dates";
 import type { ForwarderPayload, ThreePlPayload } from "@/lib/client-updates/payload-schema";
 import {
@@ -37,7 +38,10 @@ import { StageStepper } from "./stage-stepper";
 
 type Tone = "teal" | "purple";
 
-export function ProjectPanel({ update, today }: { update: ClientUpdateView; today: string }) {
+// decision: what goes under the recommendation (the client's buttons, or
+// the decision already made). Without it (staff previews) the card says to
+// reply to the Move contact.
+export function ProjectPanel({ update, today, decision }: { update: ClientUpdateView; today: string; decision?: ReactNode }) {
   const { payload } = update;
   const tone: Tone = payload.kind === "forwarder" ? "teal" : "purple";
   const context = projectContext(payload);
@@ -115,7 +119,7 @@ export function ProjectPanel({ update, today }: { update: ClientUpdateView; toda
           />
         )}
 
-        <RecommendationCard update={update} context={context} tone={tone} />
+        <RecommendationCard update={update} context={context} tone={tone} decision={decision} />
 
         {payload.milestones.length > 0 && <Milestones update={update} context={context} today={today} />}
 
@@ -295,7 +299,17 @@ function ThreePlFigures({ payload, context, tone }: { payload: ThreePlPayload; c
 
 // ---- Recommendation -----------------------------------------------------------------------
 
-function RecommendationCard({ update, context, tone }: { update: ClientUpdateView; context: string; tone: Tone }) {
+function RecommendationCard({
+  update,
+  context,
+  tone,
+  decision,
+}: {
+  update: ClientUpdateView;
+  context: string;
+  tone: Tone;
+  decision?: ReactNode;
+}) {
   const rec = update.payload.recommendation;
   const border = tone === "teal" ? "border-portal-teal" : "border-portal-purple";
   const accentText = tone === "teal" ? "text-portal-teal" : "text-portal-purple";
@@ -328,20 +342,22 @@ function RecommendationCard({ update, context, tone }: { update: ClientUpdateVie
             </div>
           )}
           {rec.basedOn && <p className="text-sm text-portal-muted">{rec.basedOn}</p>}
-          <p className="text-sm text-portal-muted">
-            To approve, reply to your Move contact
-            {firstName ? `: ${firstName}` : ""}
-            {email && (
-              <>
-                {" ("}
-                <a className="text-move-navy underline" href={`mailto:${email}`}>
-                  {email}
-                </a>
-                {")"}
-              </>
-            )}
-            .
-          </p>
+          {decision ?? (
+            <p className="text-sm text-portal-muted">
+              To approve, reply to your Move contact
+              {firstName ? `: ${firstName}` : ""}
+              {email && (
+                <>
+                  {" ("}
+                  <a className="text-move-navy underline" href={`mailto:${email}`}>
+                    {email}
+                  </a>
+                  {")"}
+                </>
+              )}
+              .
+            </p>
+          )}
         </div>
       ) : (
         <p className="mt-2 text-sm text-portal-ink">Not ready yet. We&apos;ll share our recommendation here once the comparison is done.</p>

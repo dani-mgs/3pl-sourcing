@@ -15,7 +15,14 @@ export default async function ViewAsClientPage({ params }: PageProps<"/client-ac
   return (
     <div className="bg-neutral-bg px-8 py-10 max-sm:px-4">
       <PreviewBanner clientName={client.name} />
-      <PortalHome data={data} today={utcToday()} greetingName={null} summaryHref={base} reportHref={`${base}/market-report`} />
+      <PortalHome
+        data={data}
+        today={utcToday()}
+        greetingName={null}
+        summaryHref={base}
+        reportHref={`${base}/market-report`}
+        mode="view"
+      />
     </div>
   );
 }

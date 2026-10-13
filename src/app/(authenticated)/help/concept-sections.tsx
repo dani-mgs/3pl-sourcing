@@ -335,8 +335,27 @@ export function SharingSection() {
         <li>
           In the portal, clients see each project&apos;s latest update (with its history), what needs them, key figures
           and a timeline. Before anything is published they see &ldquo;Your Move team is getting started&rdquo; with the
-          first names of the staff who own their projects. Approving and asking questions in the portal come later:
-          for now the recommendation card says to reply to the contact.
+          first names of the staff who own their projects.
+        </li>
+        <li>
+          <strong>Client requests.</strong> On the latest update&apos;s recommendation, clients can{" "}
+          <Ui>Approve recommendation</Ui>, <Ui>Request changes</Ui> (with a reason) or <Ui>Ask a question</Ui> (with an
+          optional &ldquo;Please call me&rdquo;); any decision can carry a short note. An approval means &ldquo;proceed&rdquo;:
+          it records who approved, when, and a copy of what they approved. It doesn&apos;t move the stage: you do. One
+          decision per update, by anyone at the client; it clears &ldquo;needs you&rdquo; until you publish the next update.
+          Everyone at the client with a portal login sees all of the client&apos;s requests, with who sent each.
+        </li>
+        <li>
+          They arrive in <Ui>Requests</Ui> (top bar; the number is new requests on your projects, or all projects for
+          admins) and on the project page. Opening one marks it &ldquo;Seen by Move&rdquo; for the client, but only when you
+          own the project or are an admin. Only the project&apos;s owner or an admin can reply. Replies are shown to the
+          client straight away and can&apos;t be edited; if one is wrong or shares too much, an admin can{" "}
+          <Ui>Withdraw reply</Ui>: the client sees &ldquo;Move withdrew this reply; a new one is coming&rdquo;, the text stays
+          visible to staff, and the owner can reply again. There are no emails yet: check the Requests badge.
+        </li>
+        <li>
+          Clients can send up to 10 requests an hour each and 40 a day per company. A client who still has to change
+          their one-time password can&apos;t send anything until they do.
         </li>
         <li>
           <strong>Market Report</strong> (forwarder projects, <Ui>Market Report</Ui> on the project page; owner or

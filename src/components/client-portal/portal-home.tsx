@@ -4,7 +4,10 @@ import type { PortalLoad } from "@/lib/client-updates/load-portal";
 import { buildTimeline, keyFigures, lastUpdated, needsYou, type Engagement } from "@/lib/client-updates/portal-data";
 import { ESTIMATES_FOOTER, kindLabel, nextStepText, percent } from "@/lib/client-updates/portal-text";
 import { CLIENT_STAGES, stageLabel } from "@/lib/client-updates/stages";
+import { decidedEngagementKeys, decisionOn, type ClientRequestView } from "@/lib/client-requests/requests";
+import { CLIENT_EXPLANATION, KIND_LABELS, STATUS_LABELS, WITHDRAWN_REPLY } from "@/lib/client-requests/text";
 import { EngagementSwitcher, type EngagementTile } from "./engagement-switcher";
+import { DecisionActions, NewQuestionButton, type ProjectOption } from "./request-dialogs";
 import { LocalDate } from "./local-date";
 import { PortalTimeline } from "./portal-timeline";
 import { ProjectPanel } from "./project-panel";
@@ -34,7 +37,7 @@ export function ViewSwitch({ current, summaryHref, reportHref, tier }: {
   );
 }
 
-function tileFor(e: Engagement, today: string): EngagementTile {
+function tileFor(e: Engagement, today: string, decided: Set<string>): EngagementTile {
   const p = e.latest.payload;
   const next = nextStepText(e.latest, today);
   return {
@@ -44,7 +47,7 @@ function tileFor(e: Engagement, today: string): EngagementTile {
     route: p.project.route ?? kindLabel(e.kind),
     stageLine: `Stage ${e.latest.stage} of 7 · ${stageLabel(e.latest.stage)}`,
     nextLine: e.complete ? null : next ? `Next: ${next}` : null,
-    status: e.complete ? "complete" : e.latest.needsClientAction ? "needs" : "on_track",
+    status: e.complete ? "complete" : e.latest.needsClientAction && !decided.has(e.key) ? "needs" : "on_track",
   };
 }
 
@@ -105,8 +108,120 @@ export function StatusLegend({ contactNames }: { contactNames: string[] }) {
       </p>
       <p>
         <span className="font-semibold">Questions:</span>{" "}
-        {contactNames.length ? `reply to your Move contact (${contactNames.join(", ")}).` : "reply to your Move contact."}
+        ask under Your questions on the overview, or reply to your Move contact
+        {contactNames.length ? ` (${contactNames.join(", ")})` : ""}.
       </p>
+    </section>
+  );
+}
+
+// "client": the signed-in client (buttons). "view": staff View as client
+// (read-only, never a button or a form).
+export type PortalMode = "client" | "view";
+
+function projectLabel(e: Engagement): string {
+  return `${kindLabel(e.kind)}${e.latest.payload.project.route ? ` · ${e.latest.payload.project.route}` : ""}`;
+}
+
+// What's under the recommendation: the decision already made on this
+// update, or the client's buttons (nothing to click in View as client).
+function decisionFor(e: Engagement, requests: ClientRequestView[], mode: PortalMode, projects: ProjectOption[]) {
+  const rec = e.latest.payload.recommendation;
+  if (!rec || e.complete) return undefined;
+  const decided = decisionOn(requests, e.latestUpdateKey);
+  if (decided) {
+    return (
+      <div role="status" className="rounded-lg bg-neutral-bg px-3 py-2 text-sm text-portal-ink">
+        <p className="font-semibold">
+          {KIND_LABELS[decided.kind]} <LocalDate timestamp={decided.createdAt} /> by {decided.from === "You" ? "you" : decided.from}.
+        </p>
+        {decided.message && (
+          <p className="mt-1 whitespace-pre-line">
+            {decided.kind === "approve" ? "Note: " : "What should change: "}
+            {decided.message}
+          </p>
+        )}
+        <p className="mt-1 text-portal-muted">Status: {STATUS_LABELS[decided.status]}</p>
+      </div>
+    );
+  }
+  if (mode === "view" || !e.latestUpdateKey) {
+    return (
+      <p className="text-sm text-portal-muted">
+        Here the client sees Approve recommendation, Request changes and Ask a question.
+      </p>
+    );
+  }
+  return <DecisionActions engagementKey={e.key} updateKey={e.latestUpdateKey} recommendationName={rec.name} projects={projects} />;
+}
+
+function YourQuestions({
+  requests,
+  engagements,
+  mode,
+  projects,
+  contactNames,
+}: {
+  requests: ClientRequestView[];
+  engagements: Engagement[];
+  mode: PortalMode;
+  projects: ProjectOption[];
+  contactNames: string[];
+}) {
+  const labelOf = new Map(engagements.map((e) => [e.key, projectLabel(e)]));
+  return (
+    <section aria-labelledby="questions" className="flex flex-col gap-3 rounded-2xl border border-neutral-border bg-white p-5 text-sm text-portal-ink">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 id="questions" className="font-display text-base font-bold">Your questions</h2>
+          <p className="mt-1 text-portal-muted">{CLIENT_EXPLANATION}</p>
+        </div>
+        {mode === "client" && <NewQuestionButton projects={projects} />}
+      </div>
+      {requests.length === 0 ? (
+        <p>
+          Nothing yet. You can also reply to your Move contact{contactNames.length ? ` (${contactNames.join(", ")})` : ""}.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {requests.map((r) => (
+            <li key={r.key} className="flex flex-col gap-1 border-b border-neutral-border pb-3 last:border-0">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className={`text-xs font-bold uppercase tracking-wide ${r.projectKind === "forwarder" ? "text-portal-teal" : "text-portal-purple"}`}>
+                  {labelOf.get(r.engagementKey) ?? kindLabel(r.projectKind)}
+                </span>
+                <span className="rounded-full bg-neutral-bg px-2 py-0.5 text-xs font-semibold">{STATUS_LABELS[r.status]}</span>
+              </div>
+              <p className="font-semibold">
+                {r.kind === "question"
+                  ? r.message
+                  : `${KIND_LABELS[r.kind]}${r.decisionName ? `: ${r.decisionName}` : ""}`}
+              </p>
+              {r.kind !== "question" && r.message && <p className="whitespace-pre-line">{r.message}</p>}
+              <p className="text-xs text-portal-muted">
+                {r.from} · <LocalDate timestamp={r.createdAt} />
+                {r.wantsCall ? " · Asked for a call" : ""}
+              </p>
+              {r.reply ? (
+                <div className="mt-1 rounded-lg bg-neutral-bg px-3 py-2">
+                  <p className="whitespace-pre-line">{r.reply}</p>
+                  <p className="mt-1 text-xs text-portal-muted">
+                    {r.replier ? `${r.replier}, Move` : "Move"}
+                    {r.repliedAt ? (
+                      <>
+                        {" · "}
+                        <LocalDate timestamp={r.repliedAt} />
+                      </>
+                    ) : null}
+                  </p>
+                </div>
+              ) : r.replyWithdrawn ? (
+                <p className="mt-1 text-portal-muted">{WITHDRAWN_REPLY}</p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -117,14 +232,18 @@ export function PortalHome({
   greetingName,
   reportHref,
   summaryHref,
+  mode = "client",
 }: {
   data: PortalLoad;
   today: string;
   greetingName: string | null;
   reportHref: string;
   summaryHref: string;
+  mode?: PortalMode;
 }) {
-  const { engagements, contactNames, tier } = data;
+  const { engagements, contactNames, tier, requests } = data;
+  const projects: ProjectOption[] = engagements.map((e) => ({ key: e.key, label: projectLabel(e) }));
+  const decided = decidedEngagementKeys(engagements, requests);
   const updated = lastUpdated(engagements);
   const hello = greetingName ? `Hello, ${greetingName}` : "Hello";
 
@@ -143,13 +262,13 @@ export function PortalHome({
     );
   }
 
-  const figures = keyFigures(engagements);
+  const figures = keyFigures(engagements, decided);
   const timeline = buildTimeline(engagements, today);
   const panels = Object.fromEntries(
     engagements.map((e) => [
       e.key,
       <div key={e.key}>
-        <ProjectPanel update={e.latest} today={today} />
+        <ProjectPanel update={e.latest} today={today} decision={decisionFor(e, requests, mode, projects)} />
         {e.kind === "forwarder" && (
           <MarketReportTeaser
             tier={tier}
@@ -193,7 +312,7 @@ export function PortalHome({
         />
       </section>
 
-      <EngagementSwitcher tiles={engagements.map((e) => tileFor(e, today))} panels={panels} needs={needsYou(engagements, today)} />
+      <EngagementSwitcher tiles={engagements.map((e) => tileFor(e, today, decided))} panels={panels} needs={needsYou(engagements, today, decided)} />
 
       {timeline && (
         <section className="rounded-2xl border border-neutral-border bg-white p-5">
@@ -228,13 +347,7 @@ export function PortalHome({
         </ul>
       </section>
 
-      <section aria-labelledby="questions" className="rounded-2xl border border-neutral-border bg-white p-5 text-sm text-portal-ink">
-        <h2 id="questions" className="font-display text-base font-bold">Your questions</h2>
-        <p className="mt-1">
-          Soon you&apos;ll be able to ask Move a question and approve recommendations here. For now, reply to your Move
-          contact{contactNames.length ? ` (${contactNames.join(", ")})` : ""}.
-        </p>
-      </section>
+      <YourQuestions requests={requests} engagements={engagements} mode={mode} projects={projects} contactNames={contactNames} />
 
       <StatusLegend contactNames={contactNames} />
 
