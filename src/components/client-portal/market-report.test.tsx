@@ -134,6 +134,50 @@ describe("introductions on the report (Phase 3b)", () => {
   test("the publish preview (no introductions passed) has no Introduction column", () => {
     expect(renderToStaticMarkup(<MarketReportView payload={fixtureReport()} publishedAt={null} />)).not.toContain(">Introduction</th>");
   });
+
+  // Phones (below md): stacked cards instead of the table, so Request
+  // introduction isn't off-screen at 390px. CSS picks one; both are in the HTML.
+  const cardList = (html: string) => /<ul id="[^"]*-cards"[^>]*>(.*?)<\/ul>/.exec(html)!;
+  const cards = (html: string) => [...cardList(html)[1].matchAll(/<li[^>]*>(.*?)<\/li>/g)].map((m) => m[1]);
+  const card = (html: string, name: string) => cards(html).find((c) => c.includes(`>${name}</h4>`))!;
+
+  test("phones: cards below md, the table from md up", () => {
+    const html = render("client");
+    expect(cardList(html)[0]).toMatch(/class="[^"]*\bmd:hidden\b/);
+    expect(html).toMatch(/<div class="[^"]*\bhidden\b[^"]*\bmd:block\b[^"]*"><table/);
+    expect(cards(html)).toHaveLength(12);
+  });
+
+  test("phones: a full-width Request introduction button on every card the table offers one", () => {
+    const html = render("client", [request({})]);
+    for (const letter of ["E", "F", "G", "H"]) {
+      const c = card(html, `Partner ${letter}`);
+      expect(c).toMatch(/\[&amp;&gt;button\]:w-full/);
+      expect(c).toContain(`aria-label="Request introduction to Partner ${letter}"`);
+    }
+    expect(text(card(html, "Partner D"))).toContain("Introduction requested Sent · Maya");
+    for (const name of ["Partner I", "Pacific Bridge Logistics"]) expect(card(html, name)).not.toContain("<button");
+  });
+
+  test("phones: each card shows exactly its table row's fields", () => {
+    const html = render("client", [request({})]);
+    for (const c of cards(html)) {
+      const name = /<h4[^>]*>(.*?)<\/h4>/.exec(c)![1];
+      const row = new RegExp(`<tr[^>]*><th scope="row"[^>]*>${name}</th>(.*?)</tr>`).exec(html)![1];
+      const cells = [...row.matchAll(/<td[^>]*>(.*?)<\/td>/g)].map((m) => text(m[1]).trim());
+      const values = [...c.matchAll(/<dd[^>]*>(.*?)<\/dd>/g)].map((m) => text(m[1]).trim());
+      // Table: profile, price, vs, transit, take, outcome, introduction.
+      expect(values, name).toEqual(cells.slice(0, 5));
+      expect(text(c), name).toContain(cells[5]);
+      expect(text(c).trim().endsWith(cells[6]), name).toBe(true);
+    }
+  });
+
+  test("phones, View as client: what the client sees, and no buttons", () => {
+    const html = render("view", [request({})]);
+    expect(text(card(html, "Partner E"))).toContain("Client sees: Request introduction");
+    expect(cardList(html)[1]).not.toContain("<button");
+  });
 });
 
 describe("Unlock the Market Report (Phase 3b)", () => {
