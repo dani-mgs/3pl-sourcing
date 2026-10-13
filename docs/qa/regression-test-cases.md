@@ -20,6 +20,7 @@ A reusable test-case matrix for a full regression of the hub (3PL Sourcing, Forw
 
    `ANTHROPIC_API_KEY` stays unset, so document AI extraction isn't available (see the cases marked *needs AI*).
 4. Browser: Chromium (Playwright), at 1280px and 390px wide.
+5. Client portal leak scan: with `npm run demo:seed` loaded and the app running on port 3100, run `npm run qa:portal-scan` (or `npm run qa:portal-scan -- http://localhost:<port>`). It signs in as the demo client users with one-time magic-link tokens (no passwords read or changed) and must end with "clean".
 
 **Timezones for the automated suite.** Run the full Vitest suite once in each of these seven timezones, and reuse the same list in every regression:
 

@@ -18,6 +18,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** High (if missed, a staff member could approve as a client)
 - **Where:** docs/SECURITY.md, "Client users (external)"; future `client_requests` migration.
 
+### A client who must still change their password can read their updates through the API
+- **Added:** 2026-10-13 (client dashboard Phase 2b)
+- **What:** While `must_change_password` is set, the proxy keeps the client on `/portal/change-password`, but `my_portal_updates()` doesn't check the flag, so the account can read its own client's published updates over the API with the one-time password.
+- **Why deferred:** Read-only, and only that client's own published updates, which the staff member who knows the one-time password can already see. Phase 3 writes (approvals, requests) must refuse while the flag is set (entry above).
+- **Severity:** Low
+- **Where:** `my_portal_updates()` in `20261012234353_client_portal_read.sql`.
+
 ### Portal "today" is UTC
 - **Added:** 2026-10-13 (client dashboard Phase 2a)
 - **What:** Client updates use the server's UTC date as "today": an expired quote is decided on the UTC date at publish, and the portal's validity countdown, "today" line and expired labels use it too. In Manila (UTC+8), between 00:00 and 08:00 local time that date is still yesterday's, so a countdown can read one day more than local time would and a quote expiring that day still shows as valid. Date-only values (due dates, milestones, validity dates) are never shifted; timestamps ("Updated Oct 9") show in the viewer's own timezone.

@@ -89,6 +89,7 @@ describe("ProjectPanel", () => {
     expect(t).toContain("Figures are estimates");
     expect(t).toContain("Updated Oct 9 by Beah, Move");
     expect(t).toContain("Your Move contact for this project: Beah · team@move.example");
+    expect(t).toMatch(/To approve, reply to your Move contact: Beah \( ?team@move\.example ?\) ?\./);
     // Step labels sit in a container query, so a narrow panel shows only the current stage.
     expect(html).toContain("@container");
     // Every chart can be switched to a table.

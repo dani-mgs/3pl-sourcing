@@ -37,6 +37,7 @@ export async function SharePage({ kind, projectId }: { kind: ShareKind; projectI
   let basedOn: string | null = null;
   let route: string | null;
   let clientName: string;
+  let clientId: string;
   if (kind === "forwarder") {
     const loaded = await loadForwarderSource(supabase, projectId);
     if (!loaded) notFound();
@@ -45,6 +46,7 @@ export async function SharePage({ kind, projectId }: { kind: ShareKind; projectI
     suggestedId = forwarders.find((f) => f.assessment === "Move Recommended")?.id ?? null;
     route = shortRouteLabel(loaded.source.project);
     clientName = loaded.meta.clientName;
+    clientId = loaded.meta.clientId;
   } else {
     const loaded = await loadThreePlSource(supabase, projectId);
     if (!loaded) notFound();
@@ -53,6 +55,7 @@ export async function SharePage({ kind, projectId }: { kind: ShareKind; projectI
     basedOn = PRIORITY_BASIS[loaded.source.recommendation?.priority ?? ""] ?? null;
     route = loaded.source.project.target_geography;
     clientName = loaded.meta.clientName;
+    clientId = loaded.meta.clientId;
   }
 
   const [{ canWrite }, role, { data: rows }] = await Promise.all([
@@ -94,9 +97,11 @@ export async function SharePage({ kind, projectId }: { kind: ShareKind; projectI
         shared.
       </p>
 
-      <p className="mt-4 max-w-3xl rounded-lg border border-portal-amber bg-portal-amber-bg px-4 py-3 text-sm text-portal-amber">
-        Clients can&apos;t see shared updates yet: the client portal starts showing them in the next release. Until then,
-        the latest update you publish here is what they&apos;ll see first.
+      <p className="mt-4 max-w-3xl rounded-lg border border-neutral-border bg-white px-4 py-3 text-sm text-move-navy">
+        What you publish shows in {clientName}&apos;s client portal straight away (drafts never do).{" "}
+        <Link href={`/client-access/${clientId}/preview`} className="font-semibold underline">
+          View as client
+        </Link>
       </p>
 
       {canWrite ? (

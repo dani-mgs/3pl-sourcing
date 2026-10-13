@@ -45,9 +45,9 @@ export default async function ClientAccessPage() {
     <div className="max-w-6xl px-8 py-10 max-sm:px-4">
       <h1 className="font-display text-2xl font-semibold text-move-navy">Client access</h1>
       <p className="mt-1 mb-8 max-w-3xl text-sm text-neutral-muted">
-        Portal logins for your clients. A portal user sees only what Move publishes for their own
-        company, never internal data. The portal itself is coming soon: for now they can sign in and
-        set their password.
+        Portal logins for your clients. A portal user sees only the updates Move publishes for their
+        own company (Share update with client, on each project), never internal data. Use View as
+        client to see a client&apos;s portal exactly as they do.
       </p>
 
       <div className="flex flex-col gap-8">
@@ -72,6 +72,31 @@ export default async function ClientAccessPage() {
             </p>
           ) : (
             <CreateClientUserForm clients={creatableClients.map((c) => ({ id: c.id, name: c.name }))} />
+          )}
+        </section>
+
+        <section aria-labelledby="view-as-client-heading" className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
+          <h2 id="view-as-client-heading" className="font-display text-lg font-semibold text-move-navy">
+            View as client
+          </h2>
+          <p className="mb-4 text-xs text-neutral-muted">
+            Read-only: each client&apos;s portal as their users see it, built from published updates only.
+          </p>
+          {clients.length === 0 ? (
+            <p className="text-sm text-neutral-muted">No clients yet.</p>
+          ) : (
+            <ul className="flex flex-wrap gap-2">
+              {clients.map((client) => (
+                <li key={client.id}>
+                  <Link
+                    href={`/client-access/${client.id}/preview`}
+                    className="inline-block rounded-lg border border-neutral-border px-3 py-1.5 text-sm text-move-navy hover:border-move-navy"
+                  >
+                    {client.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
 
