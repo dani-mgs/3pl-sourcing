@@ -55,7 +55,7 @@ export type ForwarderSource = {
   quotes: ForwarderQuoteSource[];
 };
 
-type Result = ForwarderQuoteResult<ForwarderQuoteSource>;
+export type Result = ForwarderQuoteResult<ForwarderQuoteSource>;
 
 export function isExpired(quote: { rate_valid_until: string | null }, today: string): boolean {
   return quote.rate_valid_until != null && daysBetween(today, quote.rate_valid_until) < 0;
@@ -72,7 +72,7 @@ export function comparabilityOf(result: Result, project: ForwarderProjectTerms, 
 
 // The one quote that speaks for a forwarder: its cheapest like-for-like
 // quote, else its cheapest priced quote.
-function representative(results: Result[], project: ForwarderProjectTerms, today: string) {
+export function representative(results: Result[], project: ForwarderProjectTerms, today: string) {
   const priced = results
     .filter((r) => r.freightCostUsd != null)
     .map((r) => ({ result: r, comparability: comparabilityOf(r, project, today) }))
@@ -87,6 +87,18 @@ const ORDER: Record<Comparability, number> = {
   not_comparable: 3,
   no_price: 4,
 };
+
+// The project's facts in fixed, plain words (mode, terms, volume, length).
+export function projectFacts(project: ForwarderProjectSource): string[] {
+  const mode = modeLabel(project.final_shipment_mode ?? project.shipment_mode, project.final_shipment_type ?? project.shipment_type);
+  const terms = incotermLabel(project.final_incoterm ?? project.current_incoterm);
+  return [
+    mode,
+    terms,
+    shipmentsLabel(project.shipments_per_month, project.shipments_per_year),
+    monthsLabel(project.project_duration_months, "project"),
+  ].filter((f): f is string => f != null);
+}
 
 export function buildForwarderPayload(
   source: ForwarderSource,
@@ -195,14 +207,7 @@ export function buildForwarderPayload(
       : null;
 
   const recommendedName = inputs.recommendedId ? (nameOf.get(inputs.recommendedId) ?? null) : null;
-  const mode = modeLabel(project.final_shipment_mode ?? project.shipment_mode, project.final_shipment_type ?? project.shipment_type);
-  const terms = incotermLabel(project.final_incoterm ?? project.current_incoterm);
-  const facts = [
-    mode,
-    terms,
-    shipmentsLabel(project.shipments_per_month, project.shipments_per_year),
-    monthsLabel(project.project_duration_months, "project"),
-  ].filter((f): f is string => f != null);
+  const facts = projectFacts(project);
 
   const payload: ForwarderPayload = {
     v: PAYLOAD_VERSION,
