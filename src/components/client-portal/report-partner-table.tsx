@@ -1,9 +1,20 @@
 "use client";
 
 import { useId, useState } from "react";
+import { ACTION_LABELS, STATUS_LABELS } from "@/lib/client-requests/text";
+import { IntroductionButton } from "./request-dialogs";
 
 // "Every forwarder we evaluated", with an All / Like-for-like only switch.
-// Receives display text only (built on the server from the payload).
+// Receives display text only (built on the server from the payload). With
+// `introductions`, lettered rows that can be introduced get an Introduction
+// column: the client's button, or what was already asked.
+
+// A lettered row that can be asked for: its letter ("D"), and the request
+// already sent for it, if any.
+export type IntroductionCell = {
+  letter: string;
+  requested: { status: string; from: string } | null;
+};
 
 export type PartnerRowView = {
   key: string;
@@ -16,9 +27,18 @@ export type PartnerRowView = {
   take: string | null;
   outcome: string;
   likeForLike: boolean;
+  intro?: IntroductionCell | null;
 };
 
-export function ReportPartnerTable({ rows, caption }: { rows: PartnerRowView[]; caption: string }) {
+export function ReportPartnerTable({
+  rows,
+  caption,
+  introductions,
+}: {
+  rows: PartnerRowView[];
+  caption: string;
+  introductions?: { engagementKey: string; mode: "client" | "view" };
+}) {
   const [onlyComparable, setOnlyComparable] = useState(false);
   const id = useId();
   const shown = onlyComparable ? rows.filter((r) => r.likeForLike) : rows;
@@ -45,7 +65,10 @@ export function ReportPartnerTable({ rows, caption }: { rows: PartnerRowView[]; 
         {button(true, `Like-for-like only (${comparable})`)}
       </div>
       <div className="min-w-0 overflow-x-auto rounded-xl border border-neutral-border">
-        <table id={`${id}-table`} className="w-full min-w-[760px] border-collapse text-left text-sm text-portal-ink">
+        <table
+          id={`${id}-table`}
+          className={`w-full ${introductions ? "min-w-[920px]" : "min-w-[760px]"} border-collapse text-left text-sm text-portal-ink`}
+        >
           <caption className="sr-only">{caption}</caption>
           <thead className="bg-neutral-bg text-xs text-portal-muted">
             <tr>
@@ -56,6 +79,7 @@ export function ReportPartnerTable({ rows, caption }: { rows: PartnerRowView[]; 
               <th scope="col" className="px-3 py-2 font-semibold">Transit</th>
               <th scope="col" className="px-3 py-2 font-semibold">Move&apos;s take</th>
               <th scope="col" className="px-3 py-2 font-semibold">Outcome</th>
+              {introductions && <th scope="col" className="px-3 py-2 font-semibold">Introduction</th>}
             </tr>
           </thead>
           <tbody>
@@ -70,6 +94,11 @@ export function ReportPartnerTable({ rows, caption }: { rows: PartnerRowView[]; 
                 <td className="px-3 py-2">{r.lead}</td>
                 <td className="px-3 py-2">{r.take ?? "—"}</td>
                 <td className="px-3 py-2">{r.outcome}</td>
+                {introductions && (
+                  <td className="px-3 py-2">
+                    <IntroductionCellView cell={r.intro ?? null} engagementKey={introductions.engagementKey} mode={introductions.mode} />
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -77,4 +106,20 @@ export function ReportPartnerTable({ rows, caption }: { rows: PartnerRowView[]; 
       </div>
     </div>
   );
+}
+
+function IntroductionCellView({ cell, engagementKey, mode }: { cell: IntroductionCell | null; engagementKey: string; mode: "client" | "view" }) {
+  if (!cell) return <span className="text-portal-muted">—</span>;
+  if (cell.requested) {
+    return (
+      <span className="flex flex-col">
+        <span className="font-semibold">{ACTION_LABELS.introductionRequested}</span>
+        <span className="text-xs text-portal-muted">
+          {STATUS_LABELS[cell.requested.status] ?? cell.requested.status} · {cell.requested.from}
+        </span>
+      </span>
+    );
+  }
+  if (mode === "view") return <span className="text-xs text-portal-muted">Client sees: {ACTION_LABELS.requestIntroduction}</span>;
+  return <IntroductionButton engagementKey={engagementKey} letter={cell.letter} />;
 }

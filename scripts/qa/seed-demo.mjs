@@ -660,13 +660,10 @@ async function seedRidgeway(db, users, clients) {
 // Client updates (Phase 2a): 2-4 published per engagement over the past
 //   weeks, plus one draft on the Kettle & Pine forwarder project, written out
 //   in demo-portal-data.mjs (checked against the app's schema in Vitest).
-// TODO(Phase 3): client_requests in each state: Brightline forwarder
-//   "Weekend delivery to Ontario?" answered ("Yes for Pacific Bridge and
-//   Lotus (+$150). Saigon Harbor: weekdays only."), Brightline 3PL "Call me
-//   about contract length" seen (wants_call), one sent, and Kettle & Pine's
-//   3PL approval dated T-7. Solace's user still has must_change_password:
-//   Phase 3 must refuse its requests and approvals until it's cleared
-//   (docs/SECURITY.md).
+// Client requests (Phase 3a/3b): one in every state (demoClientRequests()),
+//   plus Brightline's introduction to Partner D and Ridgeway's Unlock
+//   request. Solace's user still has must_change_password: the database
+//   refuses every request from it until it's cleared (docs/SECURITY.md).
 
 const ENGAGEMENTS = {
   northwind3pl: ["three_pl_projects", "three_pl_project_id", "northwind"],
@@ -757,9 +754,52 @@ async function seedClientRequests(db, clients, users) {
   const clientUsers = new Map((await allUsers(db)).map((u) => [u.email.split("@")[0], u.id]));
   const rows = [];
   for (const r of demoClientRequests()) {
+    const createdBy = clientUsers.get(r.from);
+    if (!createdBy) fail(`no client user ${r.from}`);
+    const common = {
+      kind: r.kind,
+      message: r.message,
+      wants_call: r.wantsCall ?? false,
+      created_by: createdBy,
+      created_at: at(-r.daysAgo),
+      status: r.status,
+    };
+    // Market Report interest: the client's, no project (Phase 3b).
+    if (r.kind === "report_interest") {
+      rows.push({ ...common, client_id: clients[r.client] });
+      continue;
+    }
     const [table, column, client] = ENGAGEMENTS[r.engagement];
     const projectIds = await idsWhere(db.from(table).select("id").eq("client_id", clients[client]), `find ${r.engagement}`);
     if (projectIds.length !== 1) fail(`expected one project for ${r.engagement}`);
+    // An introduction: a lettered row of the project's latest Market Report,
+    // frozen as submit_client_introduction() would (Phase 3b).
+    if (r.kind === "introduction") {
+      const [report] = check(
+        await db.from("client_market_reports").select("id, payload, published_at").eq("forwarder_project_id", projectIds[0])
+          .order("published_at", { ascending: false }).limit(1),
+        `latest report of ${r.engagement}`,
+      );
+      const row = report?.payload?.partners?.find((p) => p.label === `Partner ${r.label}`);
+      if (!row || !["quoted_not_selected", "quote_expired", "different_terms", "didnt_quote"].includes(row.outcome)) {
+        fail(`Partner ${r.label} can't be asked for in the latest report of ${r.engagement}`);
+      }
+      rows.push({
+        ...common,
+        [column]: projectIds[0],
+        client_market_report_id: report.id,
+        partner_label: r.label,
+        decision_snapshot: {
+          reportPublishedAt: report.published_at,
+          route: report.payload.project?.route ?? null,
+          partner: {
+            label: row.label, outcome: row.outcome, priceUsd: row.priceUsd,
+            leadMinDays: row.leadMinDays, leadMaxDays: row.leadMaxDays, likeForLike: row.likeForLike,
+          },
+        },
+      });
+      continue;
+    }
     const updates = check(
       await db.from("client_updates").select("id, headline, payload, published_at").eq(column, projectIds[0]).eq("is_draft", false)
         .order("published_at", { ascending: false }),
@@ -767,14 +807,10 @@ async function seedClientRequests(db, clients, users) {
     );
     const update = r.decidedOn ? updates.find((u) => u.headline === r.decidedOn) : updates[0];
     if (!update || (r.decidedOn && !update.payload?.recommendation)) fail(`no update to attach the ${r.kind} on ${r.engagement} to`);
-    const createdBy = clientUsers.get(r.from);
-    if (!createdBy) fail(`no client user ${r.from}`);
     rows.push({
+      ...common,
       [column]: projectIds[0],
       client_update_id: update.id,
-      kind: r.kind,
-      message: r.message,
-      wants_call: r.wantsCall ?? false,
       decision_snapshot: r.kind === "question" ? null : {
         headline: update.headline,
         publishedAt: update.published_at,
@@ -782,9 +818,6 @@ async function seedClientRequests(db, clients, users) {
         route: update.payload?.project?.route ?? null,
         recommendation: update.payload?.recommendation ?? null,
       },
-      created_by: createdBy,
-      created_at: at(-r.daysAgo),
-      status: r.status,
       seen_by: r.seenDaysAgo != null ? users[r.by] : null,
       seen_at: r.seenDaysAgo != null ? at(-r.seenDaysAgo) : null,
       staff_reply: r.reply ?? null,
@@ -796,7 +829,9 @@ async function seedClientRequests(db, clients, users) {
       }] : [],
     });
   }
-  check(await db.from("client_requests").insert(rows), "insert client_requests");
+  // Rows of different kinds set different columns: missing ones take their
+  // defaults (not null).
+  check(await db.from("client_requests").insert(rows, { defaultToNull: false }), "insert client_requests");
   return rows.length;
 }
 
@@ -870,7 +905,7 @@ async function main() {
   }
   console.log(`  client updates: ${updates.published} published, ${updates.drafts} draft (Kettle & Pine forwarder)`);
   console.log(`  market reports: ${reports} (Brightline current + older, Partner D-L; Ridgeway's stays locked on the free plan)`);
-  console.log(`  client requests: ${requests} (answered, seen with a call, sent, an approval with a note, a withdrawn reply)`);
+  console.log(`  client requests: ${requests} (answered, seen with a call, sent, an approval with a note, a withdrawn reply, Brightline's introduction to Partner D, Ridgeway's Unlock request)`);
   console.log(`  plans: ${ENTITLEMENTS.map((e) => `${CLIENTS[e.client].name} ${e.tier}`).join(", ")}; others free (no row)`);
   console.log(`  password: ${password}`);
 }

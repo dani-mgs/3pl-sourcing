@@ -12,14 +12,21 @@ import {
   reportFigures,
   vsTodayText,
 } from "@/lib/client-updates/market-report-view";
+import { introductionsByLabel, type ClientRequestView } from "@/lib/client-requests/requests";
 import { ChartFrame } from "./chart-frame";
 import { LocalDate } from "./local-date";
 import { ReportPartnerTable, type PartnerRowView } from "./report-partner-table";
 
 // The paid Market Report (Paid.dc.html), drawn only from the report's
 // payload. Used by the portal, staff "View as client" and the publish
-// preview, so all three show the same. Read-only: introductions, PDF and
-// spreadsheet downloads come later.
+// preview, so all three show the same. The portal and "View as client" pass
+// `introductions` (the client's requests): lettered rows that were quoted or
+// asked to quote get "Request introduction" (client) or what was asked. PDF
+// and spreadsheet downloads come later.
+
+// Rows a client can ask to be introduced to: anonymised ones that were
+// quoted or asked to quote (the database checks the same list).
+const INTRODUCIBLE = new Set(["quoted_not_selected", "quote_expired", "different_terms", "didnt_quote"]);
 
 const CONTEXT_PREFIX = "Freight forwarder project · Market Report";
 
@@ -37,7 +44,16 @@ function plural(n: number, one: string, many = `${one}s`) {
   return `${n} ${n === 1 ? one : many}`;
 }
 
-export function MarketReportView({ payload, publishedAt }: { payload: MarketReportPayload; publishedAt: string | null }) {
+export function MarketReportView({
+  payload,
+  publishedAt,
+  introductions,
+}: {
+  payload: MarketReportPayload;
+  publishedAt: string | null;
+  introductions?: { engagementKey: string; mode: "client" | "view"; requests: ClientRequestView[] };
+}) {
+  const asked = introductions ? introductionsByLabel(introductions.requests, introductions.engagementKey) : null;
   const f = reportFigures(payload);
   const route = payload.project.route;
   const context = route ? `${CONTEXT_PREFIX} · ${route}` : CONTEXT_PREFIX;
@@ -69,6 +85,16 @@ export function MarketReportView({ payload, publishedAt }: { payload: MarketRepo
     take: isNotTakenForward(p) ? null : p.take,
     outcome: OUTCOME_LABELS[p.outcome],
     likeForLike: !isNotTakenForward(p) && p.likeForLike && p.priceUsd != null,
+    intro:
+      asked && "label" in p && INTRODUCIBLE.has(p.outcome)
+        ? {
+            letter: p.label.slice("Partner ".length),
+            requested: (() => {
+              const r = asked.get(p.label);
+              return r ? { status: r.status, from: r.from } : null;
+            })(),
+          }
+        : null,
   }));
   const maxCount = Math.max(1, ...f.counts.map((c) => c.count));
 
@@ -251,7 +277,11 @@ export function MarketReportView({ payload, publishedAt }: { payload: MarketRepo
           Prices are per shipment in US dollars, as quoted.
           {f.today != null ? ` "vs. today" compares like-for-like quotes with your current ${usd(f.today)}.` : ""}
         </p>
-        <ReportPartnerTable rows={rows} caption={`All forwarders contacted${route ? ` for ${route}` : ""}`} />
+        <ReportPartnerTable
+          rows={rows}
+          caption={`All forwarders contacted${route ? ` for ${route}` : ""}`}
+          introductions={introductions ? { engagementKey: introductions.engagementKey, mode: introductions.mode } : undefined}
+        />
       </section>
 
       <footer className="border-t border-neutral-border pt-4 text-xs text-portal-muted">

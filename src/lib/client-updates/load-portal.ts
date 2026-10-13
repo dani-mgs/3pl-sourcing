@@ -87,6 +87,18 @@ export async function loadPortal(supabase: Supabase, viewer: PortalViewer): Prom
   };
 }
 
+// The client's requests and Move's replies, through the same SQL for both
+// (client_requests_rows): my_client_requests() for a client,
+// client_requests_for_client() for staff "View as client".
+export async function loadClientRequests(supabase: Supabase, viewer: PortalViewer): Promise<ClientRequestView[]> {
+  const { data, error } =
+    viewer.as === "client"
+      ? await supabase.rpc("my_client_requests")
+      : await supabase.rpc("client_requests_for_client", { p_client_id: viewer.clientId });
+  if (error) console.error(`${viewer.as === "client" ? "my_client_requests" : "client_requests_for_client"} failed:`, error.code);
+  return toRequestViews((data ?? []) as RequestRow[]);
+}
+
 function keysOf(result: { data: unknown }): string[] {
   return ((result.data ?? []) as { engagement_key: string }[]).map((r) => r.engagement_key);
 }

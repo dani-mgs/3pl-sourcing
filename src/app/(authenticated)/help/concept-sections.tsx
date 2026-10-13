@@ -377,6 +377,22 @@ export function SharingSection() {
           they&apos;re on the free plan).
         </li>
         <li>
+          <strong>Introductions.</strong> On the latest report, a paid client can press <Ui>Request introduction</Ui> on
+          a lettered forwarder that quoted or was asked to quote (not on named ones, and not on &ldquo;Not taken
+          forward&rdquo;). The row then says <Ui>Introduction requested</Ui> for everyone at the client. One open request
+          per letter; once you&apos;ve answered, they can ask again. In <Ui>Requests</Ui> you see which forwarder the
+          letter is (staff only) and what the client saw (price and transit time). Make the introduction by email: the
+          client only ever knows the letter, so a reply that names the forwarder (any forwarder shown as a letter), its
+          headquarters city, website or email domain or contact person is refused. No price or fee is shown anywhere yet.
+        </li>
+        <li>
+          <strong>Unlock the Market Report.</strong> On the free plan, the locked Market Report page has an{" "}
+          <Ui>Unlock the Market Report</Ui> button (once per company, with an optional note and &ldquo;Please call
+          me&rdquo;; no price is shown). It arrives in <Ui>Requests</Ui> as Market Report interest, which an admin or the
+          owner of any of that client&apos;s projects can answer. If a client leaves the paid plan, their introduction
+          requests disappear from their portal (you still see them) and come back if they return.
+        </li>
+        <li>
           Dates like &ldquo;today&rdquo; and quote validity use the server&apos;s date (UTC), so before 8am in Manila
           they can be a day behind.
         </li>

@@ -102,7 +102,8 @@ select is(
         'market_reports_for_client(uuid)', 'my_client_id()', 'my_client_requests()', 'my_market_reports()',
         'my_move_contact_names()', 'my_portal_updates()', 'portal_updates_for_client(uuid)',
         'reply_to_client_request(uuid,text)', 'search_hts_lines(text[],text,integer)',
-        'submit_client_request(text,text,text,text,boolean)', 'withdraw_client_request_reply(uuid)'],
+        'submit_client_introduction(text,text,text,boolean)', 'submit_client_request(text,text,text,text,boolean)',
+        'submit_market_report_interest(text,boolean)', 'withdraw_client_request_reply(uuid)'],
   'the security-definer functions a signed-in user can call are exactly these');
 
 -- ---- A client: its own published updates only --------------------------------------------

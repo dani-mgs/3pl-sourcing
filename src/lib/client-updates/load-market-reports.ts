@@ -2,11 +2,13 @@ import type { createClient } from "@/lib/supabase/server";
 import type { ClientTier } from "@/lib/admin/parse-admin-input";
 import { effectiveTier } from "@/lib/client-tiers";
 import { parseMarketReport, type MarketReportPayload } from "./market-report-schema";
-import type { PortalViewer } from "./load-portal";
+import type { ClientRequestView } from "@/lib/client-requests/requests";
+import { loadClientRequests, type PortalViewer } from "./load-portal";
 
 // The one loader behind /portal/market-report and its staff "View as client"
-// twin. The plan is read first; on the free plan NOTHING else is read (the
-// page is static text). On the paid plan both go through the same SQL
+// twin. The plan is read first; on the free plan no report data is read at
+// all (the page is static text), only the client's own requests (for its
+// "Unlock the Market Report" request). On the paid plan both go through the same SQL
 // (market_report_rows, via my_market_reports() for a client or
 // market_reports_for_client() for staff): the latest report per project,
 // only while the client is on the paid plan. Server-side only.
@@ -16,12 +18,14 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 export type ReportEntry = { key: string; publishedAt: string; payload: MarketReportPayload | null };
 
 export type ReportLoad =
-  | { tier: "free" }
+  | { tier: "free"; requests: ClientRequestView[] }
   | {
       tier: Exclude<ClientTier, "free">;
       reports: ReportEntry[];
       // The client's forwarder projects (opaque keys), for "being prepared".
       forwarderKeys: string[];
+      // For "Introduction requested" on the report's lettered rows.
+      requests: ClientRequestView[];
     };
 
 type Row = { engagement_key: string; published_at: string; payload: unknown };
@@ -33,17 +37,19 @@ export async function loadMarketReports(supabase: Supabase, viewer: PortalViewer
         await supabase.from("client_entitlements").select("tier, valid_until").maybeSingle()
       : await supabase.from("client_entitlements").select("tier, valid_until").eq("client_id", viewer.clientId).maybeSingle();
   const tier = effectiveTier(entitlement.data);
-  if (tier === "free") return { tier };
+  if (tier === "free") return { tier, requests: await loadClientRequests(supabase, viewer) };
 
-  const [reports, updates] =
+  const [reports, updates, requests] =
     viewer.as === "client"
       ? await Promise.all([
           supabase.rpc("my_market_reports"),
           supabase.rpc("my_portal_updates").select("engagement_key, project_kind"),
+          loadClientRequests(supabase, viewer),
         ])
       : await Promise.all([
           supabase.rpc("market_reports_for_client", { p_client_id: viewer.clientId }),
           supabase.rpc("portal_updates_for_client", { p_client_id: viewer.clientId }).select("engagement_key, project_kind"),
+          loadClientRequests(supabase, viewer),
         ]);
   if (reports.error) console.error("market report read failed:", reports.error.code);
   const forwarderKeys = [
@@ -61,11 +67,12 @@ export async function loadMarketReports(supabase: Supabase, viewer: PortalViewer
       payload: parseMarketReport(r.payload),
     })),
     forwarderKeys,
+    requests,
   };
 }
 
 export type ReportChoice =
-  | { kind: "locked" }
+  | { kind: "locked"; interest: ClientRequestView | null }
   | { kind: "report"; entry: ReportEntry }
   | { kind: "list"; entries: ReportEntry[] }
   | { kind: "preparing" }
@@ -74,7 +81,7 @@ export type ReportChoice =
 // Which page to show. A key that isn't one of the client's own projects is
 // "not found", exactly like a key that doesn't exist.
 export function chooseReport(load: ReportLoad, key: string | null): ReportChoice {
-  if (load.tier === "free") return { kind: "locked" };
+  if (load.tier === "free") return { kind: "locked", interest: load.requests.find((r) => r.kind === "report_interest") ?? null };
   if (key) {
     const entry = load.reports.find((r) => r.key === key);
     if (entry) return { kind: "report", entry };

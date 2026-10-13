@@ -5,16 +5,24 @@ import { buildTimeline, keyFigures, lastUpdated, needsYou, type Engagement } fro
 import { ESTIMATES_FOOTER, kindLabel, nextStepText, percent } from "@/lib/client-updates/portal-text";
 import { CLIENT_STAGES, stageLabel } from "@/lib/client-updates/stages";
 import { decidedEngagementKeys, decisionOn, type ClientRequestView } from "@/lib/client-requests/requests";
-import { CLIENT_EXPLANATION, KIND_LABELS, STATUS_LABELS, WITHDRAWN_REPLY } from "@/lib/client-requests/text";
+import {
+  ACTION_LABELS,
+  CLIENT_EXPLANATION,
+  KIND_LABELS,
+  REQUESTS_TITLE,
+  STATUS_LABELS,
+  UNLOCK_ASKED,
+  WITHDRAWN_REPLY,
+} from "@/lib/client-requests/text";
 import { EngagementSwitcher, type EngagementTile } from "./engagement-switcher";
-import { DecisionActions, NewQuestionButton, type ProjectOption } from "./request-dialogs";
+import { DecisionActions, NewQuestionButton, UnlockButton, type ProjectOption } from "./request-dialogs";
 import { LocalDate } from "./local-date";
 import { PortalTimeline } from "./portal-timeline";
 import { ProjectPanel } from "./project-panel";
 
 // The client portal's Move summary (Main.dc.html), drawn only from published
 // snapshots. Used by /portal and by staff "View as client", so both show
-// exactly the same thing. Read-only: approvals and questions come in Phase 3.
+// exactly the same thing. In "view" mode (staff) there is nothing to click.
 
 export function ViewSwitch({ current, summaryHref, reportHref, tier }: {
   current: "summary" | "report";
@@ -155,6 +163,13 @@ function decisionFor(e: Engagement, requests: ClientRequestView[], mode: PortalM
   return <DecisionActions engagementKey={e.key} updateKey={e.latestUpdateKey} recommendationName={rec.name} projects={projects} />;
 }
 
+function requestTitle(r: ClientRequestView): string | null {
+  if (r.kind === "question") return r.message;
+  if (r.kind === "introduction") return `${KIND_LABELS.introduction}: ${r.partnerLabel}`;
+  if (r.kind === "report_interest") return KIND_LABELS.report_interest;
+  return `${KIND_LABELS[r.kind]}${r.decisionName ? `: ${r.decisionName}` : ""}`;
+}
+
 function YourQuestions({
   requests,
   engagements,
@@ -173,7 +188,7 @@ function YourQuestions({
     <section aria-labelledby="questions" className="flex flex-col gap-3 rounded-2xl border border-neutral-border bg-white p-5 text-sm text-portal-ink">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 id="questions" className="font-display text-base font-bold">Your questions</h2>
+          <h2 id="questions" className="font-display text-base font-bold">{REQUESTS_TITLE}</h2>
           <p className="mt-1 text-portal-muted">{CLIENT_EXPLANATION}</p>
         </div>
         {mode === "client" && <NewQuestionButton projects={projects} />}
@@ -187,16 +202,14 @@ function YourQuestions({
           {requests.map((r) => (
             <li key={r.key} className="flex flex-col gap-1 border-b border-neutral-border pb-3 last:border-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className={`text-xs font-bold uppercase tracking-wide ${r.projectKind === "forwarder" ? "text-portal-teal" : "text-portal-purple"}`}>
-                  {labelOf.get(r.engagementKey) ?? kindLabel(r.projectKind)}
+                <span className={`text-xs font-bold uppercase tracking-wide ${r.projectKind === "three_pl" ? "text-portal-purple" : "text-portal-teal"}`}>
+                  {r.engagementKey == null || r.projectKind == null
+                    ? "Market Report"
+                    : (labelOf.get(r.engagementKey) ?? kindLabel(r.projectKind))}
                 </span>
                 <span className="rounded-full bg-neutral-bg px-2 py-0.5 text-xs font-semibold">{STATUS_LABELS[r.status]}</span>
               </div>
-              <p className="font-semibold">
-                {r.kind === "question"
-                  ? r.message
-                  : `${KIND_LABELS[r.kind]}${r.decisionName ? `: ${r.decisionName}` : ""}`}
-              </p>
+              <p className="font-semibold">{requestTitle(r)}</p>
               {r.kind !== "question" && r.message && <p className="whitespace-pre-line">{r.message}</p>}
               <p className="text-xs text-portal-muted">
                 {r.from} · <LocalDate timestamp={r.createdAt} />
@@ -363,7 +376,21 @@ export function PortalHome({
 
 // /portal/market-report without a report: static text only, no report data
 // (the locked page on the free plan; "being prepared" on the paid plan).
-export function MarketReportPlaceholder({ tier, summaryHref, reportHref }: { tier: PortalLoad["tier"]; summaryHref: string; reportHref: string }) {
+// On the free plan: "Unlock the Market Report" (no price), or what the
+// client already asked.
+export function MarketReportPlaceholder({
+  tier,
+  summaryHref,
+  reportHref,
+  interest = null,
+  mode = "client",
+}: {
+  tier: PortalLoad["tier"];
+  summaryHref: string;
+  reportHref: string;
+  interest?: ClientRequestView | null;
+  mode?: PortalMode;
+}) {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <ViewSwitch current="report" summaryHref={summaryHref} reportHref={reportHref} tier={tier} />
@@ -390,6 +417,28 @@ export function MarketReportPlaceholder({ tier, summaryHref, reportHref }: { tie
           <p className="mt-3 text-sm text-portal-muted">
             The Market Report is part of the paid plan. Ask your Move contact to find out more.
           </p>
+          <div className="mt-4 flex flex-col gap-2">
+            {interest ? (
+              <>
+                <p role="status" className="text-sm font-semibold">
+                  {UNLOCK_ASKED} on <LocalDate timestamp={interest.createdAt} /> ({interest.from === "You" ? "you" : interest.from}).
+                  Status: {STATUS_LABELS[interest.status]}.
+                </p>
+                {interest.reply ? (
+                  <div className="rounded-lg bg-neutral-bg px-3 py-2 text-sm">
+                    <p className="whitespace-pre-line">{interest.reply}</p>
+                    <p className="mt-1 text-xs text-portal-muted">{interest.replier ? `${interest.replier}, Move` : "Move"}</p>
+                  </div>
+                ) : interest.replyWithdrawn ? (
+                  <p className="text-sm text-portal-muted">{WITHDRAWN_REPLY}</p>
+                ) : null}
+              </>
+            ) : mode === "view" ? (
+              <p className="text-sm text-portal-muted">Here the client sees {ACTION_LABELS.unlockReport}.</p>
+            ) : (
+              <UnlockButton />
+            )}
+          </div>
         </div>
       )}
     </div>

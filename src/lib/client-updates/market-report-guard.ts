@@ -99,15 +99,14 @@ export function identifyingTokens(p: PartnerIdentity): IdentifyingTokens {
   };
 }
 
-export type GuardHit = { partnerId: string; partnerName: string; token: string } | { internalWord: string };
+export type IdentityHit = { partnerId: string; partnerName: string; token: string };
+export type GuardHit = IdentityHit | { internalWord: string };
 
-// The first thing in the text that identifies a partner or is an internal
-// status word, or null if the text is fine.
-export function findIdentifying(take: string, partners: PartnerIdentity[]): GuardHit | null {
-  const lower = normalise(take);
-  for (const w of INTERNAL_WORDS) {
-    if (lower.includes(w)) return { internalWord: w };
-  }
+// The first thing in the text that identifies one of these partners (name
+// words, HQ city, website or email domain, contact person), or null. Also
+// used for staff replies to introduction requests.
+export function findPartnerIdentity(text: string, partners: PartnerIdentity[]): IdentityHit | null {
+  const lower = normalise(text);
   const textWords = new Set(lower.split(/[^a-z0-9]+/).filter(Boolean));
   const textCompact = lower.replace(/[^a-z0-9]/g, "");
   const textPhrase = ` ${lower.split(/[^a-z0-9]+/).filter(Boolean).join(" ")} `;
@@ -124,4 +123,14 @@ export function findIdentifying(take: string, partners: PartnerIdentity[]): Guar
     }
   }
   return null;
+}
+
+// The first thing in the text that identifies a partner or is an internal
+// status word, or null if the text is fine.
+export function findIdentifying(take: string, partners: PartnerIdentity[]): GuardHit | null {
+  const lower = normalise(take);
+  for (const w of INTERNAL_WORDS) {
+    if (lower.includes(w)) return { internalWord: w };
+  }
+  return findPartnerIdentity(take, partners);
 }

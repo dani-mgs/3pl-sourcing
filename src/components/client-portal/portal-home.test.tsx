@@ -53,6 +53,7 @@ function request(over: Partial<ClientRequestView>): ClientRequestView {
     repliedAt: null,
     replier: null,
     replyWithdrawn: false,
+    partnerLabel: null,
     ...over,
   };
 }

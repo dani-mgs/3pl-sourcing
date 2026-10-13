@@ -55,22 +55,29 @@ function fake(entitlement: { tier: string; valid_until: string | null } | null) 
 }
 
 describe("loadMarketReports", () => {
-  test("free plan: only the plan row is read, never a report", async () => {
+  test("free plan: the plan row and the client's own requests (for Unlock), never a report", async () => {
     const { client, calls } = fake({ tier: "free", valid_until: null });
-    expect(await loadMarketReports(client as never, { as: "client" })).toEqual({ tier: "free" });
-    expect(calls).toEqual(["select client_entitlements(tier, valid_until)"]);
+    expect(await loadMarketReports(client as never, { as: "client" })).toEqual({ tier: "free", requests: [] });
+    expect(calls).toEqual(["select client_entitlements(tier, valid_until)", "rpc my_client_requests"]);
   });
 
-  test("an expired paid plan is free: nothing else is read", async () => {
+  test("an expired paid plan is free: no report function is called", async () => {
     const { client, calls } = fake({ tier: "market_report", valid_until: "2020-01-01T00:00:00Z" });
-    expect(await loadMarketReports(client as never, { as: "client" })).toEqual({ tier: "free" });
-    expect(calls.some((c) => c.startsWith("rpc"))).toBe(false);
+    expect(await loadMarketReports(client as never, { as: "client" })).toEqual({ tier: "free", requests: [] });
+    expect(calls.filter((c) => c.startsWith("rpc"))).toEqual(["rpc my_client_requests"]);
+  });
+
+  test("staff on a free client: the staff twin of the requests, nothing else", async () => {
+    const { client, calls } = fake({ tier: "free", valid_until: null });
+    await loadMarketReports(client as never, { as: "staff", clientId: CLIENT });
+    expect(calls.filter((c) => c.startsWith("rpc"))).toEqual([`rpc client_requests_for_client {"p_client_id":"${CLIENT}"}`]);
   });
 
   test("a paid client: its reports through my_market_reports, never a table", async () => {
     const { client, calls } = fake({ tier: "market_report", valid_until: null });
     const load = await loadMarketReports(client as never, { as: "client" });
     expect(calls).toContain("rpc my_market_reports");
+    expect(calls).toContain("rpc my_client_requests");
     expect(calls.filter((c) => c.startsWith("select")).map((c) => c.split("(")[0])).toEqual(["select client_entitlements"]);
     expect(load.tier === "market_report" && load.reports.map((r) => [r.key, r.payload?.partners.length])).toEqual([["k-fwd", 12]]);
     expect(load.tier === "market_report" && load.forwarderKeys).toEqual(["k-fwd", "k-fwd2"]);
@@ -94,11 +101,11 @@ describe("loadMarketReports", () => {
 
 describe("chooseReport", () => {
   const entry = { key: "k-fwd", publishedAt: "2026-10-10T10:00:00Z", payload: null };
-  const paid = (reports = [entry], forwarderKeys = ["k-fwd", "k-fwd2"]): ReportLoad => ({ tier: "market_report", reports, forwarderKeys });
+  const paid = (reports = [entry], forwarderKeys = ["k-fwd", "k-fwd2"]): ReportLoad => ({ tier: "market_report", reports, forwarderKeys, requests: [] });
 
   test.each([
-    ["free, any key", { tier: "free" } as ReportLoad, "k-fwd", "locked"],
-    ["free, no key", { tier: "free" } as ReportLoad, null, "locked"],
+    ["free, any key", { tier: "free", requests: [] } as ReportLoad, "k-fwd", "locked"],
+    ["free, no key", { tier: "free", requests: [] } as ReportLoad, null, "locked"],
     ["paid, its report", paid(), "k-fwd", "report"],
     ["paid, its project without a report", paid(), "k-fwd2", "preparing"],
     ["paid, someone else's key", paid(), "k-other", "not_found"],

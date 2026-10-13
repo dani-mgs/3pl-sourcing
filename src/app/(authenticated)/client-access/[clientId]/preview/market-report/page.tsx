@@ -6,6 +6,7 @@ import { PreviewBanner } from "../preview-banner";
 
 // Exactly the client's Market Report page: the same loader and SQL
 // (market_reports_for_client), so a free or expired client shows locked.
+// The client's introduction and "Unlock" requests show, without buttons.
 export default async function ViewAsClientMarketReportPage({
   params,
   searchParams,
@@ -20,7 +21,7 @@ export default async function ViewAsClientMarketReportPage({
   return (
     <div className="bg-neutral-bg px-8 py-10 max-sm:px-4">
       <PreviewBanner clientName={client.name} />
-      <MarketReportPageBody choice={choice} summaryHref={base} reportHref={`${base}/market-report`} />
+      <MarketReportPageBody choice={choice} summaryHref={base} reportHref={`${base}/market-report`} requests={load.requests} mode="view" />
     </div>
   );
 }

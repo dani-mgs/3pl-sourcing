@@ -18,6 +18,20 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Medium (a request can sit unseen if nobody looks at the badge)
 - **Where:** `client_requests`; the fix needs SMTP or an email provider (a new dependency, ask first), then a notification on insert and on reply.
 
+### Introductions are a request, not a workflow; no price or fee anywhere
+- **Added:** 2026-10-13 (client dashboard Phase 3b)
+- **What:** "Request introduction" and "Unlock the Market Report" only create a request in the inbox. Staff make the introduction (and any plan change) by email and say so in a reply; nothing records whether an introduction happened, and no price or introduction fee is shown or charged (`[PRICE]` and `[INTRO FEE]` are still open). After Move answers, the database lets the client ask for the same letter again, but the portal shows "Introduction requested · Answered" and no button.
+- **Why deferred:** Prices and fees are Move's to decide; enough for the first paid clients.
+- **Severity:** Low
+- **Where:** `submit_client_introduction()`, `submit_market_report_interest()` (`20261013061248_client_introductions.sql`), `src/lib/client-requests/text.ts`.
+
+### The introduction reply guard also blocks the client's own cities
+- **Added:** 2026-10-13 (client dashboard Phase 3b)
+- **What:** A reply to an introduction is refused if it mentions the HQ city of any lettered partner, even when that city is also on the client's own route (a reply to Brightline mentioning "Los Angeles" is refused because Partner E is based there). Staff have to rephrase. The opposite gap: the guard matches words, so a paraphrase that avoids those exact words (a nickname, a misspelling) gets through; only the full-name check is in the database.
+- **Why deferred:** Refusing too much is the safe side; the same rule as "Move's take".
+- **Severity:** Low
+- **Where:** `src/lib/client-requests/introduction-reply-guard.ts`, `reply_to_client_request()`.
+
 ### Client requests can't be closed, archived or followed up
 - **Added:** 2026-10-13 (client dashboard Phase 3a)
 - **What:** A request is sent, seen or answered, and stays in the inbox and the portal for good. There's one reply per request (an admin can withdraw it so the owner can reply again); a follow-up needs a new question. Deleting a project deletes its requests, approvals included.
