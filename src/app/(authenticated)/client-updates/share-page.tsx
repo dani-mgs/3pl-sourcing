@@ -11,7 +11,7 @@ import { loadForwarderSource, loadThreePlSource } from "@/lib/client-updates/loa
 import { isShortlistedForwarder } from "@/lib/client-updates/partners";
 import { parsePayload } from "@/lib/client-updates/payload-schema";
 import { defaultInputs, prefillFrom, type Partner, type StoredUpdate } from "@/lib/client-updates/prefill";
-import { projectPath, type ShareKind } from "@/lib/client-updates/share-paths";
+import { marketReportPath, projectPath, type ShareKind } from "@/lib/client-updates/share-paths";
 import { stageLabel } from "@/lib/client-updates/stages";
 import { shortRouteLabel } from "@/lib/forwarder/project-display";
 import { RemoveUpdateButton } from "./remove-update-button";
@@ -102,6 +102,14 @@ export async function SharePage({ kind, projectId }: { kind: ShareKind; projectI
         <Link href={`/client-access/${clientId}/preview`} className="font-semibold underline">
           View as client
         </Link>
+        {kind === "forwarder" && (
+          <>
+            {" · "}
+            <Link href={marketReportPath(projectId)} className="font-semibold underline">
+              Market Report
+            </Link>
+          </>
+        )}
       </p>
 
       {canWrite ? (

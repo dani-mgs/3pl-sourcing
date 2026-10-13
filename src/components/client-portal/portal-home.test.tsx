@@ -21,8 +21,8 @@ const CLIENT_NAMES = [
 const NEVER_NAMED = ["Meridian Ocean", "Redwood Gateway", "Swift Tide", "Golden Lantern", "Anchor Point", "QuickShip", "Northstar", "Atlantic Pick"];
 const STATUS_WORDS = /Unfit|Do Not Contact|Do not Contact|Withdrawn|No Response|Vetted|Under Assessment|Move Recommended|Reviewing Quotation/;
 
-function render(client: string, tier: PortalLoad["tier"] = "free", rows = rowsFor(client)) {
-  const data: PortalLoad = { ...toPortalData(rows), tier, contactNames: ["Alex"] };
+function render(client: string, tier: PortalLoad["tier"] = "free", rows = rowsFor(client), reportKeys: string[] = []) {
+  const data: PortalLoad = { ...toPortalData(rows), tier, contactNames: ["Alex"], reportKeys };
   return renderToStaticMarkup(
     <PortalHome data={data} today={TODAY} greetingName="Lena" summaryHref="/portal" reportHref="/portal/market-report" />,
   );
@@ -48,6 +48,13 @@ describe("PortalHome", () => {
     expect(t).toContain("Your Market Report for this project is being prepared.");
     expect(t).toContain("To approve, reply to your Move contact");
     expect(t).not.toMatch(/Approve recommendation|Request changes|Ask a question/);
+  });
+
+  test("paid plan with a published report: the teaser links to that project's report by its opaque key", () => {
+    const html = render("brightline", "market_report", rowsFor("brightline"), ["key-brightlineFwd"]);
+    const t = text(html);
+    expect(t).toContain("Your Market Report for this project is ready");
+    expect(html).toContain('href="/portal/market-report?p=key-brightlineFwd"');
   });
 
   test("free plan: the Market Report is locked and the teaser has no figures", () => {
