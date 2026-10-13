@@ -21,7 +21,7 @@
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
-import { demoClientUpdates, demoMarketReports } from "./demo-portal-data.mjs";
+import { demoClientRequests, demoClientUpdates, demoMarketReports } from "./demo-portal-data.mjs";
 
 const EMAIL_DOMAIN = "demo.example.test";
 const CANARY = "INTERNAL-CANARY";
@@ -198,6 +198,7 @@ async function resetData(db, userIds) {
     // that has since moved to another client (client_id is RESTRICT).
     check(await db.from("client_updates").delete().in("client_id", clientIds), "delete client updates");
     check(await db.from("client_market_reports").delete().in("client_id", clientIds), "delete market reports");
+    check(await db.from("client_requests").delete().in("client_id", clientIds), "delete client requests");
     check(await db.from("clients").delete().in("id", clientIds), "delete clients");
   }
 }
@@ -749,6 +750,56 @@ async function seedMarketReports(db, clients) {
   return reports.length;
 }
 
+// Client requests (Phase 3a), as the portal and the inbox would leave them.
+// Inserted with the service role (no signed-in user), so past dates and
+// statuses are kept.
+async function seedClientRequests(db, clients, users) {
+  const clientUsers = new Map((await allUsers(db)).map((u) => [u.email.split("@")[0], u.id]));
+  const rows = [];
+  for (const r of demoClientRequests()) {
+    const [table, column, client] = ENGAGEMENTS[r.engagement];
+    const projectIds = await idsWhere(db.from(table).select("id").eq("client_id", clients[client]), `find ${r.engagement}`);
+    if (projectIds.length !== 1) fail(`expected one project for ${r.engagement}`);
+    const updates = check(
+      await db.from("client_updates").select("id, headline, payload, published_at").eq(column, projectIds[0]).eq("is_draft", false)
+        .order("published_at", { ascending: false }),
+      `updates of ${r.engagement}`,
+    );
+    const update = r.decidedOn ? updates.find((u) => u.headline === r.decidedOn) : updates[0];
+    if (!update || (r.decidedOn && !update.payload?.recommendation)) fail(`no update to attach the ${r.kind} on ${r.engagement} to`);
+    const createdBy = clientUsers.get(r.from);
+    if (!createdBy) fail(`no client user ${r.from}`);
+    rows.push({
+      [column]: projectIds[0],
+      client_update_id: update.id,
+      kind: r.kind,
+      message: r.message,
+      wants_call: r.wantsCall ?? false,
+      decision_snapshot: r.kind === "question" ? null : {
+        headline: update.headline,
+        publishedAt: update.published_at,
+        projectKind: table === "forwarder_projects" ? "forwarder" : "three_pl",
+        route: update.payload?.project?.route ?? null,
+        recommendation: update.payload?.recommendation ?? null,
+      },
+      created_by: createdBy,
+      created_at: at(-r.daysAgo),
+      status: r.status,
+      seen_by: r.seenDaysAgo != null ? users[r.by] : null,
+      seen_at: r.seenDaysAgo != null ? at(-r.seenDaysAgo) : null,
+      staff_reply: r.reply ?? null,
+      replied_by: r.reply ? users[r.by] : null,
+      replied_at: r.reply ? at(-r.repliedDaysAgo) : null,
+      reply_history: r.withdrawn ? [{
+        reply: r.withdrawn.reply, repliedBy: users[r.by], repliedAt: at(-r.withdrawn.repliedDaysAgo),
+        withdrawnBy: users[r.by], withdrawnAt: at(-r.withdrawn.withdrawnDaysAgo),
+      }] : [],
+    });
+  }
+  check(await db.from("client_requests").insert(rows), "insert client_requests");
+  return rows.length;
+}
+
 async function seedClientUsers(db, clients, password) {
   for (const u of CLIENT_USERS) {
     check(await db.auth.admin.createUser({
@@ -807,6 +858,7 @@ async function main() {
   await seedEntitlements(db, clients);
   const updates = await seedClientUpdates(db, clients);
   const reports = await seedMarketReports(db, clients);
+  const requests = await seedClientRequests(db, clients, users);
 
   console.log(`demo:seed: seeded ${url}`);
   console.log(`  ${Object.keys(CLIENTS).length} clients: ${Object.values(CLIENTS).map((c) => c.name).join(", ")}`);
@@ -818,6 +870,7 @@ async function main() {
   }
   console.log(`  client updates: ${updates.published} published, ${updates.drafts} draft (Kettle & Pine forwarder)`);
   console.log(`  market reports: ${reports} (Brightline current + older, Partner D-L; Ridgeway's stays locked on the free plan)`);
+  console.log(`  client requests: ${requests} (answered, seen with a call, sent, an approval with a note, a withdrawn reply)`);
   console.log(`  plans: ${ENTITLEMENTS.map((e) => `${CLIENTS[e.client].name} ${e.tier}`).join(", ")}; others free (no row)`);
   console.log(`  password: ${password}`);
 }

@@ -27,6 +27,13 @@
 //     report prices, no report headings), and the locked page shows;
 //   - paid plan: the report really shows (its median and its last letter),
 //     and another client's report key is a 404.
+//
+// Client requests (Phase 3a), for every user:
+//   - no other client's request text or Move's reply to them, anywhere;
+//   - never a withdrawn reply's text (WITHDRAWN-CANARY), not even the
+//     client's own;
+//   - the staff and write functions refuse it (another client's request id
+//     or project key), and its own newest request really shows.
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -165,7 +172,16 @@ async function forbiddenTerms(db) {
   ].map((x) => usd.format(x));
   for (const r of reports) ids.add(r.id);
   const routeCities = check(await db.from("forwarder_projects").select("client_id, origin_city, destination_city"), "routes");
-  return { clients, neverNamed, ids, projects, entitled, reports, identifying, reportPrices, routeCities };
+
+  // Client requests: each one's texts belong to its own client only, and a
+  // withdrawn reply belongs to nobody.
+  const requests = check(await db.from("client_requests").select("id, client_id, message, staff_reply, reply_history, created_at"), "requests");
+  for (const r of requests) ids.add(r.id);
+  const requestTexts = requests.flatMap((r) =>
+    [r.message, r.staff_reply].filter((t) => typeof t === "string" && t.length >= 12).map((text) => ({ text, client: r.client_id })),
+  );
+  const withdrawnTexts = requests.flatMap((r) => (r.reply_history ?? []).map((h) => h.reply).filter(Boolean));
+  return { clients, neverNamed, ids, projects, entitled, reports, identifying, reportPrices, routeCities, requests, requestTexts, withdrawnTexts };
 }
 
 async function signIn(stack, admin, email) {
@@ -188,14 +204,16 @@ async function main() {
   const stack = localStack();
   const base = appBase();
   const admin = createClient(stack.url, stack.serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { clients, neverNamed, ids, projects, entitled, reports, identifying, reportPrices, routeCities } = await forbiddenTerms(admin);
+  const { clients, neverNamed, ids, projects, entitled, reports, identifying, reportPrices, routeCities, requests, requestTexts, withdrawnTexts } =
+    await forbiddenTerms(admin);
+  if (!withdrawnTexts.some((t) => t.includes("WITHDRAWN-CANARY"))) fail("no seeded client requests; run npm run demo:seed");
   if (!reports.some((r) => JSON.stringify(r.payload).includes("REPORT-CANARY"))) fail("no seeded Market Report; run npm run demo:seed");
   const openapi = await (await fetch(`${stack.url}/rest/v1/`, { headers: { apikey: stack.serviceRoleKey, Authorization: `Bearer ${stack.serviceRoleKey}` } })).json();
   const relations = Object.keys(openapi.definitions ?? {}).sort();
   // Only functions that read: calling one that writes (complete_password_change,
   // create_*_with_client, save_duty_estimate, ...) would change the data under
   // test. The writers are refused to clients by pgTAP 28 and 30.
-  const READS = /^(my_|portal_|is_|has_|search_|market_report|client_has_)/;
+  const READS = /^(my_|portal_|is_|has_|search_|market_report|client_has_|client_requests_)/;
   const functions = Object.keys(openapi.paths ?? {})
     .filter((p) => p.startsWith("/rpc/"))
     .map((p) => p.slice(5))
@@ -306,6 +324,8 @@ async function main() {
         client_has_paid_tier: others.map((c) => ({ p_client_id: c.id })).concat([{ p_client_id: own.id }]),
         market_report_label_at: [{ p_index: 0 }],
         market_report_payload_ok: [{ p_payload: {} }],
+        client_requests_for_client: others.map((c) => ({ p_client_id: c.id })).concat([{ p_client_id: own.id }]),
+        client_requests_rows: others.map((c) => ({ p_client_id: c.id, p_viewer: null })),
       }[fn] ?? [{}];
       for (const args of argsFor) {
         const res = await rest(`rpc/${fn}`, { method: "POST", body: JSON.stringify(args) });
@@ -316,6 +336,8 @@ async function main() {
         if (fn === "portal_updates_rows" && res.ok) note(`rpc ${fn}`, "a client could call the internal query");
         if (fn === "market_reports_for_client" && body !== "[]") note(`rpc ${fn}`, `returned rows for ${JSON.stringify(args)}`);
         if (fn === "market_report_rows" && res.ok) note(`rpc ${fn}`, "a client could call the internal report query");
+        if (fn === "client_requests_for_client" && body !== "[]") note(`rpc ${fn}`, `returned rows for ${JSON.stringify(args)}`);
+        if (fn === "client_requests_rows" && res.ok) note(`rpc ${fn}`, "a client could call the internal requests query");
         if (fn === "client_has_paid_tier") {
           const expectedTier = args.p_client_id === own.id && user.plan === "paid" ? "true" : "false";
           if (body !== expectedTier) note(`rpc ${fn}`, `${JSON.stringify(args)} returned ${body} (expected ${expectedTier})`);
@@ -328,6 +350,25 @@ async function main() {
         }
       }
     }
+    // The staff and write functions refuse a client acting on another
+    // client's request or project (none of these may succeed).
+    const otherRequest = requests.find((r) => r.client_id !== own.id);
+    const otherProjectKey = engagementKey(otherProject.client_id, otherProject.id);
+    const refused = [
+      ["mark_client_request_seen", { p_request_id: otherRequest.id }],
+      ["reply_to_client_request", { p_request_id: otherRequest.id, p_reply: "scan" }],
+      ["withdraw_client_request_reply", { p_request_id: otherRequest.id }],
+      ["submit_client_request", { p_kind: "question", p_engagement_key: otherProjectKey, p_update_key: null, p_message: "scan", p_wants_call: false }],
+    ];
+    for (const [fn, args] of refused) {
+      const res = await rest(`rpc/${fn}`, { method: "POST", body: JSON.stringify(args) });
+      const body = await res.text();
+      bodies.push([`rpc ${fn} (refused)`, body]);
+      rpcCalls.push(`${fn}:${res.status}`);
+      if (res.ok) note(`rpc ${fn}`, `a client wasn't refused: ${res.status} ${body.slice(0, 80)}`);
+    }
+    const myRequests = await (await rest("rpc/my_client_requests", { method: "POST", body: "{}" })).json();
+
     const mine = await (await rest("rpc/my_portal_updates", { method: "POST", body: "{}" })).json();
     // Not vacuous: the scanned portal really is this user's, signed in.
     const portalHtml = bodies.find(([w]) => w === "/portal")?.[1] ?? "";
@@ -335,6 +376,12 @@ async function main() {
     const escaped = (t) => t.replaceAll("&", "&amp;").replaceAll("'", "&#x27;").replaceAll('"', "&quot;");
     if (!user.mustChangePassword && (!newest || !portalHtml.includes(escaped(newest)))) {
       note("/portal", `doesn't show the newest update ("${newest}"): the scan may not be signed in`);
+    }
+
+    // Not vacuous for requests either: its own newest request shows.
+    const newestRequest = Array.isArray(myRequests) ? myRequests[0]?.message : null;
+    if (!user.mustChangePassword && newestRequest && !portalHtml.includes(escaped(newestRequest))) {
+      note("/portal", `doesn't show its newest request ("${newestRequest}")`);
     }
 
     // Not vacuous for the report either: paid sees it, free sees the lock.
@@ -357,6 +404,10 @@ async function main() {
       if (status && !where.startsWith("rpc search_hts")) note(where, `status word "${status[0]}"`);
       for (const c of others) if (body.includes(c.name)) note(where, `other client's name "${c.name}"`);
       for (const n of neverNamed) if (body.includes(n)) note(where, `unshortlisted partner "${n}"`);
+      for (const t of requestTexts) {
+        if (t.client !== own.id && body.includes(t.text)) note(where, `another client's request or reply ("${t.text.slice(0, 40)}")`);
+      }
+      for (const t of withdrawnTexts) if (body.includes(t) || body.includes("WITHDRAWN-CANARY")) note(where, "a withdrawn reply");
       if (body.includes("REPORT-CANARY")) note(where, body.includes("OLD-REPORT-CANARY") ? "OLD-REPORT-CANARY (an older report)" : "REPORT-CANARY (a free client's report)");
       const lower = body.toLowerCase();
       for (const t of identifying) {
@@ -387,6 +438,7 @@ async function main() {
       functions: rpcCalls.length,
       ownUpdates: Array.isArray(mine) ? mine.length : `error ${JSON.stringify(mine).slice(0, 60)}`,
       reports: reportCount,
+      requests: Array.isArray(myRequests) ? myRequests.length : "error",
       readable: readable.join(", ") || "none",
     });
   }

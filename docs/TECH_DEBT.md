@@ -8,20 +8,27 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Added:** 2026-10-12 (client dashboard Phase 1)
 - **What:** Production has no custom SMTP, so client users get no invite or password-reset emails. Staff create them with a one-time password shown once, which they pass on themselves; admins issue a new one-time password when a client loses theirs. There's no "forgot password" link, and email-change confirmations can't be delivered either.
 - **Why deferred:** Decision on 2026-10-12 to skip SMTP for now. Supabase's default sender is rate-limited and only meant for team addresses.
-- **Severity:** Medium (a manual step for every client user; the one-time password is seen by staff, which is why first sign-in forces a change and Phase 3 must refuse client writes until then: see the next entry and docs/SECURITY.md)
+- **Severity:** Medium (a manual step for every client user; the one-time password is seen by staff, which is why first sign-in forces a change and client writes are refused until then: docs/SECURITY.md)
 - **Where:** `src/lib/client-users/create-client-user.ts`, `/client-access`; the fix is custom SMTP in Supabase Auth, then invite and reset emails instead of one-time passwords.
 
-### Phase 3: client approvals and requests must be refused while `must_change_password` is set
-- **Added:** 2026-10-12 (client dashboard Phase 1, for Phase 3)
-- **What:** Whoever creates a client user, or resets its password, sees the one-time password. Until the client has chosen their own password, an approval or request made "as the client" could really be that staff member. Phase 3 (client_requests, approvals) must refuse every client write while `app_metadata.must_change_password` is true. Enforce it in the database (the insert policy or function reads the flag live from `auth.users`), test it with pgTAP, and check it in the Server Action too.
-- **Why deferred:** Phase 3's tables don't exist yet. Phase 1 already keeps a flagged user on `/portal/change-password` only, but the database rule belongs with those tables.
-- **Severity:** High (if missed, a staff member could approve as a client)
-- **Where:** docs/SECURITY.md, "Client users (external)"; future `client_requests` migration.
+### No email when a client sends a request or Move replies
+- **Added:** 2026-10-13 (client dashboard Phase 3a, for Phase 4)
+- **What:** Staff only notice new client requests through the Requests badge, and clients only see Move's reply when they next open the portal. Nothing is emailed.
+- **Why deferred:** No custom SMTP (decision 2026-10-12) and no email provider; Phase 4 in the plan.
+- **Severity:** Medium (a request can sit unseen if nobody looks at the badge)
+- **Where:** `client_requests`; the fix needs SMTP or an email provider (a new dependency, ask first), then a notification on insert and on reply.
+
+### Client requests can't be closed, archived or followed up
+- **Added:** 2026-10-13 (client dashboard Phase 3a)
+- **What:** A request is sent, seen or answered, and stays in the inbox and the portal for good. There's one reply per request (an admin can withdraw it so the owner can reply again); a follow-up needs a new question. Deleting a project deletes its requests, approvals included.
+- **Why deferred:** Enough for the first clients; closing, archiving, threads and keeping approvals after a project is deleted need their own design.
+- **Severity:** Low
+- **Where:** `client_requests` (`20261013024500_client_requests.sql`), `/client-requests`.
 
 ### A client who must still change their password can read their updates through the API
 - **Added:** 2026-10-13 (client dashboard Phase 2b)
 - **What:** While `must_change_password` is set, the proxy keeps the client on `/portal/change-password`, but `my_portal_updates()` and `my_market_reports()` don't check the flag, so the account can read its own client's published updates (and, on the paid plan, its latest Market Report) over the API with the one-time password.
-- **Why deferred:** Read-only, and only that client's own published updates, which the staff member who knows the one-time password can already see. Phase 3 writes (approvals, requests) must refuse while the flag is set (entry above).
+- **Why deferred:** Read-only, and only that client's own published updates, which the staff member who knows the one-time password can already see. Client writes (approvals, requests) are refused while the flag is set (Phase 3a).
 - **Severity:** Low
 - **Where:** `my_portal_updates()` in `20261012234353_client_portal_read.sql`; `my_market_reports()` in `20261013015815_client_market_report.sql`.
 
@@ -187,6 +194,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 
 ## Resolved
+
+### Phase 3: client approvals and requests must be refused while `must_change_password` is set
+- **Added:** 2026-10-12 (client dashboard Phase 1, for Phase 3)
+- **What:** Whoever creates a client user, or resets its password, sees the one-time password. Until the client has chosen their own password, an approval or request made "as the client" could really be that staff member. Phase 3 (client_requests, approvals) must refuse every client write while `app_metadata.must_change_password` is true. Enforce it in the database (the insert policy or function reads the flag live from `auth.users`), test it with pgTAP, and check it in the Server Action too.
+- **Resolved:** 2026-10-13 (Phase 3a). `submit_client_request()` refuses while the flag is set (pgTAP 34), as do the Server Action and the proxy.
+- **Severity:** High (if missed, a staff member could approve as a client)
+- **Where:** docs/SECURITY.md, "Client users (external)"; future `client_requests` migration.
 
 ### Migrate `src/middleware.ts` to `proxy.ts` (Next.js 16)
 - **Added:** 2026-10-01
