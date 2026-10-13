@@ -461,6 +461,9 @@ export function demoMarketReports() {
 // ---------------------------------------------------------------------------
 // Client requests (Phase 3a): one in every state, from the mockup's examples.
 // `from` is the client user's email local part; `by` the expert's key.
+// Phase 3b: Brightline (paid) asked for an introduction to Partner D of its
+// latest Market Report (Meridian Ocean Logistics, a name no portal may ever
+// show), and Ridgeway (free) asked to unlock the Market Report; both new.
 // Ridgeway's question had a reply that an admin withdrew: its text carries
 // WITHDRAWN-CANARY, which must never reach any portal (the scan checks).
 // Brightline's and Northwind's latest recommendations are left undecided,
@@ -489,5 +492,11 @@ export function demoClientRequests() {
       message: "Do any of these quotes include cargo insurance?", wantsCall: false,
       status: "seen", seenDaysAgo: 5, by: "priya",
       withdrawn: { reply: `${WITHDRAWN_CANARY}: Lusitania includes insurance up to EUR 50,000.`, repliedDaysAgo: 4, withdrawnDaysAgo: 3 } },
+    { engagement: "brightlineFwd", from: "brightline-ops", kind: "introduction", label: "D", daysAgo: 0,
+      message: "Could you introduce us? A second option for peak season would help.", wantsCall: false,
+      status: "sent" },
+    { client: "ridgeway", from: "ridgeway-ops", kind: "report_interest", daysAgo: 0,
+      message: "What would the Market Report add for our forwarder search?", wantsCall: true,
+      status: "sent" },
   ];
 }

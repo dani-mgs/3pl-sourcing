@@ -34,6 +34,16 @@
 //     client's own;
 //   - the staff and write functions refuse it (another client's request id
 //     or project key), and its own newest request really shows.
+//
+// Introductions and Market Report interest (Phase 3b), for every user:
+//   - free plan: no partner letter ("Partner D") anywhere: HTML, RSC and
+//     every API answer;
+//   - nobody, the paid client included, ever gets the forwarder behind any
+//     introduction request (its full name, any case);
+//   - asking for an introduction on another client's project, or on its own
+//     while on the free plan, is refused; the paid plan can't send Unlock;
+//   - not vacuous: Brightline's report shows "Introduction requested",
+//     Ridgeway's locked page what it asked, Northwind's the Unlock button.
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -56,6 +66,7 @@ const STATUS_WORDS =
   /Unfit|Do Not Contact|Do not Contact|Withdrawn|No Response|Vetted|Under Assessment|Move Recommended|Reviewing Quotation|Waiting for Quotation|Potential \/ Not Contacted/;
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 const REPORT_HEADINGS = /Middle of the market|What happened to all|Every forwarder we evaluated|Like-for-like only|Partner [D-Z]{1,2}\b/;
+const PARTNER_LETTER = /\bPartner [A-Z]{1,2}\b/;
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
 // The same opaque key the database gives a client's project.
@@ -175,13 +186,33 @@ async function forbiddenTerms(db) {
 
   // Client requests: each one's texts belong to its own client only, and a
   // withdrawn reply belongs to nobody.
-  const requests = check(await db.from("client_requests").select("id, client_id, message, staff_reply, reply_history, created_at"), "requests");
+  const requests = check(
+    await db.from("client_requests").select("id, client_id, kind, partner_label, forwarder_project_id, message, staff_reply, reply_history, created_at"),
+    "requests",
+  );
   for (const r of requests) ids.add(r.id);
   const requestTexts = requests.flatMap((r) =>
     [r.message, r.staff_reply].filter((t) => typeof t === "string" && t.length >= 12).map((text) => ({ text, client: r.client_id })),
   );
   const withdrawnTexts = requests.flatMap((r) => (r.reply_history ?? []).map((h) => h.reply).filter(Boolean));
-  return { clients, neverNamed, ids, projects, entitled, reports, identifying, reportPrices, routeCities, requests, requestTexts, withdrawnTexts };
+
+  // Introductions: the forwarder behind each requested letter (staff-only
+  // labels table). No client may ever receive these names.
+  const labelRows = check(await db.from("market_report_partner_labels").select("forwarder_project_id, forwarder_id, label"), "label rows");
+  const nameById = new Map(full.map((f) => [f.id, f.company_name]));
+  const introNames = [
+    ...new Set(
+      requests
+        .filter((r) => r.kind === "introduction")
+        .map((r) => labelRows.find((l) => l.forwarder_project_id === r.forwarder_project_id && l.label === r.partner_label))
+        .map((l) => (l?.forwarder_id ? nameById.get(l.forwarder_id) : null))
+        .filter(Boolean),
+    ),
+  ];
+  return {
+    clients, neverNamed, ids, projects, entitled, reports, identifying, reportPrices, routeCities, requests, requestTexts, withdrawnTexts,
+    introNames, labelRows,
+  };
 }
 
 async function signIn(stack, admin, email) {
@@ -204,8 +235,13 @@ async function main() {
   const stack = localStack();
   const base = appBase();
   const admin = createClient(stack.url, stack.serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { clients, neverNamed, ids, projects, entitled, reports, identifying, reportPrices, routeCities, requests, requestTexts, withdrawnTexts } =
-    await forbiddenTerms(admin);
+  const {
+    clients, neverNamed, ids, projects, entitled, reports, identifying, reportPrices, routeCities, requests, requestTexts, withdrawnTexts,
+    introNames, labelRows,
+  } = await forbiddenTerms(admin);
+  if (!introNames.length || !requests.some((r) => r.kind === "report_interest")) {
+    fail("no seeded introduction or Market Report interest; run npm run demo:seed");
+  }
   if (!withdrawnTexts.some((t) => t.includes("WITHDRAWN-CANARY"))) fail("no seeded client requests; run npm run demo:seed");
   if (!reports.some((r) => JSON.stringify(r.payload).includes("REPORT-CANARY"))) fail("no seeded Market Report; run npm run demo:seed");
   const openapi = await (await fetch(`${stack.url}/rest/v1/`, { headers: { apikey: stack.serviceRoleKey, Authorization: `Bearer ${stack.serviceRoleKey}` } })).json();
@@ -359,6 +395,23 @@ async function main() {
       ["reply_to_client_request", { p_request_id: otherRequest.id, p_reply: "scan" }],
       ["withdraw_client_request_reply", { p_request_id: otherRequest.id }],
       ["submit_client_request", { p_kind: "question", p_engagement_key: otherProjectKey, p_update_key: null, p_message: "scan", p_wants_call: false }],
+      // Phase 3b: another client's project, whatever the plan.
+      ...labelRows
+        .filter((l) => projects.some((p) => p.id === l.forwarder_project_id && p.client_id !== own.id))
+        .slice(0, 2)
+        .map((l) => {
+          const p = projects.find((x) => x.id === l.forwarder_project_id);
+          return ["submit_client_introduction", { p_engagement_key: engagementKey(p.client_id, p.id), p_label: l.label, p_message: null, p_wants_call: false }];
+        }),
+      // Its own project's letters, while on the free plan.
+      ...(user.plan === "free"
+        ? labelRows
+            .filter((l) => projects.some((p) => p.id === l.forwarder_project_id && p.client_id === own.id))
+            .slice(0, 2)
+            .map((l) => ["submit_client_introduction", { p_engagement_key: engagementKey(own.id, l.forwarder_project_id), p_label: l.label, p_message: null, p_wants_call: false }])
+        : []),
+      // Unlock, while already on the paid plan (a free client's call would write).
+      ...(user.plan === "paid" ? [["submit_market_report_interest", { p_message: "scan", p_wants_call: false }]] : []),
     ];
     for (const [fn, args] of refused) {
       const res = await rest(`rpc/${fn}`, { method: "POST", body: JSON.stringify(args) });
@@ -392,6 +445,16 @@ async function main() {
     if (!user.mustChangePassword && user.plan === "free" && !reportHtml.includes("Locked · paid plan")) {
       note("/portal/market-report", "doesn't show the locked page");
     }
+    // Phase 3b, not vacuous: what was asked shows, or the button does.
+    const askedIntro = requests.some((r) => r.client_id === own.id && r.kind === "introduction");
+    const askedUnlock = requests.some((r) => r.client_id === own.id && r.kind === "report_interest");
+    if (!user.mustChangePassword && user.plan === "paid" && askedIntro && !reportHtml.includes("Introduction requested")) {
+      note("/portal/market-report", "doesn't show its introduction request");
+    }
+    if (!user.mustChangePassword && user.plan === "free") {
+      const expected = askedUnlock ? "You asked about the Market Report" : "Unlock the Market Report";
+      if (!reportHtml.includes(expected)) note("/portal/market-report", `doesn't show "${expected}"`);
+    }
 
     // ---- The scan ------------------------------------------------------------------------
     const ownCities = new Set(
@@ -415,6 +478,13 @@ async function main() {
         const found = t.word ? new RegExp(`\\b${t.term}\\b`).test(body) : lower.includes(t.term.toLowerCase());
         if (found) note(where, `anonymised partner's ${t.kind} "${t.term}" (${t.of})`);
       }
+      // Phase 3b: a free client never gets a partner letter, anywhere.
+      if (user.plan === "free") {
+        const letter = body.match(PARTNER_LETTER);
+        if (letter) note(where, `a partner letter on the free plan ("${letter[0]}")`);
+      }
+      // Nobody ever gets the forwarder behind an introduction request.
+      for (const n of introNames) if (lower.includes(n.toLowerCase())) note(where, `the partner behind an introduction request ("${n}")`);
       if (user.plan === "free" && where.startsWith("/portal")) {
         const heading = body.match(REPORT_HEADINGS);
         if (heading) note(where, `Market Report content on the free plan ("${heading[0]}")`);
@@ -451,7 +521,8 @@ async function main() {
   }
   console.log(
     `qa:portal-scan: clean (${USERS.length} client users, ${relations.length} tables/views, ${functions.length} functions, ` +
-      `${identifying.length} identifying terms of anonymised partners, ${reportPrices.length} report prices).`,
+      `${identifying.length} identifying terms of anonymised partners, ${reportPrices.length} report prices, ` +
+      `${introNames.length} partner(s) behind introduction requests).`,
   );
 }
 
