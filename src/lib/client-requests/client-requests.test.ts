@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { canAct, inboxRows, parseInboxFilter, type InboxRow } from "./inbox";
 import { parseRequestForm, replyInputSchema } from "./input";
-import { decidedEngagementKeys, decisionOn, toRequestViews, type RequestRow } from "./requests";
+import { decidedEngagementKeys, decisionOn, introductionsByLabel, reportInterest, toRequestViews, type RequestRow } from "./requests";
 import * as TEXT from "./text";
 
 // Runs in every QA timezone: dates here are ISO timestamps compared as
@@ -79,7 +79,7 @@ describe("wording", () => {
   });
 
   test("the caps match the database", () => {
-    expect(TEXT.MESSAGE_MAX).toEqual({ question: 1000, request_changes: 500, approve: 500, reply: 2000 });
+    expect(TEXT.MESSAGE_MAX).toEqual({ question: 1000, request_changes: 500, approve: 500, introduction: 500, report_interest: 500, reply: 2000 });
   });
 });
 
@@ -101,6 +101,7 @@ function row(over: Partial<RequestRow>): RequestRow {
     replied_at: null,
     replier_first_name: null,
     reply_withdrawn: false,
+    partner_label: null,
     ...over,
   };
 }
@@ -148,9 +149,12 @@ function inbox(over: Partial<InboxRow>): InboxRow {
     created_by: null,
     reply_history: [],
     decision_snapshot: null,
+    partner_label: null,
+    client_id: "c1",
     three_pl_project_id: null,
     forwarder_project_id: "p1",
     projectOwnerId: "me",
+    clientOwnerIds: [],
     projectLabel: "Freight forwarder project",
     clientName: "Brightline",
     ...over,
@@ -184,8 +188,119 @@ describe("staff inbox", () => {
   });
 
   test("only the project's owner or an admin acts", () => {
-    expect(canAct({ projectOwnerId: "me" }, "me", false)).toBe(true);
-    expect(canAct({ projectOwnerId: "you" }, "me", false)).toBe(false);
-    expect(canAct({ projectOwnerId: "you" }, "me", true)).toBe(true);
+    const onProject = { three_pl_project_id: null, forwarder_project_id: "p1", clientOwnerIds: ["me"] };
+    expect(canAct({ ...onProject, projectOwnerId: "me" }, "me", false)).toBe(true);
+    expect(canAct({ ...onProject, projectOwnerId: "you" }, "me", false)).toBe(false);
+    expect(canAct({ ...onProject, projectOwnerId: "you" }, "me", true)).toBe(true);
+  });
+
+  test("Market Report interest (no project): an admin or the owner of any of the client's projects", () => {
+    const interest = { three_pl_project_id: null, forwarder_project_id: null, projectOwnerId: null };
+    expect(canAct({ ...interest, clientOwnerIds: ["you", "me"] }, "me", false)).toBe(true);
+    expect(canAct({ ...interest, clientOwnerIds: ["you"] }, "me", false)).toBe(false);
+    expect(canAct({ ...interest, clientOwnerIds: [] }, "me", true)).toBe(true);
+    const rows = [
+      inbox({ id: "mine", kind: "report_interest", forwarder_project_id: null, projectOwnerId: null, clientOwnerIds: ["me"] }),
+      inbox({ id: "theirs", kind: "report_interest", forwarder_project_id: null, projectOwnerId: null, clientOwnerIds: ["you"] }),
+    ];
+    expect(inboxRows(rows, { show: "mine", status: "open", project: null }, "me").map((r) => r.id)).toEqual(["mine"]);
+  });
+});
+
+describe("introductions and Market Report interest (Phase 3b)", () => {
+  test("introduction form: a project key and a bare letter; note and call optional", () => {
+    expect(parseRequestForm(form({ kind: "introduction", engagementKey: KEY, label: "D", message: " ", wantsCall: "on" }))).toEqual({
+      kind: "introduction",
+      engagementKey: KEY,
+      label: "D",
+      message: null,
+      wantsCall: true,
+    });
+    expect(parseRequestForm(form({ kind: "introduction", engagementKey: KEY, label: "AB", message: "Hi" }))).toMatchObject({ label: "AB", wantsCall: false });
+  });
+
+  test.each([
+    [{ kind: "introduction", engagementKey: KEY, label: "Partner D", message: "" }],
+    [{ kind: "introduction", engagementKey: KEY, label: "d", message: "" }],
+    [{ kind: "introduction", engagementKey: KEY, label: "ABC", message: "" }],
+    [{ kind: "introduction", engagementKey: KEY, label: "Meridian Ocean Logistics", message: "" }],
+    [{ kind: "introduction", engagementKey: KEY, message: "" }],
+    [{ kind: "introduction", engagementKey: "x", label: "D", message: "" }],
+    [{ kind: "introduction", engagementKey: KEY, label: "D", message: "x".repeat(501) }],
+    [{ kind: "report_interest", message: "x".repeat(501) }],
+  ])("refuses %j", (entries) => {
+    expect(parseRequestForm(form(entries as Record<string, string>))).toBeNull();
+  });
+
+  test("interest form: no project, no key; note and call optional", () => {
+    expect(parseRequestForm(form({ kind: "report_interest", engagementKey: KEY, message: "  Tell me more  " }))).toEqual({
+      kind: "report_interest",
+      message: "Tell me more",
+      wantsCall: false,
+    });
+  });
+
+  test("the introduction and unlock wording promises nothing and names no price or fee", () => {
+    const words = [
+      TEXT.introductionTitle("Partner D"),
+      TEXT.introductionBody("Partner D"),
+      TEXT.INTRODUCTION_NOTE_LABEL,
+      TEXT.INTRODUCTION_NOTE_HINT,
+      TEXT.INTRODUCTION_CONFIRM,
+      TEXT.UNLOCK_TITLE,
+      TEXT.UNLOCK_BODY,
+      TEXT.UNLOCK_NOTE_LABEL,
+      TEXT.UNLOCK_CONFIRM,
+      TEXT.UNLOCK_ASKED,
+      TEXT.ACTION_LABELS.requestIntroduction,
+      TEXT.ACTION_LABELS.introductionRequested,
+      TEXT.ACTION_LABELS.unlockReport,
+      TEXT.SENT_OK.introduction,
+      TEXT.SENT_OK.report_interest,
+    ].join(" | ");
+    expect(words).not.toMatch(/\$|€|£|\d|fee|price|cost|charge|pay|discount|free/i);
+    expect(TEXT.introductionBody("Partner D")).toBe(
+      "Move will put you in touch with Partner D and contact you about next steps. Your name and the time will be recorded.",
+    );
+    expect(TEXT.MESSAGE_MAX.introduction).toBe(500);
+    expect(TEXT.MESSAGE_MAX.report_interest).toBe(500);
+  });
+
+  test("staff: the introduction warnings name the letter, and the partner only in the staff-only error", () => {
+    expect(TEXT.introductionReplyWarning("Partner D")).toContain("only knows this partner as Partner D");
+    expect(TEXT.introductionReplyIdentifies("Meridian Ocean Logistics", "meridian", "Partner D")).toContain('Meridian Ocean Logistics ("meridian")');
+    expect(TEXT.STAFF_REPLY_ERRORS.CQ423).toMatch(/names the partner/);
+  });
+
+  test("an introduction shows its letter; interest has no project; rows missing either are left out", () => {
+    const views = toRequestViews([
+      row({ request_key: "i", kind: "introduction", partner_label: "D", created_at: "2026-10-11T00:00:00Z" }),
+      row({ request_key: "u", kind: "report_interest", engagement_key: null, project_kind: null, created_at: "2026-10-10T00:00:00Z" }),
+      row({ request_key: "no-letter", kind: "introduction", partner_label: null }),
+      row({ request_key: "bad-letter", kind: "introduction", partner_label: "Meridian" }),
+      row({ request_key: "3pl-intro", kind: "introduction", partner_label: "D", project_kind: "three_pl" }),
+      row({ request_key: "interest-with-project", kind: "report_interest" }),
+      row({ request_key: "question-without-project", engagement_key: null, project_kind: null }),
+    ]);
+    expect(views.map((v) => [v.key, v.partnerLabel])).toEqual([
+      ["i", "Partner D"],
+      ["u", null],
+    ]);
+    expect(reportInterest(views)?.key).toBe("u");
+    expect(decisionOn(views, null)).toBeNull();
+  });
+
+  test("per letter: the open request wins over an answered one; other projects don't count", () => {
+    const views = toRequestViews([
+      row({ request_key: "new-open", kind: "introduction", partner_label: "D", status: "sent", created_at: "2026-10-12T00:00:00Z" }),
+      row({ request_key: "old-answered", kind: "introduction", partner_label: "D", status: "answered", created_at: "2026-10-01T00:00:00Z" }),
+      row({ request_key: "e-answered", kind: "introduction", partner_label: "E", status: "answered" }),
+      row({ request_key: "other", kind: "introduction", partner_label: "F", engagement_key: "e2" }),
+    ]);
+    const byLabel = introductionsByLabel(views, "e1");
+    expect([...byLabel].map(([l, v]) => [l, v.key])).toEqual([
+      ["Partner D", "new-open"],
+      ["Partner E", "e-answered"],
+    ]);
   });
 });

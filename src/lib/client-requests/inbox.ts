@@ -4,7 +4,7 @@
 
 export type InboxRow = {
   id: string;
-  kind: "approve" | "request_changes" | "question";
+  kind: "approve" | "request_changes" | "question" | "introduction" | "report_interest";
   message: string | null;
   wants_call: boolean;
   status: "sent" | "seen" | "answered";
@@ -15,10 +15,22 @@ export type InboxRow = {
   replied_by: string | null;
   created_by: string | null;
   reply_history: { reply?: string; repliedBy?: string; repliedAt?: string; withdrawnBy?: string; withdrawnAt?: string }[];
-  decision_snapshot: { recommendation?: { name?: string } | null; headline?: string; publishedAt?: string } | null;
+  decision_snapshot: {
+    recommendation?: { name?: string } | null;
+    headline?: string;
+    publishedAt?: string;
+    reportPublishedAt?: string;
+    partner?: { label?: string; priceUsd?: number | null; leadMinDays?: number | null; leadMaxDays?: number | null } | null;
+  } | null;
+  partner_label: string | null;
+  client_id: string;
   three_pl_project_id: string | null;
   forwarder_project_id: string | null;
   projectOwnerId: string | null;
+  // Requests without a project (Market Report interest): the owners of any
+  // of that client's projects may act, like the database's
+  // can_act_on_client_request().
+  clientOwnerIds: string[];
   projectLabel: string;
   clientName: string;
 };
@@ -44,15 +56,24 @@ export function parseInboxFilter(params: Record<string, string | string[] | unde
 
 const STATUS_ORDER = { sent: 0, seen: 1, answered: 2 } as const;
 
+function isMine(r: Pick<InboxRow, "projectOwnerId" | "clientOwnerIds" | "three_pl_project_id" | "forwarder_project_id">, me: string) {
+  return r.three_pl_project_id == null && r.forwarder_project_id == null ? r.clientOwnerIds.includes(me) : r.projectOwnerId === me;
+}
+
 export function inboxRows(rows: InboxRow[], filter: InboxFilter, me: string): InboxRow[] {
   return rows
-    .filter((r) => filter.show === "all" || r.projectOwnerId === me)
+    .filter((r) => filter.show === "all" || isMine(r, me))
     .filter((r) => (filter.status === "all" ? true : filter.status === "open" ? r.status !== "answered" : r.status === "answered"))
     .filter((r) => !filter.project || r.three_pl_project_id === filter.project || r.forwarder_project_id === filter.project)
     .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || b.created_at.localeCompare(a.created_at));
 }
 
-// Owner or admin: mark seen and reply. Admins: withdraw a reply.
-export function canAct(row: Pick<InboxRow, "projectOwnerId">, me: string, isAdmin: boolean): boolean {
-  return isAdmin || row.projectOwnerId === me;
+// Owner or admin: mark seen and reply (for Market Report interest, the owner
+// of any of the client's projects). Admins: withdraw a reply.
+export function canAct(
+  row: Pick<InboxRow, "projectOwnerId" | "clientOwnerIds" | "three_pl_project_id" | "forwarder_project_id">,
+  me: string,
+  isAdmin: boolean,
+): boolean {
+  return isAdmin || isMine(row, me);
 }

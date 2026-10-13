@@ -15,5 +15,7 @@ export default async function PortalMarketReportPage({ searchParams }: PageProps
   const load = await loadMarketReports(supabase, { as: "client" });
   const choice = chooseReport(load, typeof p === "string" ? p : null);
   if (choice.kind === "not_found") notFound();
-  return <MarketReportPageBody choice={choice} summaryHref="/portal" reportHref="/portal/market-report" />;
+  return (
+    <MarketReportPageBody choice={choice} summaryHref="/portal" reportHref="/portal/market-report" requests={load.requests} />
+  );
 }

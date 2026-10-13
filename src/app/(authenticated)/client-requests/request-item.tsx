@@ -11,12 +11,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { LocalDate } from "@/components/client-portal/local-date";
-import { MESSAGE_MAX, STATUS_LABELS, WITHDRAW_CONFIRM, replyWarning } from "@/lib/client-requests/text";
+import { MESSAGE_MAX, STATUS_LABELS, WITHDRAW_CONFIRM, introductionReplyWarning, replyWarning } from "@/lib/client-requests/text";
 import { markClientRequestSeen, replyToClientRequest, withdrawClientRequestReply } from "./actions";
 
 // One request in the inbox. Opening it is the explicit "seen" action (only
-// for the project's owner or an admin, and only while it's unseen): never a
-// page render or a prefetch.
+// for those who can act on it, and only while it's unseen): never a page
+// render or a prefetch.
 
 export type RequestItemView = {
   id: string;
@@ -24,6 +24,8 @@ export type RequestItemView = {
   title: string;
   message: string | null;
   decisionDetail: string | null;
+  // Introductions: "Partner D" (the reply form warns not to name them).
+  partnerLetter: string | null;
   wantsCall: boolean;
   status: "sent" | "seen" | "answered";
   createdAt: string;
@@ -151,13 +153,22 @@ export function RequestItem({ item }: { item: RequestItemView }) {
                 <textarea id={`reply-${item.id}`} name="reply" required maxLength={MESSAGE_MAX.reply} rows={4} className={field} />
                 <p role="note" className="rounded-lg border border-portal-amber bg-portal-amber-bg px-3 py-2 text-portal-amber">
                   {replyWarning(item.clientName)}
+                  {item.partnerLetter && (
+                    <>
+                      {" "}
+                      <strong>{introductionReplyWarning(item.partnerLetter)}</strong>
+                    </>
+                  )}
                 </p>
                 <Button type="submit" className="self-start" disabled={isPending}>
                   {isPending ? "Sending…" : "Send reply"}
                 </Button>
               </form>
             ) : (
-              <p className="text-neutral-muted">Only the project&apos;s owner or an admin can reply.</p>
+              <p className="text-neutral-muted">
+                Only the project&apos;s owner or an admin can reply (Market Report interest: an admin or the owner of any of the
+                client&apos;s projects).
+              </p>
             ))}
 
           {message && (

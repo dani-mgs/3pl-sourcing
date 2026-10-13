@@ -1,22 +1,30 @@
 import Link from "next/link";
 import type { ReportChoice } from "@/lib/client-updates/load-market-reports";
+import type { ClientRequestView } from "@/lib/client-requests/requests";
 import { LocalDate } from "./local-date";
 import { MarketReportView } from "./market-report";
-import { MarketReportPlaceholder, ViewSwitch } from "./portal-home";
+import { MarketReportPlaceholder, ViewSwitch, type PortalMode } from "./portal-home";
 
 // /portal/market-report and its "View as client" twin. The caller has already
 // chosen what to show (chooseReport); "not_found" is handled by the page.
+// `mode` "view" (staff "View as client") shows the same without buttons.
 
 export function MarketReportPageBody({
   choice,
   summaryHref,
   reportHref,
+  requests = [],
+  mode = "client",
 }: {
   choice: Exclude<ReportChoice, { kind: "not_found" }>;
   summaryHref: string;
   reportHref: string;
+  requests?: ClientRequestView[];
+  mode?: PortalMode;
 }) {
-  if (choice.kind === "locked") return <MarketReportPlaceholder tier="free" summaryHref={summaryHref} reportHref={reportHref} />;
+  if (choice.kind === "locked") {
+    return <MarketReportPlaceholder tier="free" summaryHref={summaryHref} reportHref={reportHref} interest={choice.interest} mode={mode} />;
+  }
   if (choice.kind === "preparing") {
     return <MarketReportPlaceholder tier="market_report" summaryHref={summaryHref} reportHref={reportHref} />;
   }
@@ -41,7 +49,11 @@ export function MarketReportPageBody({
           </ul>
         </section>
       ) : choice.entry.payload ? (
-        <MarketReportView payload={choice.entry.payload} publishedAt={choice.entry.publishedAt} />
+        <MarketReportView
+          payload={choice.entry.payload}
+          publishedAt={choice.entry.publishedAt}
+          introductions={{ engagementKey: choice.entry.key, mode, requests }}
+        />
       ) : (
         <p className="rounded-2xl border border-neutral-border bg-white p-6 text-portal-ink">
           This report can&apos;t be shown. Ask your Move contact for a copy.

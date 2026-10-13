@@ -13,6 +13,16 @@ import {
 import { submitClientRequest } from "@/app/portal/actions";
 import {
   ACTION_LABELS,
+  CALL_LABEL,
+  INTRODUCTION_CONFIRM,
+  INTRODUCTION_NOTE_HINT,
+  INTRODUCTION_NOTE_LABEL,
+  introductionBody,
+  introductionTitle,
+  UNLOCK_BODY,
+  UNLOCK_CONFIRM,
+  UNLOCK_NOTE_LABEL,
+  UNLOCK_TITLE,
   APPROVE_CONFIRM,
   APPROVE_NOTE_HINT,
   APPROVE_NOTE_LABEL,
@@ -263,5 +273,78 @@ export function NewQuestionButton({ projects }: { projects: ProjectOption[] }) {
         <QuestionFields projects={projects} defaultKey={projects.length === 1 ? projects[0].key : null} />
       </RequestDialog>
     </div>
+  );
+}
+
+function NoteAndCall({ label, hint, max }: { label: string; hint?: string; max: number }) {
+  const id = useId();
+  return (
+    <>
+      <div className="flex flex-col gap-1">
+        <label htmlFor={`${id}-note`} className="text-sm font-medium text-portal-ink">
+          {label}
+        </label>
+        <textarea id={`${id}-note`} name="message" maxLength={max} rows={3} className={field} />
+        {hint && <p className="text-xs text-portal-muted">{hint}</p>}
+      </div>
+      <label className="flex items-center gap-2 text-sm text-portal-ink">
+        <input type="checkbox" name="wantsCall" className="size-4" />
+        {CALL_LABEL}
+      </label>
+    </>
+  );
+}
+
+// "Request introduction" on a lettered row of the paid Market Report. The
+// letter is all the client knows; the database checks it against the latest
+// report and the plan.
+export function IntroductionButton({ engagementKey, letter }: { engagementKey: string; letter: string }) {
+  const [open, setOpen] = useState(false);
+  const [sent, setSent] = useState<string | null>(null);
+  const label = `Partner ${letter}`;
+  if (sent) return <SentNote text={sent} />;
+  return (
+    <>
+      <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)} aria-label={`${ACTION_LABELS.requestIntroduction} to ${label}`}>
+        {ACTION_LABELS.requestIntroduction}
+      </Button>
+      <RequestDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={introductionTitle(label)}
+        description={introductionBody(label)}
+        confirm={INTRODUCTION_CONFIRM}
+        hidden={{ kind: "introduction", engagementKey, label: letter }}
+        onSent={setSent}
+      >
+        <NoteAndCall label={INTRODUCTION_NOTE_LABEL} hint={INTRODUCTION_NOTE_HINT} max={MESSAGE_MAX.introduction} />
+      </RequestDialog>
+    </>
+  );
+}
+
+// "Unlock the Market Report" on the free plan's locked page. No price: Move's
+// contact follows up.
+export function UnlockButton() {
+  const [open, setOpen] = useState(false);
+  const [sent, setSent] = useState<string | null>(null);
+  if (sent) return <SentNote text={sent} />;
+  return (
+    <>
+      <Button type="button" className="self-start" onClick={() => setOpen(true)}>
+        {ACTION_LABELS.unlockReport}
+      </Button>
+      <RequestDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={UNLOCK_TITLE}
+        description={UNLOCK_BODY}
+        confirm={UNLOCK_CONFIRM}
+        hidden={{ kind: "report_interest" }}
+        onSent={setSent}
+      >
+        <NoteAndCall label={UNLOCK_NOTE_LABEL} max={MESSAGE_MAX.report_interest} />
+      </RequestDialog>
+    </>
   );
 }
