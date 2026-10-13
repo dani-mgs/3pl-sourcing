@@ -4,6 +4,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### 3PL recommendation page unreachable
+- **Added:** 2026-10-13 (found while building the how-to guides)
+- **What:** `/3pl-sourcing/projects/[id]/recommendation` exists but nothing links to it (link lost in 89807f2, 2026-09-08). /help says "no button yet". The saved recommendation's top three feed the shortlist logic (`share-page.tsx`, `threePlShortlistOf`) and the "Based on" prefill, so staff cannot set it from the UI.
+- **Why deferred:** Found during a read-only investigation; the fix is a small UI change for its own commit.
+- **Severity:** Medium (staff can't set what the client update's shortlist and "Based on" start from without typing the address)
+- **Where:** Smallest fix: a Recommendation button in the 3PL project page header (`src/app/(authenticated)/3pl-sourcing/projects/[id]/page.tsx`) under the same `canWrite` condition as Share and Add 3PL, plus a /help update (`help/workflow-sections.tsx`) and a render test. No migration needed.
+
 ### No invite or password-reset emails for client users (no custom SMTP)
 - **Added:** 2026-10-12 (client dashboard Phase 1)
 - **What:** Production has no custom SMTP, so client users get no invite or password-reset emails. Staff create them with a one-time password shown once, which they pass on themselves; admins issue a new one-time password when a client loses theirs. There's no "forgot password" link, and email-change confirmations can't be delivered either.
