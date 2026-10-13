@@ -355,3 +355,105 @@ export function demoClientUpdates({ isoDate }) {
     },
   ];
 }
+
+// ---------------------------------------------------------------------------
+// Market Reports (Phase 2c), hand-written like the updates above and checked
+// by Vitest (src/lib/client-updates/demo-market-reports.test.ts): every
+// payload passes the strict schema, the Brightline report's rows equal what
+// the builder makes from the same forwarders, and every "Move's take" passes
+// the identifying-text guard.
+//
+// Each partner lists its internal name and HQ (used only by the seed, to
+// store the letters and the expert's inputs, and by the guard check); only
+// `row` goes into the payload.
+//
+// - Brightline (paid): the current report (Partner D-L), plus an older one
+//   carrying OLD-REPORT-CANARY: clients only ever get the latest, so the
+//   canary must never appear in any portal.
+// - Ridgeway (free): a report carrying REPORT-CANARY. Ridgeway is on the free
+//   plan, so none of it may ever reach its portal (the scan checks).
+
+export const REPORT_CANARY = "REPORT-CANARY";
+export const OLD_REPORT_CANARY = "OLD-REPORT-CANARY";
+
+function reportPayload({ route, facts, author, todayUsd, partners }) {
+  return {
+    v: 1,
+    kind: "market_report",
+    project: { route, facts },
+    author: { firstName: author },
+    today: { costUsd: todayUsd },
+    partners: partners.map((p) => p.row),
+  };
+}
+
+function quotedRow(nameOrLabel, outcome, priceUsd, leadMinDays, leadMaxDays, likeForLike, size, region, take) {
+  const who = nameOrLabel.startsWith("Partner ") ? { label: nameOrLabel } : { name: nameOrLabel };
+  return { ...who, outcome, priceUsd, leadMinDays, leadMaxDays, likeForLike, size, region, take };
+}
+
+function brightlinePartners(oldTake) {
+  return [
+    { name: "Pacific Bridge Logistics", hq: "Singapore", label: null,
+      row: quotedRow("Pacific Bridge Logistics", "recommended", 9000, 24, 28, true, "large", "southeast_asia", "Lowest comparable price; weekly sailings; in-house US customs") },
+    { name: "Lotus Freight", hq: "Ho Chi Minh City, Vietnam", label: null,
+      row: quotedRow("Lotus Freight", "shortlisted", 9420, 26, 32, true, "mid_size", "southeast_asia", "Weekend delivery available for a small fee") },
+    { name: "Saigon Harbor Shipping", hq: "Ho Chi Minh City, Vietnam", label: null,
+      row: quotedRow("Saigon Harbor Shipping", "shortlisted", 9420, 22, 26, true, "small", "southeast_asia", "Fastest transit of all quotes; weekday deliveries only") },
+    { name: "Meridian Ocean Logistics", hq: "Hong Kong", label: "D",
+      row: quotedRow("Partner D", "quoted_not_selected", 9800, 25, 30, true, "global", "east_asia", oldTake ?? "Good coverage at both ends; no in-house customs broker") },
+    { name: "Redwood Gateway Freight", hq: "Los Angeles, CA", label: "E",
+      row: quotedRow("Partner E", "quoted_not_selected", 10150, 27, 33, true, "mid_size", "north_america", "Strong at the destination end; above your current cost") },
+    { name: "Mekong Star Logistics", hq: "Can Tho, Vietnam", label: "F",
+      row: quotedRow("Partner F", "quoted_not_selected", 10600, 28, 35, true, "small", "southeast_asia", "Highest comparable price") },
+    { name: "Busan Pacific Lines", hq: "Busan, South Korea", label: "G",
+      row: quotedRow("Partner G", "different_terms", 8700, 23, 29, false, "large", "east_asia", "Quoted without duties and taxes") },
+    { name: "Orient Link Express", hq: "Shenzhen, China", label: "H",
+      row: quotedRow("Partner H", "different_terms", 8950, 25, 31, false, "large", "east_asia", "Quoted without duties and taxes") },
+    { name: "Swift Tide Cargo", hq: "Da Nang, Vietnam", label: "I",
+      row: { label: "Partner I", outcome: "not_taken_forward", size: "small", region: "southeast_asia" } },
+    { name: "Golden Lantern Shipping", hq: "Taipei, Taiwan", label: "J",
+      row: { label: "Partner J", outcome: "not_taken_forward", size: "large", region: "east_asia" } },
+    { name: "Anchor Point Forwarding", hq: "Long Beach, CA", label: "K",
+      row: { label: "Partner K", outcome: "not_taken_forward", size: "mid_size", region: "north_america" } },
+    { name: "SkyHarbor Air & Sea", hq: "Hanoi, Vietnam", label: "L",
+      row: { label: "Partner L", outcome: "not_taken_forward", size: "mid_size", region: "southeast_asia" } },
+  ];
+}
+
+export function demoMarketReports() {
+  const brightline = {
+    route: "Ho Chi Minh City → Los Angeles",
+    facts: ["Sea freight, full container (FCL)", "Delivered duty paid (DDP)", "2 shipments a month", "12-month project"],
+    author: ALEX,
+    todayUsd: 10000,
+  };
+  const ridgewayPartners = [
+    { name: "Lusitania Freight", hq: "Porto, Portugal", label: "D",
+      row: quotedRow("Partner D", "quoted_not_selected", 3780, 15, 19, true, "mid_size", "europe", `${REPORT_CANARY}: never shown on the free plan`) },
+    { name: "Atlas Transatlantic", hq: "Rotterdam, Netherlands", label: "E",
+      row: quotedRow("Partner E", "quoted_not_selected", 3950, 14, 17, true, "global", "europe", "Fastest transit on this lane") },
+    { name: "Iberian Ocean Services", hq: "Valencia, Spain", label: "F",
+      row: quotedRow("Partner F", "quoted_not_selected", 4050, 17, 21, true, "small", "europe", null) },
+    { name: "Northbound Logistics", hq: "Newark, NJ", label: "G",
+      row: quotedRow("Partner G", "quoted_not_selected", 4300, 16, 20, true, "mid_size", "north_america", null) },
+    { name: "Douro Cargo", hq: "Porto, Portugal", label: "H",
+      row: quotedRow("Partner H", "different_terms", 3400, 16, 20, false, "small", "europe", "Quoted without duties and taxes") },
+  ];
+  const brightlineCurrent = brightlinePartners();
+  const brightlineOld = brightlinePartners(`${OLD_REPORT_CANARY}: an older report clients never see`);
+  return [
+    { engagement: "brightlineFwd", daysAgo: 9, recommended: "Pacific Bridge Logistics", partners: brightlineOld,
+      payload: reportPayload({ ...brightline, partners: brightlineOld }) },
+    { engagement: "brightlineFwd", daysAgo: 2, recommended: "Pacific Bridge Logistics", partners: brightlineCurrent,
+      payload: reportPayload({ ...brightline, partners: brightlineCurrent }) },
+    { engagement: "ridgewayFwd", daysAgo: 4, recommended: null, partners: ridgewayPartners,
+      payload: reportPayload({
+        route: "Porto → Newark",
+        facts: ["Sea freight, full container (FCL)", "Delivered duty paid (DDP)", "2 shipments a month", "18-month project"],
+        author: PRIYA,
+        todayUsd: 4200,
+        partners: ridgewayPartners,
+      }) },
+  ];
+}

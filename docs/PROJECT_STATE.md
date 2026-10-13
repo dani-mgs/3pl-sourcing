@@ -2,7 +2,7 @@
 
 _Last updated: 2026-10-10 by Dani (as of `fix/data-integrity-followups`)_
 
-**Live:** 3PL Sourcing, Forwarder Sourcing, Tariff Calculator. **Next:** Landed Cost Calculator. **In progress:** client dashboard (Phases 2a and 2b: publishing client updates, and the read-only client portal; the paid Market Report is 2c). **Deferred:** 3PL Audit, Forwarder Audit.
+**Live:** 3PL Sourcing, Forwarder Sourcing, Tariff Calculator. **Next:** Landed Cost Calculator. **In progress:** client dashboard (Phase 2: publishing client updates, the read-only client portal and the paid Market Report; approvals and requests are Phase 3). **Deferred:** 3PL Audit, Forwarder Audit.
 
 History is in git and `docs/CHANGELOG.md`; this file is the short version.
 
@@ -56,7 +56,8 @@ Internal hub for Move Supply Chain Logistics Experts: source and compare 3PLs an
 - **Display names** are admin-only, stored in `app_metadata.first_name`. `profiles` is a one-way mirror of them.
 - **All data access needs an admin-assigned staff role.** Every internal RLS table has a restrictive `has_staff_role()` policy (renamed from `has_app_role()` on 2026-10-12), so an account without a staff role (no role, or a client user) sees and writes nothing.
 - **Client users** (role `client` + `app_metadata.client_id`, external) reach only `/portal`; every staff Server Action starts with `requireStaff()`. They can read one table: their client's `client_entitlements` row. Created on `/client-access` (admins: any client; experts: clients of projects they own) with a one-time password and a forced change at first sign-in; no email (no SMTP).
-- **Client updates** (`client_updates`, Phase 2a): "Share update with client" on each project page publishes a snapshot whose payload is built on the server from an allow-list (`src/lib/client-updates/`); only shortlisted partners are named, 3PL comparisons are percentages only. Clients see their own client's published updates in `/portal` (Phase 2b), read only through `my_portal_updates()`; the tables stay staff-only. Staff preview any client's portal with View as client. `client_update_inputs` (form inputs, internal ids) is staff-only for good. The Market Report tab is static until Phase 2c.
+- **Client updates** (`client_updates`, Phase 2a): "Share update with client" on each project page publishes a snapshot whose payload is built on the server from an allow-list (`src/lib/client-updates/`); only shortlisted partners are named, 3PL comparisons are percentages only. Clients see their own client's published updates in `/portal` (Phase 2b), read only through `my_portal_updates()`; the tables stay staff-only. Staff preview any client's portal with View as client. `client_update_inputs` (form inputs, internal ids) is staff-only for good.
+- **Market Report** (`client_market_reports`, Phase 2c): "Market Report" on a forwarder project publishes every contacted forwarder (shortlist named, the rest Partner D, E, … with fixed-vocabulary profiles; Unfit / Do Not Contact / Withdrawn as "Not taken forward"). Paid clients read the latest report per project through `my_market_reports()`, which checks the plan itself; free clients get a static locked page. Letters live in the staff-only `market_report_partner_labels` and are never reused.
 - **Signup is off** (`[auth] enable_signup = false`; production verified off on 2026-10-09).
 - **TRUNCATE is revoked** from `authenticated` and `anon`.
 - **Client and project are created in one transaction**, in both modules (`create_three_pl_project_with_client`, `create_forwarder_project_with_client`). A failed save leaves no orphan client.
@@ -122,7 +123,7 @@ Landed Cost Calculator (not started; no plan yet).
 ## 10. DO NOT TOUCH / FRAGILE AREAS
 - Every insert, update or delete action chains `.select()` and checks for rows; an RLS refusal returns no rows and no error.
 - Never write `profiles` directly. Roles and names go through `supabase.auth.admin.updateUserById()` (`app_metadata`), and the trigger mirrors them.
-- The restrictive `has_staff_role()` policy must be on every internal RLS table; pgTAP 24 and 28 fail if a table lacks it (`client_entitlements` is the one named exception; `client_updates` joins it in Phase 2b).
+- The restrictive `has_staff_role()` policy must be on every internal RLS table; pgTAP 24 and 28 fail if a table lacks it (`client_entitlements` is the one named exception; client updates and Market Reports stay staff-only and are read through functions).
 - The `create_*_project_with_client` field lists must match the form parsers; Vitest drift checks enforce it.
 - The `one_incumbent_per_client` partial unique index drives 3PL baseline math.
 - The toggle-chip value format (`src/lib/chip-value.ts`) is delimiter-safe; labels contain commas, e.g. "Fulfillment (Pick, Check, Pack)".

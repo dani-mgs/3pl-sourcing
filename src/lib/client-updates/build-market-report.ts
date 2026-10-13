@@ -44,8 +44,9 @@ function labelKey(label: string | undefined): string {
 }
 
 // Who appears, with what outcome, in the report's order. Priced groups go
-// cheapest first; groups without a price go by letter (existing letters
-// first), then by id, which says nothing about a partner.
+// cheapest first (named partners at the same price by name); groups without
+// a price go by letter (existing letters first), then by id, which says
+// nothing about a partner.
 export function planMarketReport(
   source: ForwarderSource,
   recommendedId: string | null,
@@ -99,10 +100,13 @@ export function planMarketReport(
       };
     });
 
+  const nameOf = new Map(forwarders.map((f) => [f.id, f.company_name]));
   return planned.sort(
     (a, b) =>
       ORDER[a.outcome] - ORDER[b.outcome] ||
       (a.priceUsd ?? Infinity) - (b.priceUsd ?? Infinity) ||
+      // Named partners at the same price: by name.
+      (a.named && b.named ? nameOf.get(a.id)!.localeCompare(nameOf.get(b.id)!) : 0) ||
       labelKey(labels.get(a.id)).localeCompare(labelKey(labels.get(b.id))) ||
       a.id.localeCompare(b.id),
   );

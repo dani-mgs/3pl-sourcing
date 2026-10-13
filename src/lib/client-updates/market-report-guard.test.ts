@@ -25,7 +25,8 @@ describe("Move's take guard", () => {
     ["See pacificbridgelogistics.example", "a", "pacificbridgelogistics"],
     ["Booked via OLX-Asia before", "d", "olxasia"],
     ["Same people as orientlink cargo", "d", "orientlinkcargo"],
-    ["Based in Hong Kong", "b", "hong"],
+    ["Based in Hong Kong", "b", "hong kong"],
+    ["Office in Can Tho", "c", "can tho"],
     ["MERIDIAN", "b", "meridian"],
   ])("refuses %j (identifies %s)", (take, id, token) => {
     expect(findIdentifying(take, PARTNERS)).toEqual({ partnerId: id, partnerName: PARTNERS.find((p) => p.id === id)!.company_name, token });
@@ -48,6 +49,8 @@ describe("Move's take guard", () => {
     "Sales desk replies within a day",
     "Global logistics network, slower transit",
     "Wider transit range",
+    "Can deliver on weekends",
+    "Kong-sized network",
   ])("allows plain descriptions: %j", (take) => {
     expect(findIdentifying(take, PARTNERS)).toBeNull();
   });
