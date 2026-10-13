@@ -94,6 +94,9 @@ describe("PortalHome", () => {
     expect(t).not.toContain("Approve recommendation Request changes");
     expect(t).not.toContain("1 item needs you");
     expect(t).toMatch(/Waiting on you 0 /);
+    // The viewer's own decision reads "by you" mid-sentence.
+    const mine = text(render("brightline", "market_report", rowsFor("brightline"), [], [{ ...approval, from: "You" }]));
+    expect(mine).toMatch(/Approved .* by you\./);
   });
 
   test("a decision on an older update doesn't count: the latest still needs the client", () => {

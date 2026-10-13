@@ -133,7 +133,7 @@ function decisionFor(e: Engagement, requests: ClientRequestView[], mode: PortalM
     return (
       <div role="status" className="rounded-lg bg-neutral-bg px-3 py-2 text-sm text-portal-ink">
         <p className="font-semibold">
-          {KIND_LABELS[decided.kind]} <LocalDate timestamp={decided.createdAt} /> by {decided.from}.
+          {KIND_LABELS[decided.kind]} <LocalDate timestamp={decided.createdAt} /> by {decided.from === "You" ? "you" : decided.from}.
         </p>
         {decided.message && (
           <p className="mt-1 whitespace-pre-line">

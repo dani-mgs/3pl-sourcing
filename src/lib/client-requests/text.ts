@@ -78,7 +78,7 @@ export function replyWarning(clientName: string): string {
   return `Your reply is shown to ${clientName} in their portal straight away. It can't be edited after you save it (an admin can withdraw it).`;
 }
 export const WITHDRAW_CONFIRM =
-  "Withdraw this reply? The client will see “Move withdrew this reply; a new one is coming” instead of the text, and the project owner can reply again. The withdrawn text stays visible to staff.";
+  "The client will see “Move withdrew this reply; a new one is coming” instead of the text, and the project owner can reply again. The withdrawn text stays visible to staff.";
 export const STAFF_REPLY_ERRORS: Record<string, string> = {
   "42501": "Only the project's owner or an admin can do this.",
   CQ409: "This request has changed since you opened it. Reload the page.",
