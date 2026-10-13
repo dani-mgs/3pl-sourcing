@@ -48,6 +48,7 @@ export function rowsFor(client: string, { includeDraft = false } = {}): PortalRo
     needs_client_action: u.needs_client_action,
     published_at: `${isoDate(-u.daysAgo)}T10:00:00Z`,
     payload: u.payload,
+    update_key: `ukey-${u.engagement}-${u.daysAgo}`,
   }));
 }
 

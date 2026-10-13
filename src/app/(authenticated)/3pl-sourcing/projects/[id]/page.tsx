@@ -16,6 +16,7 @@ import {
   ProjectSummaryTable,
   type ProviderRow,
 } from "./project-summary-table";
+import { ProjectRequestsLink } from "@/app/(authenticated)/client-requests/project-requests-link";
 
 const QUOTES_IN_STATUSES = [
   "Reviewing Quotation",
@@ -133,6 +134,7 @@ export default async function ProjectSummaryPage({
         </div>
 
         <div className="flex items-center gap-2">
+          <ProjectRequestsLink kind="three_pl" projectId={id} />
           {canWrite && (
             <Button
               variant="outline"

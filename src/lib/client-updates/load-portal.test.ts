@@ -68,6 +68,9 @@ describe("loadPortal", () => {
     const data = await loadPortal(client as never, { as: "client" });
     expect(calls).toContain("rpc my_portal_updates");
     expect(calls).toContain("rpc my_move_contact_names");
+    // Requests and replies through the function, never the table.
+    expect(calls).toContain("rpc my_client_requests");
+    expect(calls.some((c) => c.includes("select client_requests"))).toBe(false);
     expect(calls.filter((c) => c.startsWith("select")).map((c) => c.split("(")[0])).toEqual(["select client_entitlements"]);
     expect(data.tier).toBe("market_report");
     expect(data.contactNames).toEqual(["Alex"]);
@@ -89,6 +92,7 @@ describe("loadPortal", () => {
     const { client, calls } = fake(null);
     const asStaff = await loadPortal(client as never, { as: "staff", clientId: CLIENT });
     expect(calls).toContain(`rpc portal_updates_for_client {"p_client_id":"${CLIENT}"}`);
+    expect(calls).toContain(`rpc client_requests_for_client {"p_client_id":"${CLIENT}"}`);
     expect(calls.some((c) => c.includes("client_updates"))).toBe(false);
     expect(asStaff.engagements).toEqual(asClient.engagements);
     // Staff only, first word only: a client user who owned nothing isn't named.

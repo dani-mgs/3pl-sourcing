@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth/get-user-role";
 import { UserMenu } from "./user-menu";
 import { HelpLink } from "./help-link";
+import { RequestsLink } from "./requests-link";
 import { ModuleNav } from "./module-nav";
 import { APP_NAME, APP_SHORT_NAME } from "@/lib/modules";
 
@@ -40,6 +41,8 @@ export default async function AuthenticatedLayout({
   // Client users never see staff pages. The proxy already sends them to
   // /portal; this is the second layer, in case a route slips past it.
   if (role === "client") notFound();
+  // Unseen client requests on the caller's projects (all for admins).
+  const { data: badge } = role ? await supabase.rpc("my_client_request_badge") : { data: 0 };
 
   return (
     <div className="min-h-svh bg-neutral-bg">
@@ -64,6 +67,7 @@ export default async function AuthenticatedLayout({
         <ModuleNav />
 
         <div className="ml-auto flex min-w-0 items-center gap-2">
+          {role && <RequestsLink count={typeof badge === "number" ? badge : 0} />}
           <HelpLink />
           <UserMenu displayName={displayName} isAdmin={role === "admin"} />
         </div>

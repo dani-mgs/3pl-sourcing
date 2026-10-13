@@ -25,6 +25,7 @@ import { ProjectOverflowMenu } from "./project-overflow-menu";
 import { QuoteComparisonPanel } from "./quote-comparison-panel";
 import { ShipmentProfile } from "./shipment-profile";
 import { SummaryTiles, type SummaryProject } from "./summary-tiles";
+import { ProjectRequestsLink } from "@/app/(authenticated)/client-requests/project-requests-link";
 
 export default async function ForwarderProjectSummaryPage({
   params,
@@ -105,6 +106,7 @@ export default async function ForwarderProjectSummaryPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <ProjectRequestsLink kind="forwarder" projectId={id} />
           {canWrite && (
             <Button
               variant="outline"
