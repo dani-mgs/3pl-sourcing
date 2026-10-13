@@ -20,10 +20,31 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ### A client who must still change their password can read their updates through the API
 - **Added:** 2026-10-13 (client dashboard Phase 2b)
-- **What:** While `must_change_password` is set, the proxy keeps the client on `/portal/change-password`, but `my_portal_updates()` doesn't check the flag, so the account can read its own client's published updates over the API with the one-time password.
+- **What:** While `must_change_password` is set, the proxy keeps the client on `/portal/change-password`, but `my_portal_updates()` and `my_market_reports()` don't check the flag, so the account can read its own client's published updates (and, on the paid plan, its latest Market Report) over the API with the one-time password.
 - **Why deferred:** Read-only, and only that client's own published updates, which the staff member who knows the one-time password can already see. Phase 3 writes (approvals, requests) must refuse while the flag is set (entry above).
 - **Severity:** Low
-- **Where:** `my_portal_updates()` in `20261012234353_client_portal_read.sql`.
+- **Where:** `my_portal_updates()` in `20261012234353_client_portal_read.sql`; `my_market_reports()` in `20261013015815_client_market_report.sql`.
+
+### A paid client's whole report is in the page's data
+- **Added:** 2026-10-13 (client dashboard Phase 2c)
+- **What:** The Market Report's partner table switches between "All" and "Like-for-like only" in the browser, so every row of the client's own latest report is in the page's RSC data.
+- **Why deferred:** It's that paid client's own report, already shown on the page; nothing else is sent. `qa:portal-scan` reads the RSC payload too.
+- **Severity:** Low
+- **Where:** `src/components/client-portal/report-partner-table.tsx`.
+
+### "Move's take" guard is word-based and cautious
+- **Added:** 2026-10-13 (client dashboard Phase 2c)
+- **What:** The guard refuses any word of any forwarder name in the project (except a short list of generic words), so ordinary words that happen to be in a name ("Star", "Point", "Bridge") are refused too. It can't catch a description that identifies a partner without using its name, city, domain or contact ("the one that bought its rival last year").
+- **Why deferred:** Refusing too much is the safe side; the error tells the expert which forwarder matched, and the form tells them to write as if the partner could read it.
+- **Severity:** Low
+- **Where:** `src/lib/client-updates/market-report-guard.ts`.
+
+### Demo seed Market Reports are hand-written
+- **Added:** 2026-10-13 (client dashboard Phase 2c)
+- **What:** Like the demo updates, `demoMarketReports()` in `scripts/qa/demo-portal-data.mjs` is written out by hand, and the seed stores its letters directly instead of through `assign_partner_labels()`.
+- **Why deferred:** No new dependencies. `demo-market-reports.test.ts` checks the schema, the letters, the guard on every take, and that the Brightline rows equal the builder's output; the seed fails if a forwarder's name or HQ drifted.
+- **Severity:** Low
+- **Where:** `scripts/qa/demo-portal-data.mjs`, `seedMarketReports()` in `scripts/qa/seed-demo.mjs`.
 
 ### Portal "today" is UTC
 - **Added:** 2026-10-13 (client dashboard Phase 2a)

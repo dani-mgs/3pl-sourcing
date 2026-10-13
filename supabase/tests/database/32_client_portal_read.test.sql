@@ -97,8 +97,9 @@ select is(
    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prosecdef and p.prorettype <> 'trigger'::regtype
      and has_function_privilege('authenticated', p.oid, 'execute')),
-  array['complete_password_change()', 'has_staff_role()', 'is_admin()', 'is_client_user()', 'is_tariff_editor()',
-        'my_client_id()', 'my_move_contact_names()', 'my_portal_updates()', 'portal_updates_for_client(uuid)',
+  array['client_has_paid_tier(uuid)', 'complete_password_change()', 'has_staff_role()', 'is_admin()', 'is_client_user()',
+        'is_tariff_editor()', 'market_reports_for_client(uuid)', 'my_client_id()', 'my_market_reports()',
+        'my_move_contact_names()', 'my_portal_updates()', 'portal_updates_for_client(uuid)',
         'search_hts_lines(text[],text,integer)'],
   'the security-definer functions a signed-in user can call are exactly these');
 

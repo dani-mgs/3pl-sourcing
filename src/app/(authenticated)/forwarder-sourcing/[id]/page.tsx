@@ -118,6 +118,15 @@ export default async function ForwarderProjectSummaryPage({
             <Button
               variant="outline"
               nativeButton={false}
+              render={<Link href={`/forwarder-sourcing/${id}/market-report`} />}
+            >
+              Market Report
+            </Button>
+          )}
+          {canWrite && (
+            <Button
+              variant="outline"
+              nativeButton={false}
               render={<Link href={estimateDutiesHref(id)} />}
             >
               Estimate duties

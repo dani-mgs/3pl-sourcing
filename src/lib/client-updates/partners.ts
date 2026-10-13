@@ -12,7 +12,7 @@ const DO_NOT_CONTACT = new Set(["Do Not Contact", "Do not Contact"]);
 
 // Contacted: anyone past "Potential / Not Contacted", except a Do Not
 // Contact partner that never sent a price (Move didn't contact it).
-function wasContacted(status: string, id: string, pricedIds: Set<string>): boolean {
+export function wasContacted(status: string, id: string, pricedIds: Set<string>): boolean {
   if (status === NOT_CONTACTED) return false;
   return !DO_NOT_CONTACT.has(status) || pricedIds.has(id);
 }

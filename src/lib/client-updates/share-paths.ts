@@ -8,3 +8,8 @@ export function sharePath(kind: ShareKind, projectId: string): string {
 export function projectPath(kind: ShareKind, projectId: string): string {
   return kind === "forwarder" ? `/forwarder-sourcing/${projectId}` : `/3pl-sourcing/projects/${projectId}`;
 }
+
+// "Publish Market Report" (forwarder projects only).
+export function marketReportPath(projectId: string): string {
+  return `/forwarder-sourcing/${projectId}/market-report`;
+}

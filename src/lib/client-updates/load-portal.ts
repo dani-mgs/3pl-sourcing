@@ -6,13 +6,14 @@ import { toPortalData, type PortalData, type PortalRow } from "./portal-data";
 // The one loader behind the client portal and staff "View as client". Both
 // go through the same SQL (portal_updates_rows, via my_portal_updates() for
 // a client or portal_updates_for_client() for staff): published updates of
-// that one client, client-safe columns only. The tier decides only which
-// static Market Report text shows; no report data is read here.
+// that one client, client-safe columns only. On the paid plan it also reads
+// which projects have a Market Report (keys only, for the link); on the free
+// plan no report data is read at all.
 // Server-side only.
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
-export type PortalLoad = PortalData & { tier: ClientTier; contactNames: string[] };
+export type PortalLoad = PortalData & { tier: ClientTier; contactNames: string[]; reportKeys: string[] };
 
 export type PortalViewer = { as: "client" } | { as: "staff"; clientId: string };
 
@@ -30,10 +31,12 @@ export async function loadPortal(supabase: Supabase, viewer: PortalViewer): Prom
       supabase.from("client_entitlements").select("tier, valid_until").maybeSingle(),
     ]);
     if (updates.error) console.error("my_portal_updates failed:", updates.error.code);
+    const tier = effectiveTier(entitlement.data);
     return {
       ...toPortalData((updates.data ?? []) as PortalRow[]),
-      tier: effectiveTier(entitlement.data),
+      tier,
       contactNames: ((names.data ?? []) as { first_name: string }[]).map((n) => n.first_name),
+      reportKeys: tier === "free" ? [] : keysOf(await supabase.rpc("my_market_reports").select("engagement_key")),
     };
   }
 
@@ -58,9 +61,18 @@ export async function loadPortal(supabase: Supabase, viewer: PortalViewer): Prom
         .filter((n): n is string => n != null),
     ),
   ].sort();
+  const tier = effectiveTier(entitlement.data);
   return {
     ...toPortalData((updates.data ?? []) as PortalRow[]),
-    tier: effectiveTier(entitlement.data),
+    tier,
     contactNames,
+    reportKeys:
+      tier === "free"
+        ? []
+        : keysOf(await supabase.rpc("market_reports_for_client", { p_client_id: viewer.clientId }).select("engagement_key")),
   };
+}
+
+function keysOf(result: { data: unknown }): string[] {
+  return ((result.data ?? []) as { engagement_key: string }[]).map((r) => r.engagement_key);
 }

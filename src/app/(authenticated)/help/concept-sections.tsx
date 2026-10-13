@@ -1,5 +1,6 @@
 import { Bullets, HelpSection, Note, SubHeading, Ui } from "./help-parts";
-import { PUBLISH_CONFIRM } from "@/lib/client-updates/share-text";
+import { IDENTIFYING_TAKE_NOTE } from "@/lib/client-updates/market-report-inputs";
+import { PUBLISH_CONFIRM, REPORT_PUBLISH_CONFIRM } from "@/lib/client-updates/share-text";
 
 // Sections 4–7. Sources: src/lib/forwarder/cost-comparison.ts,
 // project-summary.ts, requirement-fit.ts, report-data.ts, parse-quote-form.ts,
@@ -334,9 +335,27 @@ export function SharingSection() {
         <li>
           In the portal, clients see each project&apos;s latest update (with its history), what needs them, key figures
           and a timeline. Before anything is published they see &ldquo;Your Move team is getting started&rdquo; with the
-          first names of the staff who own their projects. The Market Report tab is locked on the free plan; on the
-          paid plan it says the report is being prepared (it arrives in a later release). Approving and asking
-          questions in the portal come later too: for now the recommendation card says to reply to the contact.
+          first names of the staff who own their projects. Approving and asking questions in the portal come later:
+          for now the recommendation card says to reply to the contact.
+        </li>
+        <li>
+          <strong>Market Report</strong> (forwarder projects, <Ui>Market Report</Ui> on the project page; owner or
+          admin): every forwarder you contacted, with exact prices. Shortlisted forwarders are named; every other one is
+          shown as a letter (Partner D, E, …) with only its price, transit time, a like-for-like flag, its outcome, a
+          size and a region from fixed lists, and an optional <Ui>Move&apos;s take</Ui>. Forwarders that are Unfit, Do
+          Not Contact or Withdrawn / No Response all show as &ldquo;Not taken forward&rdquo; with only the letter, size
+          and region, so the client can&apos;t tell which it was. A forwarder keeps its letter in every later report, and
+          a letter is never reused. Validity dates, terms, services and notes are never included.
+        </li>
+        <li>
+          {IDENTIFYING_TAKE_NOTE} A comment that names any forwarder in the project, its headquarters city, website or
+          email domain or contact person, or uses an internal status word, is refused.
+        </li>
+        <li>
+          Only clients on the Market Report plan see it, and only the latest report per project; the publish page says
+          which plan the client is on. On the free plan the Market Report tab is a locked page with no figures.{" "}
+          {REPORT_PUBLISH_CONFIRM} <Ui>View as client</Ui> shows the report exactly as the client sees it (locked if
+          they&apos;re on the free plan).
         </li>
         <li>
           Dates like &ldquo;today&rdquo; and quote validity use the server&apos;s date (UTC), so before 8am in Manila

@@ -58,20 +58,24 @@ function Figure({ value, label, caption }: { value: string; label: string; capti
   );
 }
 
-// The free plan's teaser on a forwarder panel: no figures at all.
-function MarketReportTeaser({ tier, href }: { tier: PortalLoad["tier"]; href: string }) {
+// The Market Report teaser on a forwarder panel. Free plan: no figures at
+// all. Paid plan: a link to that project's report, or "being prepared".
+function MarketReportTeaser({ tier, href, ready }: { tier: PortalLoad["tier"]; href: string; ready: boolean }) {
+  const paid = tier === "market_report";
   return (
     <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-portal-teal bg-white px-5 py-4">
       <div className="min-w-0">
         <p className="text-xs font-bold uppercase tracking-wide text-portal-teal">Market Report · this freight forwarder project</p>
         <p className="text-sm text-portal-ink">
-          {tier === "market_report"
-            ? "Your Market Report for this project is being prepared."
-            : "Every forwarder behind this recommendation: the full price range, transit times and why each was or wasn't picked. Part of the paid Market Report."}
+          {!paid
+            ? "Every forwarder behind this recommendation: the full price range, transit times and why each was or wasn't picked. Part of the paid Market Report."
+            : ready
+              ? "Your Market Report for this project is ready: every forwarder we contacted, with prices and what happened to each."
+              : "Your Market Report for this project is being prepared."}
         </p>
       </div>
       <Link href={href} className="text-sm font-semibold text-move-navy underline">
-        {tier === "market_report" ? "About your Market Report" : "About the Market Report"}
+        {!paid ? "About the Market Report" : ready ? "Open the Market Report" : "About your Market Report"}
       </Link>
     </div>
   );
@@ -146,7 +150,13 @@ export function PortalHome({
       e.key,
       <div key={e.key}>
         <ProjectPanel update={e.latest} today={today} />
-        {e.kind === "forwarder" && <MarketReportTeaser tier={tier} href={reportHref} />}
+        {e.kind === "forwarder" && (
+          <MarketReportTeaser
+            tier={tier}
+            ready={data.reportKeys.includes(e.key)}
+            href={tier === "market_report" ? `${reportHref}?p=${e.key}` : reportHref}
+          />
+        )}
       </div>,
     ]),
   );
@@ -238,7 +248,8 @@ export function PortalHome({
   );
 }
 
-// /portal/market-report until 2c: static text only, no report data.
+// /portal/market-report without a report: static text only, no report data
+// (the locked page on the free plan; "being prepared" on the paid plan).
 export function MarketReportPlaceholder({ tier, summaryHref, reportHref }: { tier: PortalLoad["tier"]; summaryHref: string; reportHref: string }) {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -248,8 +259,8 @@ export function MarketReportPlaceholder({ tier, summaryHref, reportHref }: { tie
         <div className="rounded-2xl border border-neutral-border bg-white p-6 text-portal-ink">
           <p className="text-lg font-semibold">Your Market Report is being prepared.</p>
           <p className="mt-1 text-sm">
-            It will show every partner we evaluated for your freight forwarder projects: the full price range, transit
-            times and what happened to each. We&apos;ll let you know when it&apos;s ready.
+            It will show every partner we evaluated for your freight forwarder project: the full price range, transit
+            times and what happened to each. Your Move contact will let you know when it&apos;s ready.
           </p>
         </div>
       ) : (

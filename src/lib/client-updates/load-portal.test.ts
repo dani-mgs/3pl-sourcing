@@ -41,10 +41,21 @@ function fake(entitlement: { tier: string; valid_until: string | null } | null) 
   return {
     calls,
     client: {
-      rpc: async (fn: string, args?: Record<string, unknown>) => {
+      rpc: (fn: string, args?: Record<string, unknown>) => {
         calls.push(`rpc ${fn}${args ? ` ${JSON.stringify(args)}` : ""}`);
-        if (fn === "my_move_contact_names") return { data: [{ first_name: "Alex" }], error: null };
-        return { data: rows, error: null };
+        const result =
+          fn === "my_move_contact_names"
+            ? { data: [{ first_name: "Alex" }], error: null }
+            : fn.includes("market_report")
+              ? { data: [{ engagement_key: "key-brightlineFwd" }], error: null }
+              : { data: rows, error: null };
+        return {
+          select: (cols: string) => {
+            calls.push(`rpc ${fn} select(${cols})`);
+            return Promise.resolve(result);
+          },
+          then: (resolve: (v: unknown) => void) => resolve(result),
+        };
       },
       from: (table: string) => chain(table),
     },
@@ -61,6 +72,16 @@ describe("loadPortal", () => {
     expect(data.tier).toBe("market_report");
     expect(data.contactNames).toEqual(["Alex"]);
     expect(data.engagements).toHaveLength(2);
+    // Paid: which projects have a report (keys only, for the link).
+    expect(calls).toContain("rpc my_market_reports select(engagement_key)");
+    expect(data.reportKeys).toEqual(["key-brightlineFwd"]);
+  });
+
+  test("a free client: no report function is called at all", async () => {
+    const { client, calls } = fake({ tier: "free", valid_until: null });
+    const data = await loadPortal(client as never, { as: "client" });
+    expect(calls.some((c) => c.includes("market_report"))).toBe(false);
+    expect(data.reportKeys).toEqual([]);
   });
 
   test("staff: the same rows through portal_updates_for_client for that client, and the same first-name rule", async () => {
@@ -73,6 +94,14 @@ describe("loadPortal", () => {
     // Staff only, first word only: a client user who owned nothing isn't named.
     expect(asStaff.contactNames).toEqual(["Alex"]);
     expect(asStaff.tier).toBe("free");
+    expect(calls.some((c) => c.includes("market_report"))).toBe(false);
+  });
+
+  test("staff viewing a paid client: report keys through the staff twin", async () => {
+    const { client, calls } = fake({ tier: "market_report", valid_until: null });
+    const data = await loadPortal(client as never, { as: "staff", clientId: CLIENT });
+    expect(calls).toContain(`rpc market_reports_for_client {"p_client_id":"${CLIENT}"}`);
+    expect(data.reportKeys).toEqual(["key-brightlineFwd"]);
   });
 
   test("an expired paid plan is free", async () => {

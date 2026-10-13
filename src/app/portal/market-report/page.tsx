@@ -1,13 +1,19 @@
+import { notFound } from "next/navigation";
 import { requireClient } from "@/lib/auth/require-client";
 import { createClient } from "@/lib/supabase/server";
-import { MarketReportPlaceholder } from "@/components/client-portal/portal-home";
-import { effectiveTier } from "@/lib/client-tiers";
+import { MarketReportPageBody } from "@/components/client-portal/market-report-page";
+import { chooseReport, loadMarketReports } from "@/lib/client-updates/load-market-reports";
 
-// Until Phase 2c: static text. It reads only the client's own plan row (to
-// choose the locked or "being prepared" text), never any report data.
-export default async function PortalMarketReportPage() {
+// The client's Market Report. On the free plan this is static text: only the
+// client's own plan row is read. On the paid plan the report comes from
+// my_market_reports() (latest per project, only while the plan is paid);
+// ?p= is the project's opaque portal key, and any other key is a 404.
+export default async function PortalMarketReportPage({ searchParams }: PageProps<"/portal/market-report">) {
   await requireClient();
+  const { p } = await searchParams;
   const supabase = await createClient();
-  const { data: entitlement } = await supabase.from("client_entitlements").select("tier, valid_until").maybeSingle();
-  return <MarketReportPlaceholder tier={effectiveTier(entitlement)} summaryHref="/portal" reportHref="/portal/market-report" />;
+  const load = await loadMarketReports(supabase, { as: "client" });
+  const choice = chooseReport(load, typeof p === "string" ? p : null);
+  if (choice.kind === "not_found") notFound();
+  return <MarketReportPageBody choice={choice} summaryHref="/portal" reportHref="/portal/market-report" />;
 }

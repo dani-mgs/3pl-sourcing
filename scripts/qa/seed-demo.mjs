@@ -21,7 +21,7 @@
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
-import { demoClientUpdates } from "./demo-portal-data.mjs";
+import { demoClientUpdates, demoMarketReports } from "./demo-portal-data.mjs";
 
 const EMAIL_DOMAIN = "demo.example.test";
 const CANARY = "INTERNAL-CANARY";
@@ -197,6 +197,7 @@ async function resetData(db, userIds) {
     // Updates go with their projects; this also catches any left on a project
     // that has since moved to another client (client_id is RESTRICT).
     check(await db.from("client_updates").delete().in("client_id", clientIds), "delete client updates");
+    check(await db.from("client_market_reports").delete().in("client_id", clientIds), "delete market reports");
     check(await db.from("clients").delete().in("id", clientIds), "delete clients");
   }
 }
@@ -704,6 +705,50 @@ async function seedClientUpdates(db, clients) {
   return { published: updates.filter((u) => !u.isDraft).length, drafts: updates.filter((u) => u.isDraft).length };
 }
 
+// Market Reports (Phase 2c): the letters each anonymised forwarder keeps,
+// and the reports with the expert's inputs, as an expert's publish would
+// store them. Inserted with the service role, so past dates are kept.
+async function seedMarketReports(db, clients) {
+  const reports = demoMarketReports();
+  const labelled = new Set();
+  for (const r of reports) {
+    const [table, , client] = ENGAGEMENTS[r.engagement];
+    const projectIds = await idsWhere(db.from(table).select("id").eq("client_id", clients[client]), `find ${r.engagement}`);
+    if (projectIds.length !== 1) fail(`expected one project for ${r.engagement}, found ${projectIds.length}`);
+    const projectId = projectIds[0];
+    const forwarders = check(
+      await db.from("forwarders").select("id, company_name, headquarters").eq("forwarder_project_id", projectId),
+      `forwarders of ${r.engagement}`,
+    );
+    const byName = new Map(forwarders.map((f) => [f.company_name, f]));
+    const idOf = (p) => {
+      const f = byName.get(p.name);
+      if (!f || f.headquarters !== p.hq) fail(`Market Report demo data drifted: ${p.name} (${p.hq}) in ${r.engagement}`);
+      return f.id;
+    };
+    if (!labelled.has(r.engagement)) {
+      labelled.add(r.engagement);
+      check(await db.from("market_report_partner_labels").insert(
+        r.partners.filter((p) => p.label).map((p) => ({ forwarder_project_id: projectId, forwarder_id: idOf(p), label: p.label })),
+      ), `insert labels for ${r.engagement}`);
+    }
+    const inputs = {
+      recommendedId: r.recommended ? idOf(r.partners.find((p) => p.name === r.recommended)) : null,
+      partners: Object.fromEntries(r.partners.map((p) => [idOf(p), {
+        size: p.row.size, region: p.row.region, take: p.row.outcome === "not_taken_forward" ? null : p.row.take,
+      }])),
+    };
+    check(await db.from("client_market_reports").insert({
+      forwarder_project_id: projectId,
+      payload: r.payload,
+      inputs,
+      published_at: at(-r.daysAgo),
+      created_at: at(-r.daysAgo),
+    }), `insert market report for ${r.engagement}`);
+  }
+  return reports.length;
+}
+
 async function seedClientUsers(db, clients, password) {
   for (const u of CLIENT_USERS) {
     check(await db.auth.admin.createUser({
@@ -761,6 +806,7 @@ async function main() {
   await seedClientUsers(db, clients, password);
   await seedEntitlements(db, clients);
   const updates = await seedClientUpdates(db, clients);
+  const reports = await seedMarketReports(db, clients);
 
   console.log(`demo:seed: seeded ${url}`);
   console.log(`  ${Object.keys(CLIENTS).length} clients: ${Object.values(CLIENTS).map((c) => c.name).join(", ")}`);
@@ -771,6 +817,7 @@ async function main() {
     console.log(`  ${u.email.padEnd(36)} client: ${CLIENTS[u.client].name}${u.mustChangePassword ? " (must change password)" : ""}`);
   }
   console.log(`  client updates: ${updates.published} published, ${updates.drafts} draft (Kettle & Pine forwarder)`);
+  console.log(`  market reports: ${reports} (Brightline current + older, Partner D-L; Ridgeway's stays locked on the free plan)`);
   console.log(`  plans: ${ENTITLEMENTS.map((e) => `${CLIENTS[e.client].name} ${e.tier}`).join(", ")}; others free (no row)`);
   console.log(`  password: ${password}`);
 }

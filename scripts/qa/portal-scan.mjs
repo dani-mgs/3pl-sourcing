@@ -15,8 +15,21 @@
 //     PostgREST with its own token, including other clients' ids;
 // then fails on INTERNAL-CANARY, DRAFT-CANARY, internal status words, other
 // clients' names, partners never shortlisted, and any internal id.
+//
+// Market Report (Phase 2c), for every user:
+//   - no anonymised partner's name, HQ (or its city), website or email domain
+//     or contact person anywhere, for the paid client too (a city that is
+//     on the client's own route, like "Los Angeles", is allowed);
+//   - never REPORT-CANARY (Ridgeway's report, free plan) or
+//     OLD-REPORT-CANARY (an older Brightline report: clients only get the
+//     latest);
+//   - free plan: no report figure at all in HTML or RSC (no letters, no
+//     report prices, no report headings), and the locked page shows;
+//   - paid plan: the report really shows (its median and its last letter),
+//     and another client's report key is a 404.
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 
@@ -35,6 +48,23 @@ const USERS = [
 const STATUS_WORDS =
   /Unfit|Do Not Contact|Do not Contact|Withdrawn|No Response|Vetted|Under Assessment|Move Recommended|Reviewing Quotation|Waiting for Quotation|Potential \/ Not Contacted/;
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+const REPORT_HEADINGS = /Middle of the market|What happened to all|Every forwarder we evaluated|Like-for-like only|Partner [D-Z]{1,2}\b/;
+const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
+// The same opaque key the database gives a client's project.
+function engagementKey(clientId, projectId) {
+  return createHash("md5").update(`client-update:${clientId}:${projectId}`).digest("hex");
+}
+
+function host(value) {
+  if (!value) return null;
+  const raw = value.includes("@") ? value.split("@").pop() : value;
+  try {
+    return new URL(raw.includes("://") ? raw : `https://${raw}`).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
 
 function fail(message) {
   console.error(`qa:portal-scan: ${message}`);
@@ -94,7 +124,48 @@ async function forbiddenTerms(db) {
   ];
   for (const p of projects) ids.add(p.id);
   const entitled = new Set(check(await db.from("client_entitlements").select("client_id"), "entitlements").map((e) => e.client_id));
-  return { clients, neverNamed, ids, projects, entitled };
+
+  // Market Reports: every anonymised partner's identifying details, and
+  // every figure a report holds (for the free-plan check).
+  const reports = check(await db.from("client_market_reports").select("id, client_id, forwarder_project_id, payload"), "market reports");
+  const labelled = new Set(check(await db.from("market_report_partner_labels").select("forwarder_id"), "labels").map((l) => l.forwarder_id));
+  const namedAnywhere = named + JSON.stringify(reports.map((r) => r.payload));
+  const full = check(
+    await db.from("forwarders").select("id, company_name, website, headquarters, email, contact_person, forwarder_project_id"),
+    "forwarder details",
+  );
+  const anonymised = full.filter((f) => labelled.has(f.id) || !namedAnywhere.includes(f.company_name));
+  // Distinctive words of lettered partners' names ("Meridian"), matched as
+  // whole, capitalised words; generic words and words a named partner also
+  // uses ("Pacific" in Pacific Bridge) don't count.
+  const GENERIC = /^(Logistics|Freight|Shipping|Cargo|Lines|Line|Express|Forwarding|Global|International|Services|Ocean|Transport|Agents|Group|Trading|Supply|Solutions)$/;
+  const namedNames = full.filter((f) => !anonymised.includes(f)).map((f) => f.company_name).join(" ");
+  const identifying = anonymised.flatMap((f) => {
+    const city = f.headquarters?.split(",")[0].trim() ?? null;
+    const site = host(f.website);
+    const mail = host(f.email);
+    return [
+      { term: f.company_name, kind: "name", of: f.company_name },
+      { term: f.headquarters, kind: "HQ", of: f.company_name },
+      { term: city, kind: "HQ city", of: f.company_name, city: true },
+      { term: site, kind: "website", of: f.company_name },
+      { term: site?.split(".").slice(0, -1).join("."), kind: "website name", of: f.company_name },
+      { term: mail, kind: "email domain", of: f.company_name },
+      { term: mail?.split(".").slice(0, -1).join("."), kind: "email domain name", of: f.company_name },
+      { term: f.contact_person, kind: "contact", of: f.company_name },
+      // Only for forwarders shown as a letter (the full name above covers
+      // every forwarder never named).
+      ...(labelled.has(f.id) ? f.company_name.split(/[^A-Za-z]+/) : [])
+        .filter((w) => w.length >= 5 && !GENERIC.test(w) && !namedNames.includes(w))
+        .map((w) => ({ term: w, kind: "name word", of: f.company_name, word: true })),
+    ].filter((t) => t.term && t.term.length >= 4);
+  });
+  const reportPrices = [
+    ...new Set(reports.flatMap((r) => (r.payload?.partners ?? []).map((p) => p.priceUsd).filter((x) => typeof x === "number"))),
+  ].map((x) => usd.format(x));
+  for (const r of reports) ids.add(r.id);
+  const routeCities = check(await db.from("forwarder_projects").select("client_id, origin_city, destination_city"), "routes");
+  return { clients, neverNamed, ids, projects, entitled, reports, identifying, reportPrices, routeCities };
 }
 
 async function signIn(stack, admin, email) {
@@ -117,13 +188,14 @@ async function main() {
   const stack = localStack();
   const base = appBase();
   const admin = createClient(stack.url, stack.serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { clients, neverNamed, ids, projects, entitled } = await forbiddenTerms(admin);
+  const { clients, neverNamed, ids, projects, entitled, reports, identifying, reportPrices, routeCities } = await forbiddenTerms(admin);
+  if (!reports.some((r) => JSON.stringify(r.payload).includes("REPORT-CANARY"))) fail("no seeded Market Report; run npm run demo:seed");
   const openapi = await (await fetch(`${stack.url}/rest/v1/`, { headers: { apikey: stack.serviceRoleKey, Authorization: `Bearer ${stack.serviceRoleKey}` } })).json();
   const relations = Object.keys(openapi.definitions ?? {}).sort();
   // Only functions that read: calling one that writes (complete_password_change,
   // create_*_with_client, save_duty_estimate, ...) would change the data under
   // test. The writers are refused to clients by pgTAP 28 and 30.
-  const READS = /^(my_|portal_|is_|has_|search_)/;
+  const READS = /^(my_|portal_|is_|has_|search_|market_report|client_has_)/;
   const functions = Object.keys(openapi.paths ?? {})
     .filter((p) => p.startsWith("/rpc/"))
     .map((p) => p.slice(5))
@@ -181,6 +253,17 @@ async function main() {
       `/portal/${otherProject.id}`,
       `/portal/market-report/${otherProject.id}`,
     ];
+    // Another client's project key on the report page: 404 on the paid
+    // plan; the free plan's static page never reads it.
+    const otherForwarder = projects.find((p) => p.client_id !== own.id && reports.some((r) => r.forwarder_project_id === p.id));
+    if (!user.mustChangePassword && otherForwarder) {
+      const path = `/portal/market-report?p=${engagementKey(otherForwarder.client_id, otherForwarder.id)}`;
+      const res = await fetch(base + path, { headers: { cookie }, redirect: "manual" });
+      bodies.push([path, await res.text()]);
+      const expected = user.plan === "paid" ? 404 : 200;
+      if (res.status !== expected) note(path, `expected ${expected}, got ${res.status}`);
+    }
+
     for (const path of guesses) {
       const res = await fetch(base + path, { headers: { cookie }, redirect: "manual" });
       // A 404 page echoes the requested path (Next's router data lists its
@@ -213,10 +296,16 @@ async function main() {
     const expected = entitled.has(own.id) ? "client_entitlements" : "";
     if (readable.join() !== expected) note("tables", `readable: ${readable.join(", ") || "none"} (expected ${expected || "none"})`);
     const rpcCalls = [];
+    let reportCount = "n/a";
     for (const fn of functions) {
       const argsFor = {
         portal_updates_for_client: others.map((c) => ({ p_client_id: c.id })).concat([{ p_client_id: own.id }]),
         portal_updates_rows: others.map((c) => ({ p_client_id: c.id })),
+        market_reports_for_client: others.map((c) => ({ p_client_id: c.id })).concat([{ p_client_id: own.id }]),
+        market_report_rows: others.map((c) => ({ p_client_id: c.id })),
+        client_has_paid_tier: others.map((c) => ({ p_client_id: c.id })).concat([{ p_client_id: own.id }]),
+        market_report_label_at: [{ p_index: 0 }],
+        market_report_payload_ok: [{ p_payload: {} }],
       }[fn] ?? [{}];
       for (const args of argsFor) {
         const res = await rest(`rpc/${fn}`, { method: "POST", body: JSON.stringify(args) });
@@ -225,6 +314,18 @@ async function main() {
         rpcCalls.push(`${fn}:${res.status}`);
         if ((fn === "portal_updates_for_client") && body !== "[]") note(`rpc ${fn}`, `returned rows for ${JSON.stringify(args)}`);
         if (fn === "portal_updates_rows" && res.ok) note(`rpc ${fn}`, "a client could call the internal query");
+        if (fn === "market_reports_for_client" && body !== "[]") note(`rpc ${fn}`, `returned rows for ${JSON.stringify(args)}`);
+        if (fn === "market_report_rows" && res.ok) note(`rpc ${fn}`, "a client could call the internal report query");
+        if (fn === "client_has_paid_tier") {
+          const expectedTier = args.p_client_id === own.id && user.plan === "paid" ? "true" : "false";
+          if (body !== expectedTier) note(`rpc ${fn}`, `${JSON.stringify(args)} returned ${body} (expected ${expectedTier})`);
+        }
+        if (fn === "my_market_reports") {
+          const rows = res.ok ? JSON.parse(body) : [];
+          reportCount = rows.length;
+          if (user.plan !== "paid" && rows.length) note(`rpc ${fn}`, `a free client got ${rows.length} report(s)`);
+          if (user.plan === "paid" && rows.length !== 1) note(`rpc ${fn}`, `expected exactly the latest report, got ${rows.length}`);
+        }
       }
     }
     const mine = await (await rest("rpc/my_portal_updates", { method: "POST", body: "{}" })).json();
@@ -236,7 +337,19 @@ async function main() {
       note("/portal", `doesn't show the newest update ("${newest}"): the scan may not be signed in`);
     }
 
+    // Not vacuous for the report either: paid sees it, free sees the lock.
+    const reportHtml = bodies.find(([w]) => w === "/portal/market-report")?.[1] ?? "";
+    if (!user.mustChangePassword && user.plan === "paid" && !(reportHtml.includes("$9,610") && reportHtml.includes("Partner L"))) {
+      note("/portal/market-report", "doesn't show the paid report (median $9,610, Partner L)");
+    }
+    if (!user.mustChangePassword && user.plan === "free" && !reportHtml.includes("Locked · paid plan")) {
+      note("/portal/market-report", "doesn't show the locked page");
+    }
+
     // ---- The scan ------------------------------------------------------------------------
+    const ownCities = new Set(
+      routeCities.filter((r) => r.client_id === own.id).flatMap((r) => [r.origin_city, r.destination_city]).filter(Boolean),
+    );
     for (const [where, body] of bodies) {
       if (body.includes("INTERNAL-CANARY")) note(where, "INTERNAL-CANARY");
       if (body.includes("DRAFT-CANARY")) note(where, "DRAFT-CANARY (a draft)");
@@ -244,6 +357,19 @@ async function main() {
       if (status && !where.startsWith("rpc search_hts")) note(where, `status word "${status[0]}"`);
       for (const c of others) if (body.includes(c.name)) note(where, `other client's name "${c.name}"`);
       for (const n of neverNamed) if (body.includes(n)) note(where, `unshortlisted partner "${n}"`);
+      if (body.includes("REPORT-CANARY")) note(where, body.includes("OLD-REPORT-CANARY") ? "OLD-REPORT-CANARY (an older report)" : "REPORT-CANARY (a free client's report)");
+      const lower = body.toLowerCase();
+      for (const t of identifying) {
+        if (t.city && ownCities.has(t.term)) continue;
+        const found = t.word ? new RegExp(`\\b${t.term}\\b`).test(body) : lower.includes(t.term.toLowerCase());
+        if (found) note(where, `anonymised partner's ${t.kind} "${t.term}" (${t.of})`);
+      }
+      if (user.plan === "free" && where.startsWith("/portal")) {
+        const heading = body.match(REPORT_HEADINGS);
+        if (heading) note(where, `Market Report content on the free plan ("${heading[0]}")`);
+        for (const price of reportPrices) if (body.includes(price)) note(where, `Market Report price ${price} on the free plan`);
+        if (body.includes("priceUsd")) note(where, "Market Report data on the free plan");
+      }
       // The client's own client id is in its own token (app_metadata) and plan
       // row; any other internal id is a leak.
       for (const id of body.match(UUID) ?? []) {
@@ -260,6 +386,7 @@ async function main() {
       tables: relations.length,
       functions: rpcCalls.length,
       ownUpdates: Array.isArray(mine) ? mine.length : `error ${JSON.stringify(mine).slice(0, 60)}`,
+      reports: reportCount,
       readable: readable.join(", ") || "none",
     });
   }
@@ -270,7 +397,10 @@ async function main() {
     for (const p of problems) console.error(`  - ${p}`);
     process.exit(1);
   }
-  console.log(`qa:portal-scan: clean (${USERS.length} client users, ${relations.length} tables/views, ${functions.length} functions).`);
+  console.log(
+    `qa:portal-scan: clean (${USERS.length} client users, ${relations.length} tables/views, ${functions.length} functions, ` +
+      `${identifying.length} identifying terms of anonymised partners, ${reportPrices.length} report prices).`,
+  );
 }
 
 await main();
