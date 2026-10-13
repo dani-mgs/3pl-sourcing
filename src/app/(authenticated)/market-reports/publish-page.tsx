@@ -129,7 +129,11 @@ export async function MarketReportPublishPage({ projectId }: { projectId: string
                       </span>
                       <span>{payload ? `${payload.partners.length} forwarders` : "Can't be shown"}</span>
                       {payload?.author.firstName && <span className="text-neutral-muted">by {payload.author.firstName}</span>}
-                      {i === 0 && <span className="rounded-full bg-neutral-bg px-2 py-0.5 text-xs font-semibold">The one the client sees</span>}
+                      {i === 0 && (
+                        <span className="rounded-full bg-neutral-bg px-2 py-0.5 text-xs font-semibold">
+                          {paid ? "The one the client sees" : "Latest (hidden while the client is on the Free plan)"}
+                        </span>
+                      )}
                     </summary>
                     <div className="flex flex-col gap-3 border-t border-neutral-border p-4">
                       {payload ? (

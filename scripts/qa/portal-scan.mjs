@@ -135,6 +135,11 @@ async function forbiddenTerms(db) {
     "forwarder details",
   );
   const anonymised = full.filter((f) => labelled.has(f.id) || !namedAnywhere.includes(f.company_name));
+  // Distinctive words of lettered partners' names ("Meridian"), matched as
+  // whole, capitalised words; generic words and words a named partner also
+  // uses ("Pacific" in Pacific Bridge) don't count.
+  const GENERIC = /^(Logistics|Freight|Shipping|Cargo|Lines|Line|Express|Forwarding|Global|International|Services|Ocean|Transport|Agents|Group|Trading|Supply|Solutions)$/;
+  const namedNames = full.filter((f) => !anonymised.includes(f)).map((f) => f.company_name).join(" ");
   const identifying = anonymised.flatMap((f) => {
     const city = f.headquarters?.split(",")[0].trim() ?? null;
     const site = host(f.website);
@@ -148,6 +153,11 @@ async function forbiddenTerms(db) {
       { term: mail, kind: "email domain", of: f.company_name },
       { term: mail?.split(".").slice(0, -1).join("."), kind: "email domain name", of: f.company_name },
       { term: f.contact_person, kind: "contact", of: f.company_name },
+      // Only for forwarders shown as a letter (the full name above covers
+      // every forwarder never named).
+      ...(labelled.has(f.id) ? f.company_name.split(/[^A-Za-z]+/) : [])
+        .filter((w) => w.length >= 5 && !GENERIC.test(w) && !namedNames.includes(w))
+        .map((w) => ({ term: w, kind: "name word", of: f.company_name, word: true })),
     ].filter((t) => t.term && t.term.length >= 4);
   });
   const reportPrices = [
@@ -351,7 +361,8 @@ async function main() {
       const lower = body.toLowerCase();
       for (const t of identifying) {
         if (t.city && ownCities.has(t.term)) continue;
-        if (lower.includes(t.term.toLowerCase())) note(where, `anonymised partner's ${t.kind} "${t.term}" (${t.of})`);
+        const found = t.word ? new RegExp(`\\b${t.term}\\b`).test(body) : lower.includes(t.term.toLowerCase());
+        if (found) note(where, `anonymised partner's ${t.kind} "${t.term}" (${t.of})`);
       }
       if (user.plan === "free" && where.startsWith("/portal")) {
         const heading = body.match(REPORT_HEADINGS);

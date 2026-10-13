@@ -51,6 +51,12 @@ export function MarketReportView({ payload, publishedAt }: { payload: MarketRepo
   const hi = points.length ? Math.max(...points) * 1.05 : 1;
   const at = (x: number) => `${(((x - lo) / (hi - lo || 1)) * 100).toFixed(2)}%`;
   const dots = payload.partners.filter((p) => !isNotTakenForward(p) && p.likeForLike && p.priceUsd != null);
+  // Quotes at the same price are stacked so each dot stays visible.
+  const priceOf = (i: number) => (dots[i] as { priceUsd: number }).priceUsd;
+  const stackOffset = (i: number) => {
+    const same = dots.map((_, j) => j).filter((j) => priceOf(j) === priceOf(i));
+    return (same.indexOf(i) - (same.length - 1) / 2) * 20;
+  };
 
   const rows: PartnerRowView[] = payload.partners.map((p, i) => ({
     key: `${i}`,
@@ -145,7 +151,12 @@ export function MarketReportView({ payload, publishedAt }: { payload: MarketRepo
                   )}
                   {f.median != null && (
                     <div className="absolute inset-y-2 border-l-2 border-dotted border-portal-muted" style={{ left: at(f.median) }}>
-                      <span className="absolute bottom-0 left-1 text-[11px] whitespace-nowrap text-portal-muted">Median {usd(f.median)}</span>
+                      {/* Left of its line, so it never runs into "Today" (above the median here). */}
+                      <span
+                        className={`absolute bottom-0 text-[11px] whitespace-nowrap text-portal-muted ${f.today != null && f.today < f.median ? "left-1" : "right-1"}`}
+                      >
+                        Median {usd(f.median)}
+                      </span>
                     </div>
                   )}
                   {dots.map((p, i) => (
@@ -153,14 +164,14 @@ export function MarketReportView({ payload, publishedAt }: { payload: MarketRepo
                       key={i}
                       title={`${partnerName(p)}: ${priceText(p)}`}
                       className={
-                        "absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 " +
+                        "absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 " +
                         (p.outcome === "recommended"
                           ? "border-portal-teal bg-portal-teal"
                           : p.outcome === "shortlisted"
                             ? "border-portal-teal bg-white"
                             : "border-portal-muted bg-portal-line")
                       }
-                      style={{ left: at((p as { priceUsd: number }).priceUsd) }}
+                      style={{ left: at((p as { priceUsd: number }).priceUsd), top: `calc(50% + ${stackOffset(i)}px)` }}
                     />
                   ))}
                 </div>
