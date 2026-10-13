@@ -8,6 +8,11 @@ import { IntroductionButton } from "./request-dialogs";
 // Receives display text only (built on the server from the payload). With
 // `introductions`, lettered rows that can be introduced get an Introduction
 // column: the client's button, or what was already asked.
+//
+// Below md the same rows are stacked cards instead of the table (which would
+// scroll sideways and hide the Introduction column on a phone). Both are in
+// the HTML and CSS hides one, so the server and client render the same and
+// only the visible copy reaches assistive tech.
 
 // A lettered row that can be asked for: its letter ("D"), and the request
 // already sent for it, if any.
@@ -47,7 +52,7 @@ export function ReportPartnerTable({
     <button
       type="button"
       aria-pressed={onlyComparable === value}
-      aria-controls={`${id}-table`}
+      aria-controls={`${id}-table ${id}-cards`}
       onClick={() => setOnlyComparable(value)}
       className={
         "min-h-9 rounded-md px-3 text-[13px] font-semibold " +
@@ -64,7 +69,12 @@ export function ReportPartnerTable({
         {button(false, `All ${rows.length}`)}
         {button(true, `Like-for-like only (${comparable})`)}
       </div>
-      <div className="min-w-0 overflow-x-auto rounded-xl border border-neutral-border">
+      <ul id={`${id}-cards`} aria-label={caption} className="flex flex-col gap-3 md:hidden">
+        {shown.map((r) => (
+          <PartnerCard key={r.key} row={r} introductions={introductions} />
+        ))}
+      </ul>
+      <div className="hidden min-w-0 overflow-x-auto rounded-xl border border-neutral-border md:block">
         <table
           id={`${id}-table`}
           className={`w-full ${introductions ? "min-w-[920px]" : "min-w-[760px]"} border-collapse text-left text-sm text-portal-ink`}
@@ -105,6 +115,45 @@ export function ReportPartnerTable({
         </table>
       </div>
     </div>
+  );
+}
+
+// One partner on a phone: the table row's fields, top to bottom, and the
+// Introduction cell across the bottom (its button full width).
+function PartnerCard({
+  row: r,
+  introductions,
+}: {
+  row: PartnerRowView;
+  introductions?: { engagementKey: string; mode: "client" | "view" };
+}) {
+  const fields: [string, string][] = [
+    ["Profile", r.profile],
+    ["Per shipment", r.price],
+    ["vs. today", r.vs],
+    ["Transit", r.lead],
+    ["Move's take", r.take ?? "—"],
+  ];
+  return (
+    <li className="flex flex-col gap-3 rounded-xl border border-neutral-border bg-white p-4 text-sm text-portal-ink">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h4 className={`text-base ${r.named ? "font-bold" : "font-semibold"}`}>{r.name}</h4>
+        <span className="text-xs text-portal-muted">{r.outcome}</span>
+      </div>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+        {fields.map(([label, value]) => (
+          <div key={label} className="contents">
+            <dt className="text-portal-muted">{label}</dt>
+            <dd className={label === "Per shipment" ? "tabular-nums" : undefined}>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {introductions && (
+        <div className="border-t border-neutral-border pt-3 [&>button]:w-full">
+          <IntroductionCellView cell={r.intro ?? null} engagementKey={introductions.engagementKey} mode={introductions.mode} />
+        </div>
+      )}
+    </li>
   );
 }
 
