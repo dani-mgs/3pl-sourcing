@@ -2,7 +2,7 @@
 -- on any table or view in public, and every read is refused outright.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(32);
+select plan(33);
 
 -- Strict: anon holds no privilege at all on any public table or view. Lists
 -- the offending table and privilege if one creeps back in (e.g. a new table
@@ -22,7 +22,7 @@ select is_empty(
 select set_eq(
   $$ select c.relname::text from pg_class c join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relkind in ('r', 'v') $$,
-  array['additional_duties', 'additional_duty_scope', 'additional_duty_scope_counts', 'client_entitlements', 'client_market_reports', 'client_update_inputs', 'client_updates', 'clients', 'customs_fees', 'duty_estimates',
+  array['additional_duties', 'additional_duty_scope', 'additional_duty_scope_counts', 'client_entitlements', 'client_market_reports', 'client_requests', 'client_update_inputs', 'client_updates', 'clients', 'customs_fees', 'duty_estimates',
         'duty_program_review_status', 'duty_program_reviews', 'duty_programs', 'forwarder_projects',
         'forwarder_quotes', 'forwarders', 'fx_rates', 'fx_rates_latest', 'hts_chapter99_changes',
         'hts_column2_countries', 'hts_lines', 'hts_releases', 'market_report_partner_labels', 'profiles', 'rate_details',
@@ -36,6 +36,7 @@ select throws_ok('select * from additional_duty_scope', '42501', null, 'anon can
 select throws_ok('select * from additional_duty_scope_counts', '42501', null, 'anon cannot read additional_duty_scope_counts');
 select throws_ok('select * from client_entitlements', '42501', null, 'anon cannot read client_entitlements');
 select throws_ok('select * from client_market_reports', '42501', null, 'anon cannot read client_market_reports');
+select throws_ok('select * from client_requests', '42501', null, 'anon cannot read client_requests');
 select throws_ok('select * from client_update_inputs', '42501', null, 'anon cannot read client_update_inputs');
 select throws_ok('select * from client_updates', '42501', null, 'anon cannot read client_updates');
 select throws_ok('select * from clients', '42501', null, 'anon cannot read clients');
