@@ -1,8 +1,8 @@
 # MOVE Supply Chain Decision Hub — Project State & Handover
 
-_Last updated: 2026-10-10 by Dani (as of `fix/data-integrity-followups`)_
+_Last updated: 2026-10-13 by Dani (as of `main` at 5dba670, client dashboard Phase 3b merged)_
 
-**Live:** 3PL Sourcing, Forwarder Sourcing, Tariff Calculator. **Next:** Landed Cost Calculator. **In progress:** client dashboard (Phase 3: client actions. 3a approve, request changes and questions with the staff inbox; 3b introduction requests and Market Report interest; Phase 4 emails next). **Deferred:** 3PL Audit, Forwarder Audit.
+**Live:** 3PL Sourcing, Forwarder Sourcing, Tariff Calculator, client dashboard Phases 0–3b (client portal, Market Report, client requests and introductions). **Next:** Landed Cost Calculator; client dashboard Phase 4 not planned yet (section 7). **Deferred:** 3PL Audit, Forwarder Audit.
 
 History is in git and `docs/CHANGELOG.md`; this file is the short version.
 
@@ -40,6 +40,25 @@ Internal hub for Move Supply Chain Logistics Experts: source and compare 3PLs an
 - **3PL:** Contract Period (optional, 1–120 months).
 - **Also:** daily FX feed with locked quote rates; `/help` and FAQ; forwarder summary and detail redesign; security headers, a CSV formula-injection guard, Zod on 3PL and admin actions.
 
+**Client dashboard (Phases 0–3b), how it fits together**
+- **Client role:** a client user is an external Auth user with `app_metadata.role = client` and a `client_id`, created by staff on `/client-access` with a one-time password (no email). They only reach `/portal`.
+- **Entitlements:** one `client_entitlements` row per client (`free` or `market_report`, optional end date; no row = free). The paid-plan check is `client_has_paid_tier()`.
+- **Published snapshots:** "Share update with client" on a project page builds a payload on the server from an allow-list and publishes it to `client_updates` (Phase 2a). Clients only ever see published snapshots, never live project data; drafts stay staff-side.
+- **Portal** (`/portal`, Phase 2b): each project's latest update and history, what needs the client, key figures, a timeline, and "Your questions and requests".
+- **View as client** (`/client-access/[clientId]/preview`): staff see exactly the client's portal and Market Report through staff twins of the same SQL, with no buttons.
+- **Market Report** (Phase 2c, paid plan): a published snapshot of every forwarder contacted for a forwarder project. The shortlist is named; the rest show as Partner D, E, … Free clients get a locked page.
+- **Client requests** (Phase 3a): approve a recommendation, request changes or ask a question. **Introductions and interest** (Phase 3b): "Request introduction" on a lettered Market Report row (paid), "Unlock the Market Report" (free). All are rows in `client_requests`.
+- **Staff inbox** (`/client-requests`, Requests badge in the top bar): the project owner or an admin marks a request seen and replies once (Market Report interest: an admin or the owner of any of the client's projects). Admins can withdraw a reply. Staff see which forwarder a letter is; the client never does. There are no emails: watch the badge.
+- Details: `docs/SECURITY.md` ("Client users", "Client updates", "Market Report", "Client requests", "Introductions and Market Report interest"); every change is in `docs/CHANGELOG.md`.
+
+**Migrations since the last update** (all applied to production)
+- `20261012131014_client_role_foundation`: client role, `client_entitlements`, `has_staff_role()` (renamed from `has_app_role()`), client users.
+- `20261012143916_client_updates`: `client_updates`, `client_update_inputs`, the payload check.
+- `20261012234353_client_portal_read`: `my_portal_updates()`, the staff twin, contact names.
+- `20261013015815_client_market_report`: reports, partner labels, `my_market_reports()`.
+- `20261013024500_client_requests`: `client_requests`, submit, read, seen, reply, withdraw, badge; `update_key` on the portal functions.
+- `20261013061248_client_introductions`: introductions and Market Report interest, shared caller and rate-cap checks, `partner_label` on the request reads.
+
 **QA**
 - **Full regression, 2026-10-09:** 188 cases, 0 Critical; report in `docs/qa/regression-report-2026-10-09.md`.
 - **Fixes:** every logged bug, B-1 to B-12, is fixed. So are the three follow-ups:
@@ -48,17 +67,15 @@ Internal hub for Move Supply Chain Logistics Experts: source and compare 3PLs an
   - the provider-by-project index.
 - **Reusable matrix:** `docs/qa/regression-test-cases.md`.
 - **`npm run qa:seed`:** creates ZZQA test users and data. It refuses any URL but the local stack, and prints a new password each run.
-- **`npm run demo:seed`:** six realistic demo clients for the client dashboard (Northwind, Brightline, Kettle & Pine, Solace, Ridgeway, Harbor), owned by two `@demo.example.test` experts. Same local-only guard and per-run password; independent of `qa:seed`. Internal-only fields hold `INTERNAL-CANARY`.
+- **`npm run demo:seed`:** six realistic demo clients for the client dashboard (Northwind, Brightline, Kettle & Pine, Solace, Ridgeway, Harbor), owned by two `@demo.example.test` experts, with client users, published updates, Market Reports (Brightline paid, Ridgeway free) and requests in every state. Same local-only guard and per-run password; independent of `qa:seed`. Internal-only fields hold `INTERNAL-CANARY`.
+- **`npm run qa:portal-scan`:** the client portal leak scan (what it checks: `docs/qa/regression-test-cases.md`, item 5). Run it after any change to what the portal shows.
 - **Production cleanup candidates:** `docs/qa/cleanup-candidates.sql`, one read-only SELECT to run in the SQL Editor; delete through the app, never SQL.
 
 **Security model** (details in `docs/SECURITY.md`)
 - **Role checks** (`is_admin()`, `is_tariff_editor()`) read the live role from `auth.users`, not the session token. Changes apply on the next page load or save; no re-login is needed.
 - **Display names** are admin-only, stored in `app_metadata.first_name`. `profiles` is a one-way mirror of them.
 - **All data access needs an admin-assigned staff role.** Every internal RLS table has a restrictive `has_staff_role()` policy (renamed from `has_app_role()` on 2026-10-12), so an account without a staff role (no role, or a client user) sees and writes nothing.
-- **Client users** (role `client` + `app_metadata.client_id`, external) reach only `/portal`; every staff Server Action starts with `requireStaff()`. They can read one table: their client's `client_entitlements` row. Created on `/client-access` (admins: any client; experts: clients of projects they own) with a one-time password and a forced change at first sign-in; no email (no SMTP).
-- **Client updates** (`client_updates`, Phase 2a): "Share update with client" on each project page publishes a snapshot whose payload is built on the server from an allow-list (`src/lib/client-updates/`); only shortlisted partners are named, 3PL comparisons are percentages only. Clients see their own client's published updates in `/portal` (Phase 2b), read only through `my_portal_updates()`; the tables stay staff-only. Staff preview any client's portal with View as client. `client_update_inputs` (form inputs, internal ids) is staff-only for good.
-- **Client requests** (`client_requests`, Phase 3a): clients approve, request changes or ask a question in the portal through `submit_client_request()` only (forced client, author, time; stale and second decisions, must-change-password and rate caps refused); staff see them under Requests (header badge) and reply once (owner or admin); admins can withdraw a reply. The table is staff-only. Phase 3b: paid clients ask for an introduction to a lettered partner of their latest Market Report (`submit_client_introduction()`, one open per letter; staff see the name, the client only the letter, and replies that could identify a partner are refused) and free clients press "Unlock the Market Report" once (`submit_market_report_interest()`).
-- **Market Report** (`client_market_reports`, Phase 2c): "Market Report" on a forwarder project publishes every contacted forwarder (shortlist named, the rest Partner D, E, … with fixed-vocabulary profiles; Unfit / Do Not Contact / Withdrawn as "Not taken forward"). Paid clients read the latest report per project through `my_market_reports()`, which checks the plan itself; free clients get a static locked page. Letters live in the staff-only `market_report_partner_labels` and are never reused.
+- **Client users** (role `client`, external) can read one table, their client's `client_entitlements` row; everything else goes through functions. The client dashboard rules are in section 10.
 - **Signup is off** (`[auth] enable_signup = false`; production verified off on 2026-10-09).
 - **TRUNCATE is revoked** from `authenticated` and `anon`.
 - **Client and project are created in one transaction**, in both modules (`create_three_pl_project_with_client`, `create_forwarder_project_with_client`). A failed save leaves no orphan client.
@@ -81,9 +98,19 @@ Internal hub for Move Supply Chain Logistics Experts: source and compare 3PLs an
   - Never read or load `.env` files.
   - No screenshots or passwords in the repo.
 - **`/help`:** update it in the same change as any behaviour it describes.
+- **Run the client dashboard demo locally** (Docker running):
+  ```sh
+  nvm use
+  npx supabase db reset            # optional: a fresh local database
+  npm run qa:seed                  # ZZQA users and data (prints a one-time password)
+  npm run demo:seed                # demo clients, client users, updates, reports, requests (prints a one-time password)
+  # app on :3100 from a worktree, with keys from `npx supabase status -o env` (see Local QA rules), then:
+  npm run qa:portal-scan           # must end with "clean"
+  ```
+  Demo sign-ins: `brightline-ops@demo.example.test` (paid), `ridgeway-ops@` (free), `northwind-ops@` and `northwind-finance@` (two users at one client), `solace-ops@` (must change password); staff `demo-expert1@` (Alex) and `demo-expert2@` (Priya), all `@demo.example.test`, with the password `demo:seed` printed.
 
 ## 6. NEXT TASK
-Landed Cost Calculator (not started; no plan yet).
+Landed Cost Calculator (not started; no plan yet). Client dashboard Phase 4 has no plan yet either (section 7).
 
 ## 7. OPEN ITEMS
 - **Expert tasks:**
@@ -94,18 +121,33 @@ Landed Cost Calculator (not started; no plan yet).
 - **Decisions for Move:**
   - Forwarder ranking basis: Freight Cost only, or Total Comparable Logistics Cost.
   - Multi-SKU entries: the calculator estimates one line, with MPF min/max applied to that line.
+- **Client dashboard, decided:**
+  - SMTP skipped (2026-10-12): no invite, reset or notification emails; staff hand over one-time passwords and watch the Requests badge.
+  - An approval means "proceed": it records who, when and a frozen copy, and doesn't move the stage. No contract or legal wording until Move decides otherwise; all client wording is in `src/lib/client-requests/text.ts`.
+- **Client dashboard, open:**
+  - `[PRICE]` (the Market Report plan) and `[INTRO FEE]` (introductions): nothing in the portal shows or charges money until Move sets them; a test keeps prices and fees out of the wording.
+  - Branding of the portal: open (today it uses the Move design system).
+  - Annual savings visibility to clients: open (today a forwarder update shares them only when the expert ticks "Include annual estimate").
+  - Closed-engagement retention: what a client keeps seeing, and for how long, after an engagement ends: open (today nothing expires, and deleting a project deletes its updates, reports and requests, approvals included).
+  - Phase 4 ideas, none planned: emails for requests and replies (needs SMTP or a provider, a new dependency), a nudge when a project changes after its last published update, closing and archiving requests, an introduction workflow once the fee is set, PDF and spreadsheet downloads of the Market Report.
 - **Optional follow-ups:**
   - Revoke `INSERT` on `duty_estimates` from `service_role`, so even the key can save estimates only through `save_duty_estimate` (SECURITY.md: "not done").
   - Delete stale test accounts and merged branches.
 - **Known limits:**
   - A deleted user's old token was valid for up to 1 hour on their own rows (report, B-1/B-2). The later role gate should close this: `has_app_role()` finds no `auth.users` row, so every RLS table refuses the token. This comes from the function's definition, not a dedicated test.
-  - Others are in `docs/TECH_DEBT.md`.
+  - Others are in `docs/TECH_DEBT.md`. For the client dashboard, the ones that matter most:
+    - no emails at all (invites, resets, requests, replies);
+    - a client who must still change their password can read (not write) their own published updates over the API;
+    - a paid client's whole report is in the page's data (by design: it's theirs, but it can be copied);
+    - the "Move's take" and introduction reply guards are word-based: cautious (they block the client's own cities) but a paraphrase gets through;
+    - requests can't be closed or archived, and deleting a project deletes its requests, approvals included.
 
 ## 8. KEY ARCHITECTURE DECISIONS
 - 2026-09-05: authorization lives in `app_metadata`, which users can't edit. Reads are open to every role-holder; writes are owner-or-admin.
 - 2026-09-28: `clients` is a shared, admin-managed record (unique case-insensitive name), and each module's projects point at it.
 - 2026-10-02: tariff rates are data with sources and dates, never hardcoded. Every estimate says "Estimate — verify with your customs broker".
 - 2026-10-09: database checks read live `auth.users`, not the JWT. A restrictive role policy on every table. Multi-row creates run in a single SECURITY INVOKER function, so RLS still applies.
+- 2026-10-12: clients see only published snapshots built from an allow-list, never live data. Client-facing tables stay staff-only, and clients read and write only through security-definer functions that force the client from `my_client_id()`. A migration that changes a portal function's shape adds columns last, so the deployed code keeps working until the code deploy.
 
 ## 9. FILE MAP
 | Area | Path |
@@ -119,12 +161,22 @@ Landed Cost Calculator (not started; no plan yet).
 | Tariff Calculator | `src/app/(authenticated)/tariff-calculator/`, `src/lib/tariff/`, `scripts/tariff/`, `docs/tariff-data/` |
 | Admin, Help | `src/app/(authenticated)/admin/`, `src/app/(authenticated)/help/` |
 | AI extraction | `src/lib/document-extraction.ts` |
-| QA | `scripts/qa/seed-qa.mjs`, `docs/qa/` |
+| Client users, client access | `src/app/(authenticated)/client-access/`, `src/lib/client-users/`, `src/lib/auth/require-client.ts` |
+| Client updates, portal, Market Report | `src/lib/client-updates/`, `src/components/client-portal/`, `src/app/portal/`, `src/app/(authenticated)/market-reports/` |
+| Client requests, staff inbox | `src/lib/client-requests/` (wording in `text.ts`), `src/app/(authenticated)/client-requests/` |
+| QA | `scripts/qa/seed-qa.mjs`, `scripts/qa/seed-demo.mjs` (data in `demo-portal-data.mjs`), `scripts/qa/portal-scan.mjs`, `docs/qa/` |
 
 ## 10. DO NOT TOUCH / FRAGILE AREAS
 - Every insert, update or delete action chains `.select()` and checks for rows; an RLS refusal returns no rows and no error.
 - Never write `profiles` directly. Roles and names go through `supabase.auth.admin.updateUserById()` (`app_metadata`), and the trigger mirrors them.
-- The restrictive `has_staff_role()` policy must be on every internal RLS table; pgTAP 24 and 28 fail if a table lacks it (`client_entitlements` is the one named exception; client updates and Market Reports stay staff-only and are read through functions).
+- The restrictive `has_staff_role()` policy must be on every internal RLS table; pgTAP 24 and 28 fail if a table lacks it (`client_entitlements` is the one named exception).
+- **Client dashboard rules a future session must not break** (the why is in `docs/SECURITY.md`, the checklist in `AGENTS.md`):
+  - `client_updates`, `client_update_inputs`, `client_market_reports`, `market_report_partner_labels` and `client_requests` are staff-only. Clients read and write only through security-definer functions (`search_path=''`, explicit REVOKE from public and anon) that force the client from `my_client_id()`. Every such function a signed-in user can call is on the pgTAP 32 tripwire.
+  - `client` is never a staff role: never add it to `has_staff_role()`, `STAFF_ROLES` or `staffRole()` (`role-list-sync.test.ts`). Staff Server Actions start with `requireStaff()`, portal ones with `requireClient()`.
+  - While `must_change_password` is set, every client write is refused, in the database as well as the app.
+  - A client payload is built only from its allow-list (`payload-schema.ts`, `market-report-schema.ts` and their allow-list tests): no notes, assessments, status words, contact details, ids or 3PL amounts.
+  - Anonymisation: only shortlisted partners are named. A lettered partner carries only its letter, price, lead time, like-for-like flag, outcome, size band, region and "Move's take"; "Not taken forward" only the letter, outcome, size and region. Letters are never reused, and no client function ever returns the forwarder behind a letter (staff replies to introductions are checked for it).
+  - Run `npm run qa:portal-scan` after any change to what the portal shows.
 - The `create_*_project_with_client` field lists must match the form parsers; Vitest drift checks enforce it.
 - The `one_incumbent_per_client` partial unique index drives 3PL baseline math.
 - The toggle-chip value format (`src/lib/chip-value.ts`) is delimiter-safe; labels contain commas, e.g. "Fulfillment (Pick, Check, Pack)".
