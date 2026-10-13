@@ -2,7 +2,7 @@
 -- on any table or view in public, and every read is refused outright.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(32);
 
 -- Strict: anon holds no privilege at all on any public table or view. Lists
 -- the offending table and privilege if one creeps back in (e.g. a new table
@@ -22,10 +22,10 @@ select is_empty(
 select set_eq(
   $$ select c.relname::text from pg_class c join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relkind in ('r', 'v') $$,
-  array['additional_duties', 'additional_duty_scope', 'additional_duty_scope_counts', 'client_entitlements', 'client_update_inputs', 'client_updates', 'clients', 'customs_fees', 'duty_estimates',
+  array['additional_duties', 'additional_duty_scope', 'additional_duty_scope_counts', 'client_entitlements', 'client_market_reports', 'client_update_inputs', 'client_updates', 'clients', 'customs_fees', 'duty_estimates',
         'duty_program_review_status', 'duty_program_reviews', 'duty_programs', 'forwarder_projects',
         'forwarder_quotes', 'forwarders', 'fx_rates', 'fx_rates_latest', 'hts_chapter99_changes',
-        'hts_column2_countries', 'hts_lines', 'hts_releases', 'profiles', 'rate_details',
+        'hts_column2_countries', 'hts_lines', 'hts_releases', 'market_report_partner_labels', 'profiles', 'rate_details',
         'recommendation', 'tariff_data_history', 'three_pl_projects', 'three_pl_providers'],
   'the read checks below cover every public table and view'
 );
@@ -35,6 +35,7 @@ select throws_ok('select * from additional_duties', '42501', null, 'anon cannot 
 select throws_ok('select * from additional_duty_scope', '42501', null, 'anon cannot read additional_duty_scope');
 select throws_ok('select * from additional_duty_scope_counts', '42501', null, 'anon cannot read additional_duty_scope_counts');
 select throws_ok('select * from client_entitlements', '42501', null, 'anon cannot read client_entitlements');
+select throws_ok('select * from client_market_reports', '42501', null, 'anon cannot read client_market_reports');
 select throws_ok('select * from client_update_inputs', '42501', null, 'anon cannot read client_update_inputs');
 select throws_ok('select * from client_updates', '42501', null, 'anon cannot read client_updates');
 select throws_ok('select * from clients', '42501', null, 'anon cannot read clients');
@@ -52,6 +53,7 @@ select throws_ok('select * from hts_chapter99_changes', '42501', null, 'anon can
 select throws_ok('select * from hts_column2_countries', '42501', null, 'anon cannot read hts_column2_countries');
 select throws_ok('select * from hts_lines', '42501', null, 'anon cannot read hts_lines');
 select throws_ok('select * from hts_releases', '42501', null, 'anon cannot read hts_releases');
+select throws_ok('select * from market_report_partner_labels', '42501', null, 'anon cannot read market_report_partner_labels');
 select throws_ok('select * from profiles', '42501', null, 'anon cannot read profiles');
 select throws_ok('select * from rate_details', '42501', null, 'anon cannot read rate_details');
 select throws_ok('select * from recommendation', '42501', null, 'anon cannot read recommendation');
