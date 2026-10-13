@@ -99,8 +99,8 @@ select ok(not has_function_privilege('authenticated', 'public.client_requests_ro
   'signed-in users can''t call the internal queries');
 select is(
   pg_get_function_result('public.my_client_requests()'::regprocedure),
-  'TABLE(request_key text, engagement_key text, update_key text, project_kind text, kind text, message text, wants_call boolean, status text, created_at timestamp with time zone, from_first_name text, from_me boolean, decision_name text, reply text, replied_at timestamp with time zone, replier_first_name text, reply_withdrawn boolean)',
-  'a client gets exactly these columns: no ids, no staff ids, no withdrawn replies');
+  'TABLE(request_key text, engagement_key text, update_key text, project_kind text, kind text, message text, wants_call boolean, status text, created_at timestamp with time zone, from_first_name text, from_me boolean, decision_name text, reply text, replied_at timestamp with time zone, replier_first_name text, reply_withdrawn boolean, partner_label text)',
+  'a client gets exactly these columns: no ids, no staff ids, no withdrawn replies (partner_label: Phase 3b, last)');
 select is(
   pg_get_function_result('public.my_portal_updates()'::regprocedure),
   'TABLE(engagement_key text, project_kind text, stage smallint, headline text, summary text, next_step text, next_step_due date, needs_client_action boolean, published_at timestamp with time zone, payload jsonb, update_key text)',
