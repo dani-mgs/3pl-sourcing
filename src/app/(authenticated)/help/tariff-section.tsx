@@ -215,8 +215,8 @@ export function TariffSection() {
           customs value.
         </li>
         <li>
-          Every estimate shows <Ui>Duty data last reviewed {"{date}"} by {"{name}"}</Ui> for each
-          program it uses, and a warning when that review is over 30 days old or Chapter 99 headings
+          Every estimate shows <Ui>Duty data, {"{program}"}: last reviewed {"{date}"} by {"{name}"}</Ui>{" "}
+          for each program it uses, and a warning when that review is over 30 days old or Chapter 99 headings
           changed in the HTS since.
         </li>
       </Bullets>
@@ -268,6 +268,14 @@ export function TariffSection() {
           next day. Every change is recorded with who made it, and puts the program back to pending
           review, except an edit of only a row&apos;s source (its citation, links or checked date), which
           changes no rates or scope.
+        </li>
+        <li>
+          On <Ui>Duty data</Ui> → <Ui>Fees</Ui>, the <Ui>Changes</Ui> column shows who added each MPF and
+          HMF row and when (<Ui>Seeded</Ui> for the rows loaded with the app), who last changed it
+          (end-dating counts) or <Ui>Not changed since</Ui>, and a collapsed <Ui>History</Ui> of every
+          change. People are shown by display name only: <Ui>Staff</Ui> when they have none,{" "}
+          <Ui>Unknown user</Ui> when their account is gone. Seeded rows have no history before their
+          first change. Dates are UTC calendar dates.
         </li>
         <li>
           Each row&apos;s source shows a link that opens in a new tab and says what it is (a web page, a
