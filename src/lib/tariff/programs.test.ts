@@ -91,6 +91,17 @@ describe("the excluded-programs summary and label", () => {
     expect(excludedCount(null)).toBe(0);
   });
 
+  test("excludedPrograms and excludedCount use the same rule", () => {
+    const snapshots: ProgramWarning[][] = [
+      [],
+      [warning({ counted: false })],
+      [warning({ programKey: "a" }), warning({ programKey: "b", counted: true }), warning({ programKey: "c", counted: false })],
+    ];
+    for (const warnings of snapshots) {
+      expect(excludedPrograms(warnings, 10000)).toHaveLength(excludedCount(warnings));
+    }
+  });
+
   test("the total's label says what it excludes", () => {
     expect(totalLabel(0)).toBe("Estimated duties and fees (USD)");
     expect(totalLabel(1)).toBe("Base duty + fees (USD) — EXCLUDES 1 additional duty program that may apply");
