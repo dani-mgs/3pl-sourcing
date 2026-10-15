@@ -83,16 +83,18 @@ export const TARIFF_FAQ: FaqItem[] = [
     ),
   },
   {
-    id: "oldest-review",
+    id: "duty-rates-last-verified",
     module: "Tariff Calculator",
     page: "Estimating duties",
-    question: "What does \"Oldest review: … days ago\" mean?",
+    question: "What does \"Duty rates last verified\" mean?",
     answer: (
       <>
         <p>
-          How long before the day you calculated the least recently reviewed program in this estimate was
-          last reviewed by a tariff editor. It turns amber after 30 days; ask a tariff editor to review that
-          program again.
+          The date a tariff editor last reviewed the additional duty data behind this estimate. With
+          several programs counted, it is the one reviewed longest ago, which is named in brackets. It
+          turns amber when that was over 30 days before the estimate; ask a tariff editor to review that
+          program again. <strong>No reviewed additional duties in this estimate</strong> means the total
+          has only base duty and fees. It is separate from the date the estimate was saved.
         </p>
       </>
     ),
