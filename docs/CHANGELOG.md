@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- QA tooling: `npm run demo:live` / `npm run demo:remove` put one fictional client, "Brightline Apparel (Demo)" (paid plan; a 3PL and a forwarder project with partners, quotes and rate cards, a published update on each, a Market Report, three client requests, a linked duty estimate), on a Supabase project for hands-on trials, or take it off again (docs/qa/live-demo.md).
+  - Built through the app's own parsers, builders and guards. Partner letters and requests are written as their database functions write them, and checked locally to be identical.
+  - A dry run unless `--apply`. On production it also needs `--confirm-project` and the ref typed at a prompt; only the production URL and a new `sb_secret_` key are accepted (legacy JWTs refused); nothing is read from `.env` files. It's idempotent, re-runs finish a partial run, and removal touches only the marked demo client, listing anything testers added first.
+  - `qa:portal-scan` also scans the live demo client's portal user when it exists. No app code or schema change.
 - Fix (portal, Market Report on phones): at 390px "Every forwarder we evaluated" scrolled sideways and **Request introduction** sat off-screen. Below `md` each partner is now a stacked card (letter or name, outcome, profile, price, vs. today, transit, Move's take) with the Introduction cell full width at the bottom; from `md` up the table is unchanged.
   - Presentation only, in `report-partner-table.tsx`: the same rows, buttons and server actions; no data, schema or dependency change. CSS picks the layout, so server and client render the same and only the visible copy is in the accessibility tree.
   - View as client and the staff publish preview use the same component, so staff see the same cards. Vitest: cards below `md`, the table from `md`, a full-width button on every card the table offers one, each card's fields equal to its row, and none in View as client.
