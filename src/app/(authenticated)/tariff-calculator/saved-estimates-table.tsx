@@ -3,7 +3,8 @@ import { formatCurrency } from "@/lib/currency";
 import { formatRateDate } from "@/lib/fx/rate-provenance";
 import { countryName } from "@/lib/tariff/countries";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
-import { excludedCount, isIncompleteEstimate } from "@/lib/tariff/programs";
+import { excludedCount, feesNotEnteredWarning, isIncompleteEstimate } from "@/lib/tariff/programs";
+import { shortFeeLabel } from "@/lib/tariff/fee-rollover";
 import { IncompleteEstimateBadge } from "@/components/tariff/incomplete-estimate-badge";
 
 // The latest saved (locked) estimates on the calculator page, as listed
@@ -67,10 +68,17 @@ export function SavedEstimatesTable({
                         <span className="mt-1 flex justify-end">
                           <IncompleteEstimateBadge />
                         </span>
-                        <span className="block text-xs font-medium text-[#92400E]">
-                          Excludes {excludedCount(e.warnings)} additional duty program
-                          {excludedCount(e.warnings) === 1 ? "" : "s"}
-                        </span>
+                        {excludedCount(e.warnings) > 0 && (
+                          <span className="block text-xs font-medium text-[#92400E]">
+                            Excludes {excludedCount(e.warnings)} additional duty program
+                            {excludedCount(e.warnings) === 1 ? "" : "s"}
+                          </span>
+                        )}
+                        {feesNotEnteredWarning(e.warnings) && (
+                          <span className="block text-xs font-medium text-[#92400E]">
+                            {shortFeeLabel(feesNotEnteredWarning(e.warnings)!.fiscalYear)}
+                          </span>
+                        )}
                       </>
                     )}
                   </td>

@@ -115,6 +115,10 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Where:** `src/lib/auth/require-staff.ts`
 
 
+### Fee rollover reminder: non-editor wording is unreachable
+- **What:** The fee rollover reminder's non-editor wording ("Ask a tariff editor to add them.") is built and tested but unreachable, because the Fees page and Duty data overview are closed to staff who cannot edit tariff data. If other staff should see the reminder, add a notice on the Tariff Calculator page.
+- **Where:** `src/components/tariff/fee-rollover-notice.tsx`, `src/app/(authenticated)/tariff-calculator/duty-data/`
+
 ### Email shown when a user has no display name
 - **What:** Program history and the Saved estimates "By" column fall back to the user's email when there is no display name; consider a consistent "Staff" fallback, as on Duty data → Fees.
 - **Where:** `src/lib/tariff/server-duty-admin.ts` (`names`), `src/lib/tariff/estimate-authors.ts` (`loadAuthorNames`)
@@ -128,7 +132,7 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ### Tariff Calculator: past entry dates not supported; base HTS rate is the current schedule only
 - **Added:** 2026-10-07
-- **What:** The expected entry date can be yesterday (UTC) at the earliest. Base HTS rates come from the current release only (earlier schedules aren't kept), and there is no history of Section 122 / IEEPA or other past additional duties, so an estimate can't be made for an entry that has already happened. For a later date the base rate is still today's schedule (the result says so). Fee rows have no end date, so after the next 1 October the FY2027 fees would still be used silently; the result adds a fiscal-year caveat instead.
+- **What:** The expected entry date can be yesterday (UTC) at the earliest. Base HTS rates come from the current release only (earlier schedules aren't kept), and there is no history of Section 122 / IEEPA or other past additional duties, so an estimate can't be made for an entry that has already happened. For a later date the base rate is still today's schedule (the result says so). (Fees after 1 October: resolved, see below.)
 - **Why deferred:** Needs keeping every HTS release and the dated history of past duties, with sources.
 - **Severity:** Low (refused or caveated on the estimate; nothing is silently wrong)
 - **Where:** `src/lib/tariff/entry-date.ts`, `save_duty_estimate()`
@@ -231,6 +235,12 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 
 ## Resolved
+
+### Customs fees used silently after 1 October
+- **Added:** 2026-10-07 (part of "past entry dates not supported")
+- **What:** Fee rows have no end date, so after the next 1 October the FY2027 MPF fees would still be used silently; the result only added a fiscal-year caveat.
+- **Resolved:** 2026-10-16. Duty data → Fees and the overview remind tariff editors from 45 days before 1 October until the new MPF rows are entered, and an estimate whose entry date falls in a fiscal year without them is marked Incomplete with the reason (`src/lib/tariff/fee-rollover.ts`). No migration, no job.
+- **Where:** `src/lib/tariff/fee-rollover.ts`, `server-estimate.ts`
 
 ### Phase 3: client approvals and requests must be refused while `must_change_password` is set
 - **Added:** 2026-10-12 (client dashboard Phase 1, for Phase 3)

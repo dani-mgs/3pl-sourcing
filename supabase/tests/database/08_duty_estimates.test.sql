@@ -1,8 +1,9 @@
 -- Saved duty estimates are locked: any signed-in user can read them, nobody can
 -- insert one directly (they're saved through save_duty_estimate(), see 15 and
 -- 16), nobody can change one (not even the service role), and only the owner
--- or an admin can delete one. Rows here are set up as the table owner. Rolled
--- back at the end.
+-- or an admin can delete one. Rows here are set up as the table owner. Counts
+-- cover only this file's rows (ids 0000000d000N), so estimates already in the
+-- database don't change them. Rolled back at the end.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(15);
@@ -72,7 +73,7 @@ select throws_ok(
 -- ---- Another user (b1): reads, can't delete -----------------------------------
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000b1');
 
-select is((select count(*)::int from duty_estimates), 2, 'another signed-in user can read saved estimates');
+select is((select count(*)::int from duty_estimates where id::text like '00000000-0000-4000-8000-0000000d%'), 2, 'another signed-in user can read saved estimates');
 select is_empty(
   $$ delete from duty_estimates where id = '00000000-0000-4000-8000-0000000d0001' returning id $$,
   'a non-owner cannot delete an estimate'
@@ -118,7 +119,7 @@ select is(
   '00000000-0000-4000-8000-0000000000a1'::uuid, 'created_by is the user who saved it'
 );
 select is(
-  (select count(*)::int from duty_estimates), 1, 'only the remaining estimate is left'
+  (select count(*)::int from duty_estimates where id::text like '00000000-0000-4000-8000-0000000d%'), 1, 'only the remaining estimate is left'
 );
 
 select * from finish();

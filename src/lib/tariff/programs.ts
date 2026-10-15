@@ -51,6 +51,32 @@ export type ProgramWarning = {
   counted?: boolean;
 };
 
+// Not a program: the MPF fees of the entry date's fiscal year aren't entered,
+// so last year's are used (fee-rollover.ts). No programKey or name; never
+// counted among the programs a total EXCLUDES, but it makes the estimate
+// incomplete.
+export type FeesNotEnteredWarning = {
+  kind: "fees_not_entered";
+  text: string;
+  fiscalYear: number;
+  startsOn: string;
+  counted: false;
+};
+
+// What an estimate's warnings list holds (saved as duty_estimates.warnings).
+export type EstimateWarning = ProgramWarning | FeesNotEnteredWarning;
+
+export function isProgramWarning(w: EstimateWarning): w is ProgramWarning {
+  return w.kind !== "fees_not_entered";
+}
+
+// The fees warning in a warnings list (stored or live), if any.
+export function feesNotEnteredWarning(warnings: unknown): FeesNotEnteredWarning | null {
+  if (!Array.isArray(warnings)) return null;
+  const found = warnings.find((w) => w && typeof w === "object" && (w as { kind?: unknown }).kind === "fees_not_entered");
+  return (found as FeesNotEnteredWarning | undefined) ?? null;
+}
+
 // Origin and HTS triggers (NULL = any). Deliberately broad: a warning that
 // may not apply beats a duty silently left out.
 export function matchesProgramTrigger(
@@ -79,15 +105,18 @@ function legacyHint(w: ProgramWarning, customsValueUsd: number): string | null {
 }
 
 // The one rule for "left out of the total": every warning except those marked
-// counted: false (warnings saved before PR 2a have no flag and count).
+// counted: false (warnings saved before PR 2a have no flag and count). The
+// fees warning is never a program left out.
 function isExcludedFromTotal(w: unknown): boolean {
+  if (w && typeof w === "object" && (w as { kind?: unknown }).kind === "fees_not_entered") return false;
   return !(w && typeof w === "object" && (w as ProgramWarning).counted === false);
 }
 
 // What the total leaves out. Used everywhere an estimate's total is shown,
 // so the label reads the same on live, saved and listed estimates.
-export function excludedPrograms(warnings: ProgramWarning[], customsValueUsd: number): ExcludedProgram[] {
+export function excludedPrograms(warnings: EstimateWarning[], customsValueUsd: number): ExcludedProgram[] {
   return warnings
+    .filter(isProgramWarning)
     .filter(isExcludedFromTotal)
     .map((w) => ({
       programKey: w.programKey,
@@ -101,11 +130,12 @@ export function excludedCount(warnings: unknown): number {
 }
 
 // An estimate is incomplete when its total leaves out at least one program
-// that may apply (the same count as excludedCount); its amount isn't final.
+// that may apply (the same count as excludedCount), or its fiscal year's MPF
+// fees aren't entered; its amount isn't final.
 export const INCOMPLETE_ESTIMATE_LABEL = "Incomplete estimate";
 
 export function isIncompleteEstimate(warnings: unknown): boolean {
-  return excludedCount(warnings) > 0;
+  return excludedCount(warnings) > 0 || feesNotEnteredWarning(warnings) != null;
 }
 
 export function incompleteNote(excluded: number): string {

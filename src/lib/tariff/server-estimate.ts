@@ -12,7 +12,8 @@ import { checkEntryDate } from "./entry-date";
 import { formatHtsCode } from "./hts-code";
 import { evaluateAdditionalDuties, type DutyReviewNote } from "./additional-duties";
 import { scheduledChanges, type ScheduledChange } from "./scheduled-changes";
-import type { DutyProgramRow, ProgramWarning } from "./programs";
+import type { DutyProgramRow, EstimateWarning, FeesNotEnteredWarning } from "./programs";
+import { estimateFeeNote, feeYearGap } from "./fee-rollover";
 import { centsToNumber, parseDecimal, toCents } from "./rational";
 import { loadAdditionalDutyData } from "./server-duty-data";
 import type { EstimateFormData } from "./parse-estimate-form";
@@ -65,7 +66,7 @@ export type EstimateResult = {
   // Base duty, then additional duties, then fees.
   lines: EstimateLine[];
   // Programs that may apply but aren't in the total, and pending notes.
-  warnings: ProgramWarning[];
+  warnings: EstimateWarning[];
   // Review state of each program that bears on this line.
   dutyReviews: DutyReviewNote[];
   // Rate changes scheduled shortly after the entry date (display only; worked
@@ -183,7 +184,8 @@ export async function buildEstimate(
       if (result.error) throw result.error;
     }
 
-    const fees = ((feesResult.data ?? []) as (FeeRow & DatedRow)[]).filter((f) => inForce(f, entryDate));
+    const allFees = (feesResult.data ?? []) as (FeeRow & DatedRow)[];
+    const fees = allFees.filter((f) => inForce(f, entryDate));
     const originIsColumn2 = ((column2Result.data ?? []) as DatedRow[]).some((r) => inForce(r, entryDate));
     const programs = (programsResult.data ?? []) as DutyProgramRow[];
 
@@ -306,7 +308,7 @@ export async function buildEstimate(
         feesUsd: calculation.feesUsd,
         totalUsd: centsToNumber(totalCents),
         lines: [baseLine, ...additional.lines, ...feeLines],
-        warnings: additional.warnings,
+        warnings: [...additional.warnings, ...feesWarning(allFees, entryDate)],
         dutyReviews: additional.dutyReviews,
         scheduledChanges: scheduledChanges({
           rows: dutyData.schedule,
@@ -321,6 +323,17 @@ export async function buildEstimate(
     console.error("buildEstimate error:", error);
     return { ok: false, error: UNEXPECTED };
   }
+}
+
+// The entry date's fiscal year whose MPF fees aren't entered: last year's are
+// used, so the estimate says so (saved with its warnings).
+function feesWarning(fees: (FeeRow & DatedRow)[], entryDate: string): FeesNotEnteredWarning[] {
+  const gap = feeYearGap(
+    fees.map((f) => ({ fee_code: f.fee_code, effective_from: f.effective_from, effective_to: f.effective_to })),
+    entryDate,
+  );
+  if (!gap) return [];
+  return [{ kind: "fees_not_entered", text: estimateFeeNote(gap), fiscalYear: gap.fiscalYear, startsOn: gap.startsOn, counted: false }];
 }
 
 // The duty_estimates row for a built estimate (created_by defaults to the

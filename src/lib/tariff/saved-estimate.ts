@@ -31,7 +31,7 @@ const lineSchema = z.object({
   notes: z.array(z.string()).optional(),
 });
 
-const warningSchema = z.object({
+const programWarningSchema = z.object({
   programKey: z.string(),
   name: z.string(),
   text: z.string(),
@@ -42,6 +42,17 @@ const warningSchema = z.object({
   hint: z.string().nullable().optional(),
   counted: z.boolean().optional(),
 });
+
+// The fiscal year's MPF fees weren't entered (fee-rollover.ts): no program.
+const feesNotEnteredSchema = z.object({
+  kind: z.literal("fees_not_entered"),
+  text: z.string(),
+  fiscalYear: z.number().int(),
+  startsOn: z.string(),
+  counted: z.literal(false),
+});
+
+const warningSchema = z.union([feesNotEnteredSchema, programWarningSchema]);
 
 const dutyReviewSchema = z.object({
   programKey: z.string(),

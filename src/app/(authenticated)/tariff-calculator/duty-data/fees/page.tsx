@@ -8,6 +8,9 @@ import { formatRateDate } from "@/lib/fx/rate-provenance";
 import type { FeeAudit } from "@/lib/tariff/fee-audit";
 import { loadFeeAudits } from "@/lib/tariff/server-fee-audit";
 import { FeeAuditCell } from "@/components/tariff/fee-audit";
+import { FeeRolloverReminderBox } from "@/components/tariff/fee-rollover-notice";
+import { feeRolloverReminder } from "@/lib/tariff/fee-rollover";
+import { todayUtc } from "@/lib/fx/server-rates";
 import { ActionForm } from "../action-form";
 import { addFee, endDateFee } from "../actions";
 
@@ -57,6 +60,7 @@ export default async function FeesPage() {
     .order("effective_from", { ascending: false });
   if (error) console.error("FeesPage error:", error);
   const fees = (data ?? []) as FeeRow[];
+  const reminder = feeRolloverReminder(fees, todayUtc());
   let audits = new Map<string, FeeAudit>();
   try {
     audits = await loadFeeAudits(supabase, fees);
@@ -79,6 +83,8 @@ export default async function FeesPage() {
         Each fee has one row in force on any day. To change one, end-date the current row and add the new one from the
         next day.
       </p>
+
+      {reminder && <FeeRolloverReminderBox reminder={reminder} canEditFees={canEditTariffData} className="mb-6" />}
 
       <section className="rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
         <div className="relative overflow-x-auto">

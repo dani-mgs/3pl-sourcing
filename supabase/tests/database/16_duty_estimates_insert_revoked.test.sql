@@ -3,7 +3,9 @@
 -- old insert policy would have accepted. Estimates are saved only through
 -- save_duty_estimate() as the service role, which still works. Reading and
 -- deleting are unchanged, saved estimates are still locked, and nobody but
--- the service role can execute the function. Rolled back at the end.
+-- the service role can execute the function. Counts cover only this file's
+-- rows (release pgTAPRevoke1), so estimates already in the database don't
+-- change them. Rolled back at the end.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(19);
@@ -114,7 +116,7 @@ select throws_ok(
   '42501', null, 'anon can''t run save_duty_estimate'
 );
 reset role;
-select is((select count(*)::int from duty_estimates), 0, 'no row got in');
+select is((select count(*)::int from duty_estimates where hts_release_name = 'pgTAPRevoke1'), 0, 'no row got in');
 
 -- ---- The app's path still works --------------------------------------------------------
 set local role service_role;
@@ -135,7 +137,7 @@ select is(
 
 -- ---- Reading, deleting and the lock are unchanged ---------------------------------------
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000b1');
-select is((select count(*)::int from duty_estimates), 2, 'another signed-in user still reads estimates');
+select is((select count(*)::int from duty_estimates where hts_release_name = 'pgTAPRevoke1'), 2, 'another signed-in user still reads estimates');
 select is_empty(
   $$ delete from duty_estimates where label = 'one' returning id $$,
   'a non-owner still can''t delete one'

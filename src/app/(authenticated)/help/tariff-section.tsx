@@ -117,7 +117,12 @@ export function TariffSection() {
         <li>
           <Ui>MPF</Ui> (Merchandise Processing Fee): the percentage in force on the entry date, between its
           minimum and maximum, as if this line were the whole entry. Values up to the
-          informal-entry limit pay the flat informal fee instead.
+          informal-entry limit pay the flat informal fee instead. MPF is re-set each 1 October, the
+          start of the customs fiscal year. If the entry date falls in a fiscal year whose MPF rates
+          aren&apos;t entered yet, last year&apos;s are used and the estimate is marked{" "}
+          <Ui>Incomplete estimate</Ui> with{" "}
+          <Ui>Not final: MPF fees for FY2028 (from Oct 1, 2027) aren&apos;t entered yet; FY2027&apos;s are used.</Ui>{" "}
+          It is still refused if no fee row covers the date at all.
         </li>
         <li>
           <Ui>HMF</Ui> (Harbor Maintenance Fee): ocean shipments only.
@@ -276,6 +281,15 @@ export function TariffSection() {
           change. People are shown by display name only: <Ui>Staff</Ui> when they have none,{" "}
           <Ui>Unknown user</Ui> when their account is gone. Seeded rows have no history before their
           first change. Dates are UTC calendar dates.
+        </li>
+        <li>
+          From 45 days before each 1 October (UTC), until the new fiscal year&apos;s MPF rows are entered,{" "}
+          <Ui>Fees</Ui> shows <Ui>MPF rates for FY2028 start on 1 October. Check the new rates and add
+          them here; end-date the old rows the day before.</Ui> (staff who can&apos;t edit fees see{" "}
+          <Ui>Ask a tariff editor to add them.</Ui>), with the MPF rows still missing. From 1 October it
+          also says estimates for entry from that day use last year&apos;s fees. The <Ui>Duty data</Ui>{" "}
+          overview shows a one-line note linking to <Ui>Fees</Ui>. A fee counts as entered when it has a
+          row starting on or after 1 October. HMF is fixed and isn&apos;t checked. There is no email.
         </li>
         <li>
           Each row&apos;s source shows a link that opens in a new tab and says what it is (a web page, a

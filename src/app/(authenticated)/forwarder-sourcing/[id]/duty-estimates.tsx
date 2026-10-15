@@ -82,6 +82,7 @@ function Labels({ summary }: { summary: LinkedEstimateSummary }) {
           apply
         </li>
       )}
+      {summary.feesNotEntered && <li className="text-[#92400E]">{summary.feesNotEntered}</li>}
       {summary.pendingReview.length > 0 && (
         <li className="text-[#92400E]">Pending expert review: {summary.pendingReview.join(", ")}</li>
       )}

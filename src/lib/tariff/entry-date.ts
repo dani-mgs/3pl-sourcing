@@ -83,7 +83,7 @@ export function defaultEntryDate(
 
 // The US customs fiscal year runs 1 October to 30 September; MPF limits and
 // the informal-entry fee are re-set each 1 October.
-function fiscalYear(iso: string): number {
+export function fiscalYear(iso: string): number {
   const year = Number(iso.slice(0, 4));
   return Number(iso.slice(5, 7)) >= 10 ? year + 1 : year;
 }
@@ -103,7 +103,7 @@ export function entryDateCaveats(input: {
   ];
   if (fiscalYear(entryDate) > fiscalYear(calculatedOn)) {
     caveats.push(
-      "Customs user fees are re-set each 1 October. The entry date is in the next fiscal year, so the fee amounts shown are those in force today.",
+      "Customs user fees are re-set each 1 October. The entry date is in the next fiscal year, so the fees shown are those entered so far for that date.",
     );
   }
   return caveats;
