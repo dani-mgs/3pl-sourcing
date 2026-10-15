@@ -129,8 +129,13 @@ export function TariffSection() {
           excluded from the total it covers the counted duties only.
         </li>
         <li>
-          <Ui>Oldest review</Ui> names the program in the estimate that was reviewed longest ago, in days
-          before the day you calculated. Over 30 days it turns amber.
+          <Ui>Duty rates last verified: {"{date}"} (oldest reviewed program: {"{name}"})</Ui> gives the
+          date a tariff editor last reviewed the program counted in the total that was reviewed longest
+          ago, the weakest link. If that was over 30 days before the day you calculated, it turns amber
+          and asks for a review. With no reviewed additional duty counted (base duty and fees only, or
+          only programs pending review) it says <Ui>No reviewed additional duties in this estimate</Ui>.
+          The date is a UTC calendar date and comes from what was saved with the estimate, so it reads the
+          same in every time zone and on estimates saved earlier.
         </li>
         <li>
           If a rate for a reviewed program and product in the estimate starts, or a row ends, within 45 days

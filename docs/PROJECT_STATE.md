@@ -31,7 +31,7 @@ Internal hub for Move Supply Chain Logistics Experts: source and compare 3PLs an
   - Locked saved estimates.
   - "Estimate duties" from Forwarder Sourcing.
 - **Tariff Calculator:** an expected entry date. An unconfirmed duty row never displaces a confirmed, in-force one.
-- **Tariff Calculator clarity:** effective rate, oldest review, a 45-day scheduled-change warning, and a Key dates list.
+- **Tariff Calculator clarity:** effective rate, the date duty rates were last verified (oldest counted review), a 45-day scheduled-change warning, and a Key dates list.
 - **Expert checklist:** added, then removed (code reverted, tables dropped) and replaced by a handoff document.
 - **Forwarder:** Project Duration (optional, 1–120 months), on the form, the summary and the exports.
 - **Forwarder:** Scenario Group removed. A project's quotes with matching terms rank together; other terms show as "Different terms".

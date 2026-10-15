@@ -3,7 +3,7 @@ import { formatCurrency } from "@/lib/currency";
 import { DAILY_FEED_ATTRIBUTION, formatRateDate, rateCaption } from "@/lib/fx/rate-provenance";
 import { ESTIMATE_CAVEATS, ESTIMATE_DISCLAIMER, ESTIMATE_DISCLAIMER_DETAIL } from "@/lib/tariff/caveats";
 import { countryName } from "@/lib/tariff/countries";
-import { effectiveRates, oldestReview } from "@/lib/tariff/effective-rate";
+import { effectiveRates, NO_REVIEWED_DUTIES_TEXT, oldestReview, reviewDateUtc } from "@/lib/tariff/effective-rate";
 import { entryDateCaveats } from "@/lib/tariff/entry-date";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
 import { releaseLabel } from "@/lib/tariff/hts-lookup";
@@ -114,15 +114,13 @@ function EstimateTotal({ estimate }: { estimate: EstimateResult }) {
           {rates.allIn} with MPF and HMF{hasExclusions && " (counted duties only)"}
         </p>
       )}
-      {review && (
-        <p
-          className={review.stale ? "mt-1 text-xs font-medium text-[#92400E]" : "mt-1 text-xs text-neutral-muted"}
-          data-testid="oldest-review"
-        >
-          {review.text}
-          {review.stale && " — over 30 days; ask a tariff editor to review it"}
-        </p>
-      )}
+      <p
+        className={review?.stale ? "mt-1 text-xs font-medium text-[#92400E]" : "mt-1 text-xs text-neutral-muted"}
+        data-testid="last-verified"
+      >
+        {review ? review.text : NO_REVIEWED_DUTIES_TEXT}
+        {review?.stale && " — over 30 days before this estimate; ask a tariff editor to review it"}
+      </p>
       {notToday && caveats.length > 0 && (
         <div className={`${WARNING_BOX_CLASS} mt-2 text-xs`} role="note" data-testid="entry-date-note">
           <p className="font-semibold">
@@ -208,7 +206,7 @@ function DutyDataReviews({ estimate }: { estimate: EstimateResult }) {
           <li key={r.programKey}>
             Duty data, {r.name}:{" "}
             {r.status === "reviewed" && r.reviewedAt
-              ? `last reviewed ${formatRateDate(r.reviewedAt.slice(0, 10))}${r.reviewedByName ? ` by ${r.reviewedByName}` : ""}`
+              ? `last reviewed ${formatRateDate(reviewDateUtc(r.reviewedAt))}${r.reviewedByName ? ` by ${r.reviewedByName}` : ""}`
               : "pending expert review (not counted in the total)"}
           </li>
         ))}

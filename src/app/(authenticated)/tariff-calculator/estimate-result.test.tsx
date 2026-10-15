@@ -20,7 +20,7 @@ const warning = (overrides: Partial<ProgramWarning>): ProgramWarning => ({
   ...overrides,
 });
 
-const estimate = (warnings: ProgramWarning[]): EstimateResult => ({
+const estimate = (warnings: ProgramWarning[], overrides: Partial<EstimateResult> = {}): EstimateResult => ({
   asOfDate: "2026-10-14",
   entryDate: "2026-10-14",
   htsCode: "6402993110",
@@ -61,6 +61,7 @@ const estimate = (warnings: ProgramWarning[]): EstimateResult => ({
   ],
   warnings,
   dutyReviews: [],
+  ...overrides,
 });
 
 const render = (warnings: ProgramWarning[]) => renderToStaticMarkup(<EstimateResultView estimate={estimate(warnings)} />);
@@ -103,5 +104,57 @@ describe("incomplete estimate on the total", () => {
     const badge = html.slice(html.indexOf('data-testid="incomplete-estimate"'));
     // The icon is decorative; the visible text is the label.
     expect(badge).toMatch(/^[^>]*>\s*<svg[^>]*aria-hidden="true"[\s\S]*?<\/svg>Incomplete estimate<\/span>/);
+  });
+});
+
+describe("duty rates last verified, in the total", () => {
+  const china = {
+    kind: "additional" as const,
+    code: "section_301_china",
+    label: "Section 301 (China) (List 3)",
+    rateText: "+25%",
+    amountUsd: 2500,
+    detail: null,
+    sourceLabel: "HTS",
+    sourceUrl: "https://hts.usitc.gov/",
+    effectiveFrom: "2019-05-10",
+  };
+  const reviewed = (reviewedAt: string) =>
+    ({ programKey: "section_301_china", name: "Section 301 (China)", status: "reviewed", reviewedAt, reviewedByName: "Dani", staleReason: null }) as const;
+  // The line's text, tags removed.
+  const lineText = (html: string) => {
+    const at = html.indexOf('data-testid="last-verified"');
+    return html.slice(html.indexOf(">", at) + 1, html.indexOf("</p>", at)).replace(/<!-- -->/g, "");
+  };
+  const lineClass = (html: string) => html.slice(html.lastIndexOf("<p", html.indexOf('data-testid="last-verified"')), html.indexOf('data-testid="last-verified"'));
+
+  test("reviewed: the oldest counted review's date and program", () => {
+    const html = renderToStaticMarkup(
+      <EstimateResultView estimate={estimate([], { lines: [...estimate([]).lines, china], dutyReviews: [reviewed("2026-10-03T09:00:00+00:00")] })} />,
+    );
+    expect(lineText(html)).toBe("Duty rates last verified: Oct 3, 2026 (oldest reviewed program: Section 301 (China))");
+    expect(lineClass(html)).toContain("text-neutral-muted");
+    expect(html).not.toContain("Oldest review");
+  });
+
+  test("stale (over 30 days before the estimate): amber, with what to do", () => {
+    const html = renderToStaticMarkup(
+      <EstimateResultView estimate={estimate([], { lines: [...estimate([]).lines, china], dutyReviews: [reviewed("2026-09-01T09:00:00+00:00")] })} />,
+    );
+    expect(lineText(html)).toBe(
+      "Duty rates last verified: Sep 1, 2026 (oldest reviewed program: Section 301 (China)) — over 30 days before this estimate; ask a tariff editor to review it",
+    );
+    expect(lineClass(html)).toContain("text-[#92400E]");
+  });
+
+  test("none counted: says so instead of a date", () => {
+    expect(lineText(render([]))).toBe("No reviewed additional duties in this estimate");
+  });
+
+  test("pending programs left out: the line, the badge and the Not included list are all shown", () => {
+    const html = render([warning({})]);
+    expect(lineText(html)).toBe("No reviewed additional duties in this estimate");
+    expect(html).toContain("Incomplete estimate");
+    expect(html).toContain("Not included: Section 301 (China)");
   });
 });
