@@ -115,6 +115,10 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Where:** `src/lib/auth/require-staff.ts`
 
 
+### Email shown when a user has no display name
+- **What:** Program history and the Saved estimates "By" column fall back to the user's email when there is no display name; consider a consistent "Staff" fallback, as on Duty data → Fees.
+- **Where:** `src/lib/tariff/server-duty-admin.ts` (`names`), `src/lib/tariff/estimate-authors.ts` (`loadAuthorNames`)
+
 ### Tariff Calculator: scheduled-change warning knows only loaded rows; fees not covered
 - **Added:** 2026-10-08
 - **What:** The 45-day warning and the Key dates list come from dated `additional_duties` rows already in the database, so a change that hasn't been loaded isn't shown (nothing is shown when none is loaded). `customs_fees` rows (MPF/HMF, re-set each 1 October) are left out; the fiscal-year caveat covers them. On a saved estimate the warning is read live when the page opens ("known today"), so it can differ from what it would have said when saved.

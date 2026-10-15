@@ -102,6 +102,12 @@ export function formatRateDate(isoDate: string): string {
   return dateFormat.format(new Date(`${isoDate}T00:00:00Z`));
 }
 
+// The UTC calendar date (YYYY-MM-DD) of a timestamp, whatever offset it was
+// written with, so it never shifts a day with the viewer's time zone.
+export function timestampDateUtc(timestamp: string): string {
+  return new Date(timestamp).toISOString().slice(0, 10);
+}
+
 const rateFormat = new Intl.NumberFormat("en-US", { maximumSignificantDigits: 5 });
 
 // "1 KRW = 0.00073811 USD"

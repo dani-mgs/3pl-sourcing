@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getTariffPermissions } from "@/lib/auth/get-tariff-permissions";
 import { formatCurrency } from "@/lib/currency";
 import { formatRateDate } from "@/lib/fx/rate-provenance";
+import type { FeeAudit } from "@/lib/tariff/fee-audit";
+import { loadFeeAudits } from "@/lib/tariff/server-fee-audit";
+import { FeeAuditCell } from "@/components/tariff/fee-audit";
 import { ActionForm } from "../action-form";
 import { addFee, endDateFee } from "../actions";
 
@@ -25,6 +28,10 @@ type FeeRow = {
   effective_to: string | null;
   source_label: string;
   source_url: string;
+  created_at: string;
+  created_by: string | null;
+  updated_at: string;
+  updated_by: string | null;
 };
 
 function feeText(f: FeeRow) {
@@ -43,11 +50,20 @@ export default async function FeesPage() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("customs_fees")
-    .select("id, fee_code, label, rate_pct, min_usd, max_usd, flat_usd, applies_up_to_value_usd, effective_from, effective_to, source_label, source_url")
+    .select(
+      "id, fee_code, label, rate_pct, min_usd, max_usd, flat_usd, applies_up_to_value_usd, effective_from, effective_to, source_label, source_url, created_at, created_by, updated_at, updated_by",
+    )
     .order("fee_code")
     .order("effective_from", { ascending: false });
   if (error) console.error("FeesPage error:", error);
   const fees = (data ?? []) as FeeRow[];
+  let audits = new Map<string, FeeAudit>();
+  try {
+    audits = await loadFeeAudits(supabase, fees);
+  } catch (auditError) {
+    // The fees stay editable; only who/when is missing.
+    console.error("FeesPage audit error:", auditError);
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-8 py-10 max-sm:px-4">
@@ -73,6 +89,7 @@ export default async function FeesPage() {
                 <th scope="col" className="px-4 py-3 font-medium">Rate</th>
                 <th scope="col" className="px-4 py-3 font-medium">Effective</th>
                 <th scope="col" className="px-4 py-3 font-medium">Source</th>
+                <th scope="col" className="px-4 py-3 font-medium">Changes</th>
                 <th scope="col" className="px-4 py-3 font-medium"><span className="sr-only">End-date</span></th>
               </tr>
             </thead>
@@ -89,6 +106,13 @@ export default async function FeesPage() {
                     <a href={f.source_url} target="_blank" rel="noopener noreferrer" className="underline decoration-neutral-border underline-offset-2 hover:decoration-move-green">
                       {f.source_label}
                     </a>
+                  </td>
+                  <td className="px-4 py-3">
+                    {audits.has(f.id) ? (
+                      <FeeAuditCell audit={audits.get(f.id)!} />
+                    ) : (
+                      <span className="text-xs text-neutral-muted">Not available</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {!f.effective_to && (

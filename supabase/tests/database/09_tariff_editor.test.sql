@@ -4,7 +4,7 @@
 -- Rolled back at the end.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(26);
 
 create function pg_temp.act_as(uid uuid, meta jsonb)
 returns void language plpgsql as $$
@@ -79,6 +79,46 @@ select throws_ok(
   $$ select activate_hts_release('00000000-0000-4000-8000-000000000000', 0) $$,
   '42501', null, 'a tariff editor cannot activate an HTS release'
 );
+
+-- ---- Duty data -> Fees reads who changed a fee, and its history ------------
+-- As the editor still: the audit columns, the fee rows' history and display
+-- names are readable (no migration needed for the Changes column).
+select is(
+  (select updated_by from customs_fees where fee_code = 'mpf_formal' and effective_to = '2027-09-30'),
+  '00000000-0000-4000-8000-0000000000e1'::uuid, 'end-dating is stamped as the editor''s change, and the editor can read it'
+);
+select ok(
+  (select updated_at > created_at from customs_fees where fee_code = 'mpf_formal' and effective_to = '2027-09-30'),
+  'end-dating moves updated_at past created_at'
+);
+select is(
+  (select array_agg(operation order by operation) from tariff_data_history
+   where table_name = 'customs_fees' and changed_by = '00000000-0000-4000-8000-0000000000e1'),
+  array['INSERT', 'UPDATE'], 'a tariff editor can read the fee history: the end-date and the new row, in their name'
+);
+select ok(
+  (select new_row ->> 'effective_to' = '2027-09-30' and old_row ->> 'effective_to' is null
+   from tariff_data_history where table_name = 'customs_fees' and operation = 'UPDATE'
+     and changed_by = '00000000-0000-4000-8000-0000000000e1'),
+  'the end-date history row holds the old and new end date'
+);
+select is(
+  (select count(*)::int from profiles where id in ('00000000-0000-4000-8000-0000000000e1', '00000000-0000-4000-8000-0000000000ad')),
+  2, 'a tariff editor can read the profiles behind the names'
+);
+reset role;
+
+-- A client user (even one claiming tariff_editor) reads none of it.
+insert into clients (id, name) values ('00000000-0000-4000-8000-00000000c001', 'Client');
+insert into auth.users (id, email, raw_app_meta_data) values
+  ('00000000-0000-4000-8000-0000000000c1', 'client@test.local',
+   '{"role":"client","client_id":"00000000-0000-4000-8000-00000000c001","tariff_editor":true}');
+select pg_temp.act_as('00000000-0000-4000-8000-0000000000c1', '{"role":"client"}');
+select is(
+  (select count(*)::int from customs_fees) + (select count(*)::int from tariff_data_history where table_name = 'customs_fees'),
+  0, 'a client user reads no fee rows and no fee history'
+);
+select is((select count(*)::int from profiles), 0, 'a client user reads no profiles');
 
 select * from finish();
 rollback;
