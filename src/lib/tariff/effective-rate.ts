@@ -1,4 +1,4 @@
-import { formatRateDate } from "@/lib/fx/rate-provenance";
+import { formatRateDate, timestampDateUtc } from "@/lib/fx/rate-provenance";
 import { daysBetween, REVIEW_STALE_AFTER_DAYS } from "./additional-duties";
 import { toCents, parseDecimal } from "./rational";
 import type { EstimateResult } from "./server-estimate";
@@ -45,7 +45,7 @@ export const NO_REVIEWED_DUTIES_TEXT = "No reviewed additional duties in this es
 // The UTC calendar date of a review timestamp, whatever offset it was
 // written with, so it never shifts a day with the viewer's time zone.
 export function reviewDateUtc(reviewedAt: string): string {
-  return new Date(reviewedAt).toISOString().slice(0, 10);
+  return timestampDateUtc(reviewedAt);
 }
 
 // The longest-ago review among the programs counted in this estimate (a
