@@ -4,6 +4,7 @@ import { formatCurrency } from "@/lib/currency";
 import { formatRateDate } from "@/lib/fx/rate-provenance";
 import { ESTIMATE_DISCLAIMER } from "@/lib/tariff/caveats";
 import type { LinkedEstimateSummary } from "@/lib/tariff/linked-estimates";
+import { IncompleteEstimateBadge } from "@/components/tariff/incomplete-estimate-badge";
 import { estimateDutiesHref } from "./duty-estimate-links";
 
 // Saved duty estimates linked to this project's quotes (and the project
@@ -70,6 +71,11 @@ function Comparison({ summary }: { summary: LinkedEstimateSummary }) {
 function Labels({ summary }: { summary: LinkedEstimateSummary }) {
   return (
     <ul className="flex flex-col gap-0.5 text-xs">
+      {summary.incomplete && (
+        <li>
+          <IncompleteEstimateBadge />
+        </li>
+      )}
       {summary.excludedCount > 0 && (
         <li className="font-semibold text-[#92400E]">
           EXCLUDES {summary.excludedCount} additional duty program{summary.excludedCount === 1 ? "" : "s"} that may

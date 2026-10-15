@@ -27,6 +27,7 @@ import {
   type RateSource,
 } from "@/lib/fx/rate-provenance";
 import { ESTIMATE_DISCLAIMER } from "@/lib/tariff/caveats";
+import { INCOMPLETE_ESTIMATE_LABEL } from "@/lib/tariff/programs";
 import { normalizeProject, type LinkQuote } from "@/lib/tariff/forwarder-link";
 import {
   LINKED_ESTIMATE_COLUMNS,
@@ -268,6 +269,7 @@ export function quoteColumns(
 
 export function dutyEstimateLabelText(summary: LinkedEstimateSummary): string {
   const parts: string[] = [];
+  if (summary.incomplete) parts.push(INCOMPLETE_ESTIMATE_LABEL);
   if (summary.excludedCount > 0) {
     parts.push(
       `EXCLUDES ${summary.excludedCount} additional duty program${summary.excludedCount === 1 ? "" : "s"} that may apply`,

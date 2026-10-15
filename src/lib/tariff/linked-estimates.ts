@@ -8,7 +8,7 @@ import {
   type LinkProject,
   type LinkQuote,
 } from "./forwarder-link";
-import { excludedCount } from "./programs";
+import { excludedCount, isIncompleteEstimate } from "./programs";
 
 // Duty estimates linked to a forwarder project, summarized for the "Duty
 // estimates" card on the project and forwarder pages: the latest estimate
@@ -46,6 +46,8 @@ export type LinkedEstimateSummary = {
   totalUsd: number;
   // Additional duty programs that may apply but aren't in the total.
   excludedCount: number;
+  // The total leaves at least one of them out (isIncompleteEstimate).
+  incomplete: boolean;
   // Programs bearing on the line that are still pending expert review.
   pendingReview: string[];
   // Latest review date among the programs bearing on the line.
@@ -92,6 +94,7 @@ export function summarizeLinkedEstimates(
       entryDate: latest.entry_date,
       totalUsd,
       excludedCount: excludedCount(latest.warnings),
+      incomplete: isIncompleteEstimate(latest.warnings),
       pendingReview: reviewList.filter((r) => r.status === "pending_review").map((r) => r.name),
       lastReviewedOn: reviewedDates.at(-1) ?? null,
       comparison: latest.forwarder_quote_id ? compareDuties(quote?.duties_taxes_usd ?? null, totalUsd) : null,
