@@ -158,7 +158,9 @@ describe("entryDateCaveats", () => {
     expect(entryDateCaveats({ ...base, entryDate: "2027-09-30" })).toHaveLength(2);
     const caveats = entryDateCaveats({ ...base, entryDate: "2027-10-01" });
     expect(caveats).toHaveLength(3);
-    expect(caveats[2]).toMatch(/re-set each 1 October/);
+    expect(caveats[2]).toBe(
+      "Customs user fees are re-set each 1 October. The entry date is in the next fiscal year, so the fees shown are those entered so far for that date.",
+    );
     // Calculated in September: October 1 of the same year is already next FY.
     expect(entryDateCaveats({ ...base, calculatedOn: "2026-09-30", entryDate: "2026-10-01" })).toHaveLength(3);
   });

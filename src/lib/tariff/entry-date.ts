@@ -103,7 +103,7 @@ export function entryDateCaveats(input: {
   ];
   if (fiscalYear(entryDate) > fiscalYear(calculatedOn)) {
     caveats.push(
-      "Customs user fees are re-set each 1 October. The entry date is in the next fiscal year, so the fee amounts shown are those in force today.",
+      "Customs user fees are re-set each 1 October. The entry date is in the next fiscal year, so the fees shown are those entered so far for that date.",
     );
   }
   return caveats;

@@ -15,6 +15,7 @@ const summary = (overrides: Partial<LinkedEstimateSummary>): LinkedEstimateSumma
   totalUsd: 647.14,
   excludedCount: 0,
   incomplete: false,
+  feesNotEntered: null,
   pendingReview: [],
   lastReviewedOn: null,
   comparison: null,

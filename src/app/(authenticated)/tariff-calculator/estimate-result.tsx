@@ -7,7 +7,14 @@ import { effectiveRates, NO_REVIEWED_DUTIES_TEXT, oldestReview, reviewDateUtc } 
 import { entryDateCaveats } from "@/lib/tariff/entry-date";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
 import { releaseLabel } from "@/lib/tariff/hts-lookup";
-import { excludedPrograms, incompleteNote, totalLabel } from "@/lib/tariff/programs";
+import {
+  excludedPrograms,
+  feesNotEnteredWarning,
+  incompleteNote,
+  isIncompleteEstimate,
+  isProgramWarning,
+  totalLabel,
+} from "@/lib/tariff/programs";
 import type { EstimateResult } from "@/lib/tariff/server-estimate";
 import { IncompleteEstimateBadge } from "@/components/tariff/incomplete-estimate-badge";
 
@@ -66,6 +73,8 @@ export function EstimateCaveats() {
 function EstimateTotal({ estimate }: { estimate: EstimateResult }) {
   const excluded = excludedPrograms(estimate.warnings, estimate.customsValueUsd);
   const hasExclusions = excluded.length > 0;
+  const feesMissing = feesNotEnteredWarning(estimate.warnings);
+  const incomplete = isIncompleteEstimate(estimate.warnings);
   const notToday = estimate.entryDate !== estimate.asOfDate;
   const rates = effectiveRates(estimate);
   const review = oldestReview(estimate);
@@ -77,7 +86,7 @@ function EstimateTotal({ estimate }: { estimate: EstimateResult }) {
   return (
     <div
       className={
-        hasExclusions
+        incomplete
           ? "rounded-xl border border-[#FBBF24] bg-neutral-bg px-4 py-3"
           : "rounded-xl bg-neutral-bg px-4 py-3"
       }
@@ -92,11 +101,16 @@ function EstimateTotal({ estimate }: { estimate: EstimateResult }) {
         <p className="font-display text-2xl font-semibold" data-testid="estimate-total">
           {usd(estimate.totalUsd)}
         </p>
-        {hasExclusions && <IncompleteEstimateBadge />}
+        {incomplete && <IncompleteEstimateBadge />}
       </div>
       {hasExclusions && (
         <p className="text-xs font-medium text-[#92400E]" data-testid="incomplete-note">
           {incompleteNote(excluded.length)}
+        </p>
+      )}
+      {feesMissing && (
+        <p className="text-xs font-medium text-[#92400E]" data-testid="fees-not-entered">
+          {feesMissing.text}
         </p>
       )}
       <p className="text-xs font-medium text-move-navy" data-testid="estimate-entry-date">
@@ -226,6 +240,8 @@ export function EstimateResultView({
   const isUsd = estimate.currency === "USD";
   const rate = Number(estimate.exchangeRateToUsd);
   const usesDailyFeed = estimate.exchangeRateSource === "daily_feed";
+  // The fees warning has its own line under the total; this box is for programs.
+  const programWarnings = estimate.warnings.filter(isProgramWarning);
 
   return (
     <div className="flex flex-col gap-5 text-sm text-move-navy">
@@ -340,14 +356,14 @@ export function EstimateResultView({
         </p>
       )}
 
-      {estimate.warnings.length > 0 && (
+      {programWarnings.length > 0 && (
         <div className={WARNING_BOX_CLASS}>
           <p className="flex items-center gap-2 font-semibold">
             <AlertTriangle aria-hidden="true" className="size-4" />
             Additional duties not included in this estimate
           </p>
           <ul className="mt-2 flex flex-col gap-2">
-            {estimate.warnings.map((warning) => (
+            {programWarnings.map((warning) => (
               <li key={warning.programKey}>
                 <span className="font-medium">{warning.name}:</span> {warning.text}{" "}
                 <SourceLink label={warning.sourceLabel} url={warning.sourceUrl} />

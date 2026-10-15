@@ -119,6 +119,15 @@ describe("the excluded-programs summary and label", () => {
     expect(isIncompleteEstimate([legacy])).toBe(true);
   });
 
+  test("the fiscal year's MPF fees not entered also make it incomplete, without counting as a program", () => {
+    const fees = { kind: "fees_not_entered", text: "Not final: …", fiscalYear: 2028, startsOn: "2027-10-01", counted: false };
+    expect(isIncompleteEstimate([fees])).toBe(true);
+    expect(excludedCount([fees])).toBe(0);
+    expect(isIncompleteEstimate([warning({}), fees])).toBe(true);
+    expect(excludedCount([warning({}), fees])).toBe(1);
+    expect(isIncompleteEstimate([warning({ counted: false })])).toBe(false);
+  });
+
   test("the incomplete note says how many programs aren't included", () => {
     expect(INCOMPLETE_ESTIMATE_LABEL).toBe("Incomplete estimate");
     expect(incompleteNote(1)).toBe("Not final: 1 additional duty program is not included.");

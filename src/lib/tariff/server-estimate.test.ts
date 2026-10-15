@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { buildEstimate, estimateToRow, inForce } from "./server-estimate";
 import type { EstimateFormData } from "./parse-estimate-form";
+import { isProgramWarning } from "./programs";
 
 // A stub of the Supabase query chains buildEstimate uses, answering from
 // in-memory tables and applying eq/like filters.
@@ -132,7 +133,7 @@ describe("buildEstimate", () => {
       release: { name: "2026HTSRev20", release_start_date: "2026-09-28" },
     });
     expect(result.estimate.lines[1]).toMatchObject({ code: "mpf_formal", rateText: "0.3464% (min $34.58, max $670.86)" });
-    expect(result.estimate.warnings.map((w) => [w.programKey, w.kind, w.indicativePct])).toEqual([
+    expect(result.estimate.warnings.filter(isProgramWarning).map((w) => [w.programKey, w.kind, w.indicativePct])).toEqual([
       ["section_301_forced_labor", "not_loaded", 12.5],
       ["section_301_china", "not_loaded", null],
     ]);
@@ -438,5 +439,48 @@ describe("inForce", () => {
     expect(inForce({ effective_from: "2026-10-03", effective_to: null }, "2026-10-02")).toBe(false);
     expect(inForce({ effective_from: "2025-10-01", effective_to: "2026-09-30" }, "2026-10-02")).toBe(false);
     expect(inForce({ effective_from: null, effective_to: null }, "2026-10-02")).toBe(true);
+  });
+});
+
+describe("buildEstimate: the entry date's fiscal year fees aren't entered", () => {
+  const feesOf = (estimate: { warnings: unknown[] }) => estimate.warnings.filter((w) => (w as { kind?: string }).kind === "fees_not_entered");
+
+  test("entry on Sep 30 uses FY2027's fees with no warning; Oct 1 and 2 say FY2028's aren't entered, totals unchanged", async () => {
+    const run = async (entryDate: string) => {
+      const result = await buildEstimate(stubSupabase(tables()), input({ originCountry: "VN", entryDate }));
+      if (!result.ok) throw new Error(result.error);
+      return result.estimate;
+    };
+    const sep30 = await run("2027-09-30");
+    expect(feesOf(sep30)).toEqual([]);
+    for (const day of ["2027-10-01", "2027-10-02"]) {
+      const estimate = await run(day);
+      expect(feesOf(estimate)).toEqual([
+        {
+          kind: "fees_not_entered",
+          text: "Not final: MPF fees for FY2028 (from Oct 1, 2027) aren't entered yet; FY2027's are used.",
+          fiscalYear: 2028,
+          startsOn: "2027-10-01",
+          counted: false,
+        },
+      ]);
+      // Still the FY2027 fees, as before: the warning adds a reason, not a refusal.
+      expect(estimate.totalUsd).toBe(sep30.totalUsd);
+      expect(estimate.lines.map((l) => l.amountUsd)).toEqual(sep30.lines.map((l) => l.amountUsd));
+      // Saved with the estimate.
+      expect(estimateToRow(estimate, null).warnings).toContainEqual(expect.objectContaining({ kind: "fees_not_entered" }));
+    }
+  });
+
+  test("with FY2028's rows entered there is no warning", async () => {
+    const fees = [
+      ...FEES.filter((f) => f.fee_code === "hmf"),
+      ...FEES.filter((f) => f.fee_code !== "hmf" && f.effective_from === "2026-10-01").map((f) => ({ ...f, effective_to: "2027-09-30" })),
+      ...FEES.filter((f) => f.fee_code !== "hmf" && f.effective_from === "2026-10-01").map((f) => ({ ...f, effective_from: "2027-10-01", min_usd: f.min_usd && 35.5, max_usd: f.max_usd && 690 })),
+    ];
+    const result = await buildEstimate(stubSupabase(tables({ customs_fees: fees })), input({ originCountry: "VN", entryDate: "2027-10-02" }));
+    if (!result.ok) throw new Error(result.error);
+    expect(feesOf(result.estimate)).toEqual([]);
+    expect(result.estimate.lines.find((l) => l.code === "mpf_formal")?.rateText).toContain("max $690.00");
   });
 });

@@ -275,6 +275,7 @@ export function dutyEstimateLabelText(summary: LinkedEstimateSummary): string {
       `EXCLUDES ${summary.excludedCount} additional duty program${summary.excludedCount === 1 ? "" : "s"} that may apply`,
     );
   }
+  if (summary.feesNotEntered) parts.push(summary.feesNotEntered);
   if (summary.pendingReview.length > 0) parts.push(`Pending expert review: ${summary.pendingReview.join(", ")}`);
   if (summary.lastReviewedOn) parts.push(`Duty data last reviewed ${formatRateDate(summary.lastReviewedOn)}`);
   if (summary.changes.length > 0) parts.push("Inputs changed since this estimate");

@@ -210,6 +210,7 @@ data.dutyEstimates = new Map([
       totalUsd: 3000,
       excludedCount: 1,
       incomplete: true,
+      feesNotEntered: null,
       pendingReview: [DUTY_ESTIMATE_SENTINEL],
       lastReviewedOn: null,
       comparison: null,
