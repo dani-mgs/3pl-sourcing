@@ -7,8 +7,9 @@ import { effectiveRates, oldestReview } from "@/lib/tariff/effective-rate";
 import { entryDateCaveats } from "@/lib/tariff/entry-date";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
 import { releaseLabel } from "@/lib/tariff/hts-lookup";
-import { excludedPrograms, totalLabel } from "@/lib/tariff/programs";
+import { excludedPrograms, incompleteNote, totalLabel } from "@/lib/tariff/programs";
 import type { EstimateResult } from "@/lib/tariff/server-estimate";
+import { IncompleteEstimateBadge } from "@/components/tariff/incomplete-estimate-badge";
 
 // One estimate's breakdown: the live preview and a saved (locked) estimate
 // both render this, so they always show the same disclaimer, sources,
@@ -87,9 +88,17 @@ function EstimateTotal({ estimate }: { estimate: EstimateResult }) {
       >
         {totalLabel(excluded.length, estimate.additionalDutiesUsd > 0)}
       </p>
-      <p className="font-display text-2xl font-semibold" data-testid="estimate-total">
-        {usd(estimate.totalUsd)}
-      </p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p className="font-display text-2xl font-semibold" data-testid="estimate-total">
+          {usd(estimate.totalUsd)}
+        </p>
+        {hasExclusions && <IncompleteEstimateBadge />}
+      </div>
+      {hasExclusions && (
+        <p className="text-xs font-medium text-[#92400E]" data-testid="incomplete-note">
+          {incompleteNote(excluded.length)}
+        </p>
+      )}
       <p className="text-xs font-medium text-move-navy" data-testid="estimate-entry-date">
         Estimated for entry on {formatRateDate(estimate.entryDate)}
         {notToday && <span className="font-normal text-neutral-muted"> (not today)</span>}

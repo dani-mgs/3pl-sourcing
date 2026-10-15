@@ -2,19 +2,17 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getTariffPermissions } from "@/lib/auth/get-tariff-permissions";
-import { formatCurrency } from "@/lib/currency";
 import { formatRateDate } from "@/lib/fx/rate-provenance";
 import { loadLatestFxRates, todayUtc } from "@/lib/fx/server-rates";
-import { ORIGIN_COUNTRIES, countryName } from "@/lib/tariff/countries";
+import { ORIGIN_COUNTRIES } from "@/lib/tariff/countries";
 import { loadAuthorNames } from "@/lib/tariff/estimate-authors";
-import { formatHtsCode } from "@/lib/tariff/hts-code";
 import { HTS_SOURCE_URL } from "@/lib/tariff/calculate";
-import { excludedCount } from "@/lib/tariff/programs";
 import { releaseLabel } from "@/lib/tariff/hts-lookup";
 import { loadLinkContext, type LinkContextResult } from "@/lib/tariff/server-forwarder-link";
 import { loadKeyDates } from "@/lib/tariff/server-key-dates";
 import { EstimateForm } from "./estimate-form";
 import { KeyDatesPanel } from "./key-dates-panel";
+import { SavedEstimatesTable, type SavedEstimateListRow } from "./saved-estimates-table";
 import { WARNING_BOX_CLASS } from "./estimate-result";
 
 const one = (value: string | string[] | undefined) => (typeof value === "string" && value !== "" ? value : null);
@@ -135,56 +133,7 @@ export default async function TariffCalculatorPage({ searchParams }: PageProps<"
 
       <KeyDatesPanel dates={upcomingDates} />
 
-      <section className="mt-6 rounded-2xl border border-neutral-border bg-white p-6 shadow-sm">
-        <h2 className="mb-4 font-display text-lg font-semibold text-move-navy">Saved estimates</h2>
-        {estimates.length === 0 ? (
-          <p className="text-sm text-neutral-muted">No saved estimates yet. Calculate one, then Save estimate.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-move-navy">
-              <thead>
-                <tr className="border-b border-neutral-border text-xs tracking-wide text-neutral-muted uppercase">
-                  <th scope="col" className="px-4 py-3 font-medium">Saved</th>
-                  <th scope="col" className="px-4 py-3 font-medium">Reference</th>
-                  <th scope="col" className="px-4 py-3 font-medium">HTS code</th>
-                  <th scope="col" className="px-4 py-3 font-medium">Origin</th>
-                  <th scope="col" className="px-4 py-3 text-right font-medium">Total (USD)</th>
-                  <th scope="col" className="px-4 py-3 font-medium">By</th>
-                </tr>
-              </thead>
-              <tbody>
-                {estimates.map((e) => (
-                  <tr key={e.id} className="border-b border-neutral-border last:border-0 hover:bg-neutral-bg">
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <Link
-                        href={`/tariff-calculator/estimates/${e.id}`}
-                        className="rounded font-medium text-move-navy hover:text-move-green hover:underline focus-visible:ring-2 focus-visible:ring-move-green focus-visible:outline-none"
-                      >
-                        {formatRateDate((e.created_at as string).slice(0, 10))}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">{e.label ?? <span className="text-neutral-muted">—</span>}</td>
-                    <td className="px-4 py-3 whitespace-nowrap tabular-nums">{formatHtsCode(e.hts_code as string)}</td>
-                    <td className="px-4 py-3">{countryName(e.origin_country as string)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <span className="tabular-nums">{formatCurrency(Number(e.total_usd), "USD")}</span>
-                      {excludedCount(e.warnings) > 0 && (
-                        // Same rule as the estimate itself: a total that leaves
-                        // programs out never reads as complete.
-                        <span className="block text-xs font-medium text-[#92400E]">
-                          Excludes {excludedCount(e.warnings)} additional duty program
-                          {excludedCount(e.warnings) === 1 ? "" : "s"}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">{authors.get(e.created_by as string) ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      <SavedEstimatesTable estimates={estimates as SavedEstimateListRow[]} authors={authors} />
     </div>
   );
 }

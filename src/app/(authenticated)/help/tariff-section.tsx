@@ -170,6 +170,15 @@ export function TariffSection() {
           under it. Programs with no data yet show the rate read from the HTS, marked as indicative.
         </li>
         <li>
+          Such an estimate is marked <Ui>Incomplete estimate</Ui>, with{" "}
+          a line such as <Ui>Not final: 2 additional duty programs are not included.</Ui> next to the total, so the
+          amount is never mistaken for final. The same badge shows on the Saved estimates list (beside{" "}
+          <Ui>Excludes N</Ui>), on the Duty estimates card in Forwarder Sourcing, and at the start of the
+          estimate&apos;s labels in the Expert CSV. It is worked out from the warnings saved with the
+          estimate, so estimates saved earlier show it too. An estimate that counts every program that may
+          apply has no badge.
+        </li>
+        <li>
           Programs stack, in CBP&apos;s filing order (Section 301 first, then Section 232). Some don&apos;t
           apply to goods covered by another program: forced-labour and Brazil Section 301 duties
           don&apos;t apply to Section 232 goods. While that Section 232 duty isn&apos;t settled (not
@@ -338,7 +347,7 @@ export function TariffSection() {
           latest estimate: <Ui>Forwarder quoted duties $X · Our estimate $Y (as of date)</Ui> and the
           difference, or <Ui>Forwarder didn&apos;t quote duties</Ui>. A difference of at least $
           {DUTY_DIFFERENCE_FLAG_USD} and at least {Math.round(DUTY_DIFFERENCE_FLAG_SHARE * 100)}% of the
-          higher figure is flagged <Ui>Check with forwarder</Ui>. The estimate&apos;s labels (EXCLUDES,
+          higher figure is flagged <Ui>Check with forwarder</Ui>. The estimate&apos;s labels (Incomplete estimate, EXCLUDES,
           pending expert review, last reviewed, {ESTIMATE_DISCLAIMER}) always go with it.
         </li>
         <li>

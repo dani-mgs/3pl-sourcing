@@ -242,9 +242,9 @@ export const TARIFF_FAQ: FaqItem[] = [
       <>
         <p>
           Only programs a tariff editor has reviewed are counted. Others that may apply to your
-          origin or HTS code are named under the total, which says it EXCLUDES them, so it never
-          reads as complete. Section 232 on steel, aluminium and copper and China Section 301 are
-          loaded; Section 232 on vehicles, timber, semiconductors, pharmaceuticals and drones
+          origin or HTS code are named under the total, which says it EXCLUDES them, and the
+          estimate is marked <strong>Incomplete estimate</strong>, so it never reads as complete.
+          Section 232 on steel, aluminium and copper and China Section 301 are loaded; Section 232 on vehicles, timber, semiconductors, pharmaceuticals and drones
           isn&apos;t yet.
         </p>
       </>

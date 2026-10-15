@@ -2,10 +2,12 @@ import { describe, expect, test } from "vitest";
 import {
   buildForwarderReport,
   buildForwarderReportCsv,
+  dutyEstimateLabelText,
   type ExportVersion,
   type ForwarderReportData,
   type QuoteExportFields,
 } from "./report-data";
+import { escapeCsvField } from "./export-csv";
 import { renderForwarderReportPdf } from "./render-report-pdf";
 import { renderForwarderReportDocx } from "./render-report-docx";
 import type { ForwarderFields } from "./parse-forwarder-form";
@@ -207,6 +209,7 @@ data.dutyEstimates = new Map([
       entryDate: "2026-11-08",
       totalUsd: 3000,
       excludedCount: 1,
+      incomplete: true,
       pendingReview: [DUTY_ESTIMATE_SENTINEL],
       lastReviewedOn: null,
       comparison: null,
@@ -286,9 +289,23 @@ describe("duty estimates in exports", () => {
     const csv = await renderers.CSV("expert");
     expect(csv).toContain("Duty Estimate (USD),Duty Estimate As Of,Duty Estimate Entry Date,Duty Estimate Labels");
     const row = csv.split("\r\n").find((line) => line.includes(DUTY_ESTIMATE_SENTINEL));
-    expect(row).toContain(',"$3,000.00","Oct 5, 2026","Nov 8, 2026",EXCLUDES 1 additional duty program that may apply; Pending expert review: ');
+    expect(row).toContain(
+      ',"$3,000.00","Oct 5, 2026","Nov 8, 2026",Incomplete estimate; EXCLUDES 1 additional duty program that may apply; Pending expert review: ',
+    );
     expect(row).toContain("; Estimate — verify with your customs broker.");
     expect(csv).toContain("Duty estimates are informational");
+  });
+
+  test("the labels cell, now led by 'Incomplete estimate', goes through the CSV formula guard like every other cell", () => {
+    // A program name that would be a live formula on its own, inside the labels.
+    const summary = { ...data.dutyEstimates!.get("q")!, pendingReview: ['=HYPERLINK("http://x")'] };
+    const labels = dutyEstimateLabelText(summary);
+    expect(labels.startsWith("Incomplete estimate; EXCLUDES 1 additional duty program that may apply; ")).toBe(true);
+    const csv = buildForwarderReportCsv({ ...data, dutyEstimates: new Map([["q", summary]]) }, "expert");
+    const row = csv.split("\r\n").find((line) => line.includes("HYPERLINK"))!;
+    // Exactly what escapeCsvField makes of it: one quoted cell, quotes doubled.
+    expect(row).toContain(`,${escapeCsvField(labels)}`);
+    expect(row).toContain('"Incomplete estimate; EXCLUDES 1 additional duty program that may apply; Pending expert review: =HYPERLINK(""http://x"");');
   });
 });
 

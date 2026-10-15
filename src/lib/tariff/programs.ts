@@ -78,11 +78,17 @@ function legacyHint(w: ProgramWarning, customsValueUsd: number): string | null {
   return `could add up to ${pct}% (about ${amount})`;
 }
 
+// The one rule for "left out of the total": every warning except those marked
+// counted: false (warnings saved before PR 2a have no flag and count).
+function isExcludedFromTotal(w: unknown): boolean {
+  return !(w && typeof w === "object" && (w as ProgramWarning).counted === false);
+}
+
 // What the total leaves out. Used everywhere an estimate's total is shown,
 // so the label reads the same on live, saved and listed estimates.
 export function excludedPrograms(warnings: ProgramWarning[], customsValueUsd: number): ExcludedProgram[] {
   return warnings
-    .filter((w) => w.counted !== false)
+    .filter(isExcludedFromTotal)
     .map((w) => ({
       programKey: w.programKey,
       name: w.name,
@@ -91,9 +97,21 @@ export function excludedPrograms(warnings: ProgramWarning[], customsValueUsd: nu
 }
 
 export function excludedCount(warnings: unknown): number {
-  return Array.isArray(warnings)
-    ? warnings.filter((w) => !(w && typeof w === "object" && (w as ProgramWarning).counted === false)).length
-    : 0;
+  return Array.isArray(warnings) ? warnings.filter(isExcludedFromTotal).length : 0;
+}
+
+// An estimate is incomplete when its total leaves out at least one program
+// that may apply (the same count as excludedCount); its amount isn't final.
+export const INCOMPLETE_ESTIMATE_LABEL = "Incomplete estimate";
+
+export function isIncompleteEstimate(warnings: unknown): boolean {
+  return excludedCount(warnings) > 0;
+}
+
+export function incompleteNote(excluded: number): string {
+  return excluded === 1
+    ? "Not final: 1 additional duty program is not included."
+    : `Not final: ${excluded} additional duty programs are not included.`;
 }
 
 export function totalLabel(excludedCount: number, includesAdditional = false): string {

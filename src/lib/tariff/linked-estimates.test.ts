@@ -100,6 +100,7 @@ describe("summarizeLinkedEstimates", () => {
     );
     expect(s).toMatchObject({
       excludedCount: 1,
+      incomplete: true,
       pendingReview: ["China 301"],
       lastReviewedOn: "2026-10-02",
       asOfDate: "2026-10-03",

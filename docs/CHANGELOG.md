@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- Feature (Tariff Calculator): an estimate whose total leaves out additional duty programs is marked **Incomplete estimate**, so the amount isn't mistaken for final. The live preview and saved estimate show the badge next to the total with "Not final: N additional duty program(s) is/are not included."; the Saved estimates list shows it above "Excludes N"; the Forwarder Sourcing Duty estimates card shows it above EXCLUDES, and the Expert CSV labels start with "Incomplete estimate; ".
+  - One rule: `isIncompleteEstimate()` is `excludedCount() > 0` (warnings not marked `counted: false`), now shared with `excludedPrograms()`. Worked out from each estimate's stored `warnings`, so estimates saved earlier show it too. No migration, no new column, the lock trigger untouched.
+  - The Saved estimates table moved, unchanged, into `saved-estimates-table.tsx`. Vitest: the helper, the list rows (markup pinned), the total, the forwarder card, and the CSV cell through the formula guard. Help and FAQ updated.
 - Fix (portal, Market Report on phones): at 390px "Every forwarder we evaluated" scrolled sideways and **Request introduction** sat off-screen. Below `md` each partner is now a stacked card (letter or name, outcome, profile, price, vs. today, transit, Move's take) with the Introduction cell full width at the bottom; from `md` up the table is unchanged.
   - Presentation only, in `report-partner-table.tsx`: the same rows, buttons and server actions; no data, schema or dependency change. CSS picks the layout, so server and client render the same and only the visible copy is in the accessibility tree.
   - View as client and the staff publish preview use the same component, so staff see the same cards. Vitest: cards below `md`, the table from `md`, a full-width button on every card the table offers one, each card's fields equal to its row, and none in View as client.
