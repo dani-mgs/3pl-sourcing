@@ -83,7 +83,7 @@ export function defaultEntryDate(
 
 // The US customs fiscal year runs 1 October to 30 September; MPF limits and
 // the informal-entry fee are re-set each 1 October.
-function fiscalYear(iso: string): number {
+export function fiscalYear(iso: string): number {
   const year = Number(iso.slice(0, 4));
   return Number(iso.slice(5, 7)) >= 10 ? year + 1 : year;
 }

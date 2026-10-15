@@ -7,6 +7,9 @@ import { formatRateDate } from "@/lib/fx/rate-provenance";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
 import { loadProgramsOverview } from "@/lib/tariff/server-duty-admin";
 import { WARNING_BOX_CLASS } from "../estimate-result";
+import { FeeRolloverOverviewNote } from "@/components/tariff/fee-rollover-notice";
+import { feeRolloverReminder, type FeeDateRow } from "@/lib/tariff/fee-rollover";
+import { todayUtc } from "@/lib/fx/server-rates";
 import { ReviewStatusBadge } from "./review-status-badge";
 
 const linkClass =
@@ -19,7 +22,12 @@ export default async function DutyDataPage() {
   if (!canEditTariffData) notFound();
 
   const supabase = await createClient();
-  const { overviews, recentChanges } = await loadProgramsOverview(supabase);
+  const [{ overviews, recentChanges }, feesResult] = await Promise.all([
+    loadProgramsOverview(supabase),
+    supabase.from("customs_fees").select("fee_code, effective_from, effective_to"),
+  ]);
+  if (feesResult.error) console.error("DutyDataPage fees error:", feesResult.error);
+  const feeReminder = feeRolloverReminder((feesResult.data ?? []) as FeeDateRow[], todayUtc());
   const flagged = overviews.filter((o) => o.staleReason);
 
   return (
@@ -43,6 +51,8 @@ export default async function DutyDataPage() {
           Customs fees →
         </Link>
       </div>
+
+      {feeReminder && <FeeRolloverOverviewNote reminder={feeReminder} className="mb-6" />}
 
       {flagged.length > 0 && (
         <div className={`${WARNING_BOX_CLASS} mb-6`} role="note">
