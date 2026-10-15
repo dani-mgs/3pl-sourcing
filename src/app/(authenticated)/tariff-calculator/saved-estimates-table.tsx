@@ -3,7 +3,8 @@ import { formatCurrency } from "@/lib/currency";
 import { formatRateDate } from "@/lib/fx/rate-provenance";
 import { countryName } from "@/lib/tariff/countries";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
-import { excludedCount } from "@/lib/tariff/programs";
+import { excludedCount, isIncompleteEstimate } from "@/lib/tariff/programs";
+import { IncompleteEstimateBadge } from "@/components/tariff/incomplete-estimate-badge";
 
 // The latest saved (locked) estimates on the calculator page, as listed
 // columns of duty_estimates. warnings is the stored snapshot, read as is.
@@ -59,13 +60,18 @@ export function SavedEstimatesTable({
                   <td className="px-4 py-3">{countryName(e.origin_country as string)}</td>
                   <td className="px-4 py-3 text-right">
                     <span className="tabular-nums">{formatCurrency(Number(e.total_usd), "USD")}</span>
-                    {excludedCount(e.warnings) > 0 && (
+                    {isIncompleteEstimate(e.warnings) && (
                       // Same rule as the estimate itself: a total that leaves
                       // programs out never reads as complete.
-                      <span className="block text-xs font-medium text-[#92400E]">
-                        Excludes {excludedCount(e.warnings)} additional duty program
-                        {excludedCount(e.warnings) === 1 ? "" : "s"}
-                      </span>
+                      <>
+                        <span className="mt-1 flex justify-end">
+                          <IncompleteEstimateBadge />
+                        </span>
+                        <span className="block text-xs font-medium text-[#92400E]">
+                          Excludes {excludedCount(e.warnings)} additional duty program
+                          {excludedCount(e.warnings) === 1 ? "" : "s"}
+                        </span>
+                      </>
                     )}
                   </td>
                   <td className="px-4 py-3">{authors.get(e.created_by as string) ?? "—"}</td>

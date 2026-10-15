@@ -5,6 +5,9 @@ import { ORIGIN_COUNTRY_CODES } from "./countries";
 import {
   excludedCount,
   excludedPrograms,
+  INCOMPLETE_ESTIMATE_LABEL,
+  incompleteNote,
+  isIncompleteEstimate,
   matchesProgramTrigger,
   totalLabel,
   type DutyProgramRow,
@@ -100,6 +103,26 @@ describe("the excluded-programs summary and label", () => {
     for (const warnings of snapshots) {
       expect(excludedPrograms(warnings, 10000)).toHaveLength(excludedCount(warnings));
     }
+  });
+
+  test("an estimate is incomplete when its total leaves out a program", () => {
+    expect(isIncompleteEstimate([])).toBe(false);
+    expect(isIncompleteEstimate(null)).toBe(false);
+    expect(isIncompleteEstimate("not a list")).toBe(false);
+    expect(isIncompleteEstimate([warning({})])).toBe(true);
+    expect(isIncompleteEstimate([warning({ programKey: "a" }), warning({ programKey: "b" }), warning({ programKey: "c" })])).toBe(true);
+    // Notes and exempt-pending programs aren't left out of the total.
+    expect(isIncompleteEstimate([warning({ counted: false }), warning({ programKey: "b", counted: false })])).toBe(false);
+    expect(isIncompleteEstimate([warning({ counted: false }), warning({ programKey: "b", counted: true })])).toBe(true);
+    // Warnings saved before PR 2a have no counted flag: they count, as in "Excludes N".
+    const legacy = { programKey: "a", name: "A", text: "May apply.", sourceLabel: "S", sourceUrl: "https://example.gov/" };
+    expect(isIncompleteEstimate([legacy])).toBe(true);
+  });
+
+  test("the incomplete note says how many programs aren't included", () => {
+    expect(INCOMPLETE_ESTIMATE_LABEL).toBe("Incomplete estimate");
+    expect(incompleteNote(1)).toBe("Not final: 1 additional duty program is not included.");
+    expect(incompleteNote(3)).toBe("Not final: 3 additional duty programs are not included.");
   });
 
   test("the total's label says what it excludes", () => {

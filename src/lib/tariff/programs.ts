@@ -100,6 +100,20 @@ export function excludedCount(warnings: unknown): number {
   return Array.isArray(warnings) ? warnings.filter(isExcludedFromTotal).length : 0;
 }
 
+// An estimate is incomplete when its total leaves out at least one program
+// that may apply (the same count as excludedCount); its amount isn't final.
+export const INCOMPLETE_ESTIMATE_LABEL = "Incomplete estimate";
+
+export function isIncompleteEstimate(warnings: unknown): boolean {
+  return excludedCount(warnings) > 0;
+}
+
+export function incompleteNote(excluded: number): string {
+  return excluded === 1
+    ? "Not final: 1 additional duty program is not included."
+    : `Not final: ${excluded} additional duty programs are not included.`;
+}
+
 export function totalLabel(excludedCount: number, includesAdditional = false): string {
   const what = includesAdditional ? "Duties + fees (USD)" : "Base duty + fees (USD)";
   if (excludedCount === 0) return "Estimated duties and fees (USD)";
