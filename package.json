@@ -16,7 +16,9 @@
     "tariff:fetch": "node scripts/tariff/fetch-sources.mjs",
     "tariff:extract": "node scripts/tariff/extract-2a.mjs && node scripts/tariff/extract-2b.mjs",
     "tariff:seed": "node scripts/tariff/generate-seeds.mjs",
-    "tariff:verify": "npm run tariff:fetch && npm run tariff:extract && npm run tariff:seed -- --check && git diff --exit-code -- data/tariff docs/tariff-data"
+    "tariff:verify": "npm run tariff:fetch && npm run tariff:extract && npm run tariff:seed -- --check && git diff --exit-code -- data/tariff docs/tariff-data",
+    "demo:live": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/demo/ts-hooks.mjs scripts/demo/live-demo.mjs seed",
+    "demo:remove": "node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/demo/ts-hooks.mjs scripts/demo/live-demo.mjs remove"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

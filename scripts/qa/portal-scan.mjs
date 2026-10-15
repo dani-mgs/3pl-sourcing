@@ -54,13 +54,18 @@ const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost"]);
 const LOCAL_PORT = "54321";
 const EMAIL_DOMAIN = "demo.example.test";
 
-const USERS = [
+const BASE_USERS = [
   { email: `brightline-ops@${EMAIL_DOMAIN}`, client: "Brightline Apparel", plan: "paid" },
   { email: `ridgeway-ops@${EMAIL_DOMAIN}`, client: "Ridgeway Outdoor", plan: "free" },
   { email: `northwind-ops@${EMAIL_DOMAIN}`, client: "Northwind Coffee Roasters", plan: "free" },
   { email: `northwind-finance@${EMAIL_DOMAIN}`, client: "Northwind Coffee Roasters", plan: "free" },
   { email: `solace-ops@${EMAIL_DOMAIN}`, client: "Solace Skincare", plan: "free", mustChangePassword: true },
 ];
+// The live demo client (scripts/demo/live-demo.mjs), when it's on this stack
+// with its portal user: scanned like the others, its report checked against
+// its own figures.
+const LIVE_DEMO = { email: `brightline-demo@${EMAIL_DOMAIN}`, client: "Brightline Apparel (Demo)", plan: "paid" };
+let USERS = BASE_USERS;
 
 const STATUS_WORDS =
   /Unfit|Do Not Contact|Do not Contact|Withdrawn|No Response|Vetted|Under Assessment|Move Recommended|Reviewing Quotation|Waiting for Quotation|Potential \/ Not Contacted/;
@@ -215,6 +220,15 @@ async function forbiddenTerms(db) {
   };
 }
 
+async function allUsers(db) {
+  const users = [];
+  for (let page = 1; ; page++) {
+    const data = check(await db.auth.admin.listUsers({ page, perPage: 1000 }), "list users");
+    users.push(...data.users);
+    if (data.users.length < 1000) return users;
+  }
+}
+
 async function signIn(stack, admin, email) {
   const link = check(await admin.auth.admin.generateLink({ type: "magiclink", email }), `link for ${email}`);
   const anon = createClient(stack.url, stack.anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -256,6 +270,20 @@ async function main() {
     .filter((fn) => READS.test(fn))
     .sort();
   if (relations.length < 20) fail(`only ${relations.length} tables and views found; is the schema loaded?`);
+
+  const liveClient = clients.find((c) => c.name === LIVE_DEMO.client);
+  const liveUser = liveClient ? (await allUsers(admin)).find((u) => u.email === LIVE_DEMO.email) : null;
+  if (liveUser) {
+    const report = reports.filter((r) => r.client_id === liveClient.id).at(-1);
+    const partners = report?.payload?.partners ?? [];
+    const lastLetter = partners.map((p) => p.label).filter(Boolean).sort((a, b) => a.length - b.length || a.localeCompare(b)).at(-1);
+    const named = partners.find((p) => p.name)?.name;
+    USERS = [...BASE_USERS, {
+      ...LIVE_DEMO,
+      mustChangePassword: Object.hasOwn(liveUser.app_metadata ?? {}, "must_change_password"),
+      reportMarks: [lastLetter, named].filter(Boolean),
+    }];
+  }
 
   const problems = [];
   const report = [];
@@ -439,8 +467,9 @@ async function main() {
 
     // Not vacuous for the report either: paid sees it, free sees the lock.
     const reportHtml = bodies.find(([w]) => w === "/portal/market-report")?.[1] ?? "";
-    if (!user.mustChangePassword && user.plan === "paid" && !(reportHtml.includes("$9,610") && reportHtml.includes("Partner L"))) {
-      note("/portal/market-report", "doesn't show the paid report (median $9,610, Partner L)");
+    const marks = user.reportMarks ?? ["$9,610", "Partner L"];
+    if (!user.mustChangePassword && user.plan === "paid" && !marks.every((m) => reportHtml.includes(escaped(m)))) {
+      note("/portal/market-report", `doesn't show the paid report (${marks.join(", ")})`);
     }
     if (!user.mustChangePassword && user.plan === "free" && !reportHtml.includes("Locked · paid plan")) {
       note("/portal/market-report", "doesn't show the locked page");
