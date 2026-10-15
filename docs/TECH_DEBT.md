@@ -4,6 +4,18 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### Remove the live demo client
+- **Added:** 2026-10-15
+- **What:** "Brightline Apparel (Demo)" is on production: a 3PL and a forwarder project, published updates, a Market Report, requests and the portal user `brightline-demo@demo.example.test`. Testers can't delete it by hand, because published updates, reports and requests are immutable.
+- **Why deferred:** The team is still getting familiar with the app on it.
+- **Severity:** Low
+- **Where:** Branch `chore/demo-seed-production` (`scripts/demo/*`, `docs/qa/live-demo.md`). To remove it:
+  1. `git checkout chore/demo-seed-production`, then `nvm use`.
+  2. `export DEMO_TARGET_URL=https://vnidvcskfsyfytdjbiji.supabase.co`, `export DEMO_OWNER_EMAIL=<staff email>`, then `read -rs DEMO_TARGET_SERVICE_KEY && export DEMO_TARGET_SERVICE_KEY` (a NEW `sb_secret_` key; legacy `eyJ` keys are refused).
+  3. `npm run demo:remove`: a dry run. Read it; it lists anything testers added that the seed didn't create.
+  4. `npm run demo:remove -- --apply --confirm-project=vnidvcskfsyfytdjbiji`, and type the ref at the prompt.
+  5. `unset DEMO_TARGET_SERVICE_KEY`, then delete the key in Supabase (Project Settings → API Keys).
+
 ### 3PL recommendation page unreachable
 - **Added:** 2026-10-13 (found while building the how-to guides)
 - **What:** `/3pl-sourcing/projects/[id]/recommendation` exists but nothing links to it (link lost in 89807f2, 2026-09-08). /help says "no button yet". The saved recommendation's top three feed the shortlist logic (`share-page.tsx`, `threePlShortlistOf`) and the "Based on" prefill, so staff cannot set it from the UI.
