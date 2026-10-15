@@ -1,6 +1,6 @@
 # MOVE Supply Chain Decision Hub — Project State & Handover
 
-_Last updated: 2026-10-13 by Dani (as of `main` at 5dba670, client dashboard Phase 3b merged)_
+_Last updated: 2026-10-15 by Dani (as of `main` at bd6958c, live demo client on production)_
 
 **Live:** 3PL Sourcing, Forwarder Sourcing, Tariff Calculator, client dashboard Phases 0–3b (client portal, Market Report, client requests and introductions). **Next:** Landed Cost Calculator; client dashboard Phase 4 not planned yet (section 7). **Deferred:** 3PL Audit, Forwarder Audit.
 
@@ -71,6 +71,12 @@ Internal hub for Move Supply Chain Logistics Experts: source and compare 3PLs an
 - **`npm run qa:portal-scan`:** the client portal leak scan (what it checks: `docs/qa/regression-test-cases.md`, item 5). Run it after any change to what the portal shows.
 - **Production cleanup candidates:** `docs/qa/cleanup-candidates.sql`, one read-only SELECT to run in the SQL Editor; delete through the app, never SQL.
 
+**Live demo data (production, since 2026-10-15)**
+- **What exists:** "Brightline Apparel (Demo)" on the paid plan: a 3PL project (10 3PLs), a forwarder project (12 forwarders), a published update on each, a Market Report, three requests (approval, question, introduction) and the portal user `brightline-demo@demo.example.test`. It's there for the team to explore.
+- **No saved duty estimate:** `duty_estimates` refuses service-role writes by design, so the estimate isn't seeded.
+- **The tool** (`scripts/demo/*`, `docs/qa/live-demo.md`) is only on branch `chore/demo-seed-production`, intentionally not merged. Don't delete that branch until the data is removed.
+- **Removal:** one step with `demo:remove`; see `docs/TECH_DEBT.md`, "Remove the live demo client".
+
 **Security model** (details in `docs/SECURITY.md`)
 - **Role checks** (`is_admin()`, `is_tariff_editor()`) read the live role from `auth.users`, not the session token. Changes apply on the next page load or save; no re-login is needed.
 - **Display names** are admin-only, stored in `app_metadata.first_name`. `profiles` is a one-way mirror of them.
@@ -133,6 +139,7 @@ Landed Cost Calculator (not started; no plan yet). Client dashboard Phase 4 has 
 - **Optional follow-ups:**
   - Revoke `INSERT` on `duty_estimates` from `service_role`, so even the key can save estimates only through `save_duty_estimate` (SECURITY.md: "not done").
   - Delete stale test accounts and merged branches.
+  - Remove the live demo client once the team is done (TECH_DEBT).
 - **Known limits:**
   - A deleted user's old token was valid for up to 1 hour on their own rows (report, B-1/B-2). The later role gate should close this: `has_app_role()` finds no `auth.users` row, so every RLS table refuses the token. This comes from the function's definition, not a dedicated test.
   - Others are in `docs/TECH_DEBT.md`. For the client dashboard, the ones that matter most:
