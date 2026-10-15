@@ -115,6 +115,10 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Where:** `src/lib/auth/require-staff.ts`
 
 
+### Fee rollover reminder: non-editor wording is unreachable
+- **What:** The fee rollover reminder's non-editor wording ("Ask a tariff editor to add them.") is built and tested but unreachable, because the Fees page and Duty data overview are closed to staff who cannot edit tariff data. If other staff should see the reminder, add a notice on the Tariff Calculator page.
+- **Where:** `src/components/tariff/fee-rollover-notice.tsx`, `src/app/(authenticated)/tariff-calculator/duty-data/`
+
 ### Email shown when a user has no display name
 - **What:** Program history and the Saved estimates "By" column fall back to the user's email when there is no display name; consider a consistent "Staff" fallback, as on Duty data → Fees.
 - **Where:** `src/lib/tariff/server-duty-admin.ts` (`names`), `src/lib/tariff/estimate-authors.ts` (`loadAuthorNames`)
