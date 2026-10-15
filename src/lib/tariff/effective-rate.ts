@@ -1,3 +1,4 @@
+import { formatRateDate } from "@/lib/fx/rate-provenance";
 import { daysBetween, REVIEW_STALE_AFTER_DAYS } from "./additional-duties";
 import { toCents, parseDecimal } from "./rational";
 import type { EstimateResult } from "./server-estimate";
@@ -28,28 +29,47 @@ export function effectiveRates(
   return { duties: tenthsPercent(duties, value), allIn: tenthsPercent(total, value) };
 }
 
-export type OldestReview = { programName: string; days: number; stale: boolean; text: string };
+export type OldestReview = {
+  programName: string;
+  // The UTC calendar date of that review (YYYY-MM-DD).
+  reviewedOn: string;
+  // Days from the review to the day the estimate was calculated.
+  days: number;
+  stale: boolean;
+  text: string;
+};
+
+// Shown instead when no reviewed additional-duty program is counted.
+export const NO_REVIEWED_DUTIES_TEXT = "No reviewed additional duties in this estimate";
+
+// The UTC calendar date of a review timestamp, whatever offset it was
+// written with, so it never shifts a day with the viewer's time zone.
+export function reviewDateUtc(reviewedAt: string): string {
+  return new Date(reviewedAt).toISOString().slice(0, 10);
+}
 
 // The longest-ago review among the programs counted in this estimate (a
-// reviewed program with a line), measured to the day it was calculated.
+// reviewed program with a line), measured to the day it was calculated: the
+// date the estimate's duty rates were last verified, as its weakest link.
 export function oldestReview(
   estimate: Pick<EstimateResult, "dutyReviews" | "lines" | "asOfDate">,
 ): OldestReview | null {
-  let oldest: { name: string; days: number } | null = null;
+  let oldest: { name: string; reviewedOn: string; days: number } | null = null;
   for (const review of estimate.dutyReviews) {
     if (review.status !== "reviewed" || !review.reviewedAt) continue;
     if (!estimate.lines.some((l) => l.kind === "additional" && l.code === review.programKey)) continue;
-    const days = Math.max(0, daysBetween(review.reviewedAt, estimate.asOfDate));
+    const reviewedOn = reviewDateUtc(review.reviewedAt);
+    const days = Math.max(0, daysBetween(reviewedOn, estimate.asOfDate));
     if (!oldest || days > oldest.days || (days === oldest.days && review.name < oldest.name)) {
-      oldest = { name: review.name, days };
+      oldest = { name: review.name, reviewedOn, days };
     }
   }
   if (!oldest) return null;
-  const ago = oldest.days === 0 ? "today" : oldest.days === 1 ? "1 day ago" : `${oldest.days} days ago`;
   return {
     programName: oldest.name,
+    reviewedOn: oldest.reviewedOn,
     days: oldest.days,
     stale: oldest.days > REVIEW_STALE_AFTER_DAYS,
-    text: `Oldest review: ${oldest.name}, ${ago}`,
+    text: `Duty rates last verified: ${formatRateDate(oldest.reviewedOn)} (oldest reviewed program: ${oldest.name})`,
   };
 }

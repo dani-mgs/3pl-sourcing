@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { DutyReviewNote } from "./additional-duties";
-import { effectiveRates, oldestReview } from "./effective-rate";
+import { effectiveRates, NO_REVIEWED_DUTIES_TEXT, oldestReview, reviewDateUtc } from "./effective-rate";
 
 const amounts = (customsValueUsd: number, baseDutyUsd: number, additionalDutiesUsd: number, feesUsd: number) => ({
   customsValueUsd,
@@ -43,10 +43,12 @@ const review = (programKey: string, name: string, reviewedAt: string | null, sta
   programKey, name, status, reviewedAt, reviewedByName: "Dani", staleReason: null,
 });
 
-describe("oldestReview", () => {
+describe("oldestReview: when the estimate's duty rates were last verified", () => {
   const base = { asOfDate: "2026-10-07" };
+  const one = (reviewedAt: string, asOfDate = base.asOfDate) =>
+    oldestReview({ asOfDate, lines: [lineFor("a")], dutyReviews: [review("a", "A", reviewedAt)] })!;
 
-  test("names the counted program reviewed longest ago, in days to the calculation date", () => {
+  test("the oldest review among counted programs, with its date and program", () => {
     const result = oldestReview({
       ...base,
       lines: [lineFor("section_301_china"), lineFor("section_301_forced_labor")],
@@ -55,20 +57,25 @@ describe("oldestReview", () => {
         review("section_301_forced_labor", "Section 301 (forced labour)", "2026-10-02T09:00:00Z"),
       ],
     });
-    expect(result).toEqual({ programName: "Section 301 (China)", days: 41, stale: true, text: "Oldest review: Section 301 (China), 41 days ago" });
+    expect(result).toEqual({
+      programName: "Section 301 (China)",
+      reviewedOn: "2026-08-27",
+      days: 41,
+      stale: true,
+      text: "Duty rates last verified: Aug 27, 2026 (oldest reviewed program: Section 301 (China))",
+    });
   });
 
   test("the staleness threshold is the existing 30 days: 30 is fine, 31 is stale", () => {
-    const at = (date: string) =>
-      oldestReview({ ...base, lines: [lineFor("a")], dutyReviews: [review("a", "A", `${date}T00:00:00Z`)] })!;
-    expect(at("2026-09-07")).toMatchObject({ days: 30, stale: false });
-    expect(at("2026-09-06")).toMatchObject({ days: 31, stale: true });
+    expect(one("2026-09-07T00:00:00Z")).toMatchObject({ days: 30, stale: false });
+    expect(one("2026-09-06T00:00:00Z")).toMatchObject({ days: 31, stale: true });
   });
 
-  test("today and yesterday read naturally", () => {
-    const at = (date: string) => oldestReview({ ...base, lines: [lineFor("a")], dutyReviews: [review("a", "A", `${date}T00:00:00Z`)] })!.text;
-    expect(at("2026-10-07")).toBe("Oldest review: A, today");
-    expect(at("2026-10-06")).toBe("Oldest review: A, 1 day ago");
+  test("reviewed on the day it was calculated", () => {
+    expect(one("2026-10-07T08:00:00Z")).toMatchObject({
+      days: 0,
+      text: "Duty rates last verified: Oct 7, 2026 (oldest reviewed program: A)",
+    });
   });
 
   test("only programs counted in the estimate (reviewed, with a line) are considered", () => {
@@ -81,7 +88,7 @@ describe("oldestReview", () => {
         review("section_301_forced_labor", "Forced labour", null, "pending_review"),
       ],
     });
-    expect(result).toMatchObject({ programName: "Section 301 (China)", days: 6, stale: false });
+    expect(result).toMatchObject({ programName: "Section 301 (China)", reviewedOn: "2026-10-01", days: 6, stale: false });
   });
 
   test("an exempt line (0.00) still counts the program", () => {
@@ -89,7 +96,55 @@ describe("oldestReview", () => {
     expect(oldestReview({ ...base, lines: [exempt], dutyReviews: [review("section_301_forced_labor", "FL", "2026-10-01T00:00:00Z")] })).not.toBeNull();
   });
 
-  test("nothing when no additional-duty program is counted", () => {
+  test("nothing when no reviewed additional-duty program is counted", () => {
+    // A review but no line; pending only; an estimate saved before additional duties existed.
     expect(oldestReview({ ...base, lines: [], dutyReviews: [review("a", "A", "2026-10-01T00:00:00Z")] })).toBeNull();
+    expect(oldestReview({ ...base, lines: [lineFor("a")], dutyReviews: [review("a", "A", null, "pending_review")] })).toBeNull();
+    expect(oldestReview({ ...base, lines: [], dutyReviews: [] })).toBeNull();
+    expect(NO_REVIEWED_DUTIES_TEXT).toBe("No reviewed additional duties in this estimate");
+  });
+
+  test("a review's date is its UTC calendar date, at either side of midnight and whatever its offset", () => {
+    expect(reviewDateUtc("2026-10-02T23:59:59.999+00:00")).toBe("2026-10-02");
+    expect(reviewDateUtc("2026-10-03T00:00:00+00:00")).toBe("2026-10-03");
+    expect(reviewDateUtc("2026-10-03T07:30:00+08:00")).toBe("2026-10-02");
+    expect(one("2026-10-02T23:59:59.999+00:00").text).toBe("Duty rates last verified: Oct 2, 2026 (oldest reviewed program: A)");
+    expect(one("2026-10-03T07:30:00+08:00")).toMatchObject({ reviewedOn: "2026-10-02", days: 5 });
+  });
+
+  test("the same date and day count in every time zone the app is used in", () => {
+    const zones = [
+      "UTC",
+      "America/Los_Angeles",
+      "Asia/Ho_Chi_Minh",
+      "Pacific/Kiritimati",
+      "Pacific/Pago_Pago",
+      "Australia/Lord_Howe",
+      "Asia/Manila",
+    ];
+    const cases = ["2026-10-02T23:59:59.999+00:00", "2026-10-03T00:00:00+00:00", "2026-10-03T07:30:00+08:00"];
+    const original = process.env.TZ;
+    const offsets = new Set<number>();
+    try {
+      const seen = zones.map((zone) => {
+        process.env.TZ = zone;
+        offsets.add(new Date(2026, 9, 3, 12).getTimezoneOffset());
+        return cases.map((at) => {
+          const r = one(at);
+          return `${r.reviewedOn} ${r.days} ${r.text}`;
+        });
+      });
+      // The zones really were switched (UTC-11 to UTC+14), and nothing moved.
+      expect(offsets.size).toBeGreaterThan(5);
+      for (const result of seen) expect(result).toEqual(seen[0]);
+      expect(seen[0]).toEqual([
+        "2026-10-02 5 Duty rates last verified: Oct 2, 2026 (oldest reviewed program: A)",
+        "2026-10-03 4 Duty rates last verified: Oct 3, 2026 (oldest reviewed program: A)",
+        "2026-10-02 5 Duty rates last verified: Oct 2, 2026 (oldest reviewed program: A)",
+      ]);
+    } finally {
+      if (original === undefined) delete process.env.TZ;
+      else process.env.TZ = original;
+    }
   });
 });
