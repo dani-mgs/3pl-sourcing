@@ -72,3 +72,25 @@ describe(`grouping long lists by ${GROUP_SIZE}`, () => {
     expect(stub.counts.get("hts_lines")).toBe(1);
   });
 });
+
+describe("row-limit guard (batch path)", () => {
+  const request = { entryDate: CALCULATED_ON, lines: [{ lineId: "L1", htsCode: "6402993110", originCountry: "CN", enteredValueUsd: "100" }] };
+  const duties = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `d-${i}`, program_key: "section_301_china", origin_countries: ["ZZ"], effective_from: "2020-01-01", effective_to: null, chapter99_heading: "9903.88.03", excludes_programs: [] }));
+  const changes = (n: number) => Array.from({ length: n }, (_, i) => ({ hts_code: `990388${String(i).padStart(4, "0")}`, detected_at: "2026-09-25T00:00:00Z" }));
+  const reviewed = [{ program_key: "section_301_china", review_status: "reviewed", last_reviewed_at: "2026-09-20T09:00:00Z", last_reviewed_by: null }];
+  const run = (extra: Record<string, unknown[]>) =>
+    loadSkuDuties(createSupabaseStub(dutyTables(extra as never)).client, request, CALCULATED_ON);
+
+  test("below the limit: unchanged", async () => {
+    expect((await run({ additional_duties: duties(PAGE_SIZE - 1) })).ok).toBe(true);
+    expect((await run({ duty_program_review_status: reviewed, hts_chapter99_changes: changes(PAGE_SIZE - 1) })).ok).toBe(true);
+  });
+
+  test("additional duties at the limit: load_failed", async () => {
+    expect(await run({ additional_duties: duties(PAGE_SIZE) })).toMatchObject({ ok: false, code: "load_failed" });
+  });
+
+  test("Chapter 99 changes at the limit: load_failed", async () => {
+    expect(await run({ duty_program_review_status: reviewed, hts_chapter99_changes: changes(PAGE_SIZE) })).toMatchObject({ ok: false, code: "load_failed" });
+  });
+});

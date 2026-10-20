@@ -3,7 +3,9 @@ import type { DutyRow } from "@/lib/tariff/additional-duties";
 import { LINE_COLUMNS, type HtsLineRecord } from "@/lib/tariff/hts-line-match";
 import { PROGRAM_COLUMNS, type DutyProgramRow } from "@/lib/tariff/programs";
 import {
+  API_ROW_LIMIT,
   DUTY_COLUMNS,
+  belowRowLimit,
   SCOPE_COLUMNS,
   candidatePrefixes,
   earliestReview,
@@ -27,7 +29,7 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 type Page = PromiseLike<{ data: unknown[] | null; error: unknown }>;
 
 export const GROUP_SIZE = 150;
-export const PAGE_SIZE = 1000;
+export const PAGE_SIZE = API_ROW_LIMIT;
 export const MAX_PAGES = 20;
 
 export class TooMuchDataError extends Error {}
@@ -65,7 +67,7 @@ export async function readShared(supabase: Supabase, origins: string[]): Promise
     supabase.from("hts_releases").select("id, name, title, release_start_date").eq("status", "current").maybeSingle(),
     supabase.from("hts_column2_countries").select("country_code, effective_from, effective_to").in("country_code", origins),
     supabase.from("duty_programs").select(PROGRAM_COLUMNS),
-    // About 125 rows: read whole, as buildEstimate does.
+    // About 125 rows: read whole, as buildEstimate does (failing at the row limit).
     supabase.from("additional_duties").select(DUTY_COLUMNS),
     supabase.from("duty_program_review_status").select("program_key, review_status, last_reviewed_at, last_reviewed_by"),
   ]);
@@ -74,7 +76,7 @@ export async function readShared(supabase: Supabase, origins: string[]): Promise
     release: release.data as FirstReads["release"],
     column2: (column2.data ?? []) as FirstReads["column2"],
     programs: (programs.data ?? []) as DutyProgramRow[],
-    duties: (duties.data ?? []) as unknown as Omit<DutyRow, "scope">[],
+    duties: belowRowLimit(duties.data, "additional_duties") as unknown as Omit<DutyRow, "scope">[],
     statuses: (statuses.data ?? []) as StatusRow[],
   };
 }
@@ -103,7 +105,7 @@ export async function readReviewDetails(supabase: Supabase, statuses: StatusRow[
   if (changes.error) throw changes.error;
   return {
     names: reviewerNames((profiles.data ?? []) as { id: string; email: string; first_name: string | null }[]),
-    changes: (changes.data ?? []) as ChangeRow[],
+    changes: belowRowLimit(changes.data, "hts_chapter99_changes") as ChangeRow[],
   };
 }
 

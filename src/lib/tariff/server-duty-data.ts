@@ -16,6 +16,20 @@ export const DUTY_COLUMNS =
 
 export const SCOPE_COLUMNS = "duty_id, hts_prefix, article_description, excluded";
 
+// PostgREST returns at most this many rows per request (max_rows in
+// supabase/config.toml), so a read that returns exactly this many may have
+// been cut off. The unpaged reads below fail then rather than use part of the
+// data; buildEstimate shows its generic error, the batch loader load_failed.
+export const API_ROW_LIMIT = 1000;
+
+export class RowLimitError extends Error {}
+
+export function belowRowLimit(rows: readonly unknown[] | null, what: string): unknown[] {
+  const list = [...(rows ?? [])];
+  if (list.length >= API_ROW_LIMIT) throw new RowLimitError(`${what}: ${list.length} rows, at the API row limit`);
+  return list;
+}
+
 // Every prefix of the code a scope line could hold (4–10 digits).
 export function candidatePrefixes(htsCode: string): string[] {
   const prefixes: string[] = [];
@@ -163,10 +177,10 @@ export async function loadAdditionalDutyData(
   if (changesResult.error) throw changesResult.error;
 
   return assembleAdditionalDutyData(htsCode, asOfDate, {
-    duties: (dutiesResult.data ?? []) as unknown as Omit<DutyRow, "scope">[],
+    duties: belowRowLimit(dutiesResult.data, "additional_duties") as unknown as Omit<DutyRow, "scope">[],
     scope: [...(scopeResult.data ?? []), ...(childResult.data ?? [])] as ScopeRow[],
     statuses,
     names: reviewerNames((profilesResult.data ?? []) as { id: string; email: string; first_name: string | null }[]),
-    changes: (changesResult.data ?? []) as ChangeRow[],
+    changes: belowRowLimit(changesResult.data, "hts_chapter99_changes") as ChangeRow[],
   });
 }
