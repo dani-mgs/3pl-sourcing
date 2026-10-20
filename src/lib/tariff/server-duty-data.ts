@@ -72,7 +72,10 @@ export function earliestReview(statuses: StatusRow[]): string | undefined {
 }
 
 // Scope lines in a fixed order (prefix, then excluded, then article), so the
-// result doesn't depend on the order the database returns them in.
+// result doesn't depend on the order the database returns them in. Order
+// never changes a decision (evaluateAdditionalDuties matches, ranks and
+// exempts with filter / max / some over the lines), only the order of the
+// numbers and articles listed in notes.
 function compareScope(a: DutyRow["scope"][number], b: DutyRow["scope"][number]): number {
   return (
     a.hts_prefix.localeCompare(b.hts_prefix) ||
