@@ -204,10 +204,17 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ### Tariff Calculator: rounding and single-line MPF are assumptions
 - **Added:** 2026-10-02
-- **What:** Each estimate line rounds once, half up to the cent, and the MPF minimum/maximum are applied to the one line as if it were the whole entry. CBP's exact per-line rounding in ACE wasn't confirmed against a primary source; differences should be cents, but a multi-line entry's MPF can differ a lot. Both are stated on every estimate and in /help.
+- **What:** Each estimate line rounds once, half up to the cent, and the MPF minimum/maximum are applied to the one line as if it were the whole entry. CBP's exact per-line rounding in ACE wasn't confirmed against a primary source; differences should be cents, but a multi-line entry's MPF can differ a lot. Both are stated on every estimate and in /help. Updated 2026-10-21: Landed Cost uses entry-level fees (one MPF and one HMF on the sum of a scenario's entered values, split by value, `src/lib/landed-cost/entry-fees.ts`); the Tariff Calculator still computes MPF per line, by design, since it estimates one line. Both use the same `mpfFor` / `hmfFor` (`src/lib/tariff/customs-fees.ts`).
 - **Why deferred:** v1 estimates one line; confirming ACE rounding needs a broker or CBP reference.
 - **Severity:** Low
-- **Where:** `src/lib/tariff/calculate.ts`, `src/lib/tariff/caveats.ts`
+- **Where:** `src/lib/tariff/calculate.ts`, `src/lib/tariff/customs-fees.ts`, `src/lib/tariff/caveats.ts`
+
+### Landed Cost: delivered incoterms not supported yet
+- **Added:** 2026-10-21
+- **What:** Landed Cost Phase 1 accepts only EXW, FCA, FAS and FOB, where qty × unit price is the entered value. CFR, CIF, CPT, CIP, DAP, DPU, DDP and DDU include international freight (and, for CIF/CIP, insurance) in the price, which must come out of the customs value first; `computeScenarioTotals` refuses them with an error naming the incoterm.
+- **Why deferred:** The deduction needs its own inputs and confirmation, as in linked estimates. Reuse `customsValueAfterDeduction` (`src/lib/tariff/forwarder-link.ts`) rather than writing a second rule.
+- **Severity:** Medium
+- **Where:** `src/lib/landed-cost/scenario-totals.ts` (`SUPPORTED_INCOTERMS`)
 
 ### Saved estimates can't prove the inputs were honest, or the duty amounts
 - **Added:** 2026-10-06

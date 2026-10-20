@@ -1,11 +1,11 @@
-import { formatCurrency } from "@/lib/currency";
+import { pctText, usd } from "./amount-text";
+import { hmfFor, mpfFor } from "./customs-fees";
 import { parseRateText } from "./rate-text";
 import {
   ZERO,
   add,
   centsToNumber,
   centsToRational,
-  compare,
   div,
   fromInteger,
   mul,
@@ -21,7 +21,8 @@ import {
 //
 // Rounding: amounts are exact until each line is rounded once, half-up to the
 // cent. The MPF minimum and maximum are applied after rounding, and to this
-// one line as if it were the whole entry. Additional duties (Section 301,
+// one line as if it were the whole entry (customs-fees.ts; Landed Cost applies
+// them to the whole entry instead). Additional duties (Section 301,
 // 232, …) aren't calculated yet; matching programs are listed as warnings.
 
 export type ShipmentMode = "Air" | "Sea" | "Road";
@@ -108,19 +109,6 @@ export const HTS_SOURCE_URL = "https://hts.usitc.gov/";
 
 const HUNDRED = fromInteger(100);
 
-function usd(value: Rational): string {
-  return formatCurrency(centsToNumber(toCents(value)), "USD");
-}
-
-function usdText(value: number | string): string {
-  return formatCurrency(Number(value), "USD");
-}
-
-function pctText(value: Rational, places = 4): string {
-  // Trim trailing zeros: 0.346400 → 0.3464, 6.0000 → 6.
-  return `${toFixed(value, places).replace(/\.?0+$/, "")}%`;
-}
-
 // Local value × rate, rounded to the cent: the customs value every line uses.
 export function customsValueInUsd(original: string, rateToUsd: string): Rational {
   return centsToRational(toCents(mul(parseDecimal(original), parseDecimal(rateToUsd))));
@@ -190,78 +178,13 @@ function baseDuty(input: EstimateInput):
   };
 }
 
-function feeLine(row: FeeRow, cents: bigint, rateText: string, detail: string | null): EstimateLine {
-  return {
-    kind: "fee",
-    code: row.fee_code,
-    label: row.label,
-    rateText,
-    amountUsd: centsToNumber(cents),
-    detail,
-    sourceLabel: row.source_label,
-    sourceUrl: row.source_url,
-    effectiveFrom: row.effective_from,
-  };
-}
-
-function mpf(input: EstimateInput): { line: EstimateLine; cents: bigint } | FeeCode {
-  const value = input.customsValueUsd;
-  const informal = input.fees.find((f) => f.fee_code === "mpf_informal");
-  if (
-    informal &&
-    informal.flat_usd != null &&
-    informal.applies_up_to_value_usd != null &&
-    compare(value, parseDecimal(informal.applies_up_to_value_usd)) <= 0
-  ) {
-    const cents = toCents(parseDecimal(informal.flat_usd));
-    return {
-      cents,
-      line: feeLine(
-        informal,
-        cents,
-        `${usdText(informal.flat_usd)} flat`,
-        `Assumes an informal entry (value up to ${usdText(informal.applies_up_to_value_usd)})`,
-      ),
-    };
-  }
-
-  const formal = input.fees.find((f) => f.fee_code === "mpf_formal");
-  if (!formal || formal.rate_pct == null || formal.min_usd == null || formal.max_usd == null) {
-    return "mpf_formal";
-  }
-  const rate = parseDecimal(formal.rate_pct);
-  const min = toCents(parseDecimal(formal.min_usd));
-  const max = toCents(parseDecimal(formal.max_usd));
-  const calculated = toCents(div(mul(value, rate), HUNDRED));
-  const cents = calculated < min ? min : calculated > max ? max : calculated;
-  const limit = cents === min && calculated < min ? "Minimum applied" : cents === max && calculated > max ? "Maximum applied" : null;
-  return {
-    cents,
-    line: feeLine(
-      formal,
-      cents,
-      `${pctText(rate)} (min ${usdText(formal.min_usd)}, max ${usdText(formal.max_usd)})`,
-      [`${pctText(rate)} of ${usd(value)}`, limit].filter(Boolean).join("; "),
-    ),
-  };
-}
-
-function hmf(input: EstimateInput): { line: EstimateLine; cents: bigint } | FeeCode | null {
-  if (input.shipmentMode !== "Sea") return null;
-  const row = input.fees.find((f) => f.fee_code === "hmf");
-  if (!row || row.rate_pct == null) return "hmf";
-  const rate = parseDecimal(row.rate_pct);
-  const cents = toCents(div(mul(input.customsValueUsd, rate), HUNDRED));
-  return { cents, line: feeLine(row, cents, pctText(rate), `${pctText(rate)} of ${usd(input.customsValueUsd)}`) };
-}
-
 export function calculateEstimate(input: EstimateInput): EstimateCalculation {
   const base = baseDuty(input);
   if (!base.ok) return base;
 
-  const mpfResult = mpf(input);
+  const mpfResult = mpfFor(input.customsValueUsd, input.fees);
   if (typeof mpfResult === "string") return { ok: false, reason: "missing_fee", feeCode: mpfResult };
-  const hmfResult = hmf(input);
+  const hmfResult = hmfFor(input.customsValueUsd, input.shipmentMode, input.fees);
   if (typeof hmfResult === "string") return { ok: false, reason: "missing_fee", feeCode: hmfResult };
 
   const fees = [mpfResult, ...(hmfResult ? [hmfResult] : [])];
