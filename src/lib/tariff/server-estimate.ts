@@ -12,12 +12,13 @@ import { checkEntryDate } from "./entry-date";
 import { formatHtsCode } from "./hts-code";
 import { evaluateAdditionalDuties, type DutyReviewNote } from "./additional-duties";
 import { scheduledChanges, type ScheduledChange } from "./scheduled-changes";
-import type { DutyProgramRow, EstimateWarning } from "./programs";
+import { PROGRAM_COLUMNS, type DutyProgramRow, type EstimateWarning } from "./programs";
 import { feesNotEnteredWarnings, inForce } from "./customs-fees";
 import { centsToNumber, parseDecimal, toCents } from "./rational";
 import { loadAdditionalDutyData } from "./server-duty-data";
 import type { EstimateFormData } from "./parse-estimate-form";
 import { customsValueAfterDeduction } from "./forwarder-link";
+import { LINE_COLUMNS, matchHtsLine, type HtsLineRecord } from "./hts-line-match";
 
 // Builds an estimate on the server from validated form data: the current
 // HTS release and line, the fees and column 2 list in force today, the
@@ -78,27 +79,15 @@ export type BuildEstimateResult = { ok: true; estimate: EstimateResult } | { ok:
 
 const UNEXPECTED = "An unexpected error occurred.";
 
-export type HtsLineRecord = {
-  hts_code: string;
-  description: string;
-  ancestor_descriptions: string[];
-  units: string[];
-  general_rate: string | null;
-  special_rate: string | null;
-  other_rate: string | null;
-};
-
-const LINE_COLUMNS =
-  "hts_code, description, ancestor_descriptions, units, general_rate, special_rate, other_rate";
+export type { HtsLineRecord };
 
 type DatedRow = { effective_from: string | null; effective_to: string | null };
 
 // Moved to customs-fees.ts (shared with Landed Cost); re-exported for callers.
 export { inForce };
 
-// Exact 8- or 10-digit match. An 8-digit code with no line of its own (the
-// HTS merges 8471.30.01 into 8471.30.01.00) matches its only 10-digit line;
-// with several, the user must choose.
+// Exact 8- or 10-digit match, else an 8-digit code's only 10-digit line
+// (matchHtsLine).
 export async function findLine(
   supabase: Supabase,
   releaseId: string,
@@ -111,7 +100,7 @@ export async function findLine(
     .eq("hts_code", digits)
     .maybeSingle();
   if (error) throw error;
-  if (exact) return { line: exact as HtsLineRecord, matchedTenDigit: false };
+  if (exact) return matchHtsLine(digits, [exact as HtsLineRecord]);
   if (digits.length !== 8) return null;
 
   const { data: children, error: childError } = await supabase
@@ -121,13 +110,7 @@ export async function findLine(
     .like("hts_code", `${digits}__`)
     .limit(20);
   if (childError) throw childError;
-  if (!children || children.length === 0) return null;
-  if (children.length > 1) {
-    return {
-      error: `${formatHtsCode(digits)} has several 10-digit statistical lines. Enter the full 10-digit code.`,
-    };
-  }
-  return { line: children[0] as HtsLineRecord, matchedTenDigit: true };
+  return matchHtsLine(digits, (children ?? []) as HtsLineRecord[]);
 }
 
 // `calculatedOn` defaults to today (UTC); the actions read it once and pass
@@ -174,9 +157,7 @@ export async function buildEstimate(
         .eq("country_code", input.originCountry),
       supabase
         .from("duty_programs")
-        .select(
-          "key, name, status, warning_text, trigger_origins, trigger_hts_prefixes, trigger_from, indicative_rates, source_label, source_url, sort_order",
-        ),
+        .select(PROGRAM_COLUMNS),
     ]);
     for (const result of [feesResult, column2Result, programsResult]) {
       if (result.error) throw result.error;

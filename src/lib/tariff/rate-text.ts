@@ -57,6 +57,15 @@ function normalizeUnit(raw: string): string {
   return raw.trim().replace(/\s+/g, " ");
 }
 
+// The label of a published unit token ("pf.liter" and "pf. liter" are both
+// "proof liters"), or null when the token isn't a known unit. Two tokens mean
+// the same unit when their labels match.
+export function unitLabelOf(token: string): string | null {
+  const unit = normalizeUnit(token);
+  // Own keys only: "toString" isn't a unit.
+  return Object.prototype.hasOwnProperty.call(UNIT_LABELS, unit) ? UNIT_LABELS[unit] : null;
+}
+
 function parseTerm(term: string): { adValoremPct: Rational } | { specific: SpecificRate } | null {
   const pct = AD_VALOREM.exec(term);
   if (pct) {

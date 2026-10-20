@@ -20,6 +20,10 @@ export type DutyProgramRow = {
   sort_order: number;
 };
 
+// The duty_programs columns every estimate reads.
+export const PROGRAM_COLUMNS =
+  "key, name, status, warning_text, trigger_origins, trigger_hts_prefixes, trigger_from, indicative_rates, source_label, source_url, sort_order";
+
 export type ProgramWarningKind =
   // No duty rows yet.
   | "not_loaded"

@@ -118,10 +118,17 @@ export function releaseSourceLabel(release: ReleaseInfo): string {
   return `HTSUS ${release.title ?? release.name} (USITC)`;
 }
 
-function baseDuty(input: EstimateInput):
+// What the base duty needs: the estimate's inputs without the fee rows.
+export type BaseDutyInput = Omit<EstimateInput, "fees" | "shipmentMode">;
+
+export type BaseDutyResult =
   | { ok: true; line: EstimateLine; rateColumn: "general" | "column2"; rateText: string;
       cents: bigint; quantityUsed: { value: number; unit: string; unitLabel: string } | null }
-  | Extract<EstimateCalculation, { ok: false }> {
+  | Extract<EstimateCalculation, { ok: false; reason: "no_rate" | "unsupported_rate" | "quantity_required" }>;
+
+// The base duty line alone (no fees): calculateEstimate's first step, also
+// used by Landed Cost, which works out fees per entry instead.
+export function calculateBaseDuty(input: BaseDutyInput): BaseDutyResult {
   const rateColumn = input.originIsColumn2 ? "column2" : "general";
   const rateText = input.originIsColumn2 ? input.line.other_rate : input.line.general_rate;
   if (!rateText) return { ok: false, reason: "no_rate" };
@@ -179,7 +186,7 @@ function baseDuty(input: EstimateInput):
 }
 
 export function calculateEstimate(input: EstimateInput): EstimateCalculation {
-  const base = baseDuty(input);
+  const base = calculateBaseDuty(input);
   if (!base.ok) return base;
 
   const mpfResult = mpfFor(input.customsValueUsd, input.fees);

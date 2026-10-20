@@ -209,6 +209,27 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 - **Where:** `src/lib/tariff/calculate.ts`, `src/lib/tariff/customs-fees.ts`, `src/lib/tariff/caveats.ts`
 
+### Landed Cost (Phase 2c): ask for the duty quantity only where the rate needs it
+- **Added:** 2026-10-21
+- **What:** `loadSkuDuties` returns `needs_quantity` (with the unit, e.g. kg or dozen) when a SKU's rate is per unit or compound and the request has no quantity in that unit. The UI must ask for the quantity in the rate's own unit (for kg, the goods' net weight) only for those SKUs, and must never fill it from the carton gross weight or count pieces as dozens.
+- **Why deferred:** Phase 2a is the server library only; the workspace UI is Phase 2c.
+- **Severity:** Medium (a wrong quantity gives a wrong duty)
+- **Where:** `src/lib/landed-cost/sku-duty.ts` (`quantityFor`), the Phase 2c SKU form
+
+### Landed Cost (Phase 2c): a saved draft's entry date can fall out of range
+- **Added:** 2026-10-21
+- **What:** Entry dates follow the estimate rule (yesterday to 366 days ahead, UTC). A draft saved with an entry date that has since passed gets `invalid_entry_date` from `loadSkuDuties` for the whole call, so the UI needs an "update the entry date" prompt instead of a generic error.
+- **Why deferred:** No drafts or UI yet (Phase 2c).
+- **Severity:** Low
+- **Where:** `src/lib/landed-cost/duty-request.ts` (`parseDutyRequest`), the Phase 2c workspace page
+
+### Duty reads not paged: additional duties and Chapter 99 changes
+- **Added:** 2026-10-21
+- **What:** `buildEstimate` and `loadSkuDuties` read `additional_duties` (about 125 rows) and the Chapter 99 changes since the earliest review in one request each, without paging. Past PostgREST's 1,000-row limit they would be cut short silently, in both. The batch loader's other multi-row reads (HTS lines, scope lines) are paged and fail past 20 pages.
+- **Why deferred:** Both tables are far below the limit, and the two paths must read the same data.
+- **Severity:** Low
+- **Where:** `src/lib/tariff/server-duty-data.ts`, `src/lib/landed-cost/server-duty-reads.ts`
+
 ### Landed Cost: delivered incoterms not supported yet
 - **Added:** 2026-10-21
 - **What:** Landed Cost Phase 1 accepts only EXW, FCA, FAS and FOB, where qty × unit price is the entered value. CFR, CIF, CPT, CIP, DAP, DPU, DDP and DDU include international freight (and, for CIF/CIP, insurance) in the price, which must come out of the customs value first; `computeScenarioTotals` refuses them with an error naming the incoterm.
