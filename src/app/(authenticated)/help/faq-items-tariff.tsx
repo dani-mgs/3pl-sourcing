@@ -247,7 +247,7 @@ export const TARIFF_FAQ: FaqItem[] = [
           origin or HTS code are named under the total, which says it EXCLUDES them, and the
           estimate is marked <strong>Incomplete estimate</strong>, so it never reads as complete.
           Section 232 on steel, aluminium and copper and China Section 301 are loaded; Section 232 on vehicles, timber, semiconductors, pharmaceuticals and drones
-          isn&apos;t yet.
+          isn&apos;t yet, nor Section 232 on polysilicon (named only for entry on or after 4 December 2026).
         </p>
       </>
     ),

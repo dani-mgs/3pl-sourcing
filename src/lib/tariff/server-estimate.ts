@@ -177,7 +177,7 @@ export async function buildEstimate(
       supabase
         .from("duty_programs")
         .select(
-          "key, name, status, warning_text, trigger_origins, trigger_hts_prefixes, indicative_rates, source_label, source_url, sort_order",
+          "key, name, status, warning_text, trigger_origins, trigger_hts_prefixes, trigger_from, indicative_rates, source_label, source_url, sort_order",
         ),
     ]);
     for (const result of [feesResult, column2Result, programsResult]) {
@@ -271,6 +271,7 @@ export async function buildEstimate(
       baseDutyUsd: parseDecimal(calculation.baseDutyUsd),
       // Review age is measured to the day of calculation, not the entry date.
       asOfDate,
+      entryDate,
     });
     const [baseLine, ...feeLines] = calculation.lines;
     // Sum in cents so the total equals its parts exactly.

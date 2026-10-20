@@ -1,7 +1,7 @@
 import { formatCurrency } from "@/lib/currency";
 import { formatRateDate } from "@/lib/fx/rate-provenance";
 import type { EstimateLine } from "./calculate";
-import { matchesProgramTrigger, type DutyProgramRow, type ProgramWarning } from "./programs";
+import { matchesProgramTrigger, programStarted, type DutyProgramRow, type ProgramWarning } from "./programs";
 import {
   ZERO,
   centsToNumber,
@@ -401,6 +401,8 @@ export type AdditionalDutiesInput = {
   customsValueUsd: Rational;
   baseDutyUsd: Rational;
   asOfDate: string;
+  // The expected entry date: a not-loaded program due later isn't named.
+  entryDate: string;
 };
 
 export type AdditionalDutiesResult = {
@@ -442,6 +444,10 @@ export function evaluateAdditionalDuties(input: AdditionalDutiesInput): Addition
   const statusOf = (key: string): ReviewStatus =>
     input.rows.some((r) => r.program_key === key) ? (reviewOf.get(key)?.status ?? "pending_review") : "not_loaded";
   const nameOf = (key: string) => programOf.get(key)?.name ?? key;
+  // A not-loaded program may apply when it has started by the entry date and
+  // its trigger matches.
+  const mayApply = (program: DutyProgramRow) =>
+    programStarted(program, input.entryDate) && matchesProgramTrigger(program, input.originCountry, input.htsCode);
 
   // Whether a program that excludes another applies to this line. Programs
   // with rows are evaluated: a reviewed one that charges applies (uncertain
@@ -461,7 +467,7 @@ export function evaluateAdditionalDuties(input: AdditionalDutiesInput): Addition
       return { state: "does_not_apply" };
     }
     if (status !== "not_loaded") return { state: "does_not_apply" };
-    return matchesProgramTrigger(program, input.originCountry, input.htsCode) ? { state: "unknown" } : { state: "does_not_apply" };
+    return mayApply(program) ? { state: "unknown" } : { state: "does_not_apply" };
   };
 
   const lines: EstimateLine[] = [];
@@ -478,7 +484,7 @@ export function evaluateAdditionalDuties(input: AdditionalDutiesInput): Addition
     const base = { programKey: program.key, name: program.name, sourceLabel: program.source_label, sourceUrl: program.source_url };
 
     if (status === "not_loaded") {
-      if (!matchesProgramTrigger(program, input.originCountry, input.htsCode)) continue;
+      if (!mayApply(program)) continue;
       const flat = program.indicative_rates?.[input.originCountry];
       const indicativePct = typeof flat === "number" && flat > 0 ? flat : null;
       warnings.push({

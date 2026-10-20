@@ -25,6 +25,7 @@ const program = (key: string, name: string, overrides: Partial<DutyProgramRow>):
   warning_text: `${name} may apply.`,
   trigger_origins: null,
   trigger_hts_prefixes: null,
+  trigger_from: null,
   indicative_rates: null,
   source_label: "Source",
   source_url: "https://www.cbp.gov/",
@@ -80,6 +81,7 @@ function estimate(
     customsValueUsd: value,
     baseDutyUsd: parseDecimal(base.baseDutyUsd),
     asOfDate: asOf,
+    entryDate: asOf,
   });
   // save_duty_estimate() re-checks that the additional-duty lines add up to
   // additional_duties_usd; keep that true for every golden case.

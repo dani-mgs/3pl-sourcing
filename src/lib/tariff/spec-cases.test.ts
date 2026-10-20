@@ -22,7 +22,7 @@ const ENTRY = "2026-10-04";
 const SECTION_232 = ["section_232_metals", "section_232_vehicles", "section_232_timber", "section_232_semiconductors", "section_232_pharmaceuticals"];
 
 const program = (key: string, name: string, triggers: Partial<DutyProgramRow> = {}): DutyProgramRow => ({
-  key, name, status: "not_loaded", warning_text: `${name} may apply.`, trigger_origins: null, trigger_hts_prefixes: null, ...triggers,
+  key, name, status: "not_loaded", warning_text: `${name} may apply.`, trigger_origins: null, trigger_hts_prefixes: null, trigger_from: null, ...triggers,
   indicative_rates: null, source_label: "Source", source_url: "https://www.federalregister.gov/", sort_order: 0,
 });
 const PROGRAMS = [
@@ -64,7 +64,7 @@ function spec(options: { mfn: string; rows: DutyRow[]; value?: string; mode?: "S
     programs: PROGRAMS, rows: options.rows,
     reviews: PROGRAMS.map((p) => reviewed(p.key)),
     originCountry: "CN", htsCode: "8504409540", customsValueUsd: value,
-    baseDutyUsd: parseDecimal(base.baseDutyUsd), asOfDate: ENTRY,
+    baseDutyUsd: parseDecimal(base.baseDutyUsd), asOfDate: ENTRY, entryDate: ENTRY,
   });
   const cents = (s: string | number) => toCents(parseDecimal(s));
   const duty = centsToNumber(cents(base.baseDutyUsd) + cents(additional.additionalDutiesUsd));
