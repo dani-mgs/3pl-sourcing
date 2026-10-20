@@ -140,6 +140,7 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Why deferred:** Needs keeping every HTS release and the dated history of past duties, with sources.
 - **Severity:** Low (refused or caveated on the estimate; nothing is silently wrong)
 - **Where:** `src/lib/tariff/entry-date.ts`, `save_duty_estimate()`
+- **Reference validation (2026-10-19):** past-entry-date cases (e.g. before 2026-07-24 or 2026-04-06) can't run through `buildEstimate`; test them on `evaluateAdditionalDuties()` directly, with the rows and date passed in.
 
 ### Tariff duty data: gaps left for experts (not machine-readable or not decidable)
 - **Added:** 2026-10-02
@@ -147,6 +148,7 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Why deferred:** Primary-source-only rule; image tables need manual transcription and a second check.
 - **Severity:** Medium (estimates name the gap; nothing is silently zero)
 - **Where:** Tariff Calculator → Duty data; `supabase/migrations/20261002151203_tariff_seed_origin_duties.sql` header
+- **Reference validation (2026-10-19):** the reference workbook letters 9903.05.86 (b), .87 (c) and .89 (e) the same as our seed. The unloaded Section 232 programs are, in full: vehicles, parts, medium/heavy trucks, buses, timber, upholstered furniture, cabinets, semiconductors, pharmaceuticals and drones, including the scheduled 2027-01-01 wood and 2027-02-09 drone-component increases (Large).
 
 ### Tariff duty data: PR 2b open items for experts
 - **Added:** 2026-10-03
@@ -154,6 +156,37 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Why deferred:** Each needs an expert reading of the source or a decision; the seed reports them rather than picking an answer.
 - **Severity:** Medium (each is named on the estimate; nothing is silently zero, and ties take the higher rate)
 - **Where:** `docs/tariff-data/2b-crosscheck.md` ("Open items"); Tariff Calculator → Duty data
+- **Reference validation (2026-10-19):** on (8), the reference workbook starts Annex I-A, I-B, III and the 85% US-melted rate on 2026-04-06; no effect while past entry dates are refused (Low). On (9), see A2 in "open items from the reference validation" below, which widens it to every unloaded Section 232 trigger.
+
+### Tariff Calculator: open items from the reference validation (2026-10-19)
+- **Added:** 2026-10-20
+- **What:** Open items from comparing our seeded data and engine with the logistics team's reference workbook (china-us-tariff-stack.xlsx, Ms. Lara; kept outside the repo, not copied). Items already logged elsewhere are extended there instead: forced-labour lists 52(b)/(d)/(e) and the unloaded Section 232 programs ("gaps left for experts"), Section 232 start dates ("PR 2b open items" (8)), past entry dates ("past entry dates not supported").
+- **Why deferred:** Each needs an expert decision, data entry from primary sources, or an answer from the workbook's author.
+- **Severity:** Medium unless noted per item
+- **Where:** Tariff Calculator → Duty data; `src/lib/tariff/additional-duties.ts`, `calculate.ts`
+- **A. Expert decisions:**
+  1. Every loaded duty program is still pending review, so estimates omit China 301, Section 232 and forced labour until it's done. (High for real use)
+  2. Forced labour is withheld wherever an unloaded Section 232 program's broad trigger matches (chapters 29/30, 44, 9401/9403, 87, 8541/8542): charge it and flag, or withhold until those programs are loaded?
+  3. Pharmaceuticals are in our forced-labour exclusion list (9903.05.90), but the workbook's scope doesn't list them: keep or remove?
+  4. The 178 Section 301 product exclusions (expire 2026-11-09 unless extended) are named, never applied: add a confirmed "excluded article" tick?
+  5. Annex III item with column 1 at 15% or more: we treat it as a Section 232 good (forced labour exempt); the workbook would charge forced labour. Which is right?
+  6. Informal MPF at $2,500 or less: $2.77 (ours) vs the formal minimum $34.58 (workbook). Which applies to our users' entries?
+  7. Annex I-C headings 9903.82.20–.22: we read .20/.21 as USMCA U.S.-content headings, the workbook as I-C at 25%. Same 25% for China; which reading is right?
+  8. Forced labour on polysilicon goods: exempt under 9903.05.90 or charged? (The workbook marks it "Confirm"; we charge it.)
+- **B. Data work (not code defects):**
+  - Annex III and I-C move to Annex I-B rates on 2028-01-01: an editor should add the dated rows by about the end of 2026, since entry dates reach 366 days ahead. (Small; due by 2026-12-31)
+  - Unloaded Section 232 programs, forced-labour lists 52(b)/(d)/(e) and Section 232 start dates: see the extended entries above.
+- **C. Questions for Ms. Lara / workbook issues:**
+  - The List 3 rate and the List 3 / List 4A effective-from dates are blank in the workbook (our data: 25%, 2019-05-10 and 2020-02-14).
+  - Example rows use "illustrative" HTS codes; real 10-digit lines are needed for golden test cases.
+  - Four-year-review "other groups" has no single rate (ours: 25%, 50% or 100% by heading).
+  - Chassis and ship-to-shore cranes (from 2026-11-10) and informal MPF aren't in the workbook.
+  - To keep forced labour on drones the workbook needs 232 = N, because its formula zeroes forced labour whenever 232 = Y.
+  - The three "Confirm" rows on its Section 232 tab: buses, pharmaceuticals, polysilicon.
+- **Test setup:**
+  - The local HTS is a 26-line QA release, so solar, Annex III and "column 1 at 15% or more" scenarios can't run until the real release is imported locally.
+  - Past entry dates can't run through `buildEstimate`; test the duty rules function directly (see "past entry dates not supported").
+  - Golden-fixture test for the 9 matching reference cases is parked; see claude project doc tariff-validation-vs-reference-2026-10-19.
 
 ### HTS lookup paths start at "Chapter NN" without the chapter title
 - **Added:** 2026-10-05
