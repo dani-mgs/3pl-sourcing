@@ -40,7 +40,7 @@ async function names(supabase: Supabase, ids: (string | null)[]): Promise<Map<st
 }
 
 const PROGRAM_COLUMNS =
-  "key, name, status, warning_text, trigger_origins, trigger_hts_prefixes, indicative_rates, source_label, source_url, sort_order";
+  "key, name, status, warning_text, trigger_origins, trigger_hts_prefixes, trigger_from, indicative_rates, source_label, source_url, sort_order";
 
 export async function loadProgramsOverview(supabase: Supabase): Promise<{
   overviews: ProgramOverview[];

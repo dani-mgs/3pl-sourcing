@@ -30,6 +30,7 @@ const program = (key: string, name: string, overrides: Partial<DutyProgramRow> =
   warning_text: `${name} may apply.`,
   trigger_origins: null,
   trigger_hts_prefixes: null,
+  trigger_from: null,
   indicative_rates: null,
   source_label: "Source",
   source_url: "https://www.federalregister.gov/",
@@ -134,6 +135,7 @@ function estimate(
     customsValueUsd: value,
     baseDutyUsd: parseDecimal(base.baseDutyUsd),
     asOfDate: "2026-10-02",
+    entryDate: "2026-10-02",
   });
   const total = centsToNumber(
     toCents(parseDecimal(base.baseDutyUsd)) + toCents(parseDecimal(additional.additionalDutiesUsd)) + toCents(parseDecimal(base.feesUsd)),

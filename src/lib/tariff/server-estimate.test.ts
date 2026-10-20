@@ -65,8 +65,8 @@ const FEES = [
 ];
 
 const PROGRAMS = [
-  { key: "section_301_forced_labor", name: "Section 301 (forced labour)", status: "not_loaded", warning_text: "May apply.", trigger_origins: ["CN", "VN"], trigger_hts_prefixes: null, indicative_rates: { CN: 12.5, VN: 12.5 }, source_label: "FR", source_url: "https://www.federalregister.gov/", sort_order: 10 },
-  { key: "section_301_china", name: "Section 301 (China)", status: "not_loaded", warning_text: "May apply.", trigger_origins: ["CN"], trigger_hts_prefixes: null, indicative_rates: null, source_label: "CBP", source_url: "https://www.cbp.gov/", sort_order: 20 },
+  { key: "section_301_forced_labor", name: "Section 301 (forced labour)", status: "not_loaded", warning_text: "May apply.", trigger_origins: ["CN", "VN"], trigger_hts_prefixes: null, trigger_from: null, indicative_rates: { CN: 12.5, VN: 12.5 }, source_label: "FR", source_url: "https://www.federalregister.gov/", sort_order: 10 },
+  { key: "section_301_china", name: "Section 301 (China)", status: "not_loaded", warning_text: "May apply.", trigger_origins: ["CN"], trigger_hts_prefixes: null, trigger_from: null, indicative_rates: null, source_label: "CBP", source_url: "https://www.cbp.gov/", sort_order: 20 },
 ];
 
 function tables(extra: Partial<Record<string, Row[]>> = {}) {
@@ -305,6 +305,25 @@ describe("buildEstimate with an expected entry date", () => {
     if (!result.ok) throw new Error(result.error);
     expect(result.estimate).toMatchObject({ asOfDate: "2026-10-02", entryDate: "2026-11-08" });
     expect(estimateToRow(result.estimate, null)).toMatchObject({ as_of_date: "2026-10-02", entry_date: "2026-11-08" });
+  });
+
+  test("a not-loaded program with a start date is named only for entry from that day", async () => {
+    const polysilicon = {
+      key: "section_232_polysilicon", name: "Section 232 (polysilicon and derivatives)", status: "not_loaded", warning_text: "May apply.",
+      trigger_origins: null, trigger_hts_prefixes: ["280461"], trigger_from: "2026-12-04", indicative_rates: null,
+      source_label: "FR 2026-16400", source_url: "https://www.federalregister.gov/", sort_order: 105,
+    };
+    const named = async (entryDate: string) => {
+      const result = await buildEstimate(
+        stubSupabase(tables({ duty_programs: [...PROGRAMS, polysilicon], hts_lines: [line("2804610000", "5.3%")] })),
+        input({ htsDigits: "2804610000", entryDate }),
+      );
+      if (!result.ok) throw new Error(result.error);
+      return result.estimate.warnings.filter(isProgramWarning).some((w) => w.programKey === "section_232_polysilicon");
+    };
+    expect(await named("2026-12-03")).toBe(false);
+    expect(await named("2026-12-04")).toBe(true);
+    expect(await named("2026-12-05")).toBe(true);
   });
 
   test("additional duty rows follow the entry date: one that starts later, one that has ended", async () => {

@@ -10,6 +10,8 @@ export type DutyProgramRow = {
   warning_text: string;
   trigger_origins: string[] | null;
   trigger_hts_prefixes: string[] | null;
+  // The first entry date the warning shows (YYYY-MM-DD); NULL = any date.
+  trigger_from: string | null;
   // Origin → single known flat percent, read from the HTS and not
   // expert-reviewed; only used while a program has no duty rows.
   indicative_rates: Record<string, unknown> | null;
@@ -88,6 +90,12 @@ export function matchesProgramTrigger(
     (!program.trigger_origins || program.trigger_origins.includes(originCountry)) &&
     (!program.trigger_hts_prefixes || program.trigger_hts_prefixes.some((p) => htsCode.startsWith(p)))
   );
+}
+
+// Whether the program has started by the entry date (both UTC calendar
+// dates, compared as strings). A program due later is never named.
+export function programStarted(program: Pick<DutyProgramRow, "trigger_from">, entryDate: string): boolean {
+  return program.trigger_from == null || program.trigger_from <= entryDate;
 }
 
 export type ExcludedProgram = {

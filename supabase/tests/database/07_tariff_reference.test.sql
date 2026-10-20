@@ -34,7 +34,7 @@ select isnt_empty('select * from hts_releases', 'a signed-in user can read hts_r
 select isnt_empty('select * from hts_lines', 'a signed-in user can read hts_lines');
 select is((select count(*)::int from customs_fees), 3, 'a signed-in user can read the seeded fees (MPF formal, MPF informal, HMF)');
 select is((select count(*)::int from hts_column2_countries), 4, 'a signed-in user can read the column 2 countries (CU, KP, RU, BY)');
-select is((select count(*)::int from duty_programs where status = 'not_loaded'), 12, 'every seeded duty program starts not loaded');
+select is((select count(*)::int from duty_programs where status = 'not_loaded'), 13, 'every seeded duty program starts not loaded');
 select is(
   (select (indicative_rates ->> 'VN')::numeric from duty_programs where key = 'section_301_forced_labor'),
   12.5, 'forced-labour Section 301 has a flat 12.5% indicative rate for Vietnam'
@@ -64,7 +64,7 @@ select is_empty($$ delete from hts_column2_countries returning id $$, 'a non-adm
 
 reset role;
 select is((select rate_pct from customs_fees where fee_code = 'hmf'), 0.125::numeric, 'the HMF rate is unchanged');
-select is((select count(*)::int from duty_programs where status = 'not_loaded'), 12, 'the duty programs are unchanged');
+select is((select count(*)::int from duty_programs where status = 'not_loaded'), 13, 'the duty programs are unchanged');
 
 -- ---- Admin: maintains fees and programs; audit fields are stamped ------------
 select pg_temp.act_as('00000000-0000-4000-8000-0000000000ad', 'admin');

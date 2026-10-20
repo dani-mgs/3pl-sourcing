@@ -21,6 +21,7 @@ const program = (overrides: Partial<DutyProgramRow>): DutyProgramRow => ({
   warning_text: "May apply.",
   trigger_origins: null,
   trigger_hts_prefixes: null,
+  trigger_from: null,
   indicative_rates: null,
   source_label: "Source",
   source_url: "https://example.gov/",
