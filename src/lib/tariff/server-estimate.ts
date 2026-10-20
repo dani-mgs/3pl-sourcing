@@ -12,8 +12,8 @@ import { checkEntryDate } from "./entry-date";
 import { formatHtsCode } from "./hts-code";
 import { evaluateAdditionalDuties, type DutyReviewNote } from "./additional-duties";
 import { scheduledChanges, type ScheduledChange } from "./scheduled-changes";
-import type { DutyProgramRow, EstimateWarning, FeesNotEnteredWarning } from "./programs";
-import { estimateFeeNote, feeYearGap } from "./fee-rollover";
+import type { DutyProgramRow, EstimateWarning } from "./programs";
+import { feesNotEnteredWarnings, inForce } from "./customs-fees";
 import { centsToNumber, parseDecimal, toCents } from "./rational";
 import { loadAdditionalDutyData } from "./server-duty-data";
 import type { EstimateFormData } from "./parse-estimate-form";
@@ -93,10 +93,8 @@ const LINE_COLUMNS =
 
 type DatedRow = { effective_from: string | null; effective_to: string | null };
 
-export function inForce(row: DatedRow, date: string): boolean {
-  return (row.effective_from == null || row.effective_from <= date) &&
-    (row.effective_to == null || row.effective_to >= date);
-}
+// Moved to customs-fees.ts (shared with Landed Cost); re-exported for callers.
+export { inForce };
 
 // Exact 8- or 10-digit match. An 8-digit code with no line of its own (the
 // HTS merges 8471.30.01 into 8471.30.01.00) matches its only 10-digit line;
@@ -309,7 +307,7 @@ export async function buildEstimate(
         feesUsd: calculation.feesUsd,
         totalUsd: centsToNumber(totalCents),
         lines: [baseLine, ...additional.lines, ...feeLines],
-        warnings: [...additional.warnings, ...feesWarning(allFees, entryDate)],
+        warnings: [...additional.warnings, ...feesNotEnteredWarnings(allFees, entryDate)],
         dutyReviews: additional.dutyReviews,
         scheduledChanges: scheduledChanges({
           rows: dutyData.schedule,
@@ -324,17 +322,6 @@ export async function buildEstimate(
     console.error("buildEstimate error:", error);
     return { ok: false, error: UNEXPECTED };
   }
-}
-
-// The entry date's fiscal year whose MPF fees aren't entered: last year's are
-// used, so the estimate says so (saved with its warnings).
-function feesWarning(fees: (FeeRow & DatedRow)[], entryDate: string): FeesNotEnteredWarning[] {
-  const gap = feeYearGap(
-    fees.map((f) => ({ fee_code: f.fee_code, effective_from: f.effective_from, effective_to: f.effective_to })),
-    entryDate,
-  );
-  if (!gap) return [];
-  return [{ kind: "fees_not_entered", text: estimateFeeNote(gap), fiscalYear: gap.fiscalYear, startsOn: gap.startsOn, counted: false }];
 }
 
 // The duty_estimates row for a built estimate (created_by defaults to the

@@ -1,0 +1,72 @@
+{
+  "_about": "Landed Cost golden cases (Phase 1). Duty totals are passed in, not calculated: China's is 3.4% + 25% + 12.5% of 600.00; Vietnam's 10% of 800.00 is an UNVERIFIED PLACEHOLDER, not a checked rate. Fees are the FY2027 rows (MPF 0.3464%, min 34.58, max 670.86; informal 2.77 up to 2,500.00; HMF 0.125%, ocean only). A single-SKU scenario gets the whole freight, so its chargeable weight is a placeholder.",
+  "entryDate": "2026-10-04",
+  "feeRows": [
+    { "fee_code": "mpf_formal", "label": "Merchandise Processing Fee (formal entry)", "rate_pct": 0.3464, "min_usd": 34.58, "max_usd": 670.86, "flat_usd": null, "applies_up_to_value_usd": null, "effective_from": "2026-10-01", "effective_to": null, "source_label": "Federal Register 2026-15530", "source_url": "https://www.federalregister.gov/" },
+    { "fee_code": "mpf_informal", "label": "Merchandise Processing Fee (informal entry, automated)", "rate_pct": null, "min_usd": null, "max_usd": null, "flat_usd": 2.77, "applies_up_to_value_usd": 2500, "effective_from": "2026-10-01", "effective_to": null, "source_label": "Federal Register 2026-15530", "source_url": "https://www.federalregister.gov/" },
+    { "fee_code": "hmf", "label": "Harbor Maintenance Fee", "rate_pct": 0.125, "min_usd": null, "max_usd": null, "flat_usd": null, "applies_up_to_value_usd": null, "effective_from": "1991-01-01", "effective_to": null, "source_label": "19 CFR 24.24", "source_url": "https://www.ecfr.gov/" }
+  ],
+  "scenarios": {
+    "china_formal": {
+      "label": "China",
+      "incoterm": "FOB",
+      "shipmentMode": "Sea",
+      "entryTypeChoice": "formal",
+      "freightTotalUsd": "854.00",
+      "freightBasis": "chargeable_weight",
+      "otherCosts": [],
+      "skus": [
+        { "skuId": "SKU-001", "quantity": "100", "unitPriceUsd": "6.00", "chargeableKg": "1", "dutiesUsd": "245.40", "dutyRatesPct": ["3.4", "25", "12.5"], "unverified": false }
+      ],
+      "expected": { "productCents": 60000, "freightCents": 85400, "dutiesCents": 24540, "mpfCents": 3458, "hmfCents": 75, "otherCents": 0, "totalCents": 173473, "perUnitCents": 1735, "entryType": "formal", "entryTypeSource": "chosen" }
+    },
+    "vietnam_formal": {
+      "label": "Vietnam",
+      "incoterm": "FOB",
+      "shipmentMode": "Sea",
+      "entryTypeChoice": "formal",
+      "freightTotalUsd": "1053.00",
+      "freightBasis": "chargeable_weight",
+      "otherCosts": [],
+      "skus": [
+        { "skuId": "SKU-001", "quantity": "100", "unitPriceUsd": "8.00", "chargeableKg": "1", "dutiesUsd": "80.00", "dutyRatesPct": ["10"], "unverified": true, "_dutyNote": "Unverified placeholder: 10% of 800.00." }
+      ],
+      "expected": { "productCents": 80000, "freightCents": 105300, "dutiesCents": 8000, "mpfCents": 3458, "hmfCents": 100, "otherCents": 0, "totalCents": 196858, "perUnitCents": 1969, "entryType": "formal", "entryTypeSource": "chosen" }
+    },
+    "china_auto": {
+      "label": "China (automatic entry type)",
+      "incoterm": "FOB",
+      "shipmentMode": "Sea",
+      "entryTypeChoice": "auto",
+      "freightTotalUsd": "854.00",
+      "freightBasis": "chargeable_weight",
+      "otherCosts": [],
+      "skus": [
+        { "skuId": "SKU-001", "quantity": "100", "unitPriceUsd": "6.00", "chargeableKg": "1", "dutiesUsd": "245.40", "dutyRatesPct": ["3.4", "25", "12.5"], "unverified": false }
+      ],
+      "expected": { "productCents": 60000, "freightCents": 85400, "dutiesCents": 24540, "mpfCents": 277, "hmfCents": 75, "otherCents": 0, "totalCents": 170292, "perUnitCents": 1703, "entryType": "informal", "entryTypeSource": "automatic" }
+    },
+    "shared_mpf": {
+      "label": "Two SKUs, one entry",
+      "incoterm": "FOB",
+      "shipmentMode": "Sea",
+      "entryTypeChoice": "auto",
+      "freightTotalUsd": "0.00",
+      "freightBasis": "value",
+      "otherCosts": [],
+      "skus": [
+        { "skuId": "SKU-A", "quantity": "100", "unitPriceUsd": "15.00", "chargeableKg": null, "dutiesUsd": "0.00", "dutyRatesPct": [], "unverified": false },
+        { "skuId": "SKU-B", "quantity": "100", "unitPriceUsd": "15.00", "chargeableKg": null, "dutiesUsd": "0.00", "dutyRatesPct": [], "unverified": false }
+      ],
+      "expected": { "productCents": 300000, "freightCents": 0, "dutiesCents": 0, "mpfCents": 3458, "hmfCents": 375, "otherCents": 0, "totalCents": 303833, "perUnitCents": 1519, "entryType": "formal", "entryTypeSource": "automatic", "mpfSharesCents": [1729, 1729], "hmfSharesCents": [188, 187] }
+    }
+  },
+  "comparison": {
+    "baseline": "china_formal",
+    "scenarios": ["china_formal", "vietnam_formal"],
+    "expected": {
+      "vietnam_formal": { "differenceCents": -23385, "perUnitDifferenceCents": -234, "vsBaseline": "Above Baseline", "rank": 2 },
+      "ranking": ["china_formal", "vietnam_formal"]
+    }
+  }
+}
