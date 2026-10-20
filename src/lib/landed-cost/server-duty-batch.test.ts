@@ -138,6 +138,18 @@ describe("same answer as the Tariff Calculator", () => {
     expect(d.warnings.map((w) => w.kind)).toContain("depends_on");
   });
 
+  test("a conditional row only (condition not assumed): named as conditional, not counted", async () => {
+    const conditional = row({
+      id: "cn301-cond", program_key: "section_301_china", rate_pct: 100, hts_scope: "listed",
+      scope: [{ hts_prefix: "6115", article_description: null }],
+      condition_text: "the yarn was spun in a listed facility", assume_condition: false,
+    });
+    const tables = withRows([conditional], [reviewedStatus("section_301_china")]);
+    const d = (await expectSameAsCalculator(tables, { hts: "6115100500", origin: "CN" }))!;
+    expect(d.warnings.find((w) => w.programKey === "section_301_china")).toMatchObject({ kind: "conditional", counted: false });
+    expect(d.additionalDutiesUsd).toBe(0);
+  });
+
   describe("Section 232 polysilicon on the seeded rows", () => {
     const seeded = [...seedRows("data/tariff/2a-origin-301"), ...seedRows("data/tariff/2b-china301-232")];
     const tables = withRows(seeded, [reviewedStatus("section_301_china"), reviewedStatus("section_301_forced_labor")]);
