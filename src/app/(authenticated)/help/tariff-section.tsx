@@ -258,6 +258,14 @@ export function TariffSection() {
           pharmaceuticals and drones; Canada&apos;s Section 338 duties; antidumping and countervailing
           duties.
         </li>
+        <li>
+          <Ui>Section 232 polysilicon</Ui> (Proclamation 11052, any origin, Chapter 99 headings 9903.45.30 to
+          9903.45.36): named as a warning for polysilicon (2804.61), ingots and wafers (3818) and solar cells and
+          modules (8541.42, 8541.43), only for entry on or after 4 December 2026. It combines duties with minimum
+          import prices, so the amount depends on the declared price and the country of origin and no percentage
+          is shown. It doesn&apos;t change the forced-labour duty or China Section 301 (solar cells and modules
+          are already named under Section 232 semiconductors).
+        </li>
       </Bullets>
 
       <SubHeading>Who maintains duty data</SubHeading>
