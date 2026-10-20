@@ -209,6 +209,27 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 - **Where:** `src/lib/tariff/calculate.ts`, `src/lib/tariff/customs-fees.ts`, `src/lib/tariff/caveats.ts`
 
+### Landed Cost (Phase 2c): ask for the duty quantity only where the rate needs it
+- **Added:** 2026-10-21
+- **What:** `loadSkuDuties` returns `needs_quantity` (with the unit, e.g. kg or dozen) when a SKU's rate is per unit or compound and the request has no quantity in that unit. The UI must ask for the quantity in the rate's own unit (for kg, the goods' net weight) only for those SKUs, and must never fill it from the carton gross weight or count pieces as dozens.
+- **Why deferred:** Phase 2a is the server library only; the workspace UI is Phase 2c.
+- **Severity:** Medium (a wrong quantity gives a wrong duty)
+- **Where:** `src/lib/landed-cost/sku-duty.ts` (`quantityFor`), the Phase 2c SKU form
+
+### Landed Cost (Phase 2c): a saved draft's entry date can fall out of range
+- **Added:** 2026-10-21
+- **What:** Entry dates follow the estimate rule (yesterday to 366 days ahead, UTC). A draft saved with an entry date that has since passed gets `invalid_entry_date` from `loadSkuDuties` for the whole call, so the UI needs an "update the entry date" prompt instead of a generic error.
+- **Why deferred:** No drafts or UI yet (Phase 2c).
+- **Severity:** Low
+- **Where:** `src/lib/landed-cost/duty-request.ts` (`parseDutyRequest`), the Phase 2c workspace page
+
+### Duty reads not paged: additional duties and Chapter 99 changes
+- **Added:** 2026-10-21 (guard added the same day)
+- **What:** `buildEstimate` (through `loadAdditionalDutyData`) and `loadSkuDuties` read `additional_duties` (about 125 rows) and the Chapter 99 changes since the earliest review in one request each, without paging. A read that returns as many rows as the API limit (`API_ROW_LIMIT`, 1,000, PostgREST's `max_rows`) now fails instead of using possibly cut-off data: the Tariff Calculator shows its generic error, a saved estimate's scheduled changes show none, and the batch returns `load_failed`. Below the limit nothing changes. The batch's other multi-row reads (HTS lines, scope lines) are paged and fail past 20 pages. Other screens that read these tables (Key dates, Duty data overview) aren't guarded.
+- **Why deferred:** Paging them isn't needed while both tables are far below the limit; the guard turns a silent wrong answer into a visible error if they grow. If the hosted project's `max_rows` is ever changed, update `API_ROW_LIMIT`.
+- **Severity:** Low
+- **Where:** `src/lib/tariff/server-duty-data.ts` (`belowRowLimit`), `src/lib/landed-cost/server-duty-reads.ts`
+
 ### Landed Cost: delivered incoterms not supported yet
 - **Added:** 2026-10-21
 - **What:** Landed Cost Phase 1 accepts only EXW, FCA, FAS and FOB, where qty × unit price is the entered value. CFR, CIF, CPT, CIP, DAP, DPU, DDP and DDU include international freight (and, for CIF/CIP, insurance) in the price, which must come out of the customs value first; `computeScenarioTotals` refuses them with an error naming the incoterm.

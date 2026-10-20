@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { evaluateAdditionalDuties, type DutyRow, type ProgramReview } from "./additional-duties";
-import { calculateEstimate, type FeeRow } from "./calculate";
-import type { DutyProgramRow } from "./programs";
+import { calculateEstimate } from "./calculate";
 import { centsToNumber, parseDecimal, toCents } from "./rational";
+import { FEES, program, row } from "./__fixtures__/spec-builders";
 
 // The handover spec's cases: $50,000 customs value from China by sea,
 // entry 2026-10-04 unless stated. The MFN rates and every additional-duty
@@ -11,20 +11,10 @@ import { centsToNumber, parseDecimal, toCents } from "./rational";
 // any real rate. Fees are the FY2027 values: MPF 0.3464% (min $34.58, max
 // $670.86), HMF 0.125% on ocean shipments only.
 
-const FEES: FeeRow[] = [
-  { fee_code: "mpf_formal", label: "MPF", rate_pct: 0.3464, min_usd: 34.58, max_usd: 670.86, flat_usd: null, applies_up_to_value_usd: null, effective_from: "2026-10-01", source_label: "FR 2026-15530", source_url: "https://www.federalregister.gov/" },
-  { fee_code: "mpf_informal", label: "MPF informal", rate_pct: null, min_usd: null, max_usd: null, flat_usd: 2.77, applies_up_to_value_usd: 2500, effective_from: "2026-10-01", source_label: "FR 2026-15530", source_url: "https://www.federalregister.gov/" },
-  { fee_code: "hmf", label: "HMF", rate_pct: 0.125, min_usd: null, max_usd: null, flat_usd: null, applies_up_to_value_usd: null, effective_from: "1991-01-01", source_label: "19 CFR 24.24", source_url: "https://www.ecfr.gov/" },
-];
-
 const RELEASE = { name: "TEST", title: "Illustrative rates", release_start_date: "2026-01-01" };
 const ENTRY = "2026-10-04";
 const SECTION_232 = ["section_232_metals", "section_232_vehicles", "section_232_timber", "section_232_semiconductors", "section_232_pharmaceuticals"];
 
-const program = (key: string, name: string, triggers: Partial<DutyProgramRow> = {}): DutyProgramRow => ({
-  key, name, status: "not_loaded", warning_text: `${name} may apply.`, trigger_origins: null, trigger_hts_prefixes: null, trigger_from: null, ...triggers,
-  indicative_rates: null, source_label: "Source", source_url: "https://www.federalregister.gov/", sort_order: 0,
-});
 const PROGRAMS = [
   program("section_301_forced_labor", "Section 301 (forced labour)", { trigger_origins: ["CN"] }),
   program("section_301_china", "Section 301 (China)", { trigger_origins: ["CN"] }),
@@ -32,15 +22,6 @@ const PROGRAMS = [
   // 232 row Section 232 adds 0%; case 3 gives it a 50% row.
   program("section_232_metals", "Section 232 (steel, aluminium, copper)", { trigger_hts_prefixes: ["72", "73", "74", "76"] }),
 ];
-
-let seq = 0;
-const row = (overrides: Partial<DutyRow>): DutyRow => ({
-  id: `spec-${++seq}`, program_key: "section_301_china", chapter99_heading: "9903.88.03", chapter99_heading_at_minimum: null,
-  label: "Illustrative", rate_type: "add", rate_pct: 25, origin_countries: ["CN"], hts_scope: "all", condition_text: null,
-  assume_condition: false, excludes_programs: [], exclusion_heading: null, filing_order: 10, effective_from: "2020-01-01",
-  effective_to: null, legal_status: "in_force", source_label: "Illustrative", source_url: "https://example.gov/",
-  source_checked_on: "2026-10-02", scope: [], ...overrides,
-});
 
 const china301 = (ratePct: number) => row({ chapter99_heading: ratePct === 25 ? "9903.88.03" : "9903.88.15", rate_pct: ratePct });
 // Forced labour is exempt where Section 232 applies (U.S. note 52(f)).

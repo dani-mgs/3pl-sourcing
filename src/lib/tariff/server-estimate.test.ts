@@ -2,47 +2,9 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { buildEstimate, estimateToRow, inForce } from "./server-estimate";
 import type { EstimateFormData } from "./parse-estimate-form";
 import { isProgramWarning } from "./programs";
+import { stubSupabase } from "./__fixtures__/supabase-stub";
 
-// A stub of the Supabase query chains buildEstimate uses, answering from
-// in-memory tables and applying eq/like filters.
 type Row = Record<string, unknown>;
-
-function stubSupabase(tables: Record<string, Row[]>) {
-  return {
-    from(table: string) {
-      const filters: ((row: Row) => boolean)[] = [];
-      let max = Infinity;
-      const rows = () => (tables[table] ?? []).filter((r) => filters.every((f) => f(r))).slice(0, max);
-      const chain = {
-        select: () => chain,
-        eq: (column: string, value: unknown) => {
-          filters.push((r) => r[column] === value);
-          return chain;
-        },
-        in: (column: string, values: unknown[]) => {
-          filters.push((r) => values.includes(r[column]));
-          return chain;
-        },
-        gt: (column: string, value: string) => {
-          filters.push((r) => String(r[column]) > value);
-          return chain;
-        },
-        like: (column: string, pattern: string) => {
-          const regex = new RegExp(`^${pattern.replace(/%/g, ".*").replace(/_/g, ".")}$`);
-          filters.push((r) => regex.test(String(r[column])));
-          return chain;
-        },
-        limit: (n: number) => {
-          max = n;
-          return chain;
-        },
-        maybeSingle: async () => ({ data: rows()[0] ?? null, error: null }),
-        then: (resolve: (v: unknown) => void) => resolve({ data: rows(), error: null }),
-      };
-      return chain;
-    },
-  } as never;
-}
 
 const RELEASE = { id: "rel-20", name: "2026HTSRev20", title: "Revision 20 (2026)", release_start_date: "2026-09-28", status: "current" };
 const line = (code: string, general: string | null, other: string | null = "35%") => ({

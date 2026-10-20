@@ -39,7 +39,7 @@ function field(formData: FormData, name: string): string {
 }
 
 // Positive decimal with at most `places` decimals and below `max`.
-function positiveDecimal(value: string, places: number, max: number): boolean {
+export function positiveDecimal(value: string, places: number, max: number): boolean {
   if (!new RegExp(`^\\d+(\\.\\d{1,${places}})?$`).test(value)) return false;
   const n = Number(value);
   return n > 0 && n < max;
