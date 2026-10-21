@@ -3,7 +3,7 @@ import { stubSupabase } from "@/lib/tariff/__fixtures__/supabase-stub";
 import { CALCULATED_ON } from "./__fixtures__/duty-tables";
 import { L1, L2, S2, item, scenario, skuLine, tables, workspace } from "./__fixtures__/workspace-builders";
 import { skuFieldId } from "./editor-draft";
-import { toResultView, type ResultView } from "./result-view";
+import { shares, toResultView, type ResultView } from "./result-view";
 import { computeWorkspaceResult } from "./server-compute";
 import type { Workspace } from "./workspace-schema";
 
@@ -29,12 +29,14 @@ describe("complete", () => {
     expect(v.breakdown).toEqual([
       { key: "product", label: "Product (FOB)", amount: "$600.00", perUnit: "$6.00", share: "34.6%" },
       { key: "freight", label: "Freight", amount: "$854.00", perUnit: "$8.54", share: "49.2%" },
-      // 14.146%: the shares are split by largest remainder, so they add up to exactly 100.0%.
-      { key: "duties", label: "Duties", amount: "$245.40", perUnit: "$2.45", share: "14.2%" },
+      // 14.146%, rounded on its own.
+      { key: "duties", label: "Duties", amount: "$245.40", perUnit: "$2.45", share: "14.1%" },
       { key: "mpf", label: "MPF", amount: "$34.58", perUnit: "$0.35", share: "2.0%" },
       { key: "hmf", label: "HMF", amount: "$0.75", perUnit: "$0.01", share: "<0.1%" },
       { key: "other", label: "Other costs", amount: "$0.00", perUnit: "$0.00", share: "0.0%" },
     ]);
+    // 34.6 + 49.2 + 14.1 + 2.0 + 0 + 0 = 99.9%.
+    expect(v.percentagesRounded).toBe(true);
     expect(v.skus[0]).toMatchObject({ skuCode: "SKU-001", status: "ok", statusLabel: "Complete", perUnit: "$17.35", duties: "$245.40", dutyRate: "40.9%" });
     expect(v.skus[0].layers.map((l) => [l.label, l.amount])).toEqual([
       [expect.any(String), "$20.40"],
@@ -52,6 +54,27 @@ describe("complete", () => {
     const air = as(await viewOf(workspace({ scenarios: [scenario({ shipmentMode: "Air", entryType: "auto" })] })), "complete");
     expect(air.feeNotes[0]).toMatch(/^Informal entry, chosen automatically/);
     expect(air.feeNotes[2]).toBe("HMF: not charged (ocean shipments only).");
+  });
+});
+
+describe("shares", () => {
+  const n = (...cents: number[]) => cents.map((c) => BigInt(c));
+
+  test("each rounded half up to 0.1% on its own", () => {
+    // 1/3 each: 33.3% x 3 = 99.9%.
+    expect(shares(n(100, 100, 100))).toEqual({ texts: ["33.3%", "33.3%", "33.3%"], rounded: true });
+    // 2/3 = 66.67% → 66.7%, 1/3 → 33.3%: exactly 100.0%.
+    expect(shares(n(200, 100))).toEqual({ texts: ["66.7%", "33.3%"], rounded: false });
+    // 0.05% exactly rounds up to 0.1%.
+    expect(shares(n(9995, 5)).texts).toEqual(["100.0%", "0.1%"]);
+  });
+
+  test('"<0.1%" for a part above zero under 0.05%; 0.0% for zero', () => {
+    expect(shares(n(9996, 4, 0)).texts).toEqual(["100.0%", "<0.1%", "0.0%"]);
+  });
+
+  test("a zero total shows 0.0% everywhere, with no note", () => {
+    expect(shares(n(0, 0))).toEqual({ texts: ["0.0%", "0.0%"], rounded: false });
   });
 });
 

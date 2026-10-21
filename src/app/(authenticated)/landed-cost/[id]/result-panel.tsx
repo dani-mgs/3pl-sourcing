@@ -194,6 +194,7 @@ function Body({ view }: { view: ResultView }) {
               ))}
             </tbody>
           </table>
+          {view.percentagesRounded && <p className="-mt-2 text-xs text-neutral-muted">Percentages are rounded.</p>}
           <SkuTable skus={view.skus} complete />
           <div>
             <p className="mb-1 text-xs font-semibold tracking-wide text-neutral-muted uppercase">Fees</p>

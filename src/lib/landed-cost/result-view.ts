@@ -2,11 +2,10 @@ import { formatRateDate } from "@/lib/fx/rate-provenance";
 import { formatCurrency } from "@/lib/currency";
 import { NO_REVIEWED_DUTIES_TEXT } from "@/lib/tariff/effective-rate";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
-import { centsToRational, fromInteger } from "@/lib/tariff/rational";
+import { centsToRational } from "@/lib/tariff/rational";
 import { usd } from "@/lib/tariff/amount-text";
-import { allocateCents } from "./allocation";
 import { SKU_FIELD_INPUT, editedScenario, shipmentFieldId, skuFieldId } from "./editor-draft";
-import { perUnit, tenthsText } from "./money";
+import { perUnit, shareTenths, tenthsText } from "./money";
 import type { ScenarioField, SkuField } from "./scenario-inputs";
 import type { DutyUnit, ScenarioOutcome, SkuStatus, WorkspaceResult } from "./server-compute";
 import type { Workspace } from "./workspace-schema";
@@ -67,6 +66,8 @@ export type ResultView =
       units: string;
       incomplete: boolean;
       breakdown: BreakdownRow[];
+      // The shown shares don't add up to 100.0% ("Percentages are rounded").
+      percentagesRounded: boolean;
       skus: SkuResultRow[];
       feeNotes: string[];
       warnings: string[];
@@ -102,11 +103,17 @@ export function dutyQuantityLabel(unit: DutyUnit): string {
 
 const money = (cents: bigint) => usd(centsToRational(cents));
 
-// Tenths of a percent; a part above zero that rounds to 0.0% shows "<0.1%".
-function shares(parts: bigint[]): string[] {
-  const split = allocateCents(BigInt(1000), parts.map((p) => fromInteger(p)));
-  const tenths = split.ok ? split.parts : parts.map(() => BigInt(0));
-  return tenths.map((t, i) => (t === BigInt(0) && parts[i] > BigInt(0) ? "<0.1%" : tenthsText(t)));
+// Each part's share of the total, rounded on its own, half up to 0.1%; a
+// part above zero that rounds to 0.0% (under 0.05%) shows "<0.1%". So the
+// shares may not add up to 100.0%; `rounded` says when they don't.
+export function shares(parts: bigint[]): { texts: string[]; rounded: boolean } {
+  const total = parts.reduce((acc, p) => acc + p, BigInt(0));
+  const tenths = parts.map((p) => (total > BigInt(0) ? shareTenths(p, total) : BigInt(0)));
+  const shown = tenths.reduce((acc, t) => acc + t, BigInt(0));
+  return {
+    texts: tenths.map((t, i) => (t === BigInt(0) && parts[i] > BigInt(0) ? "<0.1%" : tenthsText(t))),
+    rounded: total > BigInt(0) && shown !== BigInt(1000),
+  };
 }
 
 function skuRows(workspace: Workspace, outcome: ScenarioOutcome): SkuResultRow[] {
@@ -259,8 +266,9 @@ export function toResultView(result: WorkspaceResult | null, workspace: Workspac
       label,
       amount: money(cents),
       perUnit: money(perUnit(cents, t.units).cents),
-      share: pct[i],
+      share: pct.texts[i],
     })),
+    percentagesRounded: pct.rounded,
     skus,
     feeNotes: feeNotes(outcome),
     warnings: warningsOf(outcome.skus, t.entryFees.warnings),

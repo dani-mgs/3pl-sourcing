@@ -27,6 +27,9 @@ describe("ResultPanel", () => {
     expect(html).toContain("Complete");
     expect(html).toContain("As of your last save (Oct 21, 2026)");
     expect(html).toContain("Formal entry, as chosen for this scenario.");
+    // The golden shares add up to 99.9%.
+    expect(html).toContain("Percentages are rounded.");
+    expect(html).toContain("14.1%");
     expect(html).not.toContain("Unsaved changes");
   });
 
