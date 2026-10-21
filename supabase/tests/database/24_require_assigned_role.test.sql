@@ -22,7 +22,9 @@ create function pg_temp.visible_rows() returns table (tbl text, n bigint) langua
 declare t text;
 begin
   for t in select c.relname from pg_class c join pg_namespace s on s.oid = c.relnamespace
-           where s.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity order by 1 loop
+           where s.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity
+             -- No API role has any privilege on it (pgTAP 39 checks), so there is nothing to count.
+             and c.relname <> 'landed_cost_snapshot_counters' order by 1 loop
     tbl := t;
     execute format('select count(*) from public.%I', t) into n;
     return next;
@@ -87,12 +89,14 @@ select is(
                      and p.qual = '( SELECT has_staff_role() AS has_staff_role)'
                      and p.with_check = '( SELECT has_staff_role() AS has_staff_role)')
      -- The one client-readable table has its own restrictive policy (pgTAP 29).
-     and c.relname <> 'client_entitlements'),
+     and c.relname <> 'client_entitlements'
+     -- No policies at all, and no API role has any privilege on it (pgTAP 39).
+     and c.relname <> 'landed_cost_snapshot_counters'),
   0, 'every RLS table but client_entitlements has the restrictive staff policy, as a once-per-query subselect');
 select is(
   (select count(*)::int from pg_class c join pg_namespace s on s.oid = c.relnamespace
    where s.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity),
-  33, 'there are 33 RLS tables (a new one needs the policy too)');
+  34, 'there are 34 RLS tables (a new one needs the policy too)');
 
 select is(
   (select prosecdef from pg_proc where oid = 'public.search_hts_lines(text[], text, integer)'::regprocedure),

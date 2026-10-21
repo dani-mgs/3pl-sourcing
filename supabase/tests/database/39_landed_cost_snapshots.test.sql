@@ -1,15 +1,17 @@
--- Landed Cost locked versions (migration 20261021074001): only the service
+-- Landed Cost locked versions (migrations 20261021074001 and 20261021075832,
+-- the version counter): only the service
 -- role can run save_landed_cost_snapshot(); it refuses anyone but staff who
 -- own the workspace (or an admin), any field outside its allow-list, a date
 -- that isn't today, a release that isn't current, an HTS code not in it, a
 -- version of anything but the saved draft as it is now, and amounts that
--- don't add up. Rows can't be updated by anyone, signed-in users can't insert,
+-- don't add up. Version numbers are never reused, even after a delete; the
+-- counter table is invisible to every API role. Rows can't be updated by anyone, signed-in users can't insert,
 -- any staff member reads, the creator, owner or an admin deletes, and a
 -- workspace with versions can't be deleted. Counts only the rows this file
 -- creates. Rolled back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(65);
+select plan(75);
 
 create function pg_temp.act_as(uid uuid)
 returns void language plpgsql as $$
@@ -316,6 +318,38 @@ select results_eq(
   $$ values (1, '00000000-0000-4000-8000-0000000039a1'::uuid, '00000000-0000-4000-8000-00000039e301'::uuid, 2, 'China', '17.82', false),
             (2, '00000000-0000-4000-8000-0000000039ad'::uuid, '00000000-0000-4000-8000-00000039e301'::uuid, 2, 'China', '17.82', false) $$,
   'versions are numbered in turn; created_by is the user given, hts_release_id the current release''s');
+-- ---- Version numbers are never reused ---------------------------------------------------
+delete from landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000390001' and version_no = 2;
+select is((pg_temp.lock('00000000-0000-4000-8000-0000000039ad', pg_temp.payload()) ->> 'version_no')::int, 3,
+  'after v2 is deleted, the next lock is v3, not v2 again');
+select is((select last_version_no from landed_cost_snapshot_counters where workspace_id = '00000000-0000-4000-8000-000000390001'), 3,
+  'the counter holds the last number used');
+-- A workspace locked before the counter existed has no counter row: it starts from its highest version.
+delete from landed_cost_snapshot_counters where workspace_id = '00000000-0000-4000-8000-000000390001';
+select is((pg_temp.lock('00000000-0000-4000-8000-0000000039a1', pg_temp.payload()) ->> 'version_no')::int, 4,
+  'with no counter row, numbering continues from the highest existing version');
+select ok(
+  not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'landed_cost_workspaces'
+              and column_name like '%version%'),
+  'the counter is not a workspace column (writing one would bump updated_at)');
+select is((select updated_at from landed_cost_workspaces where id = '00000000-0000-4000-8000-000000390001'),
+  '2026-10-21 01:02:03.123456+00'::timestamptz, 'locking leaves the workspace''s updated_at as it was');
+
+-- ---- The counter is invisible to every API role -------------------------------------------
+select ok((select relrowsecurity from pg_class where oid = 'public.landed_cost_snapshot_counters'::regclass)
+  and not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'landed_cost_snapshot_counters'),
+  'the counter table has RLS and no policies');
+select ok(not exists (
+    select 1 from unnest(array['anon', 'authenticated', 'service_role']) r, unnest(array['select', 'insert', 'update', 'delete', 'truncate']) p
+    where has_table_privilege(r, 'public.landed_cost_snapshot_counters', p)),
+  'anon, signed-in users and the service role have no privilege on it');
+select pg_temp.act_as('00000000-0000-4000-8000-0000000039a1');
+select throws_ok($$ select count(*) from landed_cost_snapshot_counters $$, '42501', null, 'the owner can''t read the counter');
+reset role;
+set local role service_role;
+select throws_ok($$ select count(*) from landed_cost_snapshot_counters $$, '42501', null, 'nor can the service role');
+reset role;
+
 select is((select result -> 'origins' -> 0 ->> 'totalUsd' from landed_cost_snapshots
            where workspace_id = '00000000-0000-4000-8000-000000390001' and version_no = 1), '1782.23',
   'amounts are stored as the exact strings sent');
@@ -336,9 +370,9 @@ select throws_ok($$ insert into landed_cost_snapshots (workspace_id, version_no,
   '42501', null, 'a signed-in user can''t insert a version');
 
 -- ---- Reads ------------------------------------------------------------------------------------
-select is(pg_temp.mine(), 2::bigint, 'the owner reads the versions');
+select is(pg_temp.mine(), 3::bigint, 'the owner reads the versions (v1, v3, v4)');
 select pg_temp.act_as('00000000-0000-4000-8000-0000000039a2');
-select is(pg_temp.mine(), 2::bigint, 'another expert reads them too');
+select is(pg_temp.mine(), 3::bigint, 'another expert reads them too');
 select pg_temp.act_as('00000000-0000-4000-8000-0000000039c1');
 select is(pg_temp.mine(), 0::bigint, 'a client reads none');
 select pg_temp.act_as('00000000-0000-4000-8000-0000000039a0');
@@ -353,25 +387,25 @@ reset role;
 -- the creator rule), on W1.
 insert into landed_cost_snapshots (workspace_id, version_no, created_by, as_of_date, workspace_name, entry_date, workspace_updated_at,
   hts_release_id, hts_release_name, schema_version, inputs, result, origin_count, baseline_label, baseline_per_unit_usd, incomplete)
-select workspace_id, 3, '00000000-0000-4000-8000-0000000039a2', as_of_date, workspace_name, entry_date, workspace_updated_at,
+select workspace_id, 9, '00000000-0000-4000-8000-0000000039a2', as_of_date, workspace_name, entry_date, workspace_updated_at,
   hts_release_id, hts_release_name, schema_version, inputs, result, origin_count, baseline_label, baseline_per_unit_usd, incomplete
 from landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000390001' and version_no = 1;
 
 select pg_temp.act_as('00000000-0000-4000-8000-0000000039a2');
-delete from landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000390001' and version_no in (1, 2);
-select is(pg_temp.mine(), 3::bigint, 'another expert can''t delete versions they didn''t create');
-delete from landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000390001' and version_no = 3;
-select is(pg_temp.mine(), 2::bigint, 'the creator deletes their own version');
+delete from landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000390001' and version_no in (1, 3, 4);
+select is(pg_temp.mine(), 4::bigint, 'another expert can''t delete versions they didn''t create');
+delete from landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000390001' and version_no = 9;
+select is(pg_temp.mine(), 3::bigint, 'the creator deletes their own version');
 select pg_temp.act_as('00000000-0000-4000-8000-0000000039c1');
 delete from landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000390001';
 reset role;
-select is(pg_temp.mine(), 2::bigint, 'a client deletes nothing');
+select is(pg_temp.mine(), 3::bigint, 'a client deletes nothing');
 
 select pg_temp.act_as('00000000-0000-4000-8000-0000000039a1');
 select throws_ok($$ delete from landed_cost_workspaces where id = '00000000-0000-4000-8000-000000390001' $$, '23503', null,
   'the workspace can''t be deleted while it has versions');
-delete from landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000390001' and version_no = 2;
-select is(pg_temp.mine(), 1::bigint, 'the workspace owner deletes a version an admin created');
+delete from landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000390001' and version_no = 3;
+select is(pg_temp.mine(), 2::bigint, 'the workspace owner deletes a version an admin created');
 select pg_temp.act_as('00000000-0000-4000-8000-0000000039ad');
 delete from landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000390001';
 select is(pg_temp.mine(), 0::bigint, 'an admin deletes any version');
@@ -380,6 +414,8 @@ delete from landed_cost_workspaces where id = '00000000-0000-4000-8000-000000390
 reset role;
 select is((select count(*) from landed_cost_workspaces where id = '00000000-0000-4000-8000-000000390001'), 0::bigint,
   'with no versions left, the owner deletes the workspace');
+select is((select count(*) from landed_cost_snapshot_counters where workspace_id = '00000000-0000-4000-8000-000000390001'), 0::bigint,
+  'and its counter row goes with it (on delete cascade)');
 
 select * from finish();
 rollback;

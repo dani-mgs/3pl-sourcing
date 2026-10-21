@@ -251,10 +251,10 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 - **Where:** `src/lib/landed-cost/parse-sku-paste.ts`, `src/lib/landed-cost/sku-paste.ts`
 
-### Landed Cost: locked versions have no PDF or CSV yet; numbers can repeat after a delete
+### Landed Cost: locked versions have no PDF or CSV yet
 - **Added:** 2026-10-21
-- **What:** A locked version can be viewed but not exported yet (Phase 5b-2). Version numbers are the highest existing one plus 1, so deleting the latest version (say v3) lets the next lock be v3 again. As with saved estimates, the database re-checks a version's sums, inputs and HTS release but can't recompute the duty amounts; they're right because the server computed them.
-- **Why deferred:** Export is the next phase. Never-reused numbers would need a counter on the workspace (a schema change) for a rare case.
+- **What:** A locked version can be viewed but not exported yet (Phase 5b-2). As with saved estimates, the database re-checks a version's sums, inputs and HTS release but can't recompute the duty amounts; they're right because the server computed them.
+- **Why deferred:** Export is the next phase.
 - **Severity:** Low
 - **Where:** `supabase/migrations/20261021074001_landed_cost_snapshots.sql`, `src/lib/landed-cost/snapshot-schema.ts`
 

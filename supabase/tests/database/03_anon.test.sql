@@ -2,7 +2,7 @@
 -- on any table or view in public, and every read is refused outright.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(39);
+select plan(40);
 
 -- Strict: anon holds no privilege at all on any public table or view. Lists
 -- the offending table and privilege if one creeps back in (e.g. a new table
@@ -25,7 +25,7 @@ select set_eq(
   array['additional_duties', 'additional_duty_scope', 'additional_duty_scope_counts', 'client_entitlements', 'client_market_reports', 'client_requests', 'client_update_inputs', 'client_updates', 'clients', 'customs_fees', 'duty_estimates',
         'duty_program_review_status', 'duty_program_reviews', 'duty_programs', 'forwarder_projects',
         'forwarder_quotes', 'forwarders', 'fx_rates', 'fx_rates_latest', 'hts_chapter99_changes',
-        'hts_column2_countries', 'hts_lines', 'hts_releases', 'landed_cost_other_costs', 'landed_cost_scenario_items', 'landed_cost_scenarios', 'landed_cost_sku_lines', 'landed_cost_snapshots', 'landed_cost_workspaces',
+        'hts_column2_countries', 'hts_lines', 'hts_releases', 'landed_cost_other_costs', 'landed_cost_scenario_items', 'landed_cost_scenarios', 'landed_cost_sku_lines', 'landed_cost_snapshot_counters', 'landed_cost_snapshots', 'landed_cost_workspaces',
         'market_report_partner_labels', 'profiles', 'rate_details',
         'recommendation', 'tariff_data_history', 'three_pl_projects', 'three_pl_providers'],
   'the read checks below cover every public table and view'
@@ -59,6 +59,7 @@ select throws_ok('select * from landed_cost_other_costs', '42501', null, 'anon c
 select throws_ok('select * from landed_cost_scenario_items', '42501', null, 'anon cannot read landed_cost_scenario_items');
 select throws_ok('select * from landed_cost_scenarios', '42501', null, 'anon cannot read landed_cost_scenarios');
 select throws_ok('select * from landed_cost_sku_lines', '42501', null, 'anon cannot read landed_cost_sku_lines');
+select throws_ok('select * from landed_cost_snapshot_counters', '42501', null, 'anon cannot read landed_cost_snapshot_counters');
 select throws_ok('select * from landed_cost_snapshots', '42501', null, 'anon cannot read landed_cost_snapshots');
 select throws_ok('select * from landed_cost_workspaces', '42501', null, 'anon cannot read landed_cost_workspaces');
 select throws_ok('select * from market_report_partner_labels', '42501', null, 'anon cannot read market_report_partner_labels');

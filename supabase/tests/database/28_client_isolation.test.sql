@@ -19,7 +19,9 @@ create function pg_temp.visible_rows() returns table (tbl text, n bigint) langua
 declare t text;
 begin
   for t in select c.relname from pg_class c join pg_namespace s on s.oid = c.relnamespace
-           where s.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity order by 1 loop
+           where s.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity
+             -- No API role has any privilege on it (pgTAP 39 checks), so there is nothing to count.
+             and c.relname <> 'landed_cost_snapshot_counters' order by 1 loop
     tbl := t;
     execute format('select count(*) from public.%I', t) into n;
     return next;
@@ -48,7 +50,7 @@ declare t text; col text;
 begin
   for t in select c.relname from pg_class c join pg_namespace s on s.oid = c.relnamespace
            where s.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity
-             and c.relname <> 'client_entitlements' order by 1 loop
+             and c.relname <> 'client_entitlements' and c.relname <> 'landed_cost_snapshot_counters' order by 1 loop
     tbl := t;
     select a.attname into col from pg_attribute a
      where a.attrelid = ('public.' || quote_ident(t))::regclass and a.attnum > 0 and not a.attisdropped
