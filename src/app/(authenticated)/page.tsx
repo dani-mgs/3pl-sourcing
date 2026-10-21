@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { APP_NAME, HUB_MODULES } from "@/lib/modules";
+import { APP_NAME, hubModules } from "@/lib/modules";
+import { isLandedCostEnabled } from "@/lib/landed-cost/feature-flag";
 import { getUserRole, NO_ROLE_MESSAGE } from "@/lib/auth/get-user-role";
 
 const cardBase = "flex h-full flex-col gap-2 rounded-2xl border p-6 shadow-sm";
@@ -26,7 +27,7 @@ export default async function HubHomePage() {
       )}
 
       <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {HUB_MODULES.map((module) => (
+        {hubModules(isLandedCostEnabled()).map((module) => (
           <li key={module.name}>
             {module.href ? (
               <Link

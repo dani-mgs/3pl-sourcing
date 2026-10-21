@@ -9,10 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { HUB_MODULES } from "@/lib/modules";
-
-const LIVE_MODULES = HUB_MODULES.filter((module) => module.href);
-const COMING_SOON = HUB_MODULES.filter((module) => !module.href);
+import type { HubModule } from "@/lib/modules";
 
 // Navy text on amber: 7.95:1, so it reads on both the navy header and the
 // white menus.
@@ -36,11 +33,15 @@ export const NAV_LINK_ACTIVE_CLASS =
   "bg-white/10 text-white after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-move-green";
 export const NAV_LINK_IDLE_CLASS = "text-white/80 hover:bg-white/10 hover:text-white";
 
-export function ModuleNav() {
+// `modules` comes from the server layout (hubModules), which knows the
+// feature flags; this component never reads them.
+export function ModuleNav({ modules }: { modules: HubModule[] }) {
   const pathname = usePathname();
+  const LIVE_MODULES = modules.filter((module) => module.href);
+  const COMING_SOON = modules.filter((module) => !module.href);
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
-  const activeModule = HUB_MODULES.find(
+  const activeModule = modules.find(
     (module) => module.href && isActive(module.href),
   );
 

@@ -216,26 +216,6 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 - **Where:** `supabase/migrations/20261021013030_landed_cost_workspaces.sql`, `supabase/migrations/20261021020238_landed_cost_draft_functions.sql`
 
-### Landed Cost (Phase 2c): ask for the duty quantity only where the rate needs it
-- **Added:** 2026-10-21
-- **What:** `loadSkuDuties` returns `needs_quantity` (with the unit, e.g. kg or dozen) when a SKU's rate is per unit or compound and the request has no quantity in that unit. The UI must ask for the quantity in the rate's own unit (for kg, the goods' net weight) only for those SKUs, and must never fill it from the carton gross weight or count pieces as dozens.
-- **Why deferred:** Phase 2a is the server library only; the workspace UI is Phase 2c. Updated 2026-10-21 (Phase 2c-1): `computeWorkspaceResult` reports such a SKU as `inputs_missing` with `duty_quantity` and the unit; asking for it is the 2c-2 page.
-- **Severity:** Medium (a wrong quantity gives a wrong duty)
-- **Where:** `src/lib/landed-cost/sku-duty.ts` (`quantityFor`), the Phase 2c SKU form
-
-### Landed Cost (Phase 2c): a saved draft's entry date can fall out of range
-- **Added:** 2026-10-21
-- **What:** Entry dates follow the estimate rule (yesterday to 366 days ahead, UTC). A draft saved with an entry date that has since passed gets `invalid_entry_date` from `loadSkuDuties` for the whole call, so the UI needs an "update the entry date" prompt instead of a generic error.
-- **Why deferred:** No drafts or UI yet (Phase 2c). Updated 2026-10-21 (Phase 2c-1): drafts can be saved with any real date, and `computeWorkspaceResult` returns `entry_date_out_of_range` with the bounds before loading anything; the prompt is the 2c-2 page.
-- **Severity:** Low
-- **Where:** `src/lib/landed-cost/duty-request.ts` (`parseDutyRequest`), the Phase 2c workspace page
-
-### Landed Cost: col::text reads not yet verified against a real API
-- **Added:** 2026-10-21
-- **What:** col::text reads not yet verified against a real API; verify in 2c-2 manual test before 2c-2 is deployed. `loadWorkspace` reads numeric columns as `col::text` (`src/lib/landed-cost/workspace-schema.ts`), tested only with the Supabase stub.
-- **Severity:** Medium (a wrong key or format would fail every workspace load as invalid data)
-- **Where:** `src/lib/landed-cost/workspace-schema.ts`, `src/lib/landed-cost/server-workspace.ts`
-
 ### Landed Cost: admins can't reassign workspace ownership
 - **Added:** 2026-10-21
 - **What:** A workspace's `owner_id` is set on insert and can't be updated by anyone (column grants), and its foreign key to `auth.users` is NO ACTION, as for projects and duty estimates. So admins can't reassign workspace ownership, and a departing user's workspaces must be deleted first before their account can be deleted.
@@ -320,6 +300,29 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 
 ## Resolved
+
+### Landed Cost: col::text reads not yet verified against a real API
+- **Added:** 2026-10-21
+- **What:** col::text reads not yet verified against a real API; verify in 2c-2 manual test before 2c-2 is deployed. `loadWorkspace` reads numeric columns as `col::text` (`src/lib/landed-cost/workspace-schema.ts`), tested only with the Supabase stub.
+- **Severity:** Medium (a wrong key or format would fail every workspace load as invalid data)
+- **Where:** `src/lib/landed-cost/workspace-schema.ts`, `src/lib/landed-cost/server-workspace.ts`
+- **Resolved:** 2026-10-21. Verified in the Phase 2c-2 signed-in manual test against the real API: all 13 steps passed, and values such as FOB 1.2345 and carton kg 12.345 read back exactly after a browser reload.
+
+### Landed Cost (Phase 2c): ask for the duty quantity only where the rate needs it
+- **Added:** 2026-10-21
+- **What:** `loadSkuDuties` returns `needs_quantity` (with the unit, e.g. kg or dozen) when a SKU's rate is per unit or compound and the request has no quantity in that unit. The UI must ask for the quantity in the rate's own unit (for kg, the goods' net weight) only for those SKUs, and must never fill it from the carton gross weight or count pieces as dozens.
+- **Why deferred:** Phase 2a is the server library only; the workspace UI is Phase 2c. Updated 2026-10-21 (Phase 2c-1): `computeWorkspaceResult` reports such a SKU as `inputs_missing` with `duty_quantity` and the unit; asking for it is the 2c-2 page.
+- **Severity:** Medium (a wrong quantity gives a wrong duty)
+- **Where:** `src/lib/landed-cost/sku-duty.ts` (`quantityFor`), the Phase 2c SKU form
+- **Resolved:** 2026-10-21 (Phase 2c-2). The workspace page shows the duty quantity input only for a SKU whose last result asked for it (or that has one saved), labelled in the rate's unit ("Net weight (kg)"), never filled from the carton weight (`sku-table.tsx`, `result-view.ts` `dutyQuantityLabel`).
+
+### Landed Cost (Phase 2c): a saved draft's entry date can fall out of range
+- **Added:** 2026-10-21
+- **What:** Entry dates follow the estimate rule (yesterday to 366 days ahead, UTC). A draft saved with an entry date that has since passed gets `invalid_entry_date` from `loadSkuDuties` for the whole call, so the UI needs an "update the entry date" prompt instead of a generic error.
+- **Why deferred:** No drafts or UI yet (Phase 2c). Updated 2026-10-21 (Phase 2c-1): drafts can be saved with any real date, and `computeWorkspaceResult` returns `entry_date_out_of_range` with the bounds before loading anything; the prompt is the 2c-2 page.
+- **Severity:** Low
+- **Where:** `src/lib/landed-cost/duty-request.ts` (`parseDutyRequest`), the Phase 2c workspace page
+- **Resolved:** 2026-10-21 (Phase 2c-2). The result panel shows "Update the entry date" with the allowed range and a button that focuses the date field; the draft saves with any real date (`result-panel.tsx`).
 
 ### Landed Cost (Phase 2c): a scenario item for every SKU line isn't enforced
 - **Added:** 2026-10-21
