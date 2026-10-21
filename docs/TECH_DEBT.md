@@ -244,6 +244,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 - **Where:** `src/app/(authenticated)/landed-cost/[id]/result-panel.tsx`, `comparison-area.tsx`
 
+### Landed Cost: paste only, no .xlsx upload; some inputs not pasteable
+- **Added:** 2026-10-21
+- **What:** SKUs come in as text pasted from Excel. Uploading an .xlsx file isn't supported, and the duty quantity and its unit, freight and other costs can't be pasted (they're entered on the page). The quantity × FOB limit (under $100 trillion) is checked when saving, not in the paste preview. Excel drops leading zeros from an HTS code typed as a number; such a code shows the usual HTS error rather than being guessed.
+- **Why deferred:** Reading .xlsx needs a new dependency; text paste covers copying from the experts' sheets.
+- **Severity:** Low
+- **Where:** `src/lib/landed-cost/parse-sku-paste.ts`, `src/lib/landed-cost/sku-paste.ts`
+
 ### Landed Cost: delivered incoterms not supported yet
 - **Added:** 2026-10-21
 - **What:** Landed Cost Phase 1 accepts only EXW, FCA, FAS and FOB, where qty × unit price is the entered value. CFR, CIF, CPT, CIP, DAP, DPU, DDP and DDU include international freight (and, for CIF/CIP, insurance) in the price, which must come out of the customs value first; `computeScenarioTotals` refuses them with an error naming the incoterm.

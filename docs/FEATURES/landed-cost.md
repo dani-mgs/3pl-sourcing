@@ -10,4 +10,8 @@
 - No total until an origin is complete. Only complete origins with the baseline's incoterm are ranked.
 - EXW, FCA, FAS and FOB only.
 
-**Not built yet:** a breakeven figure, freight quotes, delivered incoterms, duty overrides, snapshots, exports.
+**Paste and export**
+- Paste from Excel matches rows to SKUs by code (exact), adds new ones and never deletes. A blank cell keeps the value. FOB price and packing go to the selected origin. Calculated columns are never imported, and units are never guessed (L, W, H in cm; carton weight in kg).
+- Export CSV uses the last save, recalculated on the server, and is marked DRAFT.
+
+**Not built yet:** a breakeven figure, freight quotes, delivered incoterms, duty overrides, snapshots, .xlsx upload.
