@@ -118,14 +118,22 @@ describe("rejected inputs", () => {
     ["negative height", { heightCm: "-1" }, "length, width and height"],
     ["blank width", { widthCm: "" }, "length, width and height"],
     ["zero weight", { cartonKg: "0" }, "weight"],
+    ["length with 3 decimals", { lengthCm: "60.005" }, "length, width and height"],
+    ["a million cm", { heightCm: "1000000" }, "length, width and height"],
+    ["weight with 4 decimals", { cartonKg: "10.0005" }, "weight"],
+    ["a million kg", { cartonKg: "1000000" }, "weight"],
   ])("%s", (_name, input, word) => {
     const result = measureSkuLine({ ...CARTON, ...input }, { mode: "Air", divisor: "6000" });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toContain(word);
   });
 
+  test("the largest accepted sizes, weight and divisor", () => {
+    expect(measureSkuLine({ ...CARTON, lengthCm: "999999.99", cartonKg: "999999.999" }, { mode: "Air", divisor: "999999.999" }).ok).toBe(true);
+  });
+
   test("a zero or negative divisor", () => {
-    for (const divisor of ["0", "-6000", "abc"]) {
+    for (const divisor of ["0", "-6000", "abc", "6000.1234", "1000000"]) {
       expect(measureSkuLine(CARTON, { mode: "Air", divisor }).ok).toBe(false);
     }
   });

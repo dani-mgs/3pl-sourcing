@@ -93,6 +93,17 @@ insert into forwarders (id, forwarder_project_id, company_name) values
 insert into forwarder_quotes (forwarder_id, notes) values ('00000000-0000-4000-8000-000000000402', 'INTERNAL-CANARY');
 insert into fx_rates (rate_date, currency, rate_to_usd) values ('2026-10-01', 'EUR', 1.08)
   on conflict do nothing;
+-- A Landed Cost workspace with one row in each child table.
+insert into landed_cost_workspaces (id, owner_id, name, entry_date) values
+  ('00000000-0000-4000-8000-000000003701', '00000000-0000-4000-8000-0000000000a1', 'pgTAP workspace', '2026-11-01');
+insert into landed_cost_sku_lines (id, workspace_id, sku_code, hts_code, quantity) values
+  ('00000000-0000-4000-8000-000000003702', '00000000-0000-4000-8000-000000003701', 'SKU-1', '6402993110', 100);
+insert into landed_cost_scenarios (id, workspace_id, label, origin_country, incoterm, shipment_mode) values
+  ('00000000-0000-4000-8000-000000003703', '00000000-0000-4000-8000-000000003701', 'China', 'CN', 'FOB', 'Sea');
+insert into landed_cost_scenario_items (workspace_id, scenario_id, sku_line_id, fob_unit_price_usd) values
+  ('00000000-0000-4000-8000-000000003701', '00000000-0000-4000-8000-000000003703', '00000000-0000-4000-8000-000000003702', 6);
+insert into landed_cost_other_costs (workspace_id, scenario_id, label, amount_usd) values
+  ('00000000-0000-4000-8000-000000003701', '00000000-0000-4000-8000-000000003703', 'Broker fee', 95);
 insert into client_entitlements (client_id, tier) values
   ('00000000-0000-4000-8000-00000000c001', 'market_report'),
   ('00000000-0000-4000-8000-00000000c002', 'free');
@@ -108,7 +119,8 @@ grant select on true_counts to authenticated;
 select ok(
   (select bool_and(n > 0) from pg_temp.true_counts
    where tbl in ('clients', 'three_pl_projects', 'three_pl_providers', 'rate_details', 'recommendation',
-                 'forwarder_projects', 'forwarders', 'forwarder_quotes', 'profiles', 'fx_rates', 'hts_lines', 'client_entitlements')),
+                 'forwarder_projects', 'forwarders', 'forwarder_quotes', 'profiles', 'fx_rates', 'hts_lines', 'client_entitlements',
+                 'landed_cost_other_costs', 'landed_cost_scenario_items', 'landed_cost_scenarios', 'landed_cost_sku_lines', 'landed_cost_workspaces')),
   'there is data to hide in the main tables (the checks below aren''t vacuous)');
 
 -- ---- The client's view of itself -------------------------------------------------

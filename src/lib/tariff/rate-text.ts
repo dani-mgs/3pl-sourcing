@@ -57,6 +57,9 @@ function normalizeUnit(raw: string): string {
   return raw.trim().replace(/\s+/g, " ");
 }
 
+// Every unit token the parser knows (the Landed Cost tables accept these).
+export const UNIT_TOKENS: readonly string[] = Object.keys(UNIT_LABELS);
+
 // The label of a published unit token ("pf.liter" and "pf. liter" are both
 // "proof liters"), or null when the token isn't a known unit. Two tokens mean
 // the same unit when their labels match.

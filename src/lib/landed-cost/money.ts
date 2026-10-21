@@ -1,4 +1,4 @@
-import { div, fromInteger, parseDecimal, toCents, type Rational } from "@/lib/tariff/rational";
+import { ZERO, compare, div, fromInteger, parseDecimal, toCents, type Rational } from "@/lib/tariff/rational";
 
 // Reading typed amounts exactly (no floats) and the few rounded figures
 // Landed Cost shows. Amounts are rounded to the cent only here, at the edges.
@@ -17,6 +17,14 @@ export function parseAmount(text: string, places: number): Rational | null {
 export function parseCents(text: string): bigint | null {
   const value = parseAmount(text, 2);
   return value == null ? null : toCents(value);
+}
+
+// Above zero and below `max`, with at most `places` decimals ("60", "12.4").
+export function parseMeasure(text: string, bounds: { places: number; max: number }): Rational | null {
+  const value = text.trim();
+  if (!new RegExp(`^\\d+(\\.\\d{1,${bounds.places}})?$`).test(value)) return null;
+  const n = parseDecimal(value);
+  return compare(n, ZERO) > 0 && compare(n, fromInteger(bounds.max)) < 0 ? n : null;
 }
 
 // A whole number above zero ("100"); null otherwise.

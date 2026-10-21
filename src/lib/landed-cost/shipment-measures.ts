@@ -1,6 +1,6 @@
 import type { ShipmentMode } from "@/lib/tariff/calculate";
-import { ZERO, add, compare, div, fromInteger, mul, parseDecimal, type Rational } from "@/lib/tariff/rational";
-import { parseWholeNumber } from "./money";
+import { ZERO, add, compare, div, fromInteger, mul, type Rational } from "@/lib/tariff/rational";
+import { parseMeasure, parseWholeNumber } from "./money";
 
 // Cartons, volume and weights for each SKU line, and the chargeable weight
 // freight is split by. Pure and exact (Rational).
@@ -58,12 +58,12 @@ const B1 = BigInt(1);
 const CM3_PER_CBM = fromInteger(1_000_000);
 const KG_PER_TONNE = fromInteger(SEA_KG_PER_CBM);
 
-function positive(value: string): Rational | null {
-  const text = value.trim();
-  if (!/^\d+(\.\d+)?$/.test(text)) return null;
-  const n = parseDecimal(text);
-  return compare(n, ZERO) > 0 ? n : null;
-}
+// Carton sizes and weights, and the divisor: above zero, below 1,000,000,
+// with at most 2 (cm) or 3 (kg, divisor) decimals. The workspace tables use
+// the same bounds (migration 20261021013030).
+export const CM_BOUNDS = { places: 2, max: 1_000_000 } as const;
+export const KG_BOUNDS = { places: 3, max: 1_000_000 } as const;
+export const DIVISOR_BOUNDS = { places: 3, max: 1_000_000 } as const;
 
 export function seaBasis(totalCbm: Rational, actualKg: Rational): SeaBasis {
   const tonnes = div(actualKg, KG_PER_TONNE);
@@ -80,16 +80,16 @@ export function measureSkuLine(
   if (quantity == null) return { ok: false, error: "Enter the quantity as a whole number above zero." };
   const perCarton = parseWholeNumber(input.pcsPerCarton);
   if (perCarton == null) return { ok: false, error: "Enter the pieces per carton as a whole number above zero." };
-  const dims = [input.lengthCm, input.widthCm, input.heightCm].map(positive);
+  const dims = [input.lengthCm, input.widthCm, input.heightCm].map((d) => parseMeasure(d, CM_BOUNDS));
   if (dims.some((d) => d == null)) {
-    return { ok: false, error: "Enter the carton length, width and height in cm, each above zero." };
+    return { ok: false, error: "Enter the carton length, width and height in cm, each above zero with up to 2 decimals." };
   }
-  const cartonKg = positive(input.cartonKg);
-  if (cartonKg == null) return { ok: false, error: "Enter the carton weight in kg, above zero." };
+  const cartonKg = parseMeasure(input.cartonKg, KG_BOUNDS);
+  if (cartonKg == null) return { ok: false, error: "Enter the carton weight in kg, above zero with up to 3 decimals." };
   let divisor: Rational | null = null;
   if (options.divisor != null && options.divisor.trim() !== "") {
-    divisor = positive(options.divisor);
-    if (divisor == null) return { ok: false, error: "Enter the divisor as a number above zero, or leave it blank." };
+    divisor = parseMeasure(options.divisor, DIVISOR_BOUNDS);
+    if (divisor == null) return { ok: false, error: "Enter the divisor as a number above zero with up to 3 decimals, or leave it blank." };
   }
 
   const cartons = (quantity + perCarton - B1) / perCarton;

@@ -209,6 +209,20 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 - **Where:** `src/lib/tariff/calculate.ts`, `src/lib/tariff/customs-fees.ts`, `src/lib/tariff/caveats.ts`
 
+### Landed Cost (Phase 2c): at least one scenario per workspace is enforced in the app only
+- **Added:** 2026-10-21
+- **What:** The database caps a workspace at 5 scenarios but can't require at least 1: the workspace row exists before its first scenario, and Server Actions can't wrap both inserts in one transaction. Phase 2c must create a workspace together with its first scenario (removing the workspace if the scenario insert fails) and refuse to delete the last scenario.
+- **Why deferred:** No Server Actions yet; enforcing it in the database needs a function or deferred trigger.
+- **Severity:** Low
+- **Where:** `supabase/migrations/20261021013030_landed_cost_workspaces.sql`, the Phase 2c actions
+
+### Landed Cost (Phase 2c): a scenario item for every SKU line isn't enforced
+- **Added:** 2026-10-21
+- **What:** `landed_cost_scenario_items` holds a scenario's inputs per SKU line, but nothing requires a row for every SKU line in every scenario, and every input in a row may still be empty. Phase 2c must report "inputs missing" for each SKU line whose item is absent or incomplete, and never skip the line, so a scenario's total is never silently missing a SKU.
+- **Why deferred:** Drafts are saved before they're complete; the check belongs to the calculation (Phase 2c).
+- **Severity:** Medium (a skipped line understates the landed cost)
+- **Where:** `src/lib/landed-cost/server-workspace.ts` (`Scenario.items`), the Phase 2c calculation
+
 ### Landed Cost (Phase 2c): ask for the duty quantity only where the rate needs it
 - **Added:** 2026-10-21
 - **What:** `loadSkuDuties` returns `needs_quantity` (with the unit, e.g. kg or dozen) when a SKU's rate is per unit or compound and the request has no quantity in that unit. The UI must ask for the quantity in the rate's own unit (for kg, the goods' net weight) only for those SKUs, and must never fill it from the carton gross weight or count pieces as dozens.

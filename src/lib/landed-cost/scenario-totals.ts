@@ -19,7 +19,8 @@ import { componentBreakdown, type ComponentShare } from "./components";
 // insurance deduction first (later phase; docs/TECH_DEBT.md).
 export const SUPPORTED_INCOTERMS: readonly string[] = ["EXW", "FCA", "FAS", "FOB"];
 
-export type FreightBasis = "chargeable_weight" | "value" | "units";
+export const FREIGHT_BASES = ["chargeable_weight", "value", "units"] as const;
+export type FreightBasis = (typeof FREIGHT_BASES)[number];
 
 export type ScenarioSkuInput = {
   skuId: string;
