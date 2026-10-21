@@ -51,7 +51,14 @@ const createClient = vi.fn(async () => stubClient());
 const revalidatePath = vi.fn();
 vi.mock("next/cache", () => ({ revalidatePath }));
 
-const { createWorkspaceAction, deleteWorkspaceAction, saveDraftAction } = await import("./actions");
+// The export's load and calculation are tested in their own files; here they're stubbed.
+let loadResult: unknown = null;
+const loadWorkspace = vi.fn(async () => loadResult);
+const computeWorkspaceResult = vi.fn(async () => ({ state: "no_sku_lines", calculatedOn: "2026-10-21", entryDate: "2026-11-01" }));
+vi.mock("@/lib/landed-cost/server-workspace", () => ({ loadWorkspace }));
+vi.mock("@/lib/landed-cost/server-compute", () => ({ computeWorkspaceResult }));
+
+const { createWorkspaceAction, deleteWorkspaceAction, exportWorkspaceCsvAction, saveDraftAction } = await import("./actions");
 
 const scenario = {
   label: "China", originCountry: "cn", supplierName: "", incoterm: "FOB", shipmentMode: "Sea", entryType: "formal",
@@ -74,6 +81,8 @@ beforeEach(() => {
   rpc.mockClear();
   createClient.mockClear();
   deletes.length = 0;
+  loadWorkspace.mockClear();
+  computeWorkspaceResult.mockClear();
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -170,6 +179,41 @@ describe("deleteWorkspaceAction", () => {
   });
 });
 
+describe("exportWorkspaceCsvAction", () => {
+  const loaded = (over: Record<string, unknown> = {}) => ({
+    ok: true,
+    workspace: {
+      id: WORKSPACE, ownerId: "someone-else", name: "Q4 mugs", entryDate: "2026-11-01", currency: "USD", baselineScenarioId: SCENARIO,
+      createdAt: UPDATED_AT, updatedAt: UPDATED_AT, skuLines: [],
+      scenarios: [{ id: SCENARIO, ...scenario, originCountry: "CN", supplierName: null, volumetricDivisor: null, isBaseline: true, items: [], otherCosts: [] }],
+      ...over,
+    },
+  });
+
+  test("any staff member, not only the owner: calculated on the server, with the draft filename", async () => {
+    loadResult = loaded();
+    const result = await exportWorkspaceCsvAction({ workspaceId: WORKSPACE });
+    if (!result.ok) throw new Error(result.error);
+    expect(result.filename).toBe("landed-cost-Q4-mugs-2026-10-21-draft.csv");
+    expect(result.csv).toMatch(/^Landed Cost workspace\r\nField,Value\r\nWorkspace,Q4 mugs\r\n/);
+    expect(computeWorkspaceResult).toHaveBeenCalledWith(expect.anything(), (loadResult as { workspace: unknown }).workspace, "2026-10-21");
+  });
+
+  test("only the workspace id is read from the browser; numbers sent along are ignored", async () => {
+    loadResult = loaded();
+    await exportWorkspaceCsvAction({ workspaceId: WORKSPACE, csv: "=1+1", totals: { totalCents: 1 } });
+    expect(loadWorkspace).toHaveBeenLastCalledWith(expect.anything(), WORKSPACE);
+  });
+
+  test("a bad id, a missing workspace, or one with no scenario", async () => {
+    expect(await exportWorkspaceCsvAction({ workspaceId: "nope" })).toMatchObject({ ok: false, code: "not_found" });
+    loadResult = { ok: false, code: "not_found", message: "This workspace doesn't exist, or you can't open it." };
+    expect(await exportWorkspaceCsvAction({ workspaceId: WORKSPACE })).toMatchObject({ ok: false, code: "not_found" });
+    loadResult = loaded({ scenarios: [] });
+    expect(await exportWorkspaceCsvAction({ workspaceId: WORKSPACE })).toMatchObject({ ok: false, code: "failed" });
+  });
+});
+
 describe("behind the feature flag", () => {
   test("off: every action refuses with a generic message, before any database call", async () => {
     enabled = false;
@@ -177,6 +221,7 @@ describe("behind the feature flag", () => {
       await createWorkspaceAction({ name: "Q4", entryDate: "2026-11-01", scenario }),
       await saveDraftAction(saveInput()),
       await deleteWorkspaceAction({ workspaceId: WORKSPACE }),
+      await exportWorkspaceCsvAction({ workspaceId: WORKSPACE }),
     ];
     for (const result of results) {
       expect(result).toEqual({ ok: false, code: "unavailable", error: "Landed Cost isn't available yet.", issues: undefined });
@@ -184,13 +229,15 @@ describe("behind the feature flag", () => {
     expect(createClient).not.toHaveBeenCalled();
     expect(rpc).not.toHaveBeenCalled();
     expect(deletes).toEqual([]);
+    expect(loadWorkspace).not.toHaveBeenCalled();
+    expect(computeWorkspaceResult).not.toHaveBeenCalled();
   });
 
   test("every action checks the flag right after requireStaff()", async () => {
     const { readFileSync } = await import("node:fs");
     const source = readFileSync(new URL("./actions.ts", import.meta.url), "utf8");
     const actions = [...source.matchAll(/export async function (\w+)[^{]*\{\n(.*)\n(.*)\n/g)];
-    expect(actions.map((a) => a[1])).toEqual(["createWorkspaceAction", "saveDraftAction", "deleteWorkspaceAction"]);
+    expect(actions.map((a) => a[1])).toEqual(["createWorkspaceAction", "saveDraftAction", "deleteWorkspaceAction", "exportWorkspaceCsvAction"]);
     for (const [, , first, second] of actions) {
       expect(first.trim()).toMatch(/^(const role = )?await requireStaff\(\);$/);
       expect(second.trim()).toBe("if (!isLandedCostEnabled()) return unavailable();");

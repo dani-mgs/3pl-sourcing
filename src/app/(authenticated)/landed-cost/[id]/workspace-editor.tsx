@@ -13,6 +13,7 @@ import { saveDraftAction } from "../actions";
 import { cardClass, primaryButtonClass, secondaryButtonClass } from "../styles";
 import { CompareAfterSave, ComparisonArea } from "./comparison-area";
 import { DeleteWorkspaceButton } from "./delete-workspace-button";
+import { ExportCsvButton } from "./export-csv-button";
 import type { FieldErrors } from "./fields";
 import { FreightSection } from "./freight-section";
 import { AddOriginButtons, OriginActions, OriginTabs } from "./origin-controls";
@@ -151,6 +152,7 @@ export function WorkspaceEditor({
           </p>
         </div>
         <div className="flex flex-wrap items-start gap-3">
+          <ExportCsvButton workspaceId={workspace.id} dirty={canEdit && dirty} />
           {canEdit && (
             <>
               {dirty && (
