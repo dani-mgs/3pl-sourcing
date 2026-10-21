@@ -53,7 +53,7 @@ const AD_VALOREM = /^(\d+(?:\.\d+)?)(?: (\d+)\/(\d+))?%$/;
 const CENTS = /^(\d+(?:\.\d+)?)¢\s*(?:\/\s*(.+)|(each))$/;
 const DOLLARS = /^\$(\d+(?:\.\d+)?)\s*(?:\/\s*(.+)|(each))$/;
 
-function normalizeUnit(raw: string): string {
+export function normalizeUnit(raw: string): string {
   return raw.trim().replace(/\s+/g, " ");
 }
 

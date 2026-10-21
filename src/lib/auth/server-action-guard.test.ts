@@ -66,6 +66,7 @@ describe("server action guards", () => {
   test("the scan finds the action files (it isn't vacuous)", () => {
     expect(actionFiles.length).toBeGreaterThanOrEqual(30);
     expect(actionFiles.map((f) => f.file)).toContain("src/app/(authenticated)/admin/actions.ts");
+    expect(actionFiles.map((f) => f.file)).toContain("src/app/(authenticated)/landed-cost/actions.ts");
   });
 
   test("every action file lives where a guard rule applies", () => {
