@@ -13,13 +13,27 @@ const LOCKER = "00000000-0000-4000-8000-0000000000a1";
 let enabled = true;
 let storedRow: Record<string, unknown> | null = null;
 const reads: string[] = [];
+// Every .eq() filter the page applies; the stub returns the stored row only
+// when it matches all of them, as the database would.
+const filters: [string, unknown][] = [];
 const notFound = vi.fn(() => {
   throw new Error("NEXT_NOT_FOUND");
 });
 const createClient = vi.fn(async () => ({
   from(table: string) {
     reads.push(table);
-    const chain = { select: () => chain, eq: () => chain, maybeSingle: async () => ({ data: storedRow, error: null }) };
+    const chain = {
+      select: () => chain,
+      eq: (column: string, value: unknown) => {
+        filters.push([column, value]);
+        return chain;
+      },
+      maybeSingle: async () => {
+        const row = storedRow;
+        const matches = row != null && filters.every(([column, value]) => row[column] === value);
+        return { data: matches ? row : null, error: null };
+      },
+    };
     return chain;
   },
 }));
@@ -55,12 +69,14 @@ async function lockedRow(): Promise<Record<string, unknown>> {
     }),
   );
 }
-const render = async () =>
-  renderToStaticMarkup(await LockedVersionPage({ params: Promise.resolve({ id: WORKSPACE, versionId: VERSION }) } as never));
+const OTHER_WORKSPACE = "00000000-0000-4000-8000-000000000002";
+const render = async (id = WORKSPACE, versionId = VERSION) =>
+  renderToStaticMarkup(await LockedVersionPage({ params: Promise.resolve({ id, versionId }) } as never));
 
 beforeEach(() => {
   enabled = true;
   reads.length = 0;
+  filters.length = 0;
   createClient.mockClear();
   recalculated.mockClear();
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -97,9 +113,22 @@ describe("a locked version", () => {
     expect(recalculated).not.toHaveBeenCalled();
   });
 
-  test("a version that isn't there, or isn't this workspace's, is a 404", async () => {
+  test("a version that isn't there is a 404", async () => {
     storedRow = null;
     await expect(render()).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  test("scoped to the workspace in the URL: another workspace's version is a 404", async () => {
+    // Version B (stored under OTHER_WORKSPACE) requested under workspace A.
+    storedRow = { ...(await lockedRow()), workspace_id: OTHER_WORKSPACE };
+    await expect(render(WORKSPACE, VERSION)).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(filters).toEqual(expect.arrayContaining([["id", VERSION], ["workspace_id", WORKSPACE]]));
+
+    // The matching pair still renders.
+    filters.length = 0;
+    const html = await render(OTHER_WORKSPACE, VERSION);
+    expect(html).toContain("Locked version v3");
+    expect(filters).toEqual(expect.arrayContaining([["id", VERSION], ["workspace_id", OTHER_WORKSPACE]]));
   });
 
   test("flag off: a 404 before any read", async () => {
