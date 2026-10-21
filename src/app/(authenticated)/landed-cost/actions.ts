@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireStaff } from "@/lib/auth/require-staff";
 import type { StaffRole } from "@/lib/auth/get-user-role";
 import { todayUtc } from "@/lib/fx/server-rates";
+import { isLandedCostEnabled } from "@/lib/landed-cost/feature-flag";
 import { NOT_FOUND, OWNER_ONLY, draftError, type DraftErrorCode } from "@/lib/landed-cost/draft-errors";
 import { createPayload, parseCreateWorkspace, parseDraft, savePayload, type DraftIssue } from "@/lib/landed-cost/parse-draft";
 
@@ -14,7 +15,7 @@ import { createPayload, parseCreateWorkspace, parseDraft, savePayload, type Draf
 // loaded, never accepted from the client. Ownership is enforced by RLS (only
 // the owner or an admin writes); it's also checked here to say so plainly.
 
-export type ActionError = { ok: false; code: DraftErrorCode; error: string; issues?: DraftIssue[] };
+export type ActionError = { ok: false; code: DraftErrorCode | "unavailable"; error: string; issues?: DraftIssue[] };
 export type CreateWorkspaceState = { ok: true; workspaceId: string } | ActionError;
 export type SaveDraftState =
   | { ok: true; updatedAt: string; ids: { skuLines: Record<string, string>; scenarios: Record<string, string> } }
@@ -26,7 +27,10 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 const SIGN_IN = "Your session has expired. Sign in again.";
 const UNEXPECTED = "Something went wrong. Try again.";
 
-const fail = (code: DraftErrorCode, error: string, issues?: DraftIssue[]): ActionError => ({ ok: false, code, error, issues });
+const fail = (code: ActionError["code"], error: string, issues?: DraftIssue[]): ActionError => ({ ok: false, code, error, issues });
+// Behind LANDED_COST_ENABLED (feature-flag.ts): off, every action refuses
+// right after the staff check, before reading anything.
+const unavailable = () => fail("unavailable", "Landed Cost isn't available yet.");
 
 // updated_at exactly as the database returned it (microseconds and offset):
 // passed back as text and compared in SQL as timestamptz, never via Date.
@@ -65,6 +69,7 @@ async function checkCanEdit(supabase: Supabase, workspaceId: string, userId: str
 
 export async function createWorkspaceAction(input: unknown): Promise<CreateWorkspaceState> {
   await requireStaff();
+  if (!isLandedCostEnabled()) return unavailable();
   const supabase = await createClient();
   if (!(await signedInUser(supabase))) return fail("forbidden", SIGN_IN);
 
@@ -85,6 +90,7 @@ export async function createWorkspaceAction(input: unknown): Promise<CreateWorks
 // when the workspace changed since `expectedUpdatedAt` was read.
 export async function saveDraftAction(input: unknown): Promise<SaveDraftState> {
   const role = await requireStaff();
+  if (!isLandedCostEnabled()) return unavailable();
   const supabase = await createClient();
   const userId = await signedInUser(supabase);
   if (!userId) return fail("forbidden", SIGN_IN);
@@ -124,6 +130,7 @@ export async function saveDraftAction(input: unknown): Promise<SaveDraftState> {
 // Deletes the workspace and, by cascade, everything in it.
 export async function deleteWorkspaceAction(input: unknown): Promise<DeleteWorkspaceState> {
   const role = await requireStaff();
+  if (!isLandedCostEnabled()) return unavailable();
   const supabase = await createClient();
   const userId = await signedInUser(supabase);
   if (!userId) return fail("forbidden", SIGN_IN);

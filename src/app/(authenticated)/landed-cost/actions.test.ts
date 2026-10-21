@@ -15,6 +15,7 @@ let ownerId = "u1";
 let role = "logistics_expert";
 let rpcResult: { data: unknown; error: { code: string; message: string } | null } = { data: null, error: null };
 let deleteCount = 1;
+let enabled = true;
 const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
   void name;
   void args;
@@ -41,10 +42,12 @@ function stubClient() {
   };
 }
 
-vi.mock("@/lib/supabase/server", () => ({ createClient: async () => stubClient() }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: () => createClient() }));
 // The staff guard is tested in require-staff.test.ts; here the caller is staff.
 vi.mock("@/lib/auth/require-staff", () => ({ requireStaff: vi.fn(async () => role) }));
 vi.mock("@/lib/fx/server-rates", () => ({ todayUtc: () => "2026-10-21" }));
+vi.mock("@/lib/landed-cost/feature-flag", () => ({ isLandedCostEnabled: () => enabled }));
+const createClient = vi.fn(async () => stubClient());
 const revalidatePath = vi.fn();
 vi.mock("next/cache", () => ({ revalidatePath }));
 
@@ -67,7 +70,9 @@ beforeEach(() => {
   role = "logistics_expert";
   rpcResult = { data: { updated_at: "2026-10-21T02:05:00.000001+00:00", sku_lines: { [LINE]: LINE }, scenarios: { [SCENARIO]: SCENARIO } }, error: null };
   deleteCount = 1;
+  enabled = true;
   rpc.mockClear();
+  createClient.mockClear();
   deletes.length = 0;
 });
 afterEach(() => vi.restoreAllMocks());
@@ -162,5 +167,33 @@ describe("deleteWorkspaceAction", () => {
     ownerId = "u1";
     deleteCount = 0;
     expect(await deleteWorkspaceAction({ workspaceId: WORKSPACE })).toMatchObject({ ok: false, code: "forbidden" });
+  });
+});
+
+describe("behind the feature flag", () => {
+  test("off: every action refuses with a generic message, before any database call", async () => {
+    enabled = false;
+    const results = [
+      await createWorkspaceAction({ name: "Q4", entryDate: "2026-11-01", scenario }),
+      await saveDraftAction(saveInput()),
+      await deleteWorkspaceAction({ workspaceId: WORKSPACE }),
+    ];
+    for (const result of results) {
+      expect(result).toEqual({ ok: false, code: "unavailable", error: "Landed Cost isn't available yet.", issues: undefined });
+    }
+    expect(createClient).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+    expect(deletes).toEqual([]);
+  });
+
+  test("every action checks the flag right after requireStaff()", async () => {
+    const { readFileSync } = await import("node:fs");
+    const source = readFileSync(new URL("./actions.ts", import.meta.url), "utf8");
+    const actions = [...source.matchAll(/export async function (\w+)[^{]*\{\n(.*)\n(.*)\n/g)];
+    expect(actions.map((a) => a[1])).toEqual(["createWorkspaceAction", "saveDraftAction", "deleteWorkspaceAction"]);
+    for (const [, , first, second] of actions) {
+      expect(first.trim()).toMatch(/^(const role = )?await requireStaff\(\);$/);
+      expect(second.trim()).toBe("if (!isLandedCostEnabled()) return unavailable();");
+    }
   });
 });
