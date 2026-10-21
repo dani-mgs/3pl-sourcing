@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- Feature (Landed Cost, Phase 4, behind `LANDED_COST_ENABLED`): compare up to 5 origins in one workspace. With two or more, the page opens with a comparison of the last save: a verdict in words ("China is $2.34/unit cheaper than Vietnam (11.9%)"), ranking, per-unit bars, a per-SKU table, drivers against the baseline, and notes for origins that aren't comparable or complete, with "Ranking may change" when duties aren't final. SKUs are shared; each origin has its own tab.
+  - Origins get an editable label (unique, 1–60 characters; defaults to the country, then "<Country> (<supplier>)" or "<Country> 2"). Duplicate an origin (FOB prices and freight total start empty) or add a blank one, both after choosing the country; remove one (never the last) or set the baseline. Nothing is saved until Save draft.
+  - No migration, no /help change. Percentages are of the origin named after "than" (the baseline when compared with it).
 - Feature (Landed Cost, Phase 2c-2, behind `LANDED_COST_ENABLED`): the Landed Cost screens. `/landed-cost` lists workspaces (owner first name, entry date, origin, SKU count) and creates one; `/landed-cost/[id]` edits one origin: Shipment, SKUs (HTS lookup, live cartons and weights), Freight and Other costs, saved whole with **Save draft**. The result panel shows the last save's result, calculated on the server: per-unit landed cost, breakdown, duty layers and fee notes when complete, and only what's missing (each linked to its field) when not.
   - A save made after someone else's is refused with a Reload prompt; non-owners get a view-only page; owners and admins can delete. Off (the default), the pages are a 404, the actions refuse and the nav shows "Soon".
   - No migration. No /help change yet (it ships when the flag is turned on in production).

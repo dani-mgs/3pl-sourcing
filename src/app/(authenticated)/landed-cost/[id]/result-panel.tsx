@@ -276,12 +276,24 @@ function Body({ view }: { view: ResultView }) {
   }
 }
 
-export function ResultPanel({ view, dirty, lastSaved }: { view: ResultView; dirty: boolean; lastSaved: string }) {
+// `view` is null for an origin added since the last save; `originLabel`
+// names the origin when the workspace has several.
+export function ResultPanel({
+  view,
+  dirty,
+  lastSaved,
+  originLabel = null,
+}: {
+  view: ResultView | null;
+  dirty: boolean;
+  lastSaved: string;
+  originLabel?: string | null;
+}) {
   return (
     <section className={`${cardClass} flex flex-col gap-4`} aria-labelledby="lc-result-title" aria-live="polite">
       <div>
         <h2 id="lc-result-title" className="font-display text-lg font-semibold text-move-navy">
-          Result
+          Result{originLabel && <span className="font-normal text-neutral-muted"> · {originLabel}</span>}
         </h2>
         <p className="text-xs text-neutral-muted">As of your last save ({lastSaved}), calculated on the server.</p>
         {dirty && (
@@ -290,12 +302,13 @@ export function ResultPanel({ view, dirty, lastSaved }: { view: ResultView; dirt
           </p>
         )}
       </div>
-      {view.multiScenarioNote && (
+      {view ? (
+        <Body view={view} />
+      ) : (
         <Notice>
-          <p>{view.multiScenarioNote}</p>
+          <p>Not calculated yet: save to see this origin&apos;s result.</p>
         </Notice>
       )}
-      <Body view={view} />
     </section>
   );
 }

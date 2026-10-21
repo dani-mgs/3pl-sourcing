@@ -230,6 +230,20 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 - **Where:** `src/lib/tariff/server-duty-data.ts` (`belowRowLimit`), `src/lib/landed-cost/server-duty-reads.ts`
 
+### Landed Cost: no breakeven figure in the comparison
+- **Added:** 2026-10-21
+- **What:** The origin comparison says which origin is cheaper and why, but not when the answer would change (e.g. "flips if China freight rises above $938.00", in the layout reference).
+- **Why deferred:** Out of Phase 4's scope; it needs a rule for which input to solve for.
+- **Severity:** Low
+- **Where:** `src/lib/landed-cost/comparison-view.ts`
+
+### Landed Cost: an origin added in the draft has no result until saved
+- **Added:** 2026-10-21
+- **What:** Results and the comparison are calculated on the server from the last save, so a duplicated or blank origin shows "Not calculated yet" and the comparison asks to save first. The per-SKU comparison table also shows complete origins that aren't comparable (labelled "Not comparable", never marked lowest), by design.
+- **Why deferred:** Calculating unsaved drafts would mean sending inputs for a preview; saving is one click.
+- **Severity:** Low
+- **Where:** `src/app/(authenticated)/landed-cost/[id]/result-panel.tsx`, `comparison-area.tsx`
+
 ### Landed Cost: delivered incoterms not supported yet
 - **Added:** 2026-10-21
 - **What:** Landed Cost Phase 1 accepts only EXW, FCA, FAS and FOB, where qty × unit price is the entered value. CFR, CIF, CPT, CIP, DAP, DPU, DDP and DDU include international freight (and, for CIF/CIP, insurance) in the price, which must come out of the customs value first; `computeScenarioTotals` refuses them with an error naming the incoterm.

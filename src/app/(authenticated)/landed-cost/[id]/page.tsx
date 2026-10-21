@@ -6,7 +6,8 @@ import { getUserRole } from "@/lib/auth/get-user-role";
 import { formatRateDate, timestampDateUtc } from "@/lib/fx/rate-provenance";
 import { todayUtc } from "@/lib/fx/server-rates";
 import { isLandedCostEnabled } from "@/lib/landed-cost/feature-flag";
-import { toResultView } from "@/lib/landed-cost/result-view";
+import { toComparisonView } from "@/lib/landed-cost/comparison-view";
+import { toResultViews } from "@/lib/landed-cost/result-view";
 import { computeWorkspaceResult } from "@/lib/landed-cost/server-compute";
 import { loadWorkspace } from "@/lib/landed-cost/server-workspace";
 import { loadFirstNames } from "@/lib/landed-cost/server-workspace-list";
@@ -20,7 +21,8 @@ import { WorkspaceEditor } from "./workspace-editor";
 
 // One Landed Cost workspace: its inputs, edited as a local draft and saved
 // whole, and its result, calculated on the server from the last save on
-// every load (never stored, never taken from the browser). Any staff member
+// every load (never stored, never taken from the browser), and with several
+// origins their comparison. Any staff member
 // can open it; only its owner or an admin can edit it. Behind
 // LANDED_COST_ENABLED: off, this page doesn't exist.
 function boundsFor(today: string) {
@@ -28,9 +30,10 @@ function boundsFor(today: string) {
   return { min, max, minText: formatRateDate(min), maxText: formatRateDate(max) };
 }
 
-export default async function LandedCostWorkspacePage({ params }: PageProps<"/landed-cost/[id]">) {
+export default async function LandedCostWorkspacePage({ params, searchParams }: PageProps<"/landed-cost/[id]">) {
   if (!isLandedCostEnabled()) notFound();
   const { id } = await params;
+  const origin = (await searchParams)?.origin;
 
   const supabase = await createClient();
   const [loaded, { data: auth }, role, release] = await Promise.all([
@@ -67,7 +70,7 @@ export default async function LandedCostWorkspacePage({ params }: PageProps<"/la
       return new Map<string, string | null>();
     }),
   ]);
-  const view = toResultView(result, workspace);
+  const views = toResultViews(result, workspace);
   const ownerName = personName(workspace.ownerId, names);
 
   return (
@@ -75,7 +78,7 @@ export default async function LandedCostWorkspacePage({ params }: PageProps<"/la
     // (docs/DESIGN_SYSTEM.md, documented exceptions).
     <div className="mx-auto max-w-[1680px] px-8 py-6 max-sm:px-4">
       {back}
-      {view.state === "no_scenario" ? (
+      {workspace.scenarios.length === 0 ? (
         <div className={`${cardClass} mt-6 flex flex-col gap-4`}>
           <h1 className="font-display text-2xl font-semibold text-move-navy">{workspace.name}</h1>
           <p className="text-sm text-move-navy" role="status">
@@ -89,7 +92,9 @@ export default async function LandedCostWorkspacePage({ params }: PageProps<"/la
           // starts the editor again from the saved workspace.
           key={workspace.updatedAt}
           workspace={workspace}
-          view={view}
+          views={views}
+          comparison={toComparisonView(result, workspace)}
+          initialOrigin={typeof origin === "string" ? origin : null}
           canEdit={canEdit}
           ownerName={ownerName}
           countries={ORIGIN_COUNTRIES}

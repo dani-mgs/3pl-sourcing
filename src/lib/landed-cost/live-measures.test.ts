@@ -1,14 +1,13 @@
 import { describe, expect, test } from "vitest";
 import { parseDecimal } from "@/lib/tariff/rational";
-import { newSkuRow, type SkuRow } from "./editor-draft";
-import { decimalText, liveMeasures, liveShipment } from "./live-measures";
+import { EMPTY_ITEM, type ItemInputs } from "./editor-draft";
+import { decimalText, liveMeasures, liveShipment, type MeasuredRow } from "./live-measures";
 
 // The live cartons and weights shown while packing is typed (display only).
 
-const row = (over: Partial<SkuRow> = {}): SkuRow => ({
-  ...newSkuRow("r1"),
-  quantity: "100", pcsPerCarton: "20", cartonLengthCm: "60", cartonWidthCm: "40", cartonHeightCm: "31", cartonGrossKg: "10",
-  ...over,
+const row = ({ quantity = "100", ...item }: Partial<ItemInputs> & { quantity?: string } = {}): MeasuredRow => ({
+  quantity,
+  item: { ...EMPTY_ITEM, pcsPerCarton: "20", cartonLengthCm: "60", cartonWidthCm: "40", cartonHeightCm: "31", cartonGrossKg: "10", ...item },
 });
 
 describe("liveMeasures", () => {
@@ -38,8 +37,8 @@ describe("liveMeasures", () => {
 
 describe("liveShipment and decimalText", () => {
   test("totals once every row can be measured", () => {
-    expect(liveShipment([row(), row({ ref: "r2" })], "Air", "")).toMatchObject({ cartons: "10", cbm: "0.744", chargeableKg: "124.0" });
-    expect(liveShipment([row(), row({ ref: "r2", pcsPerCarton: "" })], "Air", "")).toBeNull();
+    expect(liveShipment([row(), row()], "Air", "")).toMatchObject({ cartons: "10", cbm: "0.744", chargeableKg: "124.0" });
+    expect(liveShipment([row(), row({ pcsPerCarton: "" })], "Air", "")).toBeNull();
     expect(liveShipment([], "Air", "")).toBeNull();
   });
 

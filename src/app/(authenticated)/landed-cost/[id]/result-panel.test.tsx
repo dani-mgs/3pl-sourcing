@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { stubSupabase } from "@/lib/tariff/__fixtures__/supabase-stub";
 import { CALCULATED_ON } from "@/lib/landed-cost/__fixtures__/duty-tables";
-import { L2, scenario, skuLine, tables, workspace } from "@/lib/landed-cost/__fixtures__/workspace-builders";
+import { L2, skuLine, tables, workspace } from "@/lib/landed-cost/__fixtures__/workspace-builders";
 import { toResultView, type ResultView } from "@/lib/landed-cost/result-view";
 import { computeWorkspaceResult } from "@/lib/landed-cost/server-compute";
 import type { Workspace } from "@/lib/landed-cost/workspace-schema";
@@ -60,8 +60,10 @@ describe("ResultPanel", () => {
     expect(html).toContain("This workspace has no scenario, so it can&#x27;t be calculated.");
   });
 
-  test("more than one scenario: a note that only the baseline is shown", async () => {
-    const html = await render(workspace({ scenarios: [scenario(), scenario({ id: "s2", label: "Vietnam", isBaseline: false })] }));
-    expect(html).toContain("Only the baseline is shown here; comparing origins is coming.");
+  test("an origin added since the last save: not calculated yet, named in the heading", () => {
+    const html = renderToStaticMarkup(<ResultPanel view={null} dirty lastSaved="Oct 21, 2026" originLabel="Mexico" />);
+    expect(html).toContain("Not calculated yet: save to see this origin&#x27;s result.");
+    expect(html).toContain("· Mexico");
+    expect(html).not.toContain("lc-per-unit");
   });
 });
