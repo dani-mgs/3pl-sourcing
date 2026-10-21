@@ -71,14 +71,15 @@ export async function loadSnapshotList(supabase: Supabase, workspaceId: string):
   return { ok: true, versions: rows.data };
 }
 
-export async function loadLockedVersion(supabase: Supabase, workspaceId: string, versionId: string): Promise<LockedVersionResult> {
-  if (!z.uuid().safeParse(workspaceId).success || !z.uuid().safeParse(versionId).success) return { ok: false, code: "not_found" };
-  const { data, error } = await supabase
-    .from("landed_cost_snapshots")
-    .select(VERSION_COLUMNS)
-    .eq("id", versionId)
-    .eq("workspace_id", workspaceId)
-    .maybeSingle();
+// One version of one workspace (the version page), or, with workspaceId
+// null, one version by its id alone (the exports).
+export async function loadLockedVersion(supabase: Supabase, workspaceId: string | null, versionId: string): Promise<LockedVersionResult> {
+  if ((workspaceId !== null && !z.uuid().safeParse(workspaceId).success) || !z.uuid().safeParse(versionId).success) {
+    return { ok: false, code: "not_found" };
+  }
+  let query = supabase.from("landed_cost_snapshots").select(VERSION_COLUMNS).eq("id", versionId);
+  if (workspaceId !== null) query = query.eq("workspace_id", workspaceId);
+  const { data, error } = await query.maybeSingle();
   if (error) {
     console.error("loadLockedVersion error:", error);
     return { ok: false, code: "load_failed" };

@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { stubSupabase } from "@/lib/tariff/__fixtures__/supabase-stub";
 import { CALCULATED_ON } from "./__fixtures__/duty-tables";
 import { scenario, skuLine, tables, vietnamScenario, workspace } from "./__fixtures__/workspace-builders";
-import { DRAFT_NOTE, buildWorkspaceCsv, plainCents, workspaceCsvFilename } from "./export-csv";
+import { lockedVersion } from "./__fixtures__/locked-version";
+import { DRAFT_NOTE, buildWorkspaceCsv, plainCents, versionFilename, workspaceCsvFilename } from "./export-csv";
 import { computeWorkspaceResult } from "./server-compute";
 import type { Workspace } from "./workspace-schema";
 
@@ -141,5 +142,51 @@ describe("formula injection", () => {
     expect(csv).toContain("'+SKU,'-2+3");
     expect(csv).toContain("\r\n'@China: inputs\r\n");
     expect(csv).toContain("Other cost: -Brokerage (USD),95.00");
+  });
+});
+
+describe("a locked version's CSV", () => {
+  const locked = { versionNo: 3, lockedOn: "Oct 2, 2026", byName: "Dani", release: "Revision 20 (2026HTSRev20)", asOf: "Oct 2, 2026" };
+
+  test("the LOCKED line in place of DRAFT, with the release and the duty-data date", async () => {
+    const { restored } = await lockedVersion({ scenarios: [scenario(), vietnamScenario()] });
+    const csv = buildWorkspaceCsv(restored.workspace, restored.result, locked);
+    expect(sectionRows(csv, "Landed Cost workspace")).toEqual([
+      "Field,Value",
+      "Workspace,Golden",
+      `Entry date,${restored.workspace.entryDate}`,
+      `Calculated on,${CALCULATED_ON}`,
+      "Status,\"LOCKED VERSION v3, locked on Oct 2, 2026 by Dani. These figures are fixed.\"",
+      "HTS release,Revision 20 (2026HTSRev20)",
+      "Duty data as of,\"Oct 2, 2026\"",
+    ]);
+    expect(csv).not.toContain("DRAFT");
+  });
+
+  test("the golden China vs Vietnam figures exactly as stored", async () => {
+    const { snapshot, restored } = await lockedVersion({ scenarios: [scenario(), vietnamScenario()] });
+    const csv = buildWorkspaceCsv(restored.workspace, restored.result, locked);
+    expect(snapshot.result.origins.map((o) => [o.totalUsd, o.perUnitUsd])).toEqual([["1734.73", "17.35"], ["1968.58", "19.69"]]);
+    expect(sectionRows(csv, "China: totals")).toEqual(expect.arrayContaining(["Total,1734.73,17.35,"]));
+    expect(sectionRows(csv, "Vietnam: totals")).toEqual(expect.arrayContaining(["Total,1968.58,19.69,"]));
+    expect(sectionRows(csv, "Comparison: ranking")).toEqual([
+      "Rank,Origin,Baseline,Position,Per unit (USD),Shipment total (USD),Against the baseline",
+      "1,China,Yes,Lowest landed cost,17.35,1734.73,Baseline",
+      "2,Vietnam,No,Highest landed cost,19.69,1968.58,$2.34/unit more than the baseline (13.5%)",
+    ]);
+  });
+
+  test("formula injection is escaped as in the draft CSV, typed names included", async () => {
+    const { restored } = await lockedVersion({ name: "=cmd|' /C calc'!A0", skuLines: [skuLine({ skuCode: "@SUM" })] });
+    const csv = buildWorkspaceCsv(restored.workspace, restored.result, { ...locked, byName: "+Dani" });
+    expect(csv).toContain("Workspace,'=cmd|' /C calc'!A0");
+    expect(csv).toContain("'@SUM,");
+    expect(csv).toContain("by +Dani");
+    for (const cell of csv.split("\r\n").flatMap((l) => l.split(","))) expect(cell.replace(/^"/, "")).not.toMatch(/^[=+\-@]/);
+  });
+
+  test("the version filename", () => {
+    expect(versionFilename("Q4: mugs", 3, "2026-10-02", "pdf")).toBe("landed-cost-Q4-mugs-v3-2026-10-02.pdf");
+    expect(versionFilename("Q4: mugs", 3, "2026-10-02", "csv")).toBe("landed-cost-Q4-mugs-v3-2026-10-02.csv");
   });
 });

@@ -251,12 +251,19 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 - **Where:** `src/lib/landed-cost/parse-sku-paste.ts`, `src/lib/landed-cost/sku-paste.ts`
 
-### Landed Cost: locked versions have no PDF or CSV yet
+### Landed Cost: the database can't re-prove a locked version's duty amounts
 - **Added:** 2026-10-21
-- **What:** A locked version can be viewed but not exported yet (Phase 5b-2). As with saved estimates, the database re-checks a version's sums, inputs and HTS release but can't recompute the duty amounts; they're right because the server computed them.
-- **Why deferred:** Export is the next phase.
+- **What:** As with saved estimates, `save_landed_cost_snapshot()` re-checks a version's sums, inputs and HTS release but can't recompute the duty amounts; they're right because the server computed them. (PDF and CSV exports of versions shipped in 5b-2.)
+- **Why deferred:** Duties are calculated in TypeScript; repeating that in SQL would be a second implementation to keep in step.
 - **Severity:** Low
-- **Where:** `supabase/migrations/20261021074001_landed_cost_snapshots.sql`, `src/lib/landed-cost/snapshot-schema.ts`
+- **Where:** `supabase/migrations/20261021074001_landed_cost_snapshots.sql`
+
+### Landed Cost PDF: only Windows-1252 characters (no embedded font)
+- **Added:** 2026-10-21
+- **What:** Version PDFs use pdfkit's built-in Helvetica, which draws Windows-1252 only (Latin letters and accents, common punctuation, €). Typed text in other scripts (Chinese supplier names, emoji, arrows) shows as "?" with the note "Some characters couldn't be shown in this PDF"; the CSV keeps every character. Embedding a Unicode font (e.g. Noto Sans) would fix it.
+- **Why deferred:** It needs a font file in the repo (several MB for CJK) and a licence check (Noto is OFL, to confirm), plus a check of the PDF's size.
+- **Severity:** Low
+- **Where:** `src/lib/landed-cost/pdf-text.ts`, `src/lib/landed-cost/render-version-pdf.ts`
 
 ### Landed Cost: delivered incoterms not supported yet
 - **Added:** 2026-10-21
