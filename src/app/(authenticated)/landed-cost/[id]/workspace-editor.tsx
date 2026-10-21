@@ -13,6 +13,7 @@ import { saveDraftAction } from "../actions";
 import { cardClass, primaryButtonClass, secondaryButtonClass } from "../styles";
 import { CompareAfterSave, ComparisonArea } from "./comparison-area";
 import { DeleteWorkspaceButton } from "./delete-workspace-button";
+import { ExportCsvButton } from "./export-csv-button";
 import type { FieldErrors } from "./fields";
 import { FreightSection } from "./freight-section";
 import { AddOriginButtons, OriginActions, OriginTabs } from "./origin-controls";
@@ -136,6 +137,7 @@ export function WorkspaceEditor({
       <ResultPanel view={selected.id ? (views[selected.id] ?? null) : null} dirty={dirty} lastSaved={lastSaved} originLabel={multi ? selected.label : null} />
     </aside>
   );
+  const paste = canEdit ? { originRef: selected.ref, onApplied: setNotice } : null;
   const addOrigin = canEdit && (
     <AddOriginButtons draft={draft} sourceRef={selected.ref} countries={countries} disabled={disabled} update={update} newRef={newRef} onAdded={select} />
   );
@@ -149,21 +151,24 @@ export function WorkspaceEditor({
             {multi ? `${draft.scenarios.length} origins` : selected.label} · Owned by {ownerName} · Last saved {lastSaved}
           </p>
         </div>
-        {canEdit && (
-          <div className="flex flex-wrap items-start gap-3">
-            {dirty && (
-              <span className="self-center text-sm font-medium text-[#92400E]" role="status">
-                Unsaved changes
-              </span>
-            )}
-            {/* One origin: adding another starts the comparison. */}
-            {!multi && addOrigin}
-            <button type="button" onClick={save} disabled={isPending || stale} className={primaryButtonClass}>
-              {isPending ? "Saving…" : "Save draft"}
-            </button>
-            <DeleteWorkspaceButton workspaceId={workspace.id} name={workspace.name} disabled={isPending} />
-          </div>
-        )}
+        <div className="flex flex-wrap items-start gap-3">
+          <ExportCsvButton workspaceId={workspace.id} dirty={canEdit && dirty} />
+          {canEdit && (
+            <>
+              {dirty && (
+                <span className="self-center text-sm font-medium text-[#92400E]" role="status">
+                  Unsaved changes
+                </span>
+              )}
+              {/* One origin: adding another starts the comparison. */}
+              {!multi && addOrigin}
+              <button type="button" onClick={save} disabled={isPending || stale} className={primaryButtonClass}>
+                {isPending ? "Saving…" : "Save draft"}
+              </button>
+              <DeleteWorkspaceButton workspaceId={workspace.id} name={workspace.name} disabled={isPending} />
+            </>
+          )}
+        </div>
       </div>
 
       {!canEdit && (
@@ -212,7 +217,7 @@ export function WorkspaceEditor({
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
           <div className="flex min-w-0 flex-col gap-6">
             <ShipmentSection {...sectionProps} scenario={selected} workspaceFields countries={countries} bounds={bounds} />
-            <SkuTable {...sectionProps} mode="combined" scenario={selected} dutyQuantityUnits={dutyQuantityUnits} htsRelease={htsRelease} newRef={newRef} />
+            <SkuTable {...sectionProps} mode="combined" scenario={selected} dutyQuantityUnits={dutyQuantityUnits} htsRelease={htsRelease} newRef={newRef} paste={paste} />
             <FreightSection {...sectionProps} scenario={selected} step="3" />
             <OtherCostsSection {...sectionProps} scenario={selected} step="4" newRef={newRef} />
           </div>
@@ -225,7 +230,7 @@ export function WorkspaceEditor({
               <WorkspaceFields {...sectionProps} bounds={bounds} />
             </div>
           </section>
-          <SkuTable {...sectionProps} mode="shared" scenario={null} dutyQuantityUnits={dutyQuantityUnits} htsRelease={htsRelease} newRef={newRef} />
+          <SkuTable {...sectionProps} mode="shared" scenario={null} dutyQuantityUnits={dutyQuantityUnits} htsRelease={htsRelease} newRef={newRef} paste={paste} />
           <div className="flex flex-col gap-4">
             <OriginTabs draft={draft} selectedRef={selected.ref} onSelect={select} countries={countries} panelId={PANEL_ID} />
             {canEdit && (

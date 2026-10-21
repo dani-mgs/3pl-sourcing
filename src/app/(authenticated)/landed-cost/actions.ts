@@ -8,9 +8,12 @@ import type { StaffRole } from "@/lib/auth/get-user-role";
 import { todayUtc } from "@/lib/fx/server-rates";
 import { isLandedCostEnabled } from "@/lib/landed-cost/feature-flag";
 import { NOT_FOUND, OWNER_ONLY, draftError, type DraftErrorCode } from "@/lib/landed-cost/draft-errors";
+import { buildWorkspaceCsv, workspaceCsvFilename } from "@/lib/landed-cost/export-csv";
 import { createPayload, parseCreateWorkspace, parseDraft, savePayload, type DraftIssue } from "@/lib/landed-cost/parse-draft";
+import { computeWorkspaceResult } from "@/lib/landed-cost/server-compute";
+import { loadWorkspace } from "@/lib/landed-cost/server-workspace";
 
-// Landed Cost workspaces: create, save a draft, delete. The browser sends
+// Landed Cost workspaces: create, save a draft, delete, export as CSV. The browser sends
 // inputs only; results are calculated on the server when the workspace is
 // loaded, never accepted from the client. Ownership is enforced by RLS (only
 // the owner or an admin writes); it's also checked here to say so plainly.
@@ -21,6 +24,7 @@ export type SaveDraftState =
   | { ok: true; updatedAt: string; ids: { skuLines: Record<string, string>; scenarios: Record<string, string> } }
   | ActionError;
 export type DeleteWorkspaceState = { ok: true } | ActionError;
+export type ExportCsvState = { ok: true; csv: string; filename: string } | ActionError;
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -40,6 +44,7 @@ const timestampText = z
 
 const saveInputSchema = z.object({ workspaceId: z.uuid(), expectedUpdatedAt: timestampText, draft: z.unknown() });
 const deleteInputSchema = z.object({ workspaceId: z.uuid() });
+const exportInputSchema = z.object({ workspaceId: z.uuid() });
 
 const saveResultSchema = z.object({
   updated_at: z.string(),
@@ -150,4 +155,30 @@ export async function deleteWorkspaceAction(input: unknown): Promise<DeleteWorks
   if (count === 0) return fail("forbidden", OWNER_ONLY);
   revalidatePath("/landed-cost");
   return { ok: true };
+}
+
+// Any staff member who can open the workspace can export it (RLS lets every
+// staff role read it). Loaded and calculated here from the last save; no
+// number comes from the browser.
+export async function exportWorkspaceCsvAction(input: unknown): Promise<ExportCsvState> {
+  await requireStaff();
+  if (!isLandedCostEnabled()) return unavailable();
+  const request = exportInputSchema.safeParse(input);
+  if (!request.success) return fail("not_found", NOT_FOUND);
+
+  const supabase = await createClient();
+  const loaded = await loadWorkspace(supabase, request.data.workspaceId);
+  if (!loaded.ok) return fail(loaded.code === "not_found" ? "not_found" : "failed", loaded.message);
+  if (loaded.workspace.scenarios.length === 0) return fail("failed", "This workspace has no scenario, so there's nothing to export.");
+  try {
+    const result = await computeWorkspaceResult(supabase, loaded.workspace, todayUtc());
+    return {
+      ok: true,
+      csv: buildWorkspaceCsv(loaded.workspace, result),
+      filename: workspaceCsvFilename(loaded.workspace.name, result.calculatedOn),
+    };
+  } catch (error) {
+    console.error("exportWorkspaceCsvAction error:", error);
+    return fail("failed", "The export couldn't be built right now. Try again.");
+  }
 }
