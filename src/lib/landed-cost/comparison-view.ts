@@ -4,8 +4,8 @@ import { COMPONENT_KEYS, type ComponentKey } from "./components";
 import { perUnit, shareTenths, tenthsText } from "./money";
 import { missingItems } from "./result-view";
 import type { ScenarioResult } from "./scenario-comparison";
-import type { ScenarioOutcome, WorkspaceResult } from "./server-compute";
 import type { Workspace } from "./workspace-schema";
+import type { ViewOutcome, ViewResult } from "./view-result";
 
 // The comparison of a workspace's origins, from the server's result on the
 // last save, as words ready to show. Differences inside compareScenarios are
@@ -14,7 +14,7 @@ import type { Workspace } from "./workspace-schema";
 // A percentage is of the origin named after "than" (the baseline when
 // compared with the baseline). Pure.
 
-type Complete = Extract<ScenarioOutcome, { state: "complete" }>;
+type Complete = Extract<ViewOutcome, { state: "complete" }>;
 
 export type ExcludedOrigin = { label: string; reason: string };
 
@@ -163,7 +163,7 @@ export function skuCompareTable(
   };
 }
 
-function excludedOf(workspace: Workspace, outcomes: ScenarioOutcome[]): ExcludedOrigin[] {
+function excludedOf(workspace: Workspace, outcomes: ViewOutcome[]): ExcludedOrigin[] {
   return outcomes.flatMap((o) => {
     if (o.state === "complete") return [];
     if (o.state === "error") return [{ label: o.label, reason: o.message }];
@@ -203,7 +203,7 @@ function withCodes(reason: string, workspace: Workspace): string {
   return workspace.skuLines.reduce((text, l) => text.split(l.id).join(l.skuCode), reason);
 }
 
-export function toComparisonView(result: WorkspaceResult | null, workspace: Workspace): ComparisonView {
+export function toComparisonView(result: ViewResult | null, workspace: Workspace): ComparisonView {
   if (workspace.scenarios.length < 2) return { state: "hidden" };
   if (!result || result.state !== "ready") {
     return { state: "unavailable", note: "Origins can be compared once the result below can be calculated." };

@@ -16,6 +16,8 @@ let role = "logistics_expert";
 let rpcResult: { data: unknown; error: { code: string; message: string } | null } = { data: null, error: null };
 let deleteCount = 1;
 let enabled = true;
+let snapshotCount = 0;
+let snapshotRow: unknown = null;
 const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
   void name;
   void args;
@@ -31,7 +33,12 @@ function stubClient() {
       const chain = {
         select: () => chain,
         eq: () => chain,
-        maybeSingle: async () => ({ data: ownerId ? { owner_id: ownerId } : null, error: null }),
+        maybeSingle: async () =>
+          table === "landed_cost_snapshots"
+            ? { data: snapshotRow, error: null }
+            : { data: ownerId ? { owner_id: ownerId } : null, error: null },
+        // A count query (head: true) awaited directly.
+        then: (resolve: (value: unknown) => void) => resolve({ data: null, error: null, count: table === "landed_cost_snapshots" ? snapshotCount : null }),
         delete: () => {
           deletes.push(table);
           return { eq: async () => ({ error: null, count: deleteCount }) };
@@ -57,8 +64,18 @@ const loadWorkspace = vi.fn(async () => loadResult);
 const computeWorkspaceResult = vi.fn(async () => ({ state: "no_sku_lines", calculatedOn: "2026-10-21", entryDate: "2026-11-01" }));
 vi.mock("@/lib/landed-cost/server-workspace", () => ({ loadWorkspace }));
 vi.mock("@/lib/landed-cost/server-compute", () => ({ computeWorkspaceResult }));
+// The one service-role module: what it's called with is the point here.
+const saveLandedCostSnapshot = vi.fn(async (userId: string, row: unknown) => {
+  void userId;
+  void row;
+  return { ok: true, id: "00000000-0000-4000-8000-000000000399", versionNo: 3 } as
+    | { ok: true; id: string; versionNo: number }
+    | { ok: false; code: string | null; message: string | null };
+});
+vi.mock("@/lib/landed-cost/snapshot-store", () => ({ saveLandedCostSnapshot }));
 
-const { createWorkspaceAction, deleteWorkspaceAction, exportWorkspaceCsvAction, saveDraftAction } = await import("./actions");
+const { createWorkspaceAction, deleteSnapshotAction, deleteWorkspaceAction, exportWorkspaceCsvAction, lockWorkspaceAction, saveDraftAction } =
+  await import("./actions");
 
 const scenario = {
   label: "China", originCountry: "cn", supplierName: "", incoterm: "FOB", shipmentMode: "Sea", entryType: "formal",
@@ -82,7 +99,11 @@ beforeEach(() => {
   createClient.mockClear();
   deletes.length = 0;
   loadWorkspace.mockClear();
-  computeWorkspaceResult.mockClear();
+  computeWorkspaceResult.mockReset();
+  computeWorkspaceResult.mockImplementation(async () => ({ state: "no_sku_lines", calculatedOn: "2026-10-21", entryDate: "2026-11-01" }));
+  saveLandedCostSnapshot.mockClear();
+  snapshotCount = 0;
+  snapshotRow = null;
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -214,6 +235,114 @@ describe("exportWorkspaceCsvAction", () => {
   });
 });
 
+describe("deleteWorkspaceAction with locked versions", () => {
+  test("refused with the number of versions, before any delete", async () => {
+    snapshotCount = 2;
+    expect(await deleteWorkspaceAction({ workspaceId: WORKSPACE })).toEqual({
+      ok: false, code: "invalid", error: "This workspace has 2 locked versions. Delete them first.", issues: undefined,
+    });
+    snapshotCount = 1;
+    expect(await deleteWorkspaceAction({ workspaceId: WORKSPACE })).toMatchObject({ error: "This workspace has 1 locked version. Delete it first." });
+    expect(deletes).toEqual([]);
+  });
+});
+
+describe("lockWorkspaceAction", () => {
+  // The golden China vs Vietnam workspace, calculated by the real pipeline on the stub tables.
+  const golden = async () => {
+    const { scenario: china, vietnamScenario, workspace } = await import("@/lib/landed-cost/__fixtures__/workspace-builders");
+    return workspace({ id: WORKSPACE, ownerId: "00000000-0000-4000-8000-0000000000a1", updatedAt: UPDATED_AT, scenarios: [china(), vietnamScenario()] });
+  };
+  async function realCompute() {
+    const actual = await vi.importActual<typeof import("@/lib/landed-cost/server-compute")>("@/lib/landed-cost/server-compute");
+    const { stubSupabase } = await import("@/lib/tariff/__fixtures__/supabase-stub");
+    const { CALCULATED_ON } = await import("@/lib/landed-cost/__fixtures__/duty-tables");
+    const { tables } = await import("@/lib/landed-cost/__fixtures__/workspace-builders");
+    computeWorkspaceResult.mockImplementation((async (_client: unknown, w: never) =>
+      actual.computeWorkspaceResult(stubSupabase(tables()) as never, w, CALCULATED_ON)) as never);
+  }
+  const lockInput = (over: Record<string, unknown> = {}) => ({ workspaceId: WORKSPACE, expectedUpdatedAt: UPDATED_AT, ...over });
+
+  test("locks the saved draft: the row built on the server, the user id from the session only", async () => {
+    loadResult = { ok: true, workspace: await golden() };
+    await realCompute();
+    const result = await lockWorkspaceAction(
+      lockInput({ userId: "00000000-0000-4000-8000-0000000000ff", p_user_id: "evil", baseline_per_unit_usd: "0.01", row: { incomplete: false }, result: {} }),
+    );
+    expect(result).toEqual({ ok: true, versionId: "00000000-0000-4000-8000-000000000399", versionNo: 3 });
+    expect(saveLandedCostSnapshot).toHaveBeenCalledTimes(1);
+    const [userId, row] = saveLandedCostSnapshot.mock.calls[0] as [string, Record<string, unknown>];
+    expect(userId).toBe("u1");
+    expect(row).toMatchObject({ workspace_id: WORKSPACE, workspace_updated_at: UPDATED_AT, baseline_label: "China", baseline_per_unit_usd: "17.35", origin_count: 2 });
+    expect(Object.keys(row)).not.toContain("created_by");
+    expect(revalidatePath).toHaveBeenCalledWith(`/landed-cost/${WORKSPACE}`);
+  });
+
+  test("an admin can lock someone else's workspace; another expert is told it's the owner's", async () => {
+    loadResult = { ok: true, workspace: await golden() };
+    await realCompute();
+    ownerId = "u2";
+    expect(await lockWorkspaceAction(lockInput())).toMatchObject({ ok: false, code: "forbidden", error: "Only the workspace's owner or an admin can edit it." });
+    expect(saveLandedCostSnapshot).not.toHaveBeenCalled();
+    role = "admin";
+    expect(await lockWorkspaceAction(lockInput())).toMatchObject({ ok: true });
+  });
+
+  test("stale: a workspace saved since it was opened is refused, exact string, before calculating", async () => {
+    loadResult = { ok: true, workspace: await golden() };
+    expect(await lockWorkspaceAction(lockInput({ expectedUpdatedAt: "2026-10-21T02:02:38.123457+00:00" }))).toMatchObject({ ok: false, code: "stale" });
+    expect(computeWorkspaceResult).not.toHaveBeenCalled();
+    expect(saveLandedCostSnapshot).not.toHaveBeenCalled();
+  });
+
+  test("an incomplete origin: refused with what's missing; pending programs alone don't block", async () => {
+    const w = await golden();
+    loadResult = { ok: true, workspace: { ...w, scenarios: [w.scenarios[0], { ...w.scenarios[1], freightTotalUsd: null }] } };
+    await realCompute();
+    expect(await lockWorkspaceAction(lockInput())).toMatchObject({
+      ok: false, code: "invalid", error: "Complete every origin before locking: Vietnam: Freight total (USD).",
+    });
+    expect(saveLandedCostSnapshot).not.toHaveBeenCalled();
+  });
+
+  test("the database's refusals in our words", async () => {
+    loadResult = { ok: true, workspace: await golden() };
+    await realCompute();
+    for (const [code, expected] of [["LC409", "stale"], ["23514", "invalid"], ["42501", "forbidden"], ["XX000", "failed"]] as const) {
+      saveLandedCostSnapshot.mockResolvedValueOnce({ ok: false, code, message: "SQL detail" });
+      const result = await lockWorkspaceAction(lockInput());
+      expect(result).toMatchObject({ ok: false, code: expected });
+      expect(JSON.stringify(result)).not.toContain("SQL detail");
+    }
+  });
+
+  test("a bad id or timestamp is refused before anything is read", async () => {
+    expect(await lockWorkspaceAction({ workspaceId: "nope", expectedUpdatedAt: UPDATED_AT })).toMatchObject({ ok: false, code: "not_found" });
+    expect(await lockWorkspaceAction({ workspaceId: WORKSPACE, expectedUpdatedAt: "yesterday" })).toMatchObject({ ok: false, code: "not_found" });
+    expect(loadWorkspace).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleteSnapshotAction", () => {
+  const SNAPSHOT = "00000000-0000-4000-8000-000000000398";
+  test("the creator, the workspace owner or an admin; anyone else is told who can", async () => {
+    snapshotRow = { workspace_id: WORKSPACE, created_by: "u1", landed_cost_workspaces: { owner_id: "u2" } };
+    expect(await deleteSnapshotAction({ snapshotId: SNAPSHOT })).toEqual({ ok: true });
+    snapshotRow = { workspace_id: WORKSPACE, created_by: "u3", landed_cost_workspaces: { owner_id: "u1" } };
+    expect(await deleteSnapshotAction({ snapshotId: SNAPSHOT })).toEqual({ ok: true });
+    snapshotRow = { workspace_id: WORKSPACE, created_by: "u3", landed_cost_workspaces: { owner_id: "u2" } };
+    expect(await deleteSnapshotAction({ snapshotId: SNAPSHOT })).toMatchObject({ ok: false, code: "forbidden" });
+    role = "admin";
+    expect(await deleteSnapshotAction({ snapshotId: SNAPSHOT })).toEqual({ ok: true });
+    expect(deletes).toEqual(["landed_cost_snapshots", "landed_cost_snapshots", "landed_cost_snapshots"]);
+  });
+
+  test("a version that isn't there", async () => {
+    expect(await deleteSnapshotAction({ snapshotId: SNAPSHOT })).toMatchObject({ ok: false, code: "not_found" });
+    expect(await deleteSnapshotAction({ snapshotId: "nope" })).toMatchObject({ ok: false, code: "not_found" });
+  });
+});
+
 describe("behind the feature flag", () => {
   test("off: every action refuses with a generic message, before any database call", async () => {
     enabled = false;
@@ -222,6 +351,8 @@ describe("behind the feature flag", () => {
       await saveDraftAction(saveInput()),
       await deleteWorkspaceAction({ workspaceId: WORKSPACE }),
       await exportWorkspaceCsvAction({ workspaceId: WORKSPACE }),
+      await lockWorkspaceAction({ workspaceId: WORKSPACE, expectedUpdatedAt: UPDATED_AT }),
+      await deleteSnapshotAction({ snapshotId: WORKSPACE }),
     ];
     for (const result of results) {
       expect(result).toEqual({ ok: false, code: "unavailable", error: "Landed Cost isn't available yet.", issues: undefined });
@@ -231,13 +362,21 @@ describe("behind the feature flag", () => {
     expect(deletes).toEqual([]);
     expect(loadWorkspace).not.toHaveBeenCalled();
     expect(computeWorkspaceResult).not.toHaveBeenCalled();
+    expect(saveLandedCostSnapshot).not.toHaveBeenCalled();
   });
 
   test("every action checks the flag right after requireStaff()", async () => {
     const { readFileSync } = await import("node:fs");
     const source = readFileSync(new URL("./actions.ts", import.meta.url), "utf8");
     const actions = [...source.matchAll(/export async function (\w+)[^{]*\{\n(.*)\n(.*)\n/g)];
-    expect(actions.map((a) => a[1])).toEqual(["createWorkspaceAction", "saveDraftAction", "deleteWorkspaceAction", "exportWorkspaceCsvAction"]);
+    expect(actions.map((a) => a[1])).toEqual([
+      "createWorkspaceAction",
+      "saveDraftAction",
+      "deleteWorkspaceAction",
+      "exportWorkspaceCsvAction",
+      "lockWorkspaceAction",
+      "deleteSnapshotAction",
+    ]);
     for (const [, , first, second] of actions) {
       expect(first.trim()).toMatch(/^(const role = )?await requireStaff\(\);$/);
       expect(second.trim()).toBe("if (!isLandedCostEnabled()) return unavailable();");

@@ -14,6 +14,7 @@ import { cardClass, primaryButtonClass, secondaryButtonClass } from "../styles";
 import { CompareAfterSave, ComparisonArea } from "./comparison-area";
 import { DeleteWorkspaceButton } from "./delete-workspace-button";
 import { ExportCsvButton } from "./export-csv-button";
+import { LockVersionButton } from "./locked-versions";
 import type { FieldErrors } from "./fields";
 import { FreightSection } from "./freight-section";
 import { AddOriginButtons, OriginActions, OriginTabs } from "./origin-controls";
@@ -57,6 +58,7 @@ export function WorkspaceEditor({
   lastSaved,
   htsRelease,
   initialOrigin,
+  lockBlocker,
 }: {
   workspace: Workspace;
   views: Record<string, ResultView>;
@@ -68,6 +70,8 @@ export function WorkspaceEditor({
   lastSaved: string;
   htsRelease: LookupRelease | null;
   initialOrigin: string | null;
+  // Why the last save can't be locked yet (an origin incomplete), or null.
+  lockBlocker: string | null;
 }) {
   const router = useRouter();
   // The page renders this editor only for a workspace with a scenario.
@@ -165,6 +169,7 @@ export function WorkspaceEditor({
               <button type="button" onClick={save} disabled={isPending || stale} className={primaryButtonClass}>
                 {isPending ? "Saving…" : "Save draft"}
               </button>
+              <LockVersionButton workspaceId={workspace.id} updatedAt={expectedUpdatedAt} dirty={dirty} blocker={lockBlocker} disabled={isPending || stale} />
               <DeleteWorkspaceButton workspaceId={workspace.id} name={workspace.name} disabled={isPending} />
             </>
           )}

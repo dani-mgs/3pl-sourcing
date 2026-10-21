@@ -6,8 +6,8 @@ import { toComparisonView } from "./comparison-view";
 import { COMPONENT_KEYS, type ComponentKey } from "./components";
 import { parseCents, perUnit } from "./money";
 import { missingItems, shares } from "./result-view";
-import type { ScenarioOutcome, WorkspaceResult } from "./server-compute";
 import type { Scenario, Workspace } from "./workspace-schema";
+import type { ViewOutcome, ViewResult } from "./view-result";
 
 // A workspace as CSV, built on the server from its last save and a fresh
 // calculation (nothing from the browser). Sections stack with
@@ -20,7 +20,7 @@ export const DRAFT_NOTE = "DRAFT: not a locked estimate. Figures change when inp
 
 type Cell = string | number | null | undefined;
 type Section = { title: string; csv: string };
-type Complete = Extract<ScenarioOutcome, { state: "complete" }>;
+type Complete = Extract<ViewOutcome, { state: "complete" }>;
 
 const B0 = BigInt(0);
 const abs = (n: bigint) => (n < B0 ? -n : n);
@@ -102,7 +102,7 @@ function inputSections(workspace: Workspace, s: Scenario): Section[] {
   ];
 }
 
-function resultSections(workspace: Workspace, outcome: ScenarioOutcome): Section[] {
+function resultSections(workspace: Workspace, outcome: ViewOutcome): Section[] {
   const label = outcome.label;
   const codes = new Map(workspace.skuLines.map((l) => [l.id, l]));
   const totals = outcome.state === "complete" ? new Map(outcome.totals.skus.map((t) => [t.skuId, t])) : null;
@@ -197,7 +197,7 @@ function resultSections(workspace: Workspace, outcome: ScenarioOutcome): Section
   return [perSku, layers, feeSection, totalsSection];
 }
 
-function comparisonSections(workspace: Workspace, result: Extract<WorkspaceResult, { state: "ready" }>): Section[] {
+function comparisonSections(workspace: Workspace, result: Extract<ViewResult, { state: "ready" }>): Section[] {
   const view = toComparisonView(result, workspace);
   if (view.state === "hidden") return [];
   if (view.state !== "ready") {
@@ -276,7 +276,7 @@ function comparisonSections(workspace: Workspace, result: Extract<WorkspaceResul
   return sections;
 }
 
-export function buildWorkspaceCsv(workspace: Workspace, result: WorkspaceResult): string {
+export function buildWorkspaceCsv(workspace: Workspace, result: ViewResult): string {
   const sections: Section[] = [workspaceSection(workspace, result.calculatedOn), skuSection(workspace)];
   const notCalculated = result.state === "ready" ? null : result.state === "no_sku_lines" ? "Add at least one SKU." : result.message;
   for (const s of workspace.scenarios) {

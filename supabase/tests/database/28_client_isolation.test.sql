@@ -104,6 +104,11 @@ insert into landed_cost_scenario_items (workspace_id, scenario_id, sku_line_id, 
   ('00000000-0000-4000-8000-000000003701', '00000000-0000-4000-8000-000000003703', '00000000-0000-4000-8000-000000003702', 6);
 insert into landed_cost_other_costs (workspace_id, scenario_id, label, amount_usd) values
   ('00000000-0000-4000-8000-000000003701', '00000000-0000-4000-8000-000000003703', 'Broker fee', 95);
+-- A locked version (written as the table's owner; the app goes through save_landed_cost_snapshot).
+insert into landed_cost_snapshots (workspace_id, version_no, created_by, as_of_date, workspace_name, entry_date, workspace_updated_at,
+  hts_release_id, hts_release_name, schema_version, inputs, result, origin_count, baseline_label, baseline_per_unit_usd, incomplete) values
+  ('00000000-0000-4000-8000-000000003701', 1, '00000000-0000-4000-8000-0000000000a1', current_date, 'pgTAP workspace', '2026-11-01', now(),
+   '00000000-0000-4000-8000-00000000ba01', 'pgTAP', 1, '{}', '{}', 1, 'China', 17.35, false);
 insert into client_entitlements (client_id, tier) values
   ('00000000-0000-4000-8000-00000000c001', 'market_report'),
   ('00000000-0000-4000-8000-00000000c002', 'free');
@@ -120,7 +125,7 @@ select ok(
   (select bool_and(n > 0) from pg_temp.true_counts
    where tbl in ('clients', 'three_pl_projects', 'three_pl_providers', 'rate_details', 'recommendation',
                  'forwarder_projects', 'forwarders', 'forwarder_quotes', 'profiles', 'fx_rates', 'hts_lines', 'client_entitlements',
-                 'landed_cost_other_costs', 'landed_cost_scenario_items', 'landed_cost_scenarios', 'landed_cost_sku_lines', 'landed_cost_workspaces')),
+                 'landed_cost_other_costs', 'landed_cost_scenario_items', 'landed_cost_scenarios', 'landed_cost_sku_lines', 'landed_cost_snapshots', 'landed_cost_workspaces')),
   'there is data to hide in the main tables (the checks below aren''t vacuous)');
 
 -- ---- The client's view of itself -------------------------------------------------

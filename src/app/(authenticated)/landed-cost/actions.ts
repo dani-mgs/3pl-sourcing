@@ -12,8 +12,13 @@ import { buildWorkspaceCsv, workspaceCsvFilename } from "@/lib/landed-cost/expor
 import { createPayload, parseCreateWorkspace, parseDraft, savePayload, type DraftIssue } from "@/lib/landed-cost/parse-draft";
 import { computeWorkspaceResult } from "@/lib/landed-cost/server-compute";
 import { loadWorkspace } from "@/lib/landed-cost/server-workspace";
+import { lockBlocker } from "@/lib/landed-cost/lock-check";
+import { buildSnapshotRow } from "@/lib/landed-cost/snapshot-schema";
+import { saveLandedCostSnapshot } from "@/lib/landed-cost/snapshot-store";
+import type { WorkspaceResult } from "@/lib/landed-cost/server-compute";
 
-// Landed Cost workspaces: create, save a draft, delete, export as CSV. The browser sends
+// Landed Cost workspaces: create, save a draft, delete, export as CSV, and
+// lock a version (or delete one). The browser sends
 // inputs only; results are calculated on the server when the workspace is
 // loaded, never accepted from the client. Ownership is enforced by RLS (only
 // the owner or an admin writes); it's also checked here to say so plainly.
@@ -25,6 +30,8 @@ export type SaveDraftState =
   | ActionError;
 export type DeleteWorkspaceState = { ok: true } | ActionError;
 export type ExportCsvState = { ok: true; csv: string; filename: string } | ActionError;
+export type LockWorkspaceState = { ok: true; versionId: string; versionNo: number } | ActionError;
+export type DeleteSnapshotState = { ok: true } | ActionError;
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -45,6 +52,16 @@ const timestampText = z
 const saveInputSchema = z.object({ workspaceId: z.uuid(), expectedUpdatedAt: timestampText, draft: z.unknown() });
 const deleteInputSchema = z.object({ workspaceId: z.uuid() });
 const exportInputSchema = z.object({ workspaceId: z.uuid() });
+const lockInputSchema = z.object({ workspaceId: z.uuid(), expectedUpdatedAt: timestampText });
+const deleteSnapshotInputSchema = z.object({ snapshotId: z.uuid() });
+
+const LOCK_STALE = "This workspace changed since you opened it. Reload it, check the result, then lock again.";
+const LOCK_FAILED = "This version couldn't be locked right now. Try again.";
+const LOCK_MISMATCH = "This version couldn't be locked: the result didn't match the saved workspace. Reload it and try again.";
+const SNAPSHOT_NOT_FOUND = "This version doesn't exist, or you can't delete it.";
+const SNAPSHOT_OWNER_ONLY = "Only the person who locked this version, the workspace's owner or an admin can delete it.";
+const hasVersions = (n: number | null) =>
+  n ? `This workspace has ${n} locked ${n === 1 ? "version" : "versions"}. Delete ${n === 1 ? "it" : "them"} first.` : "This workspace has locked versions. Delete them first.";
 
 const saveResultSchema = z.object({
   updated_at: z.string(),
@@ -146,7 +163,16 @@ export async function deleteWorkspaceAction(input: unknown): Promise<DeleteWorks
   const denied = await checkCanEdit(supabase, workspaceId, userId, role);
   if (denied) return denied;
 
+  // Locked versions keep their workspace (no cascade): say so before trying.
+  const versions = await supabase.from("landed_cost_snapshots").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId);
+  if (versions.error) {
+    console.error("deleteWorkspaceAction versions error:", versions.error);
+    return fail("failed", "The workspace couldn't be deleted right now. Try again.");
+  }
+  if ((versions.count ?? 0) > 0) return fail("invalid", hasVersions(versions.count));
+
   const { error, count } = await supabase.from("landed_cost_workspaces").delete({ count: "exact" }).eq("id", workspaceId);
+  if (error?.code === "23503") return fail("invalid", hasVersions(null));
   if (error) {
     console.error("deleteWorkspaceAction error:", error);
     return fail("failed", "The workspace couldn't be deleted right now. Try again.");
@@ -181,4 +207,94 @@ export async function exportWorkspaceCsvAction(input: unknown): Promise<ExportCs
     console.error("exportWorkspaceCsvAction error:", error);
     return fail("failed", "The export couldn't be built right now. Try again.");
   }
+}
+
+// Locks the saved draft as the next version: exactly what the user saw (the
+// same updated_at), recalculated here, every origin complete. The row is
+// built on the server and stored through the one service-role module, with
+// the signed-in user's id; nothing but the two ids is read from the browser.
+export async function lockWorkspaceAction(input: unknown): Promise<LockWorkspaceState> {
+  const role = await requireStaff();
+  if (!isLandedCostEnabled()) return unavailable();
+  const supabase = await createClient();
+  const userId = await signedInUser(supabase);
+  if (!userId) return fail("forbidden", SIGN_IN);
+
+  const request = lockInputSchema.safeParse(input);
+  if (!request.success) return fail("not_found", NOT_FOUND);
+  const { workspaceId, expectedUpdatedAt } = request.data;
+  const denied = await checkCanEdit(supabase, workspaceId, userId, role);
+  if (denied) return denied;
+
+  const loaded = await loadWorkspace(supabase, workspaceId);
+  if (!loaded.ok) return fail(loaded.code === "not_found" ? "not_found" : "failed", loaded.message);
+  const workspace = loaded.workspace;
+  if (workspace.updatedAt !== expectedUpdatedAt) return fail("stale", LOCK_STALE);
+  if (workspace.scenarios.length === 0) return fail("invalid", "This workspace has no origin to lock.");
+
+  let result: WorkspaceResult;
+  try {
+    result = await computeWorkspaceResult(supabase, workspace, todayUtc());
+  } catch (error) {
+    console.error("lockWorkspaceAction compute error:", error);
+    return fail("failed", LOCK_FAILED);
+  }
+  const blocked = lockBlocker(workspace, result);
+  if (blocked) return fail("invalid", blocked);
+
+  const built = buildSnapshotRow(workspace, result);
+  if (!built.ok) return fail("invalid", built.error);
+  const saved = await saveLandedCostSnapshot(userId, built.row);
+  if (!saved.ok) {
+    switch (saved.code) {
+      case "LC409":
+        return fail("stale", LOCK_STALE);
+      case "42501":
+        return fail("forbidden", OWNER_ONLY);
+      case "P0002":
+        return fail("not_found", NOT_FOUND);
+      case "23514":
+      case "LC422":
+        return fail("invalid", LOCK_MISMATCH);
+      default:
+        return fail("failed", LOCK_FAILED);
+    }
+  }
+  revalidatePath(`/landed-cost/${workspaceId}`);
+  return { ok: true, versionId: saved.id, versionNo: saved.versionNo };
+}
+
+// Deletes one locked version: its creator, the workspace's owner or an admin
+// (RLS enforces the same; checked here to say so plainly).
+export async function deleteSnapshotAction(input: unknown): Promise<DeleteSnapshotState> {
+  const role = await requireStaff();
+  if (!isLandedCostEnabled()) return unavailable();
+  const supabase = await createClient();
+  const userId = await signedInUser(supabase);
+  if (!userId) return fail("forbidden", SIGN_IN);
+
+  const request = deleteSnapshotInputSchema.safeParse(input);
+  if (!request.success) return fail("not_found", SNAPSHOT_NOT_FOUND);
+  const { snapshotId } = request.data;
+  const { data, error: readError } = await supabase
+    .from("landed_cost_snapshots")
+    .select("workspace_id, created_by, landed_cost_workspaces(owner_id)")
+    .eq("id", snapshotId)
+    .maybeSingle();
+  if (readError) {
+    console.error("deleteSnapshotAction read error:", readError);
+    return fail("failed", UNEXPECTED);
+  }
+  if (!data) return fail("not_found", SNAPSHOT_NOT_FOUND);
+  const owner = (data.landed_cost_workspaces as { owner_id?: string } | null)?.owner_id;
+  if (data.created_by !== userId && owner !== userId && role !== "admin") return fail("forbidden", SNAPSHOT_OWNER_ONLY);
+
+  const { error, count } = await supabase.from("landed_cost_snapshots").delete({ count: "exact" }).eq("id", snapshotId);
+  if (error) {
+    console.error("deleteSnapshotAction error:", error);
+    return fail("failed", "The version couldn't be deleted right now. Try again.");
+  }
+  if (count === 0) return fail("forbidden", SNAPSHOT_OWNER_ONLY);
+  revalidatePath(`/landed-cost/${data.workspace_id}`);
+  return { ok: true };
 }
