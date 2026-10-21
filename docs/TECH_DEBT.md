@@ -216,12 +216,6 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 - **Where:** `supabase/migrations/20261021013030_landed_cost_workspaces.sql`, `supabase/migrations/20261021020238_landed_cost_draft_functions.sql`
 
-### Landed Cost: col::text reads not yet verified against a real API
-- **Added:** 2026-10-21
-- **What:** col::text reads not yet verified against a real API; verify in 2c-2 manual test before 2c-2 is deployed. `loadWorkspace` reads numeric columns as `col::text` (`src/lib/landed-cost/workspace-schema.ts`), tested only with the Supabase stub.
-- **Severity:** Medium (a wrong key or format would fail every workspace load as invalid data)
-- **Where:** `src/lib/landed-cost/workspace-schema.ts`, `src/lib/landed-cost/server-workspace.ts`
-
 ### Landed Cost: admins can't reassign workspace ownership
 - **Added:** 2026-10-21
 - **What:** A workspace's `owner_id` is set on insert and can't be updated by anyone (column grants), and its foreign key to `auth.users` is NO ACTION, as for projects and duty estimates. So admins can't reassign workspace ownership, and a departing user's workspaces must be deleted first before their account can be deleted.
@@ -306,6 +300,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 
 ## Resolved
+
+### Landed Cost: col::text reads not yet verified against a real API
+- **Added:** 2026-10-21
+- **What:** col::text reads not yet verified against a real API; verify in 2c-2 manual test before 2c-2 is deployed. `loadWorkspace` reads numeric columns as `col::text` (`src/lib/landed-cost/workspace-schema.ts`), tested only with the Supabase stub.
+- **Severity:** Medium (a wrong key or format would fail every workspace load as invalid data)
+- **Where:** `src/lib/landed-cost/workspace-schema.ts`, `src/lib/landed-cost/server-workspace.ts`
+- **Resolved:** 2026-10-21. Verified in the Phase 2c-2 signed-in manual test against the real API: all 13 steps passed, and values such as FOB 1.2345 and carton kg 12.345 read back exactly after a browser reload.
 
 ### Landed Cost (Phase 2c): ask for the duty quantity only where the rate needs it
 - **Added:** 2026-10-21
