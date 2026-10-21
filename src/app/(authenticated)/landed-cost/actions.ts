@@ -8,12 +8,17 @@ import type { StaffRole } from "@/lib/auth/get-user-role";
 import { todayUtc } from "@/lib/fx/server-rates";
 import { isLandedCostEnabled } from "@/lib/landed-cost/feature-flag";
 import { NOT_FOUND, OWNER_ONLY, draftError, type DraftErrorCode } from "@/lib/landed-cost/draft-errors";
-import { buildWorkspaceCsv, workspaceCsvFilename } from "@/lib/landed-cost/export-csv";
+import { buildWorkspaceCsv, versionFilename, workspaceCsvFilename } from "@/lib/landed-cost/export-csv";
+import { renderVersionPdf } from "@/lib/landed-cost/render-version-pdf";
+import { loadLockedVersion } from "@/lib/landed-cost/server-snapshots";
+import { loadFirstNames } from "@/lib/landed-cost/server-workspace-list";
+import { buildVersionReport, describeVersion } from "@/lib/landed-cost/version-report";
+import { personName } from "@/lib/tariff/fee-audit";
 import { createPayload, parseCreateWorkspace, parseDraft, savePayload, type DraftIssue } from "@/lib/landed-cost/parse-draft";
 import { computeWorkspaceResult } from "@/lib/landed-cost/server-compute";
 import { loadWorkspace } from "@/lib/landed-cost/server-workspace";
 import { lockBlocker } from "@/lib/landed-cost/lock-check";
-import { buildSnapshotRow } from "@/lib/landed-cost/snapshot-schema";
+import { buildSnapshotRow, restoreSnapshot } from "@/lib/landed-cost/snapshot-schema";
 import { saveLandedCostSnapshot } from "@/lib/landed-cost/snapshot-store";
 import type { WorkspaceResult } from "@/lib/landed-cost/server-compute";
 
@@ -32,6 +37,8 @@ export type DeleteWorkspaceState = { ok: true } | ActionError;
 export type ExportCsvState = { ok: true; csv: string; filename: string } | ActionError;
 export type LockWorkspaceState = { ok: true; versionId: string; versionNo: number } | ActionError;
 export type DeleteSnapshotState = { ok: true } | ActionError;
+export type ExportVersionPdfState = { ok: true; base64: string; filename: string } | ActionError;
+export type ExportVersionCsvState = { ok: true; csv: string; filename: string } | ActionError;
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -54,6 +61,11 @@ const deleteInputSchema = z.object({ workspaceId: z.uuid() });
 const exportInputSchema = z.object({ workspaceId: z.uuid() });
 const lockInputSchema = z.object({ workspaceId: z.uuid(), expectedUpdatedAt: timestampText });
 const deleteSnapshotInputSchema = z.object({ snapshotId: z.uuid() });
+const exportVersionInputSchema = z.object({ snapshotId: z.uuid() });
+
+const VERSION_NOT_FOUND = "This version doesn't exist, or you can't open it.";
+const VERSION_UNREADABLE = "This version can't be exported: its stored data isn't in a form this export can read.";
+const EXPORT_FAILED = "The export couldn't be built right now. Try again.";
 
 const LOCK_STALE = "This workspace changed since you opened it. Reload it, check the result, then lock again.";
 const LOCK_FAILED = "This version couldn't be locked right now. Try again.";
@@ -297,4 +309,68 @@ export async function deleteSnapshotAction(input: unknown): Promise<DeleteSnapsh
   if (count === 0) return fail("forbidden", SNAPSHOT_OWNER_ONLY);
   revalidatePath(`/landed-cost/${data.workspace_id}`);
   return { ok: true };
+}
+
+// A locked version, for its exports: read through RLS (any staff member),
+// parsed with Zod and restored. Never recalculated.
+async function lockedForExport(input: unknown) {
+  const request = exportVersionInputSchema.safeParse(input);
+  if (!request.success) return { ok: false as const, error: fail("not_found", VERSION_NOT_FOUND) };
+  const supabase = await createClient();
+  const loaded = await loadLockedVersion(supabase, null, request.data.snapshotId);
+  if (!loaded.ok) {
+    return { ok: false as const, error: loaded.code === "not_found" ? fail("not_found", VERSION_NOT_FOUND) : fail("failed", EXPORT_FAILED) };
+  }
+  const version = loaded.version;
+  if (!version.snapshot) return { ok: false as const, error: fail("invalid", VERSION_UNREADABLE) };
+  const names = await loadFirstNames(supabase, [version.created_by]).catch((error) => {
+    console.error("version export names error:", error);
+    return new Map<string, string | null>();
+  });
+  return { ok: true as const, meta: describeVersion(version, personName(version.created_by, names)), restored: restoreSnapshot(version.snapshot) };
+}
+
+// The locked version as a PDF, from its stored snapshot only.
+export async function exportVersionPdfAction(input: unknown): Promise<ExportVersionPdfState> {
+  await requireStaff();
+  if (!isLandedCostEnabled()) return unavailable();
+  const locked = await lockedForExport(input);
+  if (!locked.ok) return locked.error;
+  try {
+    const buffer = await renderVersionPdf(buildVersionReport(locked.meta, locked.restored));
+    return {
+      ok: true,
+      base64: buffer.toString("base64"),
+      filename: versionFilename(locked.meta.workspaceName, locked.meta.versionNo, locked.meta.lockedDate, "pdf"),
+    };
+  } catch (error) {
+    console.error("exportVersionPdfAction error:", error);
+    return fail("failed", EXPORT_FAILED);
+  }
+}
+
+// The locked version as CSV, from its stored snapshot only: the 5a builder
+// with the LOCKED line in place of DRAFT.
+export async function exportVersionCsvAction(input: unknown): Promise<ExportVersionCsvState> {
+  await requireStaff();
+  if (!isLandedCostEnabled()) return unavailable();
+  const locked = await lockedForExport(input);
+  if (!locked.ok) return locked.error;
+  const { meta, restored } = locked;
+  try {
+    return {
+      ok: true,
+      csv: buildWorkspaceCsv(restored.workspace, restored.result, {
+        versionNo: meta.versionNo,
+        lockedOn: meta.lockedOn,
+        byName: meta.byName,
+        release: meta.release,
+        asOf: meta.asOf,
+      }),
+      filename: versionFilename(meta.workspaceName, meta.versionNo, meta.lockedDate, "csv"),
+    };
+  } catch (error) {
+    console.error("exportVersionCsvAction error:", error);
+    return fail("failed", EXPORT_FAILED);
+  }
 }

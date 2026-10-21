@@ -58,12 +58,19 @@ const COMPONENT_NOUNS: Record<ComponentKey, string> = {
   other: "Other costs",
 };
 
-function workspaceSection(workspace: Workspace, calculatedOn: string): Section {
+// A locked version's CSV says so in place of the DRAFT line.
+export type LockedCsv = { versionNo: number; lockedOn: string; byName: string; release: string; asOf: string };
+
+export const lockedNote = (l: LockedCsv) =>
+  `LOCKED VERSION v${l.versionNo}, locked on ${l.lockedOn} by ${l.byName}. These figures are fixed.`;
+
+function workspaceSection(workspace: Workspace, calculatedOn: string, locked: LockedCsv | null): Section {
   return section("Landed Cost workspace", ["Field", "Value"], [
     ["Workspace", workspace.name],
     ["Entry date", workspace.entryDate],
     ["Calculated on", calculatedOn],
-    ["Status", DRAFT_NOTE],
+    ["Status", locked ? lockedNote(locked) : DRAFT_NOTE],
+    ...(locked ? [["HTS release", locked.release], ["Duty data as of", locked.asOf]] : []),
   ]);
 }
 
@@ -276,8 +283,10 @@ function comparisonSections(workspace: Workspace, result: Extract<ViewResult, { 
   return sections;
 }
 
-export function buildWorkspaceCsv(workspace: Workspace, result: ViewResult): string {
-  const sections: Section[] = [workspaceSection(workspace, result.calculatedOn), skuSection(workspace)];
+// A draft (recalculated from the last save), or a locked version (restored
+// from its snapshot, never recalculated) when `locked` is given.
+export function buildWorkspaceCsv(workspace: Workspace, result: ViewResult, locked: LockedCsv | null = null): string {
+  const sections: Section[] = [workspaceSection(workspace, result.calculatedOn, locked), skuSection(workspace)];
   const notCalculated = result.state === "ready" ? null : result.state === "no_sku_lines" ? "Add at least one SKU." : result.message;
   for (const s of workspace.scenarios) {
     sections.push(...inputSections(workspace, s));
@@ -294,6 +303,11 @@ export function buildWorkspaceCsv(workspace: Workspace, result: ViewResult): str
     );
   }
   return buildMultiSectionCsv(sections);
+}
+
+// landed-cost-<workspace-name>-v<N>-<locked date>.pdf / .csv
+export function versionFilename(name: string, versionNo: number, lockedDate: string, extension: "pdf" | "csv"): string {
+  return `landed-cost-${sanitizeFilename(name)}-v${versionNo}-${lockedDate}.${extension}`;
 }
 
 // landed-cost-<workspace-name>-<date>-draft.csv

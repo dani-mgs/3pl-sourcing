@@ -73,9 +73,18 @@ const saveLandedCostSnapshot = vi.fn(async (userId: string, row: unknown) => {
     | { ok: false; code: string | null; message: string | null };
 });
 vi.mock("@/lib/landed-cost/snapshot-store", () => ({ saveLandedCostSnapshot }));
+vi.mock("@/lib/landed-cost/server-workspace-list", () => ({ loadFirstNames: async () => new Map([["00000000-0000-4000-8000-0000000000a1", "Dani"]]) }));
 
-const { createWorkspaceAction, deleteSnapshotAction, deleteWorkspaceAction, exportWorkspaceCsvAction, lockWorkspaceAction, saveDraftAction } =
-  await import("./actions");
+const {
+  createWorkspaceAction,
+  deleteSnapshotAction,
+  deleteWorkspaceAction,
+  exportVersionCsvAction,
+  exportVersionPdfAction,
+  exportWorkspaceCsvAction,
+  lockWorkspaceAction,
+  saveDraftAction,
+} = await import("./actions");
 
 const scenario = {
   label: "China", originCountry: "cn", supplierName: "", incoterm: "FOB", shipmentMode: "Sea", entryType: "formal",
@@ -343,6 +352,75 @@ describe("deleteSnapshotAction", () => {
   });
 });
 
+describe("exportVersionPdfAction / exportVersionCsvAction", () => {
+  const SNAPSHOT = "00000000-0000-4000-8000-000000000397";
+  // A version as stored: built by the real pipeline, through JSON, as the database returns the row.
+  async function storedRow(): Promise<Record<string, unknown>> {
+    const actual = await vi.importActual<typeof import("@/lib/landed-cost/server-compute")>("@/lib/landed-cost/server-compute");
+    const { stubSupabase } = await import("@/lib/tariff/__fixtures__/supabase-stub");
+    const { CALCULATED_ON } = await import("@/lib/landed-cost/__fixtures__/duty-tables");
+    const { scenario: china, tables, vietnamScenario, workspace } = await import("@/lib/landed-cost/__fixtures__/workspace-builders");
+    const { buildSnapshotRow } = await import("@/lib/landed-cost/snapshot-schema");
+    const w = workspace({ id: WORKSPACE, ownerId: "00000000-0000-4000-8000-0000000000a1", name: "Q4 mugs", scenarios: [china(), vietnamScenario()] });
+    const built = buildSnapshotRow(w, await actual.computeWorkspaceResult(stubSupabase(tables()) as never, w, CALCULATED_ON));
+    if (!built.ok) throw new Error(built.error);
+    const r = built.row;
+    return JSON.parse(JSON.stringify({
+      id: SNAPSHOT, workspace_id: WORKSPACE, version_no: 3, created_at: "2026-10-02T09:30:00.123456+00:00",
+      created_by: "00000000-0000-4000-8000-0000000000a1", as_of_date: r.as_of_date, workspace_name: r.workspace_name,
+      entry_date: r.entry_date, hts_release_name: r.hts_release_name, hts_release_title: r.hts_release_title,
+      hts_release_start_date: r.hts_release_start_date, schema_version: r.schema_version, inputs: r.inputs, result: r.result,
+      incomplete: r.incomplete,
+    }));
+  }
+  const never = () => {
+    throw new Error("a locked version must not be recalculated");
+  };
+
+  test("any staff member, from the stored version only: the PDF and the CSV with their filenames", async () => {
+    snapshotRow = await storedRow();
+    computeWorkspaceResult.mockImplementation(never as never);
+    ownerId = "someone-else";
+    const pdf = await exportVersionPdfAction({ snapshotId: SNAPSHOT });
+    if (!pdf.ok) throw new Error(pdf.error);
+    expect(pdf.filename).toBe("landed-cost-Q4-mugs-v3-2026-10-02.pdf");
+    expect(Buffer.from(pdf.base64, "base64").subarray(0, 5).toString()).toBe("%PDF-");
+    const csv = await exportVersionCsvAction({ snapshotId: SNAPSHOT });
+    if (!csv.ok) throw new Error(csv.error);
+    expect(csv.filename).toBe("landed-cost-Q4-mugs-v3-2026-10-02.csv");
+    expect(csv.csv).toContain("LOCKED VERSION v3, locked on Oct 2, 2026 by Dani. These figures are fixed.");
+    expect(csv.csv).toContain("1,China,Yes,Lowest landed cost,17.35,1734.73,Baseline");
+    expect(computeWorkspaceResult).not.toHaveBeenCalled();
+    expect(loadWorkspace).not.toHaveBeenCalled();
+  });
+
+  test("only the id is read from the browser", async () => {
+    snapshotRow = await storedRow();
+    const csv = await exportVersionCsvAction({ snapshotId: SNAPSHOT, csv: "=1+1", versionNo: 99, byName: "Mallory", result: {} });
+    if (!csv.ok) throw new Error(csv.error);
+    expect(csv.csv).not.toMatch(/Mallory|v99|=1\+1/);
+  });
+
+  test("stored data that fails the schema: refused in words", async () => {
+    const row = await storedRow();
+    (row.result as { origins: { totalUsd: unknown }[] }).origins[0].totalUsd = 1734.73;
+    snapshotRow = row;
+    for (const result of [await exportVersionPdfAction({ snapshotId: SNAPSHOT }), await exportVersionCsvAction({ snapshotId: SNAPSHOT })]) {
+      expect(result).toEqual({
+        ok: false, code: "invalid", error: "This version can't be exported: its stored data isn't in a form this export can read.", issues: undefined,
+      });
+    }
+  });
+
+  test("a bad id, or a version that isn't there (or RLS hides)", async () => {
+    expect(await exportVersionPdfAction({ snapshotId: "nope" })).toMatchObject({ ok: false, code: "not_found" });
+    snapshotRow = null;
+    expect(await exportVersionCsvAction({ snapshotId: SNAPSHOT })).toMatchObject({
+      ok: false, code: "not_found", error: "This version doesn't exist, or you can't open it.",
+    });
+  });
+});
+
 describe("behind the feature flag", () => {
   test("off: every action refuses with a generic message, before any database call", async () => {
     enabled = false;
@@ -353,6 +431,8 @@ describe("behind the feature flag", () => {
       await exportWorkspaceCsvAction({ workspaceId: WORKSPACE }),
       await lockWorkspaceAction({ workspaceId: WORKSPACE, expectedUpdatedAt: UPDATED_AT }),
       await deleteSnapshotAction({ snapshotId: WORKSPACE }),
+      await exportVersionPdfAction({ snapshotId: WORKSPACE }),
+      await exportVersionCsvAction({ snapshotId: WORKSPACE }),
     ];
     for (const result of results) {
       expect(result).toEqual({ ok: false, code: "unavailable", error: "Landed Cost isn't available yet.", issues: undefined });
@@ -376,6 +456,8 @@ describe("behind the feature flag", () => {
       "exportWorkspaceCsvAction",
       "lockWorkspaceAction",
       "deleteSnapshotAction",
+      "exportVersionPdfAction",
+      "exportVersionCsvAction",
     ]);
     for (const [, , first, second] of actions) {
       expect(first.trim()).toMatch(/^(const role = )?await requireStaff\(\);$/);

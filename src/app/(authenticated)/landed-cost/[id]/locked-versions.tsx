@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { deleteSnapshotAction, lockWorkspaceAction } from "../actions";
 import { cardClass, errorTextClass, hintClass, secondaryButtonClass, sectionTitleClass } from "../styles";
+import { VersionPdfLink } from "./version-export-buttons";
 
 export type VersionRow = {
   id: string;
@@ -179,6 +180,7 @@ export function LockedVersionsList({ workspaceId, versions, loadFailed }: { work
               <th scope="col" className="py-2 pr-3 font-medium">By</th>
               <th scope="col" className="py-2 pr-3 font-medium">Baseline</th>
               <th scope="col" className="py-2 pr-3 text-right font-medium">Per unit</th>
+              <th scope="col" className="py-2 pr-3 font-medium">Export</th>
               <th scope="col" className="py-2">
                 <span className="sr-only">Delete</span>
               </th>
@@ -199,6 +201,9 @@ export function LockedVersionsList({ workspaceId, versions, loadFailed }: { work
                 <td className="py-2 pr-3">{v.byName}</td>
                 <td className="py-2 pr-3">{v.baselineLabel}</td>
                 <td className="py-2 pr-3 text-right tabular-nums">{v.baselinePerUnit}</td>
+                <td className="py-2 pr-3">
+                  <VersionPdfLink snapshotId={v.id} versionNo={v.versionNo} />
+                </td>
                 <td className="py-2 text-right">{v.canDelete && <DeleteVersionButton version={v} />}</td>
               </tr>
             ))}

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { formatRateDate, timestampDateUtc } from "@/lib/fx/rate-provenance";
 import { toComparisonView } from "@/lib/landed-cost/comparison-view";
 import { toEditorDraft } from "@/lib/landed-cost/editor-draft";
 import { isLandedCostEnabled } from "@/lib/landed-cost/feature-flag";
@@ -10,9 +9,11 @@ import { toResultViews } from "@/lib/landed-cost/result-view";
 import { loadLockedVersion } from "@/lib/landed-cost/server-snapshots";
 import { loadFirstNames } from "@/lib/landed-cost/server-workspace-list";
 import { restoreSnapshot } from "@/lib/landed-cost/snapshot-schema";
+import { describeVersion } from "@/lib/landed-cost/version-report";
 import { ORIGIN_COUNTRIES } from "@/lib/tariff/countries";
 import { personName } from "@/lib/tariff/fee-audit";
 import { cardClass } from "../../../styles";
+import { VersionExportButtons } from "../../version-export-buttons";
 import { LockedVersionView } from "./locked-version-view";
 
 // One locked version, read-only. Rendered ONLY from the stored snapshot,
@@ -48,9 +49,8 @@ export default async function LockedVersionPage({ params }: PageProps<"/landed-c
     console.error("LockedVersionPage names error:", error);
     return new Map<string, string | null>();
   });
-  const lockedOn = formatRateDate(timestampDateUtc(v.created_at));
-  const asOf = formatRateDate(v.as_of_date);
-  const release = v.hts_release_title ? `${v.hts_release_title} (${v.hts_release_name})` : v.hts_release_name;
+  const meta = describeVersion(v, personName(v.created_by, names));
+  const { lockedOn, asOf, release } = meta;
   const restored = v.snapshot ? restoreSnapshot(v.snapshot) : null;
   const draft = restored ? toEditorDraft(restored.workspace) : null;
 
@@ -59,11 +59,16 @@ export default async function LockedVersionPage({ params }: PageProps<"/landed-c
       {back}
       <div className="mt-4 mb-6">
         <h1 className="font-display text-2xl font-semibold text-move-navy">
-          Locked version v{v.version_no}, locked on {lockedOn} by {personName(v.created_by, names)}
+          Locked version v{v.version_no}, locked on {lockedOn} by {meta.byName}
         </h1>
         <p className="mt-1 text-sm text-neutral-muted">
-          {v.workspace_name} · Entry date {formatRateDate(v.entry_date)} · HTS release {release} · Duty data as of {asOf}
+          {v.workspace_name} · Entry date {meta.entryDate} · HTS release {release} · Duty data as of {asOf}
         </p>
+        {v.snapshot && (
+          <div className="mt-3">
+            <VersionExportButtons snapshotId={v.id} />
+          </div>
+        )}
         <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-move-navy" role="status">
           <span className="rounded-full bg-neutral-bg px-2 py-0.5 text-xs font-semibold">Read-only</span>
           {v.incomplete && (

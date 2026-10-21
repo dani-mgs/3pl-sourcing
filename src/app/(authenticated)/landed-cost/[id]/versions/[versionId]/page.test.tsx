@@ -78,6 +78,8 @@ describe("a locked version", () => {
     expect(html).toContain("$17.35");
     expect(html).toContain("Not recalculated.");
     expect(html).toContain("Read-only");
+    expect(html).toContain("Download PDF");
+    expect(html).toContain("Export CSV");
     expect(html).not.toContain("As of your last save");
     expect(html).not.toMatch(/<input|<textarea/);
     expect(recalculated).not.toHaveBeenCalled();
@@ -91,6 +93,7 @@ describe("a locked version", () => {
     const html = await render();
     expect(html).toContain("This version can&#x27;t be displayed");
     expect(html).toContain("Locked version v3");
+    expect(html).not.toContain("Download PDF");
     expect(recalculated).not.toHaveBeenCalled();
   });
 
