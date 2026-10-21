@@ -17,5 +17,6 @@
 **Locked versions**
 - Lock the last save once every origin is complete: it becomes v1, v2, … (a number is never reused, even after a delete) with its result as calculated that day. A version never changes and is shown from what was stored; later duty data or edits don't affect it. Pending duty reviews don't block it; the version is marked Incomplete.
 - The creator, the workspace's owner or an admin can delete a version. Delete a workspace's versions before the workspace.
+- Any staff member can download a version as PDF or CSV, built from what was stored. Drafts export as CSV only.
 
-**Not built yet:** a breakeven figure, freight quotes, delivered incoterms, duty overrides, .xlsx upload, a PDF or CSV of a locked version.
+**Not built yet:** a breakeven figure, freight quotes, delivered incoterms, duty overrides, .xlsx upload, non-Latin text in PDFs.
