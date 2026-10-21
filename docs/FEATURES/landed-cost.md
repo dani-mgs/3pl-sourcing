@@ -19,4 +19,9 @@
 - The creator, the workspace's owner or an admin can delete a version. Delete a workspace's versions before the workspace.
 - Any staff member can download a version as PDF or CSV, built from what was stored. Drafts export as CSV only.
 
-**Not built yet:** a breakeven figure, freight quotes, delivered incoterms, duty overrides, .xlsx upload, non-Latin text in PDFs.
+**Manual rates (core; no editing UI yet)**
+- One per duty layer of a SKU in an origin: replace a layer the app applied (the base duty or a program, 0 included) or add one it didn't (a program it named, or a free label such as anti-dumping). A rate (% of the entered value, 0 to 1000) or a fixed amount, with a reason; at most 10 per SKU per origin; never MPF or HMF. Owner or admin; any staff member sees them. Who set and changed one, and when, come from the session.
+- Applied after the app's duties: the origin is marked "Includes manual rate", and the comparison's caution names each one. It never makes a result complete; the app's warnings stay (marked as covered). A replace whose layer the app no longer applies, or an add the app now applies itself, blocks that SKU's total; a changed app rate is noted.
+- Locked versions (schema version 2) keep them; versions locked before still show and export as before.
+
+**Not built yet:** a breakeven figure, freight quotes, delivered incoterms, the manual-rate editor, .xlsx upload, non-Latin text in PDFs.

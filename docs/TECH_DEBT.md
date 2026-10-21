@@ -253,10 +253,30 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ### Landed Cost: the database can't re-prove a locked version's duty amounts
 - **Added:** 2026-10-21
-- **What:** As with saved estimates, `save_landed_cost_snapshot()` re-checks a version's sums, inputs and HTS release but can't recompute the duty amounts; they're right because the server computed them. (PDF and CSV exports of versions shipped in 5b-2.)
+- **What:** As with saved estimates, `save_landed_cost_snapshot()` re-checks a version's sums, inputs and HTS release but can't recompute the app's own duty amounts; they're right because the server computed them. (PDF and CSV exports of versions shipped in 5b-2.) Since Phase 3a it does prove each manual layer's amount from its stored rate and the entered value, and that a SKU's duties are the sum of its layers.
 - **Why deferred:** Duties are calculated in TypeScript; repeating that in SQL would be a second implementation to keep in step.
 - **Severity:** Low
 - **Where:** `supabase/migrations/20261021074001_landed_cost_snapshots.sql`
+
+### Landed Cost manual rates: no editing UI yet
+- **Added:** 2026-10-21
+- **What:** Phase 3a is the core only: the table, the save path, the calculation and locked versions. Nothing in the app creates a manual rate yet; the result panel, PDF and CSV only mark one ("(manual rate)" on the layer, "Includes manual rate", a conflict in the Missing list). /help still lists manual rates as not available.
+- **Why deferred:** Phase 3b (the editor, and the full details on screen).
+- **Severity:** Low
+- **Where:** `src/lib/landed-cost/manual-rates.ts`, `[id]/result-panel.tsx`
+
+### Landed Cost: deploy-window compatibility to remove after Phase 3a ships
+- **Added:** 2026-10-21
+- **What:** For the minutes when the old code runs against the new functions, `save_landed_cost_draft` treats an item without `overrides` as "leave its manual rates as they are", and `save_landed_cost_snapshot` still takes schema version 1 rows while a workspace has no manual rates. Once 3a is deployed, a later migration can require the key and version 2. Stored version 1 rows must keep parsing in the app either way.
+- **Why deferred:** Needed until the 3a code is live.
+- **Severity:** Low
+- **Where:** `supabase/migrations/20261021135010_landed_cost_rate_overrides.sql`
+
+### Landed Cost manual rates aren't copied when an origin is duplicated
+- **Added:** 2026-10-21
+- **What:** "Duplicate this origin" copies packing, freight split and other costs but not manual rates (they're about that origin's duties). Decide in 3b whether to offer copying them.
+- **Severity:** Low
+- **Where:** `src/lib/landed-cost/origin-draft.ts`
 
 ### Landed Cost PDF: only Windows-1252 characters (no embedded font)
 - **Added:** 2026-10-21
