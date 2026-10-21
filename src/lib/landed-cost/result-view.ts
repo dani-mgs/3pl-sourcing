@@ -7,10 +7,10 @@ import { usd } from "@/lib/tariff/amount-text";
 import { baselineScenario, missingFieldId, scenarioFieldId, skuFieldId, workspaceFieldId } from "./editor-draft";
 import { perUnit, shareTenths, tenthsText } from "./money";
 import type { ScenarioField, SkuField } from "./scenario-inputs";
-import type { DutyUnit, ScenarioOutcome, SkuStatus, WorkspaceResult } from "./server-compute";
 import type { Workspace } from "./workspace-schema";
+import type { ViewDutyUnit, ViewOutcome, ViewResult, ViewSkuStatus } from "./view-result";
 
-// The result panel's content: the server's WorkspaceResult for the edited
+// The result panel's content: the server's result (or a locked version's) for the edited
 // scenario, as plain text ready to show (no bigint or Rational reaches the
 // browser). Pure. Every status carries a word; colour only repeats it.
 
@@ -32,7 +32,7 @@ export type SkuResultRow = {
   skuLineId: string;
   skuCode: string;
   htsCode: string;
-  status: SkuStatus["status"];
+  status: ViewSkuStatus["status"];
   statusLabel: string;
   // Complete scenario only.
   perUnit: string | null;
@@ -52,7 +52,7 @@ export type BreakdownRow = { key: string; label: string; amount: string; perUnit
 
 type Common = {
   // Per SKU line, the rate's unit when the last result asked for a duty quantity.
-  dutyQuantityUnits: Record<string, DutyUnit>;
+  dutyQuantityUnits: Record<string, ViewDutyUnit>;
 };
 
 export type ResultView =
@@ -88,14 +88,14 @@ const SKU_FIELD_LABELS: Record<Exclude<SkuField, "duty_quantity">, string> = {
 const SCENARIO_FIELD_LABELS: Record<ScenarioField, string> = { freight_total_usd: "Freight total (USD)" };
 const SCENARIO_FIELD_INPUT: Record<ScenarioField, "freightTotalUsd"> = { freight_total_usd: "freightTotalUsd" };
 
-const STATUS_LABELS: Record<SkuStatus["status"], string> = {
+const STATUS_LABELS: Record<ViewSkuStatus["status"], string> = {
   ok: "Complete",
   inputs_missing: "Inputs missing",
   duty_error: "Duty error",
 };
 
 // The duty quantity's label in the rate's unit: kg is the goods' net weight.
-export function dutyQuantityLabel(unit: DutyUnit): string {
+export function dutyQuantityLabel(unit: ViewDutyUnit): string {
   return unit.token === "kg" ? "Net weight (kg)" : `Quantity (${unit.label})`;
 }
 
@@ -114,7 +114,7 @@ export function shares(parts: bigint[]): { texts: string[]; rounded: boolean } {
   };
 }
 
-function skuRows(workspace: Workspace, outcome: ScenarioOutcome): SkuResultRow[] {
+function skuRows(workspace: Workspace, outcome: ViewOutcome): SkuResultRow[] {
   const lines = new Map(workspace.skuLines.map((l) => [l.id, l]));
   const totals = outcome.state === "complete" ? new Map(outcome.totals.skus.map((t) => [t.skuId, t])) : null;
   return outcome.skus.map((s) => {
@@ -151,7 +151,7 @@ function skuRows(workspace: Workspace, outcome: ScenarioOutcome): SkuResultRow[]
 }
 
 // What an incomplete origin still needs, each pointing at its field in that origin.
-export function missingItems(workspace: Workspace, outcome: Extract<ScenarioOutcome, { state: "incomplete" }>): MissingItem[] {
+export function missingItems(workspace: Workspace, outcome: Extract<ViewOutcome, { state: "incomplete" }>): MissingItem[] {
   const codes = new Map(workspace.skuLines.map((l) => [l.id, l.skuCode]));
   const items: MissingItem[] = outcome.missing.map((f) => ({
     label: SCENARIO_FIELD_LABELS[f],
@@ -177,7 +177,7 @@ export function missingItems(workspace: Workspace, outcome: Extract<ScenarioOutc
 }
 
 // Program warnings, once each, then the fees-not-entered note.
-function warningsOf(skus: SkuStatus[], feeWarnings: { text: string }[] = []): string[] {
+function warningsOf(skus: ViewSkuStatus[], feeWarnings: { text: string }[] = []): string[] {
   const seen = new Set<string>();
   for (const s of skus) {
     if (s.status === "duty_error" || !s.duty) continue;
@@ -187,7 +187,7 @@ function warningsOf(skus: SkuStatus[], feeWarnings: { text: string }[] = []): st
   return [...seen];
 }
 
-function feeNotes(outcome: Extract<ScenarioOutcome, { state: "complete" }>): string[] {
+function feeNotes(outcome: Extract<ViewOutcome, { state: "complete" }>): string[] {
   const fees = outcome.totals.entryFees;
   const entry =
     fees.entryTypeSource === "chosen"
@@ -203,9 +203,9 @@ function feeNotes(outcome: Extract<ScenarioOutcome, { state: "complete" }>): str
 }
 
 // One origin's view (the baseline's when `scenarioId` is left out).
-export function toResultView(result: WorkspaceResult | null, workspace: Workspace, scenarioId?: string): ResultView {
+export function toResultView(result: ViewResult | null, workspace: Workspace, scenarioId?: string): ResultView {
   const scenario = scenarioId ? workspace.scenarios.find((s) => s.id === scenarioId) : baselineScenario(workspace);
-  const dutyQuantityUnits: Record<string, DutyUnit> = {};
+  const dutyQuantityUnits: Record<string, ViewDutyUnit> = {};
   const common = { dutyQuantityUnits };
   if (!scenario || !result) return { ...common, state: "no_scenario" };
 
@@ -272,6 +272,6 @@ export function toResultView(result: WorkspaceResult | null, workspace: Workspac
 }
 
 // Every saved origin's view, by scenario id.
-export function toResultViews(result: WorkspaceResult | null, workspace: Workspace): Record<string, ResultView> {
+export function toResultViews(result: ViewResult | null, workspace: Workspace): Record<string, ResultView> {
   return Object.fromEntries(workspace.scenarios.map((s) => [s.id, toResultView(result, workspace, s.id)]));
 }

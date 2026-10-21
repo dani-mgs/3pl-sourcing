@@ -283,11 +283,14 @@ export function ResultPanel({
   dirty,
   lastSaved,
   originLabel = null,
+  subtitle = null,
 }: {
   view: ResultView | null;
   dirty: boolean;
   lastSaved: string;
   originLabel?: string | null;
+  // In place of "As of your last save…" (a locked version).
+  subtitle?: string | null;
 }) {
   return (
     <section className={`${cardClass} flex flex-col gap-4`} aria-labelledby="lc-result-title" aria-live="polite">
@@ -295,7 +298,7 @@ export function ResultPanel({
         <h2 id="lc-result-title" className="font-display text-lg font-semibold text-move-navy">
           Result{originLabel && <span className="font-normal text-neutral-muted"> · {originLabel}</span>}
         </h2>
-        <p className="text-xs text-neutral-muted">As of your last save ({lastSaved}), calculated on the server.</p>
+        <p className="text-xs text-neutral-muted">{subtitle ?? `As of your last save (${lastSaved}), calculated on the server.`}</p>
         {dirty && (
           <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-[#92400E]">
             <AlertTriangle aria-hidden="true" className="size-3.5" /> Unsaved changes: save to update the result.

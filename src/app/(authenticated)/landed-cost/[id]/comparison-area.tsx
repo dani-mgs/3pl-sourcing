@@ -192,7 +192,8 @@ function Ready({ view }: { view: Extract<ComparisonView, { state: "ready" }> }) 
   );
 }
 
-export function ComparisonArea({ view, dirty }: { view: ComparisonView; dirty: boolean }) {
+// `subtitle` replaces "As of your last save…" (a locked version).
+export function ComparisonArea({ view, dirty, subtitle = null }: { view: ComparisonView; dirty: boolean; subtitle?: string | null }) {
   if (view.state === "hidden") return null;
   return (
     <section className={`${cardClass} flex flex-col gap-4`} aria-labelledby="lc-compare-title">
@@ -200,7 +201,7 @@ export function ComparisonArea({ view, dirty }: { view: ComparisonView; dirty: b
         <h2 id="lc-compare-title" className={sectionTitleClass}>
           Compare origins
         </h2>
-        <p className={hintClass}>As of your last save, calculated on the server.</p>
+        <p className={hintClass}>{subtitle ?? "As of your last save, calculated on the server."}</p>
         {dirty && <p className="mt-1 text-xs font-semibold text-[#92400E]">Unsaved changes: save to update the comparison.</p>}
       </div>
       {view.state === "ready" ? (

@@ -22,7 +22,9 @@ create function pg_temp.visible_rows() returns table (tbl text, n bigint) langua
 declare t text;
 begin
   for t in select c.relname from pg_class c join pg_namespace s on s.oid = c.relnamespace
-           where s.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity order by 1 loop
+           where s.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity
+             -- No API role has any privilege on it (pgTAP 39 checks), so there is nothing to count.
+             and c.relname <> 'landed_cost_snapshot_counters' order by 1 loop
     tbl := t;
     execute format('select count(*) from public.%I', t) into n;
     return next;
@@ -58,6 +60,11 @@ insert into landed_cost_scenario_items (workspace_id, scenario_id, sku_line_id, 
   ('00000000-0000-4000-8000-000000003701', '00000000-0000-4000-8000-000000003703', '00000000-0000-4000-8000-000000003702', 6);
 insert into landed_cost_other_costs (workspace_id, scenario_id, label, amount_usd) values
   ('00000000-0000-4000-8000-000000003701', '00000000-0000-4000-8000-000000003703', 'Broker fee', 95);
+-- A locked version (written as the table's owner; the app goes through save_landed_cost_snapshot).
+insert into landed_cost_snapshots (workspace_id, version_no, created_by, as_of_date, workspace_name, entry_date, workspace_updated_at,
+  hts_release_id, hts_release_name, schema_version, inputs, result, origin_count, baseline_label, baseline_per_unit_usd, incomplete) values
+  ('00000000-0000-4000-8000-000000003701', 1, '00000000-0000-4000-8000-0000000000a1', current_date, 'pgTAP workspace', '2026-11-01', now(),
+   '00000000-0000-4000-8000-00000000ba01', 'pgTAP', 1, '{}', '{}', 1, 'China', 17.35, false);
 
 -- ---- The helpers ----------------------------------------------------------------
 select is(
@@ -82,12 +89,14 @@ select is(
                      and p.qual = '( SELECT has_staff_role() AS has_staff_role)'
                      and p.with_check = '( SELECT has_staff_role() AS has_staff_role)')
      -- The one client-readable table has its own restrictive policy (pgTAP 29).
-     and c.relname <> 'client_entitlements'),
+     and c.relname <> 'client_entitlements'
+     -- No policies at all, and no API role has any privilege on it (pgTAP 39).
+     and c.relname <> 'landed_cost_snapshot_counters'),
   0, 'every RLS table but client_entitlements has the restrictive staff policy, as a once-per-query subselect');
 select is(
   (select count(*)::int from pg_class c join pg_namespace s on s.oid = c.relnamespace
    where s.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity),
-  32, 'there are 32 RLS tables (a new one needs the policy too)');
+  34, 'there are 34 RLS tables (a new one needs the policy too)');
 
 select is(
   (select prosecdef from pg_proc where oid = 'public.search_hts_lines(text[], text, integer)'::regprocedure),

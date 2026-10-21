@@ -251,6 +251,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 - **Where:** `src/lib/landed-cost/parse-sku-paste.ts`, `src/lib/landed-cost/sku-paste.ts`
 
+### Landed Cost: locked versions have no PDF or CSV yet
+- **Added:** 2026-10-21
+- **What:** A locked version can be viewed but not exported yet (Phase 5b-2). As with saved estimates, the database re-checks a version's sums, inputs and HTS release but can't recompute the duty amounts; they're right because the server computed them.
+- **Why deferred:** Export is the next phase.
+- **Severity:** Low
+- **Where:** `supabase/migrations/20261021074001_landed_cost_snapshots.sql`, `src/lib/landed-cost/snapshot-schema.ts`
+
 ### Landed Cost: delivered incoterms not supported yet
 - **Added:** 2026-10-21
 - **What:** Landed Cost Phase 1 accepts only EXW, FCA, FAS and FOB, where qty × unit price is the entered value. CFR, CIF, CPT, CIP, DAP, DPU, DDP and DDU include international freight (and, for CIF/CIP, insurance) in the price, which must come out of the customs value first; `computeScenarioTotals` refuses them with an error naming the incoterm.

@@ -8,15 +8,20 @@ import { todayUtc } from "@/lib/fx/server-rates";
 import { isLandedCostEnabled } from "@/lib/landed-cost/feature-flag";
 import { toComparisonView } from "@/lib/landed-cost/comparison-view";
 import { toResultViews } from "@/lib/landed-cost/result-view";
+import { lockBlocker } from "@/lib/landed-cost/lock-check";
 import { computeWorkspaceResult } from "@/lib/landed-cost/server-compute";
+import { loadSnapshotList } from "@/lib/landed-cost/server-snapshots";
 import { loadWorkspace } from "@/lib/landed-cost/server-workspace";
 import { loadFirstNames } from "@/lib/landed-cost/server-workspace-list";
 import { ORIGIN_COUNTRIES } from "@/lib/tariff/countries";
 import { entryDateBounds } from "@/lib/tariff/entry-date";
 import { personName } from "@/lib/tariff/fee-audit";
 import { releaseLabel } from "@/lib/tariff/hts-lookup";
+import { usd } from "@/lib/tariff/amount-text";
+import { parseDecimal } from "@/lib/tariff/rational";
 import { cardClass } from "../styles";
 import { DeleteWorkspaceButton } from "./delete-workspace-button";
+import { LockedVersionsList, type VersionRow } from "./locked-versions";
 import { WorkspaceEditor } from "./workspace-editor";
 
 // One Landed Cost workspace: its inputs, edited as a local draft and saved
@@ -63,15 +68,30 @@ export default async function LandedCostWorkspacePage({ params, searchParams }: 
   const workspace = loaded.workspace;
   const canEdit = auth.user?.id === workspace.ownerId || role === "admin";
   const today = todayUtc();
-  const [result, names] = await Promise.all([
+  const [result, snapshots] = await Promise.all([
     workspace.scenarios.length > 0 ? computeWorkspaceResult(supabase, workspace, today) : Promise.resolve(null),
-    loadFirstNames(supabase, [workspace.ownerId]).catch((error) => {
-      console.error("LandedCostWorkspacePage names error:", error);
-      return new Map<string, string | null>();
-    }),
+    loadSnapshotList(supabase, workspace.id),
   ]);
+  const lockers = snapshots.ok ? snapshots.versions.map((v) => v.created_by) : [];
+  const names = await loadFirstNames(supabase, [workspace.ownerId, ...lockers]).catch((error) => {
+    console.error("LandedCostWorkspacePage names error:", error);
+    return new Map<string, string | null>();
+  });
   const views = toResultViews(result, workspace);
   const ownerName = personName(workspace.ownerId, names);
+  const userId = auth.user?.id ?? null;
+  const versions: VersionRow[] = snapshots.ok
+    ? snapshots.versions.map((v) => ({
+        id: v.id,
+        versionNo: v.version_no,
+        lockedOn: formatRateDate(timestampDateUtc(v.created_at)),
+        byName: personName(v.created_by, names),
+        baselineLabel: v.baseline_label,
+        baselinePerUnit: usd(parseDecimal(v.baseline_per_unit_usd)),
+        incomplete: v.incomplete,
+        canDelete: v.created_by === userId || workspace.ownerId === userId || role === "admin",
+      }))
+    : [];
 
   return (
     // Wider than max-w-6xl: the editor and the result column side by side
@@ -95,6 +115,7 @@ export default async function LandedCostWorkspacePage({ params, searchParams }: 
           views={views}
           comparison={toComparisonView(result, workspace)}
           initialOrigin={typeof origin === "string" ? origin : null}
+          lockBlocker={lockBlocker(workspace, result)}
           canEdit={canEdit}
           ownerName={ownerName}
           countries={ORIGIN_COUNTRIES}
@@ -110,6 +131,9 @@ export default async function LandedCostWorkspacePage({ params, searchParams }: 
           }
         />
       )}
+      <div className="mt-6">
+        <LockedVersionsList workspaceId={workspace.id} versions={versions} loadFailed={!snapshots.ok} />
+      </div>
     </div>
   );
 }

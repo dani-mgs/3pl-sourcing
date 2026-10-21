@@ -14,4 +14,8 @@
 - Paste from Excel matches rows to SKUs by code (exact), adds new ones and never deletes. A blank cell keeps the value. FOB price and packing go to the selected origin. Calculated columns are never imported, and units are never guessed (L, W, H in cm; carton weight in kg).
 - Export CSV uses the last save, recalculated on the server, and is marked DRAFT.
 
-**Not built yet:** a breakeven figure, freight quotes, delivered incoterms, duty overrides, snapshots, .xlsx upload.
+**Locked versions**
+- Lock the last save once every origin is complete: it becomes v1, v2, … (a number is never reused, even after a delete) with its result as calculated that day. A version never changes and is shown from what was stored; later duty data or edits don't affect it. Pending duty reviews don't block it; the version is marked Incomplete.
+- The creator, the workspace's owner or an admin can delete a version. Delete a workspace's versions before the workspace.
+
+**Not built yet:** a breakeven figure, freight quotes, delivered incoterms, duty overrides, .xlsx upload, a PDF or CSV of a locked version.
