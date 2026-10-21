@@ -20,6 +20,8 @@ import { CM_BOUNDS, DIVISOR_BOUNDS, KG_BOUNDS } from "./shipment-measures";
 
 export const MAX_SKU_LINES = 100;
 export const MAX_SCENARIOS = 5;
+export const MAX_OVERRIDES_PER_ITEM = 10;
+export const MAX_RATE_PERCENT = 1000;
 
 const ENTERED_VALUE_MAX_CENTS = BigInt(10) ** BigInt(16);
 
@@ -116,6 +118,42 @@ export const skuLineSchema = z
 const measure = (bounds: { places: number; max: number }, message: string) =>
   optionalNumber((s) => parseMeasure(s, bounds) != null, message);
 
+// A manual rate (manual-rates.ts), as the table checks it. Who set or changed
+// it, and when, are never read from the browser (unknown keys are dropped);
+// the app's own rate for a replaced layer is filled in by the save action.
+const LAYER_KEY = /^[a-z0-9_]{1,64}$/;
+const isFeeKey = (key: string) => /^(mpf|hmf)/i.test(key);
+const ratePercent = (s: string) => {
+  const value = parseAmount(s, 4);
+  return value != null && value.n <= BigInt(MAX_RATE_PERCENT) * value.d;
+};
+export const overrideSchema = z
+  .object({
+    ref,
+    id,
+    kind: z.enum(["replace", "add"], "Choose whether the manual rate replaces a duty or adds one."),
+    layerKey: z
+      .string()
+      .nullish()
+      .transform((s) => (s ?? "").trim() || null)
+      .refine((s) => s == null || isFeeKey(s) || LAYER_KEY.test(s), "Choose the duty layer from the list."),
+    label: optionalText(100, "Enter a label of up to 100 characters."),
+    ratePercent: optionalNumber(ratePercent, `Enter the rate as a percentage from 0 to ${MAX_RATE_PERCENT}, with up to 4 decimals.`),
+    amountUsd: optionalNumber((s) => parseCents(s) != null, "Enter the amount in USD as 0 or more, with up to 2 decimals."),
+    reason: text(1, 500, "Enter a reason of 1 to 500 characters."),
+  })
+  .superRefine((o, ctx) => {
+    const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });
+    if (o.layerKey != null && isFeeKey(o.layerKey)) issue("layerKey", "MPF and HMF can't be overridden.");
+    if (o.ratePercent == null && o.amountUsd == null) issue("ratePercent", "Enter a rate or a fixed amount.");
+    if (o.ratePercent != null && o.amountUsd != null) issue("ratePercent", "Enter a rate or a fixed amount, not both.");
+    if (o.kind === "replace" && o.layerKey == null) issue("layerKey", "Choose the duty layer to replace.");
+    if (o.kind === "add" && o.layerKey === "base") issue("layerKey", "The base duty can be replaced, not added.");
+    if (o.kind === "add" && o.label == null) issue("label", "Enter a label of 1 to 100 characters.");
+  })
+  // A replace is named by its layer, not a label.
+  .transform((o) => (o.kind === "replace" ? { ...o, label: null } : o));
+
 export const itemSchema = z.object({
   skuRef: ref,
   fobUnitPriceUsd: fob,
@@ -124,6 +162,10 @@ export const itemSchema = z.object({
   cartonWidthCm: measure(CM_BOUNDS, "Enter the carton width in cm, above zero with up to 2 decimals."),
   cartonHeightCm: measure(CM_BOUNDS, "Enter the carton height in cm, above zero with up to 2 decimals."),
   cartonGrossKg: measure(KG_BOUNDS, "Enter the carton weight in kg, above zero with up to 3 decimals."),
+  overrides: z
+    .array(overrideSchema)
+    .max(MAX_OVERRIDES_PER_ITEM, `A SKU can have at most ${MAX_OVERRIDES_PER_ITEM} manual rates in an origin.`)
+    .default([]),
 });
 
 const otherCostSchema = z.object({
@@ -184,6 +226,9 @@ function checkRows(d: z.output<typeof draftObject>, ctx: z.RefinementCtx) {
   const labels = duplicates(d.scenarios.map((s) => s.label));
   const scenarioIds = duplicates(d.scenarios.flatMap((s) => (s.id ? [s.id] : [])));
   const costIds = duplicates(d.scenarios.flatMap((s) => s.otherCosts.flatMap((c) => (c.id ? [c.id] : []))));
+  const overrides = d.scenarios.flatMap((s) => s.items.flatMap((it) => it.overrides));
+  const overrideRefs = duplicates(overrides.map((o) => o.ref));
+  const overrideIds = duplicates(overrides.flatMap((o) => (o.id ? [o.id] : [])));
   const lines = new Map(d.skuLines.map((l) => [l.ref, l]));
   d.scenarios.forEach((s, i) => {
     if (scenarioRefs.has(s.ref) || (s.id && scenarioIds.has(s.id))) issue(["scenarios", i], "This scenario appears twice. Reload the workspace.");
@@ -196,6 +241,12 @@ function checkRows(d: z.output<typeof draftObject>, ctx: z.RefinementCtx) {
       const line = lines.get(it.skuRef);
       if (!line) return issue(["scenarios", i, "items", j], "This item's SKU line isn't in the workspace. Reload the workspace.");
       if (itemRefs.has(it.skuRef)) issue(["scenarios", i, "items", j], `${line.skuCode} has more than one set of inputs in ${s.label}.`);
+      const layers = duplicates(it.overrides.flatMap((o) => (o.layerKey ? [o.layerKey] : [])));
+      it.overrides.forEach((o, k) => {
+        const at = ["scenarios", i, "items", j, "overrides", k];
+        if (overrideRefs.has(o.ref) || (o.id && overrideIds.has(o.id))) issue(at, "This manual rate appears twice. Reload the workspace.");
+        if (o.layerKey && layers.has(o.layerKey)) issue([...at, "layerKey"], `${line.skuCode} in ${s.label}: only one manual rate per duty layer.`);
+      });
       // As the loader receives it: qty x FOB rounded to the cent, in (0, 1e14).
       // Skipped when either is missing or already refused above.
       const quantity = parseWholeNumber(line.quantity);
@@ -261,8 +312,12 @@ export function createPayload(input: CreateWorkspaceInput) {
   return { name: input.name, entry_date: input.entryDate, scenario: scenarioPayload(input.scenario) };
 }
 
+export type DraftOverride = Draft["scenarios"][number]["items"][number]["overrides"][number];
+// The app's own rate and amount for a replaced layer (from the server).
+export type EngineRates = (o: DraftOverride) => { rateText: string; amountUsd: string } | null;
+
 // Rows keep their order as sort_order; a row without an id is inserted.
-export function savePayload(draft: Draft) {
+export function savePayload(draft: Draft, engineRates?: EngineRates) {
   const withId = (rowId: string | null) => (rowId ? { id: rowId } : {});
   return {
     name: draft.name,
@@ -292,6 +347,22 @@ export function savePayload(draft: Draft) {
         carton_width_cm: it.cartonWidthCm,
         carton_height_cm: it.cartonHeightCm,
         carton_gross_kg: it.cartonGrossKg,
+        overrides: it.overrides.map((o, k) => {
+          const engine = o.kind === "replace" ? engineRates?.(o) : null;
+          return {
+            ref: o.ref,
+            ...withId(o.id),
+            kind: o.kind,
+            layer_key: o.layerKey,
+            label: o.label,
+            rate_percent: o.ratePercent,
+            amount_usd: o.amountUsd,
+            reason: o.reason,
+            engine_rate_text: engine?.rateText ?? null,
+            engine_amount_usd: engine?.amountUsd ?? null,
+            sort_order: k,
+          };
+        }),
       })),
       other_costs: s.otherCosts.map((c, j) => ({ ...withId(c.id), label: c.label, amount_usd: c.amountUsd, sort_order: j })),
     })),

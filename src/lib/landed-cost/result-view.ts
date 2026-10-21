@@ -41,6 +41,7 @@ export type SkuResultRow = {
   duties: string | null;
   dutyRate: string | null;
   dutiesIncomplete: boolean;
+  includesManualRate: boolean;
   layers: DutyLayer[];
   lastVerified: string | null;
   lastVerifiedStale: boolean;
@@ -63,6 +64,8 @@ export type ResultView =
       total: string;
       units: string;
       incomplete: boolean;
+      // "Includes manual rate": a manual rate applies to a SKU (manual-rates.ts).
+      includesManualRate: boolean;
       breakdown: BreakdownRow[];
       // The shown shares don't add up to 100.0% ("Percentages are rounded").
       percentagesRounded: boolean;
@@ -92,7 +95,11 @@ const STATUS_LABELS: Record<ViewSkuStatus["status"], string> = {
   ok: "Complete",
   inputs_missing: "Inputs missing",
   duty_error: "Duty error",
+  manual_rate_conflict: "Manual rate to fix",
 };
+
+export const INCLUDES_MANUAL_RATE = "Includes manual rate";
+export const COVERED_BY_MANUAL_RATE = " (covered by a manual rate)";
 
 // The duty quantity's label in the rate's unit: kg is the goods' net weight.
 export function dutyQuantityLabel(unit: ViewDutyUnit): string {
@@ -132,6 +139,7 @@ function skuRows(workspace: Workspace, outcome: ViewOutcome): SkuResultRow[] {
       duties: duty ? formatCurrency(duty.dutiesUsd, "USD") : null,
       dutyRate: duty?.effectiveDutyRate ?? null,
       dutiesIncomplete: duty?.incomplete ?? false,
+      includesManualRate: (duty?.lines ?? []).some((l) => l.manual),
       layers: (duty?.lines ?? []).map((l) => ({
         label: l.label,
         heading: l.heading ?? null,
@@ -162,6 +170,9 @@ export function missingItems(workspace: Workspace, outcome: Extract<ViewOutcome,
     if (s.status === "duty_error") {
       items.push({ label: `${code}: ${s.message}`, targetId: skuFieldId(s.skuLineId, "htsCode") });
     }
+    if (s.status === "manual_rate_conflict") {
+      for (const m of s.messages) items.push({ label: `${code}: ${m}`, targetId: null });
+    }
     if (s.status === "ok") continue;
     for (const f of s.missing) {
       const label =
@@ -181,7 +192,7 @@ function warningsOf(skus: ViewSkuStatus[], feeWarnings: { text: string }[] = [])
   const seen = new Set<string>();
   for (const s of skus) {
     if (s.status === "duty_error" || !s.duty) continue;
-    for (const w of s.duty.warnings) seen.add(`${w.name}: ${w.text}`);
+    for (const w of s.duty.warnings) seen.add(`${w.name}: ${w.text}${w.coveredByManualRate ? COVERED_BY_MANUAL_RATE : ""}`);
   }
   for (const w of feeWarnings) seen.add(w.text);
   return [...seen];
@@ -257,6 +268,7 @@ export function toResultView(result: ViewResult | null, workspace: Workspace, sc
     total: money(t.totalCents),
     units: `${t.units.toLocaleString("en-US")} pcs`,
     incomplete: t.status.incomplete,
+    includesManualRate: t.status.includesManualRate,
     breakdown: parts.map(([key, label, cents], i) => ({
       key,
       label,

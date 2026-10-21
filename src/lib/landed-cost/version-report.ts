@@ -272,6 +272,9 @@ function originBlocks(
   });
   if (view.percentagesRounded) out.push({ kind: "paragraph", text: t.own("Percentages are rounded."), tone: "muted" });
   if (view.incomplete) out.push({ kind: "paragraph", text: t.own("Duties or fees for this origin are not final."), tone: "strong" });
+  if (view.includesManualRate) {
+    out.push({ kind: "paragraph", text: t.own("Includes manual rate: each one is marked in the duty layers below."), tone: "strong" });
+  }
 
   out.push({ kind: "heading", level: 2, text: t.own("Per SKU") });
   out.push({

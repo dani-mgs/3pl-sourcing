@@ -33,6 +33,10 @@ function tables(overrides: Record<string, Record<string, unknown>[]> = {}) {
       { id: id(31), workspace_id: W, scenario_id: id(21), label: "Trucking", amount_usd: "300.00", sort_order: 1 },
       { id: id(32), workspace_id: W, scenario_id: id(21), label: "Broker fee", amount_usd: "95.00", sort_order: 0 },
     ],
+    landed_cost_rate_overrides: [
+      { id: id(42), workspace_id: W, scenario_id: id(21), sku_line_id: id(11), kind: "add", layer_key: null, label: "Anti-dumping", rate_percent: null, amount_usd: "12.34", reason: "Case A-570-001", engine_rate_text: null, engine_amount_usd: null, sort_order: 1, set_by: id(1), set_at: "2026-10-21T10:00:00Z", changed_by: id(2), changed_at: "2026-10-21T11:00:00Z" },
+      { id: id(41), workspace_id: W, scenario_id: id(21), sku_line_id: id(11), kind: "replace", layer_key: "section_301_china", label: null, rate_percent: "0", amount_usd: null, reason: "Exclusion", engine_rate_text: "+25%", engine_amount_usd: "150.00", sort_order: 0, set_by: id(1), set_at: "2026-10-21T09:00:00Z", changed_by: id(1), changed_at: "2026-10-21T09:00:00Z" },
+    ],
     ...overrides,
   };
 }
@@ -59,7 +63,13 @@ describe("loadWorkspace", () => {
     ]);
     expect(china.otherCosts.map((c) => [c.label, c.amountUsd])).toEqual([["Broker fee", "95.00"], ["Trucking", "300.00"]]);
     expect(w.scenarios[1].items).toEqual([]);
-    expect(stub.total()).toBe(5);
+    // Manual rates on their item, in order, exact; none on the other item.
+    expect(china.items[0].overrides.map((o) => [o.kind, o.layerKey, o.label, o.ratePercent, o.amountUsd, o.engineRateText, o.engineAmountUsd, o.changedBy])).toEqual([
+      ["replace", "section_301_china", null, "0", null, "+25%", "150.00", id(1)],
+      ["add", null, "Anti-dumping", null, "12.34", null, null, id(2)],
+    ]);
+    expect(china.items[1].overrides).toEqual([]);
+    expect(stub.total()).toBe(6);
   });
 
   test("only the requested workspace's rows", async () => {

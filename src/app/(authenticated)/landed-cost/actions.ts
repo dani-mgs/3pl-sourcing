@@ -14,9 +14,10 @@ import { loadLockedVersion } from "@/lib/landed-cost/server-snapshots";
 import { loadFirstNames } from "@/lib/landed-cost/server-workspace-list";
 import { buildVersionReport, describeVersion } from "@/lib/landed-cost/version-report";
 import { personName } from "@/lib/tariff/fee-audit";
-import { createPayload, parseCreateWorkspace, parseDraft, savePayload, type DraftIssue } from "@/lib/landed-cost/parse-draft";
+import { createPayload, parseCreateWorkspace, parseDraft, savePayload, type DraftIssue, type EngineRates } from "@/lib/landed-cost/parse-draft";
 import { computeWorkspaceResult } from "@/lib/landed-cost/server-compute";
 import { loadWorkspace } from "@/lib/landed-cost/server-workspace";
+import { engineRatesFor } from "@/lib/landed-cost/server-override-engine";
 import { lockBlocker } from "@/lib/landed-cost/lock-check";
 import { buildSnapshotRow, restoreSnapshot } from "@/lib/landed-cost/snapshot-schema";
 import { saveLandedCostSnapshot } from "@/lib/landed-cost/snapshot-store";
@@ -31,7 +32,11 @@ import type { WorkspaceResult } from "@/lib/landed-cost/server-compute";
 export type ActionError = { ok: false; code: DraftErrorCode | "unavailable"; error: string; issues?: DraftIssue[] };
 export type CreateWorkspaceState = { ok: true; workspaceId: string } | ActionError;
 export type SaveDraftState =
-  | { ok: true; updatedAt: string; ids: { skuLines: Record<string, string>; scenarios: Record<string, string> } }
+  | {
+      ok: true;
+      updatedAt: string;
+      ids: { skuLines: Record<string, string>; scenarios: Record<string, string>; overrides: Record<string, string> };
+    }
   | ActionError;
 export type DeleteWorkspaceState = { ok: true } | ActionError;
 export type ExportCsvState = { ok: true; csv: string; filename: string } | ActionError;
@@ -79,6 +84,8 @@ const saveResultSchema = z.object({
   updated_at: z.string(),
   sku_lines: z.record(z.string(), z.uuid()),
   scenarios: z.record(z.string(), z.uuid()),
+  // Absent from the function before manual rates (it's replaced first, so only briefly).
+  overrides: z.record(z.string(), z.uuid()).default({}),
 });
 
 async function signedInUser(supabase: Supabase): Promise<string | null> {
@@ -138,10 +145,27 @@ export async function saveDraftAction(input: unknown): Promise<SaveDraftState> {
   const denied = await checkCanEdit(supabase, workspaceId, userId, role);
   if (denied) return denied;
 
+  // A manual rate that replaces a layer is stored with the app's own rate
+  // for it, worked out here (never taken from the browser).
+  const replaces = draft.data.scenarios.some((s) => s.items.some((i) => i.overrides.some((o) => o.kind === "replace")));
+  let engineRates: EngineRates | undefined;
+  if (replaces) {
+    const saved = await loadWorkspace(supabase, workspaceId);
+    if (!saved.ok) return fail(saved.code === "not_found" ? "not_found" : "failed", saved.message);
+    try {
+      const engine = await engineRatesFor(supabase, draft.data, saved.workspace);
+      if (!engine.ok) return fail("invalid", engine.error, engine.issues);
+      engineRates = engine.rates;
+    } catch (error) {
+      console.error("saveDraftAction engine rates error:", error);
+      return fail("failed", UNEXPECTED);
+    }
+  }
+
   const { data, error } = await supabase.rpc("save_landed_cost_draft", {
     p_workspace_id: workspaceId,
     p_expected_updated_at: expectedUpdatedAt,
-    p_payload: savePayload(draft.data),
+    p_payload: savePayload(draft.data, engineRates),
   });
   if (error) {
     if (error.code !== "LC409") console.error("saveDraftAction error:", error);
@@ -157,7 +181,7 @@ export async function saveDraftAction(input: unknown): Promise<SaveDraftState> {
   return {
     ok: true,
     updatedAt: result.data.updated_at,
-    ids: { skuLines: result.data.sku_lines, scenarios: result.data.scenarios },
+    ids: { skuLines: result.data.sku_lines, scenarios: result.data.scenarios, overrides: result.data.overrides },
   };
 }
 

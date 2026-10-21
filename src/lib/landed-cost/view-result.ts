@@ -1,8 +1,8 @@
 import type { EstimateLine } from "@/lib/tariff/calculate";
 import type { EntryType } from "@/lib/tariff/customs-fees";
 import type { OldestReview } from "@/lib/tariff/effective-rate";
-import type { ProgramWarning } from "@/lib/tariff/programs";
 import type { LineErrorCode } from "./duty-request";
+import type { DutyLine, DutyWarning } from "./manual-rates";
 import type { ScenarioComparison } from "./scenario-comparison";
 import type { ScenarioField, SkuField } from "./scenario-inputs";
 import type { ScenarioStatus, SkuTotals } from "./scenario-totals";
@@ -21,15 +21,17 @@ export type ViewDuty = {
   dutiesUsd: number;
   effectiveDutyRate: string | null;
   incomplete: boolean;
-  lines: EstimateLine[];
-  warnings: ProgramWarning[];
+  lines: DutyLine[];
+  warnings: DutyWarning[];
   oldestReview: OldestReview | null;
 };
 
 export type ViewSkuStatus =
   | { status: "ok"; skuLineId: string; duty: ViewDuty }
   | { status: "inputs_missing"; skuLineId: string; missing: SkuField[]; dutyQuantityUnit: ViewDutyUnit | null; duty: ViewDuty | null }
-  | { status: "duty_error"; skuLineId: string; code: LineErrorCode; message: string; unit: ViewDutyUnit | null; missing: SkuField[] };
+  | { status: "duty_error"; skuLineId: string; code: LineErrorCode; message: string; unit: ViewDutyUnit | null; missing: SkuField[] }
+  // A manual rate that no longer fits the app's duties: no total until it's fixed.
+  | { status: "manual_rate_conflict"; skuLineId: string; messages: string[]; duty: ViewDuty; missing: SkuField[] };
 
 export type ViewFeeCharge = { line: EstimateLine; cents: bigint };
 

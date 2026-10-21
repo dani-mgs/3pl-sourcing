@@ -2,7 +2,7 @@
 
 import { AlertTriangle, CheckCircle2, CircleAlert, Info } from "lucide-react";
 import type { ReactNode } from "react";
-import type { ResultView, SkuResultRow } from "@/lib/landed-cost/result-view";
+import { INCLUDES_MANUAL_RATE, type ResultView, type SkuResultRow } from "@/lib/landed-cost/result-view";
 import { IncompleteEstimateBadge } from "@/components/tariff/incomplete-estimate-badge";
 import { cardClass, secondaryButtonClass } from "../styles";
 
@@ -100,6 +100,15 @@ function SkuDuties({ sku }: { sku: SkuResultRow }) {
   );
 }
 
+// A manual rate applies (the editing UI comes later): said in words.
+function ManualRateBadge() {
+  return (
+    <span className="rounded-full border border-neutral-border bg-neutral-bg px-2 py-0.5 text-xs font-semibold text-move-navy">
+      {INCLUDES_MANUAL_RATE}
+    </span>
+  );
+}
+
 function SkuTable({ skus, complete }: { skus: SkuResultRow[]; complete: boolean }) {
   return (
     <table className="w-full text-left text-sm text-move-navy">
@@ -120,6 +129,7 @@ function SkuTable({ skus, complete }: { skus: SkuResultRow[]; complete: boolean 
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <Status kind={s.status === "ok" ? "complete" : s.status === "duty_error" ? "error" : "incomplete"}>{s.statusLabel}</Status>
                 {s.dutiesIncomplete && <IncompleteEstimateBadge />}
+                {s.includesManualRate && <ManualRateBadge />}
               </div>
               <div className="mt-1">
                 <SkuDuties sku={s} />
@@ -163,6 +173,7 @@ function Body({ view }: { view: ResultView }) {
             <div className="flex flex-wrap items-center gap-2">
               <Status kind="complete">Complete</Status>
               {view.incomplete && <IncompleteEstimateBadge />}
+              {view.includesManualRate && <ManualRateBadge />}
             </div>
             <p className="text-xs text-neutral-muted">Landed cost per unit</p>
             <p className="font-display text-4xl font-semibold text-move-navy tabular-nums" data-testid="lc-per-unit">
