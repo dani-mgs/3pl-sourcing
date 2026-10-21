@@ -99,16 +99,19 @@ const IGNORED: [string, string][] = [
     "duty",
     "duties",
     "mpf",
+    "tariff rate (%)",
     "mpf rate",
+    "mpf rate (%)",
     "mpf cost",
     "hmf",
     "hmf rate",
+    "hmf rate (%)",
     "hmf cost",
     "landed cost",
     "total landed cost",
     "landed cost per unit",
   ].map((h): [string, string] => [h, IGNORE_REASONS.rates]),
-  ...["freight", "freight per unit", "total freight", "total freight cost (usd)", "freight/pc"].map((h): [string, string] => [h, IGNORE_REASONS.freight]),
+  ...["freight", "freight per unit", "freight cost per unit", "total freight", "total freight cost", "freight/pc"].map((h): [string, string] => [h, IGNORE_REASONS.freight]),
   ["other costs", IGNORE_REASONS.otherCosts],
   ...["total unit cost", "total fob", "total cost", "cartons", "number of cartons", "total weight"].map((h): [string, string] => [
     h,
@@ -121,17 +124,40 @@ const IGNORED: [string, string][] = [
   ...["weight", "carton weight", "gross weight"].map((h): [string, string] => [h, unitNotStated("Carton kg")]),
 ];
 
-const ALIAS_MAP = new Map(ALIASES.map(([h, field, priority]) => [h, { field, priority: priority ?? 0 }]));
-const IGNORED_MAP = new Map(IGNORED);
+// Lowercase, all whitespace (newlines too) as one space, no spaces around
+// "/", and an optional trailing "(USD)": "Total Weight / Master Carton (kg)"
+// and "Unit Cost (USD)" match their aliases.
+export const normalizeHeading = (heading: string) =>
+  heading
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase()
+    .replace(/ ?\/ ?/g, "/")
+    .replace(/ ?\(usd\)$/, "");
+// A heading as shown back: its whitespace collapsed.
+const shown = (heading: string) => heading.replace(/\s+/g, " ").trim();
+
+const ALIAS_MAP = new Map(ALIASES.map(([h, field, priority]) => [normalizeHeading(h), { field, priority: priority ?? 0 }]));
+const IGNORED_MAP = new Map(IGNORED.map(([h, reason]) => [normalizeHeading(h), reason]));
+// Under a merged "Tariff Rate (%)" heading, the experts' sheets have a second heading row.
+const SUB_HEADINGS = new Set(["ad valorem", "section 301", "reciprocal"]);
+export const SUB_HEADING_NOTE = "Skipped a second heading row (tariff sub-columns).";
 // After the exact names: anything mentioning these is calculated or entered elsewhere.
 const ELSEWHERE = /tariff|duty|rate|mpf|hmf|landed|freight/i;
 
-export const normalizeHeading = (heading: string) => heading.trim().replace(/\s+/g, " ").toLowerCase();
 
 export type IgnoredColumn = { heading: string; reason: string };
 export type PastedRow = { rowNumber: number; values: Partial<Record<PasteField, string>> };
 export type ParsedPaste =
-  | { ok: true; hasHeader: boolean; columns: { heading: string; field: PasteField }[]; ignored: IgnoredColumn[]; rows: PastedRow[] }
+  | {
+      ok: true;
+      hasHeader: boolean;
+      columns: { heading: string; field: PasteField }[];
+      ignored: IgnoredColumn[];
+      // Rows skipped on purpose, e.g. a second heading row.
+      notes: string[];
+      rows: PastedRow[];
+    }
   | { ok: false; error: string };
 
 // Excel's clipboard text as rows of cells (quotes removed, "" read as ").
@@ -212,14 +238,14 @@ function mapHeadings(headings: string[]): { byIndex: (PasteField | null)[]; colu
       const won = winner.get(alias.field)!;
       if (won.index === index) {
         byIndex[index] = alias.field;
-        columns.push({ heading: heading.trim(), field: alias.field });
+        columns.push({ heading: shown(heading), field: alias.field });
       } else {
-        ignored.push({ heading: heading.trim(), reason: `Another column (${headings[won.index].trim()}) already gives ${PASTE_FIELD_LABELS[alias.field]}.` });
+        ignored.push({ heading: shown(heading), reason: `Another column (${shown(headings[won.index])}) already gives ${PASTE_FIELD_LABELS[alias.field]}.` });
       }
       return;
     }
     const reason = IGNORED_MAP.get(name) ?? (name.includes("cbm") ? IGNORE_REASONS.cbm : ELSEWHERE.test(name) ? IGNORE_REASONS.elsewhere : IGNORE_REASONS.unknown);
-    ignored.push({ heading: heading.trim(), reason });
+    ignored.push({ heading: shown(heading), reason });
   });
   return { byIndex, columns, ignored };
 }
@@ -237,9 +263,22 @@ export function parseSkuPaste(text: string): ParsedPaste {
   let columns: { heading: string; field: PasteField }[];
   let ignored: IgnoredColumn[];
   let data = numbered;
+  const notes: string[] = [];
   if (hasHeader) {
     ({ byIndex, columns, ignored } = mapHeadings(numbered[0].cells));
     data = numbered.slice(1);
+    // A second heading row right after it (no SKU, only known sub-headings) is skipped.
+    const next = data[0];
+    const skuIndex = byIndex.indexOf("skuCode");
+    if (
+      next &&
+      next.rowNumber === numbered[0].rowNumber + 1 &&
+      (next.cells[skuIndex] ?? "").trim() === "" &&
+      next.cells.every((c) => c.trim() === "" || SUB_HEADINGS.has(normalizeHeading(c)))
+    ) {
+      data = data.slice(1);
+      notes.push(SUB_HEADING_NOTE);
+    }
     if (!byIndex.includes("skuCode")) {
       return { ok: false, error: 'No SKU column found. Name it "SKU", or paste without a header row in the fixed order.' };
     }
@@ -268,5 +307,5 @@ export function parseSkuPaste(text: string): ParsedPaste {
     });
     return { rowNumber, values };
   });
-  return { ok: true, hasHeader, columns, ignored, rows };
+  return { ok: true, hasHeader, columns, ignored, notes, rows };
 }

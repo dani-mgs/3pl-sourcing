@@ -81,6 +81,30 @@ describe("warnings: shown, never acted on", () => {
     expect(countryInCode("VIETNAM")).toBeNull();
   });
 
+  test("the experts' sheet 2 as pasted: both rows warned about the country; FOB, packing and quantity only", () => {
+    const head = [
+      "SKU", "Quantity", "FOB Unit Cost (USD)", "Box Configuration (pcs/carton)", "Number of cartons", "Total Unit Cost (USD)",
+      '"Volumetric\nWeight/ Master Carton\n(CBM)"', "Total Weight / Master Carton (kg)", "Total Freight Cost (USD)", "Freight/ pc", "Tariff Rate (%)", "", "",
+      "Total Tariff Rate", "Tariff Cost (USD)", "MPF Rate (%)", "MPF Cost (USD)", "HMF Rate (%)", "HMF Cost (USD)", "Other Costs (USD)", "Total Landed Cost (USD)",
+    ];
+    const sub = ["", "", "", "", "", "", "", "", "", "", "Ad Valorem", "Section 301", "Reciprocal"];
+    const vn = ["SKU-001 - VIETNAM", "100", "8", "20", "5", "800", "6", "10", "1053", "10.53", "0.1", "0", "0", "0.1", "80", "0.003464", "6.418792", "0.00125", "2.31625", "0", "19.41735042"];
+    const cn = ["SKU-001- CHINA", "100", "6", "20", "5", "600", "6", "10", "854", "8.54", "0.034", "0.25", "1.25", "1.534", "920.4", "0.003464", "5.036656", "0.00125", "1.8175", "0", "23.81254156"];
+    const p = preview(two(), [head, sub, vn, cn].map((r) => r.join("\t")).join("\r\n") + "\r\n");
+    expect(p.notes).toEqual(["Skipped a second heading row (tariff sub-columns)."]);
+    expect(p.rows.map((r) => [r.skuCode, r.action, r.warnings])).toEqual([
+      ["SKU-001 - VIETNAM", "add", ["This SKU code seems to include a country (VIETNAM). Consider removing it so the same SKU matches across origins."]],
+      ["SKU-001- CHINA", "add", ["This SKU code seems to include a country (CHINA). Consider removing it so the same SKU matches across origins."]],
+    ]);
+    const { draft } = applySkuPaste(two(), p, ref);
+    const added = draft.skus.slice(1).map((s) => draft.scenarios[0].items[s.ref]);
+    expect(added).toEqual([
+      { fobUnitPriceUsd: "8", pcsPerCarton: "20", cartonLengthCm: "", cartonWidthCm: "", cartonHeightCm: "", cartonGrossKg: "10" },
+      { fobUnitPriceUsd: "6", pcsPerCarton: "20", cartonLengthCm: "", cartonWidthCm: "", cartonHeightCm: "", cartonGrossKg: "10" },
+    ]);
+    expect(draft.skus.slice(1).map((s) => [s.quantity, s.htsCode, s.description])).toEqual([["100", "", ""], ["100", "", ""]]);
+  });
+
   test("a new code that differs only by case is added as new, with a warning", () => {
     const p = preview(two(), "SKU\tQuantity\nsku-001\t5\n");
     expect(p.rows[0]).toMatchObject({ action: "add", warnings: ["Differs only by case from SKU-001; it will be added as a new SKU."] });

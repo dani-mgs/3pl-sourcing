@@ -34,6 +34,7 @@ export type PastePreview = {
   originLabel: string;
   columns: { heading: string; field: PasteField }[];
   ignored: IgnoredColumn[];
+  notes: string[];
   rows: PreviewRow[];
   updates: number;
   adds: number;
@@ -134,6 +135,7 @@ export function previewSkuPaste(draft: EditorDraft, originRef: string, parsed: E
     originLabel: origin.label,
     columns: parsed.columns,
     ignored: parsed.ignored,
+    notes: parsed.notes,
     rows,
     updates: rows.filter((r) => r.action === "update").length,
     adds,

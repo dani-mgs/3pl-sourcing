@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { IGNORE_REASONS, parseSkuPaste, splitTsv } from "./parse-sku-paste";
+import { IGNORE_REASONS, SUB_HEADING_NOTE, normalizeHeading, parseSkuPaste, splitTsv } from "./parse-sku-paste";
 
 // Excel's clipboard text into rows: headings mapped by name (with aliases,
 // the experts' sheet headings included), the fixed order without a header
@@ -12,16 +12,34 @@ function ok(text: string) {
   return parsed;
 }
 
-// The experts' two sheets, heading rows as they name them.
+// The experts' real workbook, as Excel copies it: blank cells under the
+// merged "Tariff Rate (%)" heading, a second heading row for its sub-columns,
+// and line breaks inside the quoted CBM heading.
 const SHEET_1 = [
-  "SKU", "Quantity", "Unit Cost", "Total Unit Cost", "Box Configuration (pcs/carton)", "Number of cartons",
-  "Total Weight/Master Carton (kg)", "Volumetric Weight/Master Carton (CBM)", "Ad Valorem", "Section 301", "Reciprocal",
-  "Total Tariff Rate", "Tariff Cost", "MPF Rate", "MPF Cost", "HMF Rate", "HMF Cost", "Freight per Unit", "Total Freight",
-  "Other Costs", "Total Landed Cost", "Landed Cost",
+  ["SKU", "Quantity", "Unit Cost (USD)", "Total Unit Cost (USD)", "Freight Cost per Unit (USD)", "Total Freight Cost (USD)", "Tariff Rate (%)", "", "",
+    "Total Tariff Rate", "Tariff Cost (USD)", "MPF Rate (%)", "MPF Cost (USD)", "HMF Rate (%)", "HMF Cost (USD)", "Other Costs (USD)", "Total Landed Cost (USD)"],
+  ["", "", "", "", "", "", "Ad Valorem", "Section 301", "Reciprocal"],
+  ["SKU-001", "100", "6", "600", "1", "100", "0.075", "0.25", "1.25", "1.575", "945", "0.003464", "2.4248", "0.00125", "0.875", "0", "16.482998"],
 ];
 const SHEET_2 = [
-  "SKU", "Quantity", "FOB Unit Cost (USD)", "Unit Cost", "Tariff Rate", "Box Configuration (pcs/carton)",
-  "Total Weight/Master Carton (kg)", "Total Freight Cost (USD)", "Freight/pc", "Landed Cost",
+  ["SKU", "Quantity", "FOB Unit Cost (USD)", "Box Configuration (pcs/carton)", "Number of cartons", "Total Unit Cost (USD)",
+    '"Volumetric\nWeight/ Master Carton\n(CBM)"', "Total Weight / Master Carton (kg)", "Total Freight Cost (USD)", "Freight/ pc", "Tariff Rate (%)", "", "",
+    "Total Tariff Rate", "Tariff Cost (USD)", "MPF Rate (%)", "MPF Cost (USD)", "HMF Rate (%)", "HMF Cost (USD)", "Other Costs (USD)", "Total Landed Cost (USD)"],
+  ["", "", "", "", "", "", "", "", "", "", "Ad Valorem", "Section 301", "Reciprocal"],
+  ["SKU-001 - VIETNAM", "100", "8", "20", "5", "800", "6", "10", "1053", "10.53", "0.1", "0", "0", "0.1", "80", "0.003464", "6.418792", "0.00125", "2.31625", "0", "19.41735042"],
+  ["SKU-001- CHINA", "100", "6", "20", "5", "600", "6", "10", "854", "8.54", "0.034", "0.25", "1.25", "1.534", "920.4", "0.003464", "5.036656", "0.00125", "1.8175", "0", "23.81254156"],
+];
+const RATES = IGNORE_REASONS.rates;
+const TARIFF_AND_FEES = [
+  { heading: "Tariff Rate (%)", reason: RATES },
+  { heading: "Total Tariff Rate", reason: RATES },
+  { heading: "Tariff Cost (USD)", reason: RATES },
+  { heading: "MPF Rate (%)", reason: RATES },
+  { heading: "MPF Cost (USD)", reason: RATES },
+  { heading: "HMF Rate (%)", reason: RATES },
+  { heading: "HMF Cost (USD)", reason: RATES },
+  { heading: "Other Costs (USD)", reason: IGNORE_REASONS.otherCosts },
+  { heading: "Total Landed Cost (USD)", reason: RATES },
 ];
 
 describe("splitTsv: as Excel copies", () => {
@@ -37,53 +55,61 @@ describe("splitTsv: as Excel copies", () => {
   });
 });
 
-describe("the experts' header layouts", () => {
-  test("sheet 1: inputs mapped, every other heading ignored with its reason", () => {
-    const p = ok(tsv([SHEET_1, ["SKU-001", "100", "$6.00", "$600.00", "20", "5", "5", "0.064", "3.4%", "25%", "10%", "38.4%", "$230.40", "0.3464%", "$2.08", "0.125%", "$0.75", "$8.54", "$854.00", "$0", "$1,734.73", "$17.35"]]));
-    expect(p.hasHeader).toBe(true);
+describe("the experts' real sheets", () => {
+  test("sheet 1: SKU, quantity and FOB (from Unit Cost (USD)) only; the sub-heading row skipped; every other column listed with its reason", () => {
+    const p = ok(tsv(SHEET_1));
     expect(p.columns.map((c) => [c.heading, c.field])).toEqual([
       ["SKU", "skuCode"],
       ["Quantity", "quantity"],
-      ["Unit Cost", "fobUnitPriceUsd"],
-      ["Box Configuration (pcs/carton)", "pcsPerCarton"],
-      ["Total Weight/Master Carton (kg)", "cartonGrossKg"],
+      ["Unit Cost (USD)", "fobUnitPriceUsd"],
     ]);
-    const why = Object.fromEntries(p.ignored.map((c) => [c.heading, c.reason]));
-    expect(why).toEqual({
-      "Total Unit Cost": IGNORE_REASONS.calculated,
-      "Number of cartons": IGNORE_REASONS.calculated,
-      "Volumetric Weight/Master Carton (CBM)": IGNORE_REASONS.cbm,
-      "Ad Valorem": IGNORE_REASONS.rates,
-      "Section 301": IGNORE_REASONS.rates,
-      Reciprocal: IGNORE_REASONS.rates,
-      "Total Tariff Rate": IGNORE_REASONS.rates,
-      "Tariff Cost": IGNORE_REASONS.rates,
-      "MPF Rate": IGNORE_REASONS.rates,
-      "MPF Cost": IGNORE_REASONS.rates,
-      "HMF Rate": IGNORE_REASONS.rates,
-      "HMF Cost": IGNORE_REASONS.rates,
-      "Freight per Unit": IGNORE_REASONS.freight,
-      "Total Freight": IGNORE_REASONS.freight,
-      "Other Costs": IGNORE_REASONS.otherCosts,
-      "Total Landed Cost": IGNORE_REASONS.rates,
-      "Landed Cost": IGNORE_REASONS.rates,
-    });
+    expect(p.notes).toEqual([SUB_HEADING_NOTE]);
+    expect(p.ignored).toEqual([
+      { heading: "Total Unit Cost (USD)", reason: IGNORE_REASONS.calculated },
+      { heading: "Freight Cost per Unit (USD)", reason: IGNORE_REASONS.freight },
+      { heading: "Total Freight Cost (USD)", reason: IGNORE_REASONS.freight },
+      ...TARIFF_AND_FEES,
+    ]);
+    // No tariff, fee, freight or landed-cost value, including the ones under the blank headings.
+    expect(p.rows).toEqual([{ rowNumber: 3, values: { skuCode: "SKU-001", quantity: "100", fobUnitPriceUsd: "6" } }]);
+  });
+
+  test("sheet 2: SKU, quantity, FOB, pcs/carton and carton kg (\"Total Weight / Master Carton (kg)\"); the CBM heading with line breaks gets the CBM note", () => {
+    const p = ok(tsv(SHEET_2));
+    expect(p.columns.map((c) => [c.heading, c.field])).toEqual([
+      ["SKU", "skuCode"],
+      ["Quantity", "quantity"],
+      ["FOB Unit Cost (USD)", "fobUnitPriceUsd"],
+      ["Box Configuration (pcs/carton)", "pcsPerCarton"],
+      ["Total Weight / Master Carton (kg)", "cartonGrossKg"],
+    ]);
+    expect(p.notes).toEqual([SUB_HEADING_NOTE]);
+    expect(p.ignored).toEqual([
+      { heading: "Number of cartons", reason: IGNORE_REASONS.calculated },
+      { heading: "Total Unit Cost (USD)", reason: IGNORE_REASONS.calculated },
+      { heading: "Volumetric Weight/ Master Carton (CBM)", reason: IGNORE_REASONS.cbm },
+      { heading: "Total Freight Cost (USD)", reason: IGNORE_REASONS.freight },
+      { heading: "Freight/ pc", reason: IGNORE_REASONS.freight },
+      ...TARIFF_AND_FEES,
+    ]);
     expect(p.rows).toEqual([
-      { rowNumber: 2, values: { skuCode: "SKU-001", quantity: "100", fobUnitPriceUsd: "$6.00", pcsPerCarton: "20", cartonGrossKg: "5" } },
+      { rowNumber: 3, values: { skuCode: "SKU-001 - VIETNAM", quantity: "100", fobUnitPriceUsd: "8", pcsPerCarton: "20", cartonGrossKg: "10" } },
+      { rowNumber: 4, values: { skuCode: "SKU-001- CHINA", quantity: "100", fobUnitPriceUsd: "6", pcsPerCarton: "20", cartonGrossKg: "10" } },
     ]);
   });
 
-  test('sheet 2: "FOB Unit Cost (USD)" wins over "Unit Cost", which is listed as ignored', () => {
-    const p = ok(tsv([SHEET_2, ["SKU-001", "100", "6.00", "6.10", "38.4%", "20", "5", "$1,053.00", "$10.53", "$19.69"]]));
-    expect(p.columns.map((c) => c.field)).toEqual(["skuCode", "quantity", "fobUnitPriceUsd", "pcsPerCarton", "cartonGrossKg"]);
-    expect(p.rows[0].values.fobUnitPriceUsd).toBe("6.00");
-    expect(p.ignored).toEqual([
-      { heading: "Unit Cost", reason: "Another column (FOB Unit Cost (USD)) already gives FOB per unit (USD)." },
-      { heading: "Tariff Rate", reason: IGNORE_REASONS.rates },
-      { heading: "Total Freight Cost (USD)", reason: IGNORE_REASONS.freight },
-      { heading: "Freight/pc", reason: IGNORE_REASONS.freight },
-      { heading: "Landed Cost", reason: IGNORE_REASONS.rates },
-    ]);
+  test("headings: case, newlines and spaces around / don't matter; (USD) is optional on every alias", () => {
+    expect(normalizeHeading("  Total Weight /\n Master   Carton (kg) ")).toBe("total weight/master carton (kg)");
+    const p = ok(tsv([["SKU (USD)", "Qty (usd)", "FOB price (USD)", "Pcs per carton"], ["A"]]));
+    expect(p.columns.map((c) => c.field)).toEqual(["skuCode", "quantity", "fobUnitPriceUsd", "pcsPerCarton"]);
+  });
+
+  test("a second row that isn't only sub-headings, or has a SKU, is data", () => {
+    expect(ok(tsv([["SKU", "Tariff Rate (%)"], ["", "Ad Valorem"], ["A", "1"]])).notes).toEqual([SUB_HEADING_NOTE]);
+    const withSku = ok(tsv([["SKU", "Tariff Rate (%)"], ["Ad Valorem", "Section 301"]]));
+    expect([withSku.notes, withSku.rows.map((r) => r.values.skuCode)]).toEqual([[], ["Ad Valorem"]]);
+    const other = ok(tsv([["SKU", "Quantity", "Tariff Rate (%)"], ["", "10", "Ad Valorem"]]));
+    expect([other.notes, other.rows]).toEqual([[], [{ rowNumber: 2, values: { skuCode: "", quantity: "10" } }]]);
   });
 
   test("after the exact names: tariff, duty, rate, MPF, HMF, landed or freight words are 'calculated or entered elsewhere'; others not recognised", () => {

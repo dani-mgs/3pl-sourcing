@@ -17,10 +17,10 @@ const ACCEPTED: [string, string][] = [
   ["Description", "Description, Product description, Product name"],
   ["HTS code", "HTS, HTS code, HTSUS"],
   ["Quantity", "Quantity, Qty"],
-  ["FOB per unit (USD)", "FOB Unit Cost (USD), FOB per unit, FOB price, Unit Cost (used when there's no FOB column)"],
+  ["FOB per unit (USD)", "FOB Unit Cost (USD), FOB per unit, FOB price, Unit Cost (USD) (used when there's no FOB column)"],
   ["Pcs per carton", "Box Configuration (pcs/carton), Pcs per carton, Pcs/carton"],
   ["L / W / H (cm)", "L (cm), Length (cm), Carton length (cm), and the same for W and H"],
-  ["Carton kg", "Total Weight/Master Carton (kg), Carton kg, Carton weight (kg)"],
+  ["Carton kg", "Total Weight / Master Carton (kg), Carton kg, Carton weight (kg)"],
 ];
 
 // The preview: every pasted row with what will happen to it, in words.
@@ -37,6 +37,11 @@ export function PastePreviewTable({ preview }: { preview: PastePreview }) {
           {preview.limitError}
         </p>
       )}
+      {preview.notes.map((note) => (
+        <p key={note} className={hintClass}>
+          {note}
+        </p>
+      ))}
       {preview.ignored.length > 0 && (
         <div>
           <p className="text-xs font-semibold tracking-wide text-neutral-muted uppercase">Columns not imported</p>
@@ -187,7 +192,7 @@ export function PasteSkusButton({
                   imported. &quot;$&quot; and thousands commas are fine.
                 </p>
                 <details className="mt-1">
-                  <summary className="cursor-pointer">Accepted headings</summary>
+                  <summary className="cursor-pointer">Accepted headings (any case; &quot;(USD)&quot; at the end is optional)</summary>
                   <ul className="mt-1 flex flex-col gap-0.5">
                     {ACCEPTED.map(([field, names]) => (
                       <li key={field}>
