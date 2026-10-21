@@ -1,10 +1,10 @@
-import { HUB_MODULES } from "@/lib/modules";
+import type { HubModule } from "@/lib/modules";
 import { Bullets, HelpSection, Note, Steps, SubHeading, Ui } from "./help-parts";
 
 // Sections 1–3: what the hub is for and the two module workflows. Every rule
 // here mirrors the code; see AGENTS.md ("update /help in the same change").
 
-export function OverviewSection() {
+export function OverviewSection({ modules }: { modules: HubModule[] }) {
   return (
     <HelpSection id="overview" title="What the Decision Hub is for">
       <p>
@@ -13,7 +13,7 @@ export function OverviewSection() {
         into a recommendation or a report for the client.
       </p>
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {HUB_MODULES.map((module) => (
+        {modules.map((module) => (
           <li
             key={module.name}
             className="flex flex-col gap-0.5 rounded-xl border border-neutral-border px-3 py-2"

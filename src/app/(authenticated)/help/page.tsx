@@ -5,7 +5,10 @@ import {
   SharingSection,
   UploadSection,
 } from "./concept-sections";
+import { isLandedCostEnabled } from "@/lib/landed-cost/feature-flag";
+import { hubModules } from "@/lib/modules";
 import { FaqSection } from "./faq-section";
+import { LandedCostSection } from "./landed-cost-section";
 import { TariffSection } from "./tariff-section";
 import { ForwarderSection, OverviewSection, ThreePlSection } from "./workflow-sections";
 
@@ -14,6 +17,7 @@ const CONTENTS = [
   { id: "three-pl", label: "3PL Sourcing" },
   { id: "forwarder", label: "Forwarder Sourcing" },
   { id: "tariff", label: "Tariff Calculator" },
+  { id: "landed-cost", label: "Landed Cost" },
   { id: "concepts", label: "Key concepts" },
   { id: "upload", label: "AI document upload" },
   { id: "exports", label: "Exports" },
@@ -23,9 +27,12 @@ const CONTENTS = [
 ];
 
 // Static how-to page for any signed-in user (the (authenticated) layout
-// handles sign-in). No data access. When behavior described here changes,
-// update it in the same change (AGENTS.md).
+// handles sign-in). No data access. Landed Cost's section, its contents link
+// and its "Live" badge follow LANDED_COST_ENABLED. When behavior described
+// here changes, update it in the same change (AGENTS.md).
 export default function HelpPage() {
+  const landedCost = isLandedCostEnabled();
+  const contents = landedCost ? CONTENTS : CONTENTS.filter((item) => item.id !== "landed-cost");
   return (
     <div className="mx-auto max-w-6xl px-8 py-10 max-sm:px-4">
       <h1 className="mb-2 font-display text-2xl font-semibold text-move-navy">How to use the Decision Hub</h1>
@@ -39,7 +46,7 @@ export default function HelpPage() {
             On this page
           </p>
           <ol className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm xl:flex-col">
-            {CONTENTS.map((item) => (
+            {contents.map((item) => (
               <li key={item.id}>
                 <a
                   href={`#${item.id}`}
@@ -53,10 +60,11 @@ export default function HelpPage() {
         </nav>
 
         <div className="flex min-w-0 flex-col gap-6">
-          <OverviewSection />
+          <OverviewSection modules={hubModules(landedCost)} />
           <ThreePlSection />
           <ForwarderSection />
           <TariffSection />
+          {landedCost && <LandedCostSection />}
           <ConceptsSection />
           <UploadSection />
           <ExportSection />

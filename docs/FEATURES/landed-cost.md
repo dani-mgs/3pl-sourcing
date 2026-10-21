@@ -1,6 +1,6 @@
 # Landed Cost
 
-**What it does:** the full cost of one shipment per unit and in total (product, freight, duties, MPF, HMF, other costs), for up to 5 origins compared side by side. Results are recalculated on the server from the last saved draft. Behind `LANDED_COST_ENABLED` (README).
+**What it does:** the full cost of one shipment per unit and in total (product, freight, duties, MPF, HMF, other costs), for up to 5 origins compared side by side. Results are recalculated on the server from the last saved draft. Behind `LANDED_COST_ENABLED` (README). User guide: `/help#landed-cost` (shown only while the flag is on).
 
 **Rules**
 - One MPF and one HMF per origin's entry, split by entered value (qty × FOB). HMF is ocean only.
