@@ -74,7 +74,12 @@ export type ComparisonView =
 const B0 = BigInt(0);
 const money = (cents: bigint) => usd(centsToRational(cents));
 const abs = (n: bigint) => (n < B0 ? -n : n);
-const pctOf = (part: bigint, whole: bigint) => (whole > B0 ? tenthsText(shareTenths(abs(part), whole)) : "—");
+// Like the breakdown: a non-zero part that rounds to 0.0% shows "<0.1%".
+function pctOf(part: bigint, whole: bigint): string {
+  if (whole <= B0) return "—";
+  const tenths = shareTenths(abs(part), whole);
+  return tenths === B0 && part !== B0 ? "<0.1%" : tenthsText(tenths);
+}
 
 const DRIVER_NOUNS: Record<ComponentKey, string> = {
   fob: "product",
@@ -88,6 +93,12 @@ const DRIVER_NOUNS: Record<ComponentKey, string> = {
 export function modeLabels(origins: { label: string; mode: string }[]): string | null {
   if (new Set(origins.map((o) => o.mode)).size < 2) return null;
   return `${origins.map((o) => `${o.label} by ${o.mode.toLowerCase()}`).join(", ")}.`;
+}
+
+// A non-zero difference per unit, never "$0.00": under half a cent reads "less than $0.01".
+function perUnitAmount(amountCents: bigint, units: bigint): string {
+  const cents = perUnit(amountCents, units).cents;
+  return cents === B0 ? "less than $0.01" : money(cents);
 }
 
 // "<cheaper> is $X/unit cheaper than <dearer> (Y%)": the percentage is of the dearer one.
@@ -104,7 +115,7 @@ export function verdictText(
     };
   }
   return {
-    text: `${cheaper.label} is ${money(perUnit(difference, units).cents)}/unit cheaper than ${dearer.label} (${pctOf(difference, dearer.totalCents)}).`,
+    text: `${cheaper.label} is ${perUnitAmount(difference, units)}/unit cheaper than ${dearer.label} (${pctOf(difference, dearer.totalCents)}).`,
     perShipment: `${money(difference)} less per shipment.`,
   };
 }
@@ -113,7 +124,7 @@ export function verdictText(
 export function vsBaselineText(differenceCents: bigint, baselineTotalCents: bigint, units: bigint): string {
   if (differenceCents === B0) return "Same as the baseline";
   const word = differenceCents > B0 ? "less" : "more";
-  return `${money(perUnit(abs(differenceCents), units).cents)}/unit ${word} than the baseline (${pctOf(differenceCents, baselineTotalCents)})`;
+  return `${perUnitAmount(abs(differenceCents), units)}/unit ${word} than the baseline (${pctOf(differenceCents, baselineTotalCents)})`;
 }
 
 // "$2.00/unit more on product ($200.00 more per shipment)", from baseline minus origin.
@@ -122,7 +133,7 @@ export function driverText(key: ComponentKey, differenceCents: bigint, units: bi
   if (differenceCents === B0) return `Same ${noun}`;
   const word = differenceCents > B0 ? "less" : "more";
   const amount = abs(differenceCents);
-  return `${money(perUnit(amount, units).cents)}/unit ${word} on ${noun} (${money(amount)} ${word} per shipment)`;
+  return `${perUnitAmount(amount, units)}/unit ${word} on ${noun} (${money(amount)} ${word} per shipment)`;
 }
 
 // The cheapest per-unit cost of each SKU among comparable origins; others are never marked.
@@ -290,7 +301,7 @@ export function toComparisonView(result: WorkspaceResult | null, workspace: Work
         summary:
           total === B0
             ? "In all: the same as the baseline."
-            : `In all: ${money(perUnit(abs(total), units).cents)}/unit ${word} than the baseline (${money(abs(total))} per shipment).`,
+            : `In all: ${perUnitAmount(abs(total), units)}/unit ${word} than the baseline (${money(abs(total))} per shipment).`,
         lines: COMPONENT_KEYS.map((key) => driverText(key, parts.find((d) => d.key === key)?.differenceCents ?? B0, units)),
         roundedNote: perUnitSum !== totalPerUnit,
       };

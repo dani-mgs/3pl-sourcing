@@ -54,7 +54,7 @@ describe("golden: China (baseline) vs Vietnam, formal entry, through the pipelin
         "$2.00/unit more on product ($200.00 more per shipment)",
         "$1.99/unit more on freight ($199.00 more per shipment)",
         "$1.65/unit less on duties ($165.40 less per shipment)",
-        "$0.00/unit more on fees (MPF and HMF) ($0.25 more per shipment)",
+        "less than $0.01/unit more on fees (MPF and HMF) ($0.25 more per shipment)",
         "Same other costs",
       ],
       roundedNote: false,
@@ -86,6 +86,21 @@ describe("both directions", () => {
       ["China", "$2.34/unit less than the baseline (11.9%)"],
       ["Vietnam", "Baseline"],
     ]);
+  });
+
+  test("a per-unit difference under half a cent reads 'less than $0.01', never '$0.00'; exactly zero stays 'Same'", () => {
+    // 4 cents over 10 units is $0.004/unit, which rounds to $0.00.
+    expect(driverText("fees", BigInt(-4), BigInt(10))).toBe("less than $0.01/unit more on fees (MPF and HMF) ($0.04 more per shipment)");
+    expect(driverText("fees", BigInt(4), BigInt(10))).toBe("less than $0.01/unit less on fees (MPF and HMF) ($0.04 less per shipment)");
+    expect(driverText("fees", BigInt(0), BigInt(10))).toBe("Same fees (MPF and HMF)");
+    expect(vsBaselineText(BigInt(-4), BigInt(100000), BigInt(10))).toBe("less than $0.01/unit more than the baseline (<0.1%)");
+    expect(vsBaselineText(BigInt(4), BigInt(100000), BigInt(10))).toBe("less than $0.01/unit less than the baseline (<0.1%)");
+    expect(vsBaselineText(BigInt(0), BigInt(100000), BigInt(10))).toBe("Same as the baseline");
+    expect(verdictText({ label: "A", totalCents: BigInt(99996) }, { label: "B", totalCents: BigInt(100000) }, BigInt(10)).text).toBe(
+      "A is less than $0.01/unit cheaper than B (<0.1%).",
+    );
+    // Half a cent rounds up, so it's an amount.
+    expect(driverText("fees", BigInt(-5), BigInt(10))).toBe("$0.01/unit more on fees (MPF and HMF) ($0.05 more per shipment)");
   });
 
   test("wording helpers: never a sign, ties say so", () => {
