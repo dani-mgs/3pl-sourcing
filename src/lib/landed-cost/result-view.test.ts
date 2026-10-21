@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { stubSupabase } from "@/lib/tariff/__fixtures__/supabase-stub";
 import { CALCULATED_ON } from "./__fixtures__/duty-tables";
-import { L1, L2, S2, item, scenario, skuLine, tables, workspace } from "./__fixtures__/workspace-builders";
-import { skuFieldId } from "./editor-draft";
-import { shares, toResultView, type ResultView } from "./result-view";
+import { L1, L2, S1, S2, item, scenario, skuLine, tables, vietnamScenario, workspace } from "./__fixtures__/workspace-builders";
+import { itemFieldId, scenarioFieldId, skuFieldId } from "./editor-draft";
+import { shares, toResultView, toResultViews, type ResultView } from "./result-view";
 import { computeWorkspaceResult } from "./server-compute";
 import type { Workspace } from "./workspace-schema";
 
@@ -84,7 +84,7 @@ describe("incomplete: no totals, and what's missing", () => {
     expect(v).not.toHaveProperty("perUnit");
     expect(v).not.toHaveProperty("total");
     expect(v.skus[0].perUnit).toBeNull();
-    expect(v.missing).toEqual([{ label: "Freight total (USD)", targetId: "lc-freightTotalUsd" }]);
+    expect(v.missing).toEqual([{ label: "Freight total (USD)", targetId: scenarioFieldId(S1, "freightTotalUsd") }]);
   });
 
   test("a SKU with no inputs lists each field, pointing at its input", async () => {
@@ -97,7 +97,8 @@ describe("incomplete: no totals, and what's missing", () => {
       "SKU-002: Carton height (cm)",
       "SKU-002: Carton weight (kg)",
     ]);
-    expect(v.missing[0].targetId).toBe(skuFieldId(L2, "fobUnitPriceUsd"));
+    // In this origin's own fields.
+    expect(v.missing[0].targetId).toBe(itemFieldId(S1, L2, "fobUnitPriceUsd"));
   });
 
   test("a per-unit rate asks for the duty quantity in its unit, and the editor learns the unit", async () => {
@@ -135,9 +136,10 @@ describe("other states", () => {
     expect(toResultView(null, workspace({ scenarios: [] })).state).toBe("no_scenario");
   });
 
-  test("more than one scenario: the baseline only, with a note", async () => {
-    const v = await viewOf(workspace({ scenarios: [scenario(), scenario({ id: S2, label: "Vietnam", originCountry: "VN", isBaseline: false })] }));
-    expect(v.state).toBe("complete");
-    expect(v.multiScenarioNote).toMatch(/2 scenarios\. Only the baseline is shown here; comparing origins is coming\./);
+  test("one view per origin, each pointing at its own fields", async () => {
+    const w = workspace({ scenarios: [scenario(), vietnamScenario({ freightTotalUsd: null })] });
+    const views = toResultViews(await computeWorkspaceResult(stubSupabase(tables()), w, CALCULATED_ON), w);
+    expect(as(views[S1], "complete").perUnit).toBe("$17.35");
+    expect(as(views[S2], "incomplete").missing).toEqual([{ label: "Freight total (USD)", targetId: scenarioFieldId(S2, "freightTotalUsd") }]);
   });
 });

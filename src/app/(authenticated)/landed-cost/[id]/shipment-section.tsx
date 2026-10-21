@@ -1,6 +1,13 @@
 "use client";
 
-import { shipmentFieldId, type EditorDraft, type ScenarioFields } from "@/lib/landed-cost/editor-draft";
+import {
+  scenarioFieldId,
+  workspaceFieldId,
+  type EditorDraft,
+  type ScenarioDraft,
+  type ScenarioInput,
+} from "@/lib/landed-cost/editor-draft";
+import { labelError } from "@/lib/landed-cost/origin-draft";
 import { ENTRY_TYPE_HINT, INCOTERMS, MODE_LABELS } from "../options";
 import { cardClass, fieldClass, labelClass, sectionTitleClass } from "../styles";
 import { Field, FieldError, TextInput, describedBy, type FieldErrors } from "./fields";
@@ -15,56 +22,93 @@ export type EditorSectionProps = {
   update: (change: (draft: EditorDraft) => EditorDraft) => void;
 };
 
-// 1. Shipment: the workspace and the one origin scenario it costs.
-export function ShipmentSection({
+export type Countries = readonly { code: string; name: string }[];
+
+// Changes one origin in the draft.
+export function updateScenario(update: EditorSectionProps["update"], ref: string, change: Partial<ScenarioDraft>) {
+  update((d) => ({ ...d, scenarios: d.scenarios.map((s) => (s.ref === ref ? { ...s, ...change } : s)) }));
+}
+
+// The workspace's own fields: shared by every origin.
+export function WorkspaceFields({
   draft,
   disabled,
   errors,
   update,
+  bounds,
+}: EditorSectionProps & { bounds: EntryDateBounds }) {
+  return (
+    <>
+      <Field id={workspaceFieldId("name")} label="Workspace name" errors={errors}>
+        <TextInput id={workspaceFieldId("name")} value={draft.name} onValue={(v) => update((d) => ({ ...d, name: v }))} errors={errors} disabled={disabled} maxLength={120} />
+      </Field>
+      <Field id={workspaceFieldId("entryDate")} label="Expected entry date" errors={errors} hint={`From ${bounds.minText} to ${bounds.maxText} (UTC).`}>
+        <TextInput
+          id={workspaceFieldId("entryDate")}
+          type="date"
+          value={draft.entryDate}
+          onValue={(v) => update((d) => ({ ...d, entryDate: v }))}
+          errors={errors}
+          hint
+          disabled={disabled}
+          min={bounds.min}
+          max={bounds.max}
+        />
+      </Field>
+    </>
+  );
+}
+
+// 1. Shipment: one origin's fields. With one origin (`workspaceFields`) the
+// workspace's name and entry date sit here too, and the label follows the
+// country silently; with several, each origin has an editable label.
+export function ShipmentSection({
+  scenario,
+  workspaceFields,
   countries,
   bounds,
-}: EditorSectionProps & { countries: readonly { code: string; name: string }[]; bounds: EntryDateBounds }) {
-  const setScenario = (field: keyof ScenarioFields, value: string) =>
-    update((d) => ({ ...d, scenario: { ...d.scenario, [field]: value } }));
+  ...props
+}: EditorSectionProps & { scenario: ScenarioDraft; workspaceFields: boolean; countries: Countries; bounds: EntryDateBounds }) {
+  const { draft, disabled, errors, update } = props;
+  const ref = scenario.ref;
+  const id = (field: ScenarioInput) => scenarioFieldId(ref, field);
+  const set = (field: ScenarioInput, value: string) => updateScenario(update, ref, { [field]: value });
   const countryName = (code: string) => countries.find((c) => c.code === code)?.name ?? code;
-  // The scenario is labelled with its country until someone renames it.
+  // The label follows the country until someone renames it.
   const setOrigin = (code: string) =>
-    update((d) => ({
-      ...d,
-      scenario: {
-        ...d.scenario,
-        originCountry: code,
-        label: d.scenario.label === countryName(d.scenario.originCountry) ? countryName(code) : d.scenario.label,
-      },
-    }));
-  const id = shipmentFieldId;
+    updateScenario(update, ref, {
+      originCountry: code,
+      label: scenario.label === countryName(scenario.originCountry) ? countryName(code) : scenario.label,
+    });
+  const labelProblem = workspaceFields ? null : labelError(draft, ref);
+  // A label problem shows at once, before any save.
+  const labelErrors = labelProblem && !errors[id("label")] ? { ...errors, [id("label")]: labelProblem } : errors;
 
   return (
-    <section className={cardClass} aria-labelledby="lc-shipment-title">
-      <h2 id="lc-shipment-title" className={`${sectionTitleClass} mb-4`}>
-        <span className="text-neutral-muted">1</span> Shipment
+    <section className={cardClass} aria-labelledby={`${id("label")}-title`}>
+      <h2 id={`${id("label")}-title`} className={`${sectionTitleClass} mb-4`}>
+        <span className="text-neutral-muted">{workspaceFields ? "1" : "A"}</span> Shipment
+        {!workspaceFields && <span className="text-sm font-normal text-neutral-muted"> · {scenario.label || "this origin"}</span>}
       </h2>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Field id={id("name")} label="Workspace name" errors={errors}>
-          <TextInput id={id("name")} value={draft.name} onValue={(v) => update((d) => ({ ...d, name: v }))} errors={errors} disabled={disabled} maxLength={120} />
-        </Field>
-        <Field id={id("entryDate")} label="Expected entry date" errors={errors} hint={`From ${bounds.minText} to ${bounds.maxText} (UTC).`}>
-          <TextInput
-            id={id("entryDate")}
-            type="date"
-            value={draft.entryDate}
-            onValue={(v) => update((d) => ({ ...d, entryDate: v }))}
-            errors={errors}
-            hint
-            disabled={disabled}
-            min={bounds.min}
-            max={bounds.max}
-          />
-        </Field>
+        {workspaceFields && <WorkspaceFields {...props} bounds={bounds} />}
+        {!workspaceFields && (
+          <Field id={id("label")} label="Origin label" errors={labelErrors} hint="Unique in this workspace, e.g. the country and supplier.">
+            <TextInput
+              id={id("label")}
+              value={scenario.label}
+              onValue={(v) => set("label", v)}
+              errors={labelErrors}
+              hint
+              disabled={disabled}
+              maxLength={60}
+            />
+          </Field>
+        )}
         <Field id={id("originCountry")} label="Country of origin" errors={errors}>
           <select
             id={id("originCountry")}
-            value={draft.scenario.originCountry}
+            value={scenario.originCountry}
             onChange={(e) => setOrigin(e.target.value)}
             disabled={disabled}
             aria-describedby={describedBy(id("originCountry"), errors)}
@@ -78,10 +122,10 @@ export function ShipmentSection({
           </select>
         </Field>
         <Field id={id("supplierName")} label="Supplier" unit="optional" errors={errors}>
-          <TextInput id={id("supplierName")} value={draft.scenario.supplierName} onValue={(v) => setScenario("supplierName", v)} errors={errors} disabled={disabled} maxLength={120} />
+          <TextInput id={id("supplierName")} value={scenario.supplierName} onValue={(v) => set("supplierName", v)} errors={errors} disabled={disabled} maxLength={120} />
         </Field>
         <Field id={id("shipmentMode")} label="Mode" errors={errors}>
-          <select id={id("shipmentMode")} value={draft.scenario.shipmentMode} onChange={(e) => setScenario("shipmentMode", e.target.value)} disabled={disabled} className={fieldClass}>
+          <select id={id("shipmentMode")} value={scenario.shipmentMode} onChange={(e) => set("shipmentMode", e.target.value)} disabled={disabled} className={fieldClass}>
             {Object.entries(MODE_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -90,7 +134,7 @@ export function ShipmentSection({
           </select>
         </Field>
         <Field id={id("incoterm")} label="Incoterm" errors={errors}>
-          <select id={id("incoterm")} value={draft.scenario.incoterm} onChange={(e) => setScenario("incoterm", e.target.value)} disabled={disabled} className={fieldClass}>
+          <select id={id("incoterm")} value={scenario.incoterm} onChange={(e) => set("incoterm", e.target.value)} disabled={disabled} className={fieldClass}>
             {INCOTERMS.map((term) => (
               <option key={term} value={term}>
                 {term}
@@ -99,7 +143,7 @@ export function ShipmentSection({
           </select>
         </Field>
       </div>
-      <fieldset className="mt-4 flex flex-col gap-2" aria-describedby="lc-entryType-hint">
+      <fieldset className="mt-4 flex flex-col gap-2" aria-describedby={`${id("entryType")}-hint`}>
         <legend className={`${labelClass} mb-2`}>Entry type</legend>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           {[
@@ -109,11 +153,11 @@ export function ShipmentSection({
             <label key={value} className="flex items-center gap-2 text-sm text-move-navy">
               <input
                 type="radio"
-                name="lc-entryType"
+                name={id("entryType")}
                 id={value === "auto" ? id("entryType") : undefined}
                 value={value}
-                checked={draft.scenario.entryType === value}
-                onChange={() => setScenario("entryType", value)}
+                checked={scenario.entryType === value}
+                onChange={() => set("entryType", value)}
                 disabled={disabled}
                 className="accent-move-green"
               />
@@ -121,7 +165,7 @@ export function ShipmentSection({
             </label>
           ))}
         </div>
-        <p id="lc-entryType-hint" className="text-xs text-neutral-muted">
+        <p id={`${id("entryType")}-hint`} className="text-xs text-neutral-muted">
           {ENTRY_TYPE_HINT}
         </p>
         <FieldError id={id("entryType")} errors={errors} />

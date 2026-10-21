@@ -1,6 +1,6 @@
 import type { ShipmentMode } from "@/lib/tariff/calculate";
 import { toFixed, type Rational } from "@/lib/tariff/rational";
-import type { SkuRow } from "./editor-draft";
+import type { ItemInputs } from "./editor-draft";
 import { divisorFor } from "./scenario-inputs";
 import { measureSkuLine, shipmentTotals, type SkuMeasures } from "./shipment-measures";
 
@@ -39,15 +39,18 @@ function text(m: SkuMeasures, pcsPerCarton: string): MeasuresText {
   };
 }
 
-function measure(row: SkuRow, mode: ShipmentMode, divisor: string): SkuMeasures | null {
+// A SKU row's quantity with one origin's carton inputs.
+export type MeasuredRow = { quantity: string; item: ItemInputs };
+
+function measure({ quantity, item }: MeasuredRow, mode: ShipmentMode, divisor: string): SkuMeasures | null {
   const result = measureSkuLine(
     {
-      quantity: row.quantity.replace(/,/g, ""),
-      pcsPerCarton: row.pcsPerCarton.replace(/,/g, ""),
-      lengthCm: row.cartonLengthCm,
-      widthCm: row.cartonWidthCm,
-      heightCm: row.cartonHeightCm,
-      cartonKg: row.cartonGrossKg,
+      quantity: quantity.replace(/,/g, ""),
+      pcsPerCarton: item.pcsPerCarton.replace(/,/g, ""),
+      lengthCm: item.cartonLengthCm,
+      widthCm: item.cartonWidthCm,
+      heightCm: item.cartonHeightCm,
+      cartonKg: item.cartonGrossKg,
     },
     { mode, divisor: divisorFor(mode, divisor.trim() === "" ? null : divisor.trim()) },
   );
@@ -55,13 +58,13 @@ function measure(row: SkuRow, mode: ShipmentMode, divisor: string): SkuMeasures 
 }
 
 // Null until the quantity and every packing field hold valid values.
-export function liveMeasures(row: SkuRow, mode: ShipmentMode, divisor: string): MeasuresText | null {
+export function liveMeasures(row: MeasuredRow, mode: ShipmentMode, divisor: string): MeasuresText | null {
   const m = measure(row, mode, divisor);
-  return m ? text(m, row.pcsPerCarton.trim()) : null;
+  return m ? text(m, row.item.pcsPerCarton.trim()) : null;
 }
 
 // The shipment's totals, once every row can be measured; else null.
-export function liveShipment(rows: SkuRow[], mode: ShipmentMode, divisor: string): Omit<MeasuresText, "partial" | "chargeableBasis"> | null {
+export function liveShipment(rows: MeasuredRow[], mode: ShipmentMode, divisor: string): Omit<MeasuresText, "partial" | "chargeableBasis"> | null {
   if (rows.length === 0) return null;
   const all = rows.map((r) => measure(r, mode, divisor));
   if (all.some((m) => m == null)) return null;

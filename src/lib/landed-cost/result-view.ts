@@ -4,7 +4,7 @@ import { NO_REVIEWED_DUTIES_TEXT } from "@/lib/tariff/effective-rate";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
 import { centsToRational } from "@/lib/tariff/rational";
 import { usd } from "@/lib/tariff/amount-text";
-import { SKU_FIELD_INPUT, editedScenario, shipmentFieldId, skuFieldId } from "./editor-draft";
+import { baselineScenario, missingFieldId, scenarioFieldId, skuFieldId, workspaceFieldId } from "./editor-draft";
 import { perUnit, shareTenths, tenthsText } from "./money";
 import type { ScenarioField, SkuField } from "./scenario-inputs";
 import type { DutyUnit, ScenarioOutcome, SkuStatus, WorkspaceResult } from "./server-compute";
@@ -51,8 +51,6 @@ export type SkuResultRow = {
 export type BreakdownRow = { key: string; label: string; amount: string; perUnit: string; share: string };
 
 type Common = {
-  // Set when the workspace has more than one scenario (only one is shown).
-  multiScenarioNote: string | null;
   // Per SKU line, the rate's unit when the last result asked for a duty quantity.
   dutyQuantityUnits: Record<string, DutyUnit>;
 };
@@ -152,11 +150,12 @@ function skuRows(workspace: Workspace, outcome: ScenarioOutcome): SkuResultRow[]
   });
 }
 
-function missingItems(workspace: Workspace, outcome: Extract<ScenarioOutcome, { state: "incomplete" }>): MissingItem[] {
+// What an incomplete origin still needs, each pointing at its field in that origin.
+export function missingItems(workspace: Workspace, outcome: Extract<ScenarioOutcome, { state: "incomplete" }>): MissingItem[] {
   const codes = new Map(workspace.skuLines.map((l) => [l.id, l.skuCode]));
   const items: MissingItem[] = outcome.missing.map((f) => ({
     label: SCENARIO_FIELD_LABELS[f],
-    targetId: shipmentFieldId(SCENARIO_FIELD_INPUT[f]),
+    targetId: scenarioFieldId(outcome.scenarioId, SCENARIO_FIELD_INPUT[f]),
   }));
   for (const s of outcome.skus) {
     const code = codes.get(s.skuLineId) ?? "SKU";
@@ -171,7 +170,7 @@ function missingItems(workspace: Workspace, outcome: Extract<ScenarioOutcome, { 
             ? dutyQuantityLabel(s.dutyQuantityUnit)
             : "Duty quantity"
           : SKU_FIELD_LABELS[f];
-      items.push({ label: `${code}: ${label}`, targetId: skuFieldId(s.skuLineId, SKU_FIELD_INPUT[f]) });
+      items.push({ label: `${code}: ${label}`, targetId: missingFieldId(outcome.scenarioId, s.skuLineId, f) });
     }
   }
   return items;
@@ -203,14 +202,11 @@ function feeNotes(outcome: Extract<ScenarioOutcome, { state: "complete" }>): str
   return [entry, mpf, hmf, "One MPF and one HMF for the whole entry, split across SKUs by entered value."];
 }
 
-export function toResultView(result: WorkspaceResult | null, workspace: Workspace): ResultView {
-  const scenario = editedScenario(workspace);
-  const multiScenarioNote =
-    workspace.scenarios.length > 1
-      ? `This workspace has ${workspace.scenarios.length} scenarios. Only the baseline is shown here; comparing origins is coming.`
-      : null;
+// One origin's view (the baseline's when `scenarioId` is left out).
+export function toResultView(result: WorkspaceResult | null, workspace: Workspace, scenarioId?: string): ResultView {
+  const scenario = scenarioId ? workspace.scenarios.find((s) => s.id === scenarioId) : baselineScenario(workspace);
   const dutyQuantityUnits: Record<string, DutyUnit> = {};
-  const common = { multiScenarioNote, dutyQuantityUnits };
+  const common = { dutyQuantityUnits };
   if (!scenario || !result) return { ...common, state: "no_scenario" };
 
   switch (result.state) {
@@ -221,7 +217,7 @@ export function toResultView(result: WorkspaceResult | null, workspace: Workspac
         message: result.message,
         min: formatRateDate(result.bounds.min),
         max: formatRateDate(result.bounds.max),
-        targetId: shipmentFieldId("entryDate"),
+        targetId: workspaceFieldId("entryDate"),
       };
     case "no_sku_lines":
       return { ...common, state: "no_sku_lines" };
@@ -273,4 +269,9 @@ export function toResultView(result: WorkspaceResult | null, workspace: Workspac
     feeNotes: feeNotes(outcome),
     warnings: warningsOf(outcome.skus, t.entryFees.warnings),
   };
+}
+
+// Every saved origin's view, by scenario id.
+export function toResultViews(result: WorkspaceResult | null, workspace: Workspace): Record<string, ResultView> {
+  return Object.fromEntries(workspace.scenarios.map((s) => [s.id, toResultView(result, workspace, s.id)]));
 }
