@@ -94,7 +94,7 @@ const scenarioFields = {
   ),
 };
 
-const skuLineSchema = z
+export const skuLineSchema = z
   .object({
     ref,
     id,
@@ -116,7 +116,7 @@ const skuLineSchema = z
 const measure = (bounds: { places: number; max: number }, message: string) =>
   optionalNumber((s) => parseMeasure(s, bounds) != null, message);
 
-const itemSchema = z.object({
+export const itemSchema = z.object({
   skuRef: ref,
   fobUnitPriceUsd: fob,
   pcsPerCarton: optionalNumber((s) => parseWholeNumber(s) != null, "Enter the pieces per carton as a whole number above zero."),

@@ -23,6 +23,7 @@ import type { LookupLine } from "@/lib/tariff/hts-lookup";
 import { HtsLookupDialog, type LookupRelease } from "../../tariff-calculator/hts-lookup/hts-lookup-dialog";
 import { cardClass, hintClass, linkButtonClass, sectionTitleClass } from "../styles";
 import { FieldError, TextInput } from "./fields";
+import { PasteSkusButton } from "./paste-skus-dialog";
 import type { EditorSectionProps } from "./shipment-section";
 
 const cellInput =
@@ -62,12 +63,15 @@ export function SkuTable({
   dutyQuantityUnits,
   htsRelease,
   newRef,
+  paste,
 }: EditorSectionProps & {
   mode: "combined" | "shared" | "items";
   scenario: ScenarioDraft | null;
   dutyQuantityUnits: Record<string, DutyUnit>;
   htsRelease: LookupRelease | null;
   newRef: () => string;
+  // "Paste from Excel" (owner or admin): prices and packing go to this origin.
+  paste?: { originRef: string; onApplied: (notice: string) => void } | null;
 }) {
   const [lookupFor, setLookupFor] = useState<string | null>(null);
   const lookupButton = useRef<HTMLElement | null>(null);
@@ -120,10 +124,13 @@ export function SkuTable({
       <div className="mb-4 flex items-center justify-between gap-4">
         <h2 className={sectionTitleClass}>{title}</h2>
         {showSku && (
-          <button type="button" onClick={addRow} disabled={disabled || draft.skus.length >= MAX_EDITOR_SKUS} className={linkButtonClass}>
-            <Plus aria-hidden="true" className="mr-1 inline size-4" />
-            Add SKU
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            {paste && <PasteSkusButton draft={draft} originRef={paste.originRef} disabled={disabled} update={update} newRef={newRef} onApplied={paste.onApplied} />}
+            <button type="button" onClick={addRow} disabled={disabled || draft.skus.length >= MAX_EDITOR_SKUS} className={linkButtonClass}>
+              <Plus aria-hidden="true" className="mr-1 inline size-4" />
+              Add SKU
+            </button>
+          </div>
         )}
       </div>
 
