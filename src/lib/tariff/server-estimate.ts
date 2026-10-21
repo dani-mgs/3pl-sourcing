@@ -13,7 +13,7 @@ import { formatHtsCode } from "./hts-code";
 import { evaluateAdditionalDuties, type DutyReviewNote } from "./additional-duties";
 import { scheduledChanges, type ScheduledChange } from "./scheduled-changes";
 import { PROGRAM_COLUMNS, type DutyProgramRow, type EstimateWarning } from "./programs";
-import { feesNotEnteredWarnings, inForce } from "./customs-fees";
+import { FEE_COLUMNS, feesNotEnteredWarnings, inForce } from "./customs-fees";
 import { centsToNumber, parseDecimal, toCents } from "./rational";
 import { loadAdditionalDutyData } from "./server-duty-data";
 import type { EstimateFormData } from "./parse-estimate-form";
@@ -146,11 +146,7 @@ export async function buildEstimate(
     const { line, matchedTenDigit } = found;
 
     const [feesResult, column2Result, programsResult] = await Promise.all([
-      supabase
-        .from("customs_fees")
-        .select(
-          "fee_code, label, rate_pct, min_usd, max_usd, flat_usd, applies_up_to_value_usd, effective_from, effective_to, source_label, source_url",
-        ),
+      supabase.from("customs_fees").select(FEE_COLUMNS),
       supabase
         .from("hts_column2_countries")
         .select("effective_from, effective_to")

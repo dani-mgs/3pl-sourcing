@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import { SHIPMENT_MODES } from "@/lib/tariff/calculate";
 import { ORIGIN_COUNTRY_CODES } from "@/lib/tariff/countries";
 import { UNIT_TOKENS } from "@/lib/tariff/rate-text";
+import { createPayload, parseCreateWorkspace, parseDraft, savePayload } from "./parse-draft";
 import { FREIGHT_BASES, SUPPORTED_INCOTERMS } from "./scenario-totals";
 
 // The workspace tables' value lists must be exactly the ones the app accepts,
@@ -56,5 +57,50 @@ describe("workspace tables match the app's lists", () => {
       if (ch.trim() === "") jsSet.add(ch);
     }
     expect([...sqlSet].sort()).toEqual([...jsSet].sort());
+  });
+});
+
+// The draft functions refuse any key they don't list, so their lists must be
+// exactly the keys the payload builders send.
+describe("draft functions take exactly the payload's keys", () => {
+  const FUNCTIONS = readFileSync(
+    path.join(process.cwd(), "supabase/migrations/20261021020238_landed_cost_draft_functions.sql"),
+    "utf8",
+  );
+  const [createPart, savePart] = FUNCTIONS.split("create function public.save_landed_cost_draft");
+  const keys = (sql: string, name: string): string[] => {
+    const match = new RegExp(`${name} constant text\\[\\] := array\\[([^\\]]*)\\]`).exec(sql);
+    if (!match) throw new Error(`no list ${name}`);
+    return [...match[1].matchAll(/'([^']*)'/g)].map((m) => m[1]).sort();
+  };
+  const sorted = (o: object) => Object.keys(o).sort();
+
+  const id = "00000000-0000-4000-8000-000000000001";
+  const scenario = {
+    label: "China", originCountry: "CN", supplierName: null, incoterm: "FOB", shipmentMode: "Sea", entryType: "auto",
+    freightTotalUsd: null, freightBasis: "value", volumetricDivisor: null,
+  };
+  const draft = parseDraft({
+    name: "W", entryDate: "2026-11-01", baselineRef: id,
+    skuLines: [{ ref: id, id, skuCode: "A", htsCode: "6402993110", quantity: "1" }],
+    scenarios: [{ ref: id, id, ...scenario, items: [{ skuRef: id, fobUnitPriceUsd: "1" }], otherCosts: [{ id, label: "x", amountUsd: "1" }] }],
+  });
+  if (!draft.ok) throw new Error(draft.error);
+  const save = savePayload(draft.data);
+
+  test("save_landed_cost_draft", () => {
+    expect(keys(savePart, "v_top")).toEqual(sorted(save));
+    expect(keys(savePart, "v_line_keys")).toEqual(sorted(save.sku_lines[0]));
+    expect(keys(savePart, "v_scenario_keys")).toEqual(sorted(save.scenarios[0]));
+    expect(keys(savePart, "v_item_keys")).toEqual(sorted(save.scenarios[0].items[0]));
+    expect(keys(savePart, "v_cost_keys")).toEqual(sorted(save.scenarios[0].other_costs[0]));
+  });
+
+  test("create_landed_cost_workspace", () => {
+    const created = parseCreateWorkspace({ name: "W", entryDate: "2026-11-01", scenario }, "2026-10-21");
+    if (!created.ok) throw new Error(created.error);
+    const payload = createPayload(created.data);
+    expect(keys(createPart, "v_top")).toEqual(sorted(payload));
+    expect(keys(createPart, "v_scenario_keys")).toEqual(sorted(payload.scenario));
   });
 });

@@ -14,6 +14,10 @@ import { centsToNumber, compare, div, fromInteger, mul, parseDecimal, toCents, t
 
 const HUNDRED = fromInteger(100);
 
+// The customs_fees columns both readers take (buildEstimate, Landed Cost).
+export const FEE_COLUMNS =
+  "fee_code, label, rate_pct, min_usd, max_usd, flat_usd, applies_up_to_value_usd, effective_from, effective_to, source_label, source_url";
+
 export type FeeCharge = { line: EstimateLine; cents: bigint };
 
 // "auto": informal (flat fee) at or below the informal row's value limit,

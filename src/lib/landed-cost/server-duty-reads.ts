@@ -1,6 +1,8 @@
 import type { createClient } from "@/lib/supabase/server";
 import type { DutyRow } from "@/lib/tariff/additional-duties";
+import { FEE_COLUMNS } from "@/lib/tariff/customs-fees";
 import { LINE_COLUMNS, type HtsLineRecord } from "@/lib/tariff/hts-line-match";
+import type { FeeRowWithDates } from "./entry-fees";
 import { PROGRAM_COLUMNS, type DutyProgramRow } from "@/lib/tariff/programs";
 import {
   API_ROW_LIMIT,
@@ -126,4 +128,13 @@ export async function readScope(supabase: Supabase, codes: string[]): Promise<Sc
   ]);
   const byId = new Map([...direct, ...under].map((s) => [s.id, s]));
   return [...byId.values()].map(({ duty_id, hts_prefix, article_description, excluded }) => ({ duty_id, hts_prefix, article_description, excluded }));
+}
+
+// Every customs fee row, as buildEstimate reads them (a few dozen at most;
+// failing at the row limit). Landed Cost picks those in force on the entry
+// date, and warns from the whole list when its fiscal year isn't entered.
+export async function readFeeRows(supabase: Supabase): Promise<FeeRowWithDates[]> {
+  const { data, error } = await supabase.from("customs_fees").select(FEE_COLUMNS);
+  if (error) throw error;
+  return belowRowLimit(data, "customs_fees") as FeeRowWithDates[];
 }

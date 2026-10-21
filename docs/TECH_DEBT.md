@@ -209,33 +209,33 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 - **Where:** `src/lib/tariff/calculate.ts`, `src/lib/tariff/customs-fees.ts`, `src/lib/tariff/caveats.ts`
 
-### Landed Cost (Phase 2c): at least one scenario per workspace is enforced in the app only
+### Landed Cost: at least one scenario per workspace isn't a table constraint
 - **Added:** 2026-10-21
-- **What:** The database caps a workspace at 5 scenarios but can't require at least 1: the workspace row exists before its first scenario, and Server Actions can't wrap both inserts in one transaction. Phase 2c must create a workspace together with its first scenario (removing the workspace if the scenario insert fails) and refuse to delete the last scenario.
-- **Why deferred:** No Server Actions yet; enforcing it in the database needs a function or deferred trigger.
+- **What:** The database caps a workspace at 5 scenarios but can't require at least 1: the workspace row exists before its first scenario. Updated 2026-10-21 (Phase 2c-1): the app writes only through `create_landed_cost_workspace()` (the workspace and its first scenario in one transaction) and `save_landed_cost_draft()` (refuses a draft with no scenario), so the app can't leave a workspace without one. A direct `delete` on `landed_cost_scenarios` through the API by the owner or an admin still can; the calculation then shows no scenarios.
+- **Why deferred:** Closing it needs a deferred constraint trigger on scenario deletes that ignores deletes cascading from the workspace; nothing in the app deletes scenarios directly.
 - **Severity:** Low
-- **Where:** `supabase/migrations/20261021013030_landed_cost_workspaces.sql`, the Phase 2c actions
-
-### Landed Cost (Phase 2c): a scenario item for every SKU line isn't enforced
-- **Added:** 2026-10-21
-- **What:** `landed_cost_scenario_items` holds a scenario's inputs per SKU line, but nothing requires a row for every SKU line in every scenario, and every input in a row may still be empty. Phase 2c must report "inputs missing" for each SKU line whose item is absent or incomplete, and never skip the line, so a scenario's total is never silently missing a SKU.
-- **Why deferred:** Drafts are saved before they're complete; the check belongs to the calculation (Phase 2c).
-- **Severity:** Medium (a skipped line understates the landed cost)
-- **Where:** `src/lib/landed-cost/server-workspace.ts` (`Scenario.items`), the Phase 2c calculation
+- **Where:** `supabase/migrations/20261021013030_landed_cost_workspaces.sql`, `supabase/migrations/20261021020238_landed_cost_draft_functions.sql`
 
 ### Landed Cost (Phase 2c): ask for the duty quantity only where the rate needs it
 - **Added:** 2026-10-21
 - **What:** `loadSkuDuties` returns `needs_quantity` (with the unit, e.g. kg or dozen) when a SKU's rate is per unit or compound and the request has no quantity in that unit. The UI must ask for the quantity in the rate's own unit (for kg, the goods' net weight) only for those SKUs, and must never fill it from the carton gross weight or count pieces as dozens.
-- **Why deferred:** Phase 2a is the server library only; the workspace UI is Phase 2c.
+- **Why deferred:** Phase 2a is the server library only; the workspace UI is Phase 2c. Updated 2026-10-21 (Phase 2c-1): `computeWorkspaceResult` reports such a SKU as `inputs_missing` with `duty_quantity` and the unit; asking for it is the 2c-2 page.
 - **Severity:** Medium (a wrong quantity gives a wrong duty)
 - **Where:** `src/lib/landed-cost/sku-duty.ts` (`quantityFor`), the Phase 2c SKU form
 
 ### Landed Cost (Phase 2c): a saved draft's entry date can fall out of range
 - **Added:** 2026-10-21
 - **What:** Entry dates follow the estimate rule (yesterday to 366 days ahead, UTC). A draft saved with an entry date that has since passed gets `invalid_entry_date` from `loadSkuDuties` for the whole call, so the UI needs an "update the entry date" prompt instead of a generic error.
-- **Why deferred:** No drafts or UI yet (Phase 2c).
+- **Why deferred:** No drafts or UI yet (Phase 2c). Updated 2026-10-21 (Phase 2c-1): drafts can be saved with any real date, and `computeWorkspaceResult` returns `entry_date_out_of_range` with the bounds before loading anything; the prompt is the 2c-2 page.
 - **Severity:** Low
 - **Where:** `src/lib/landed-cost/duty-request.ts` (`parseDutyRequest`), the Phase 2c workspace page
+
+### Landed Cost: admins can't reassign workspace ownership
+- **Added:** 2026-10-21
+- **What:** A workspace's `owner_id` is set on insert and can't be updated by anyone (column grants), and its foreign key to `auth.users` is NO ACTION, as for projects and duty estimates. So admins can't reassign workspace ownership, and a departing user's workspaces must be deleted first before their account can be deleted.
+- **Why deferred:** Not needed yet. Consider an admin reassign action later (a narrow function or admin-only update, with its own pgTAP case).
+- **Severity:** Low
+- **Where:** `supabase/migrations/20261021013030_landed_cost_workspaces.sql`
 
 ### Duty reads not paged: additional duties and Chapter 99 changes
 - **Added:** 2026-10-21 (guard added the same day)
@@ -314,6 +314,14 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 
 ## Resolved
+
+### Landed Cost (Phase 2c): a scenario item for every SKU line isn't enforced
+- **Added:** 2026-10-21
+- **What:** `landed_cost_scenario_items` holds a scenario's inputs per SKU line, but nothing requires a row for every SKU line in every scenario, and every input in a row may still be empty. Phase 2c must report "inputs missing" for each SKU line whose item is absent or incomplete, and never skip the line, so a scenario's total is never silently missing a SKU.
+- **Why deferred:** Drafts are saved before they're complete; the check belongs to the calculation (Phase 2c).
+- **Severity:** Medium (a skipped line understates the landed cost)
+- **Where:** `src/lib/landed-cost/server-workspace.ts` (`Scenario.items`), the Phase 2c calculation
+- **Resolved:** 2026-10-21 (Phase 2c-1). `prepareScenario` (`src/lib/landed-cost/scenario-inputs.ts`) walks every SKU line for every scenario; a line with no item row is `inputs_missing` with every item field listed, and a scenario shows totals only when every line is complete (`server-compute.test.ts`).
 
 ### Customs fees used silently after 1 October
 - **Added:** 2026-10-07 (part of "past entry dates not supported")
