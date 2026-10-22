@@ -2,14 +2,33 @@
 
 import { AlertTriangle, CheckCircle2, CircleAlert, Info } from "lucide-react";
 import type { ReactNode } from "react";
-import { INCLUDES_MANUAL_RATE, type ResultView, type SkuResultRow } from "@/lib/landed-cost/result-view";
+import { COVERED_TEXT, type DutyLayer, type ProgramNote, type ResultView, type SkuResultRow } from "@/lib/landed-cost/result-view";
 import { IncompleteEstimateBadge } from "@/components/tariff/incomplete-estimate-badge";
-import { cardClass, secondaryButtonClass } from "../styles";
+import { cardClass, linkButtonClass, secondaryButtonClass } from "../styles";
+import { IncludesManualRate, ManualLayerDetails, ManualMark, NotSavedMark } from "./manual-layer";
 
 // The result of the LAST SAVE, calculated on the server (toResultView). A
 // scenario shows totals only when it's complete; otherwise it lists what's
 // missing, each item focusing its field. Every status is a word with an
-// icon; colour only repeats it.
+// icon; colour only repeats it. Manual rates are shown in full to everyone;
+// `editing` (the workspace's owner or an admin, never a locked version) adds
+// the buttons that change them in the local draft.
+
+// What the panel's manual-rate buttons do (workspace-editor.tsx), and the
+// draft's state for the marks. SKU line ids are the saved SKUs' refs.
+export type ManualEditing = {
+  onOverride: (skuLineId: string, layer: DutyLayer) => void;
+  onApplyManually: (skuLineId: string, program: ProgramNote) => void;
+  onAddDuty: (skuLineId: string) => void;
+  onEdit: (skuLineId: string, overrideId: string) => void;
+  onRemove: (skuLineId: string, overrideId: string) => void;
+  onKeepMyRate: (skuLineId: string, overrideId: string) => void;
+  onConflict: (overrideId: string) => void;
+  // The draft's manual rate for an app layer, if any.
+  rowForLayer: (skuLineId: string, layerKey: string) => { ref: string; unsaved: boolean } | null;
+  // A saved manual rate changed or removed in the draft since.
+  isUnsaved: (skuLineId: string, overrideId: string) => boolean;
+};
 
 const WARNING_BOX = "rounded-xl border border-[#FBBF24] bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]";
 
@@ -42,7 +61,74 @@ function Notice({ tone = "info", children }: { tone?: "info" | "warning" | "erro
   );
 }
 
-function SkuDuties({ sku }: { sku: SkuResultRow }) {
+function LayerActions({ sku, layer, editing }: { sku: SkuResultRow; layer: DutyLayer; editing: ManualEditing }) {
+  if (layer.manual) {
+    const id = layer.manual.overrideId;
+    return (
+      <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+        {editing.isUnsaved(sku.skuLineId, id) && <NotSavedMark />}
+        <button type="button" className={linkButtonClass} onClick={() => editing.onEdit(sku.skuLineId, id)}>
+          Edit<span className="sr-only"> the manual rate for {layer.manual.layerName}</span>
+        </button>
+        {layer.manual.note ? (
+          <>
+            <button type="button" className={linkButtonClass} onClick={() => editing.onRemove(sku.skuLineId, id)}>
+              Remove (use the app&apos;s rate)
+            </button>
+            <button type="button" className={linkButtonClass} onClick={() => editing.onKeepMyRate(sku.skuLineId, id)}>
+              Keep my rate
+            </button>
+          </>
+        ) : (
+          <button type="button" className={linkButtonClass} onClick={() => editing.onRemove(sku.skuLineId, id)}>
+            Remove
+          </button>
+        )}
+      </p>
+    );
+  }
+  if (!layer.layerKey) return null;
+  const row = editing.rowForLayer(sku.skuLineId, layer.layerKey);
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-x-3">
+      {row?.unsaved && <NotSavedMark />}
+      <button type="button" className={linkButtonClass} onClick={() => editing.onOverride(sku.skuLineId, layer)}>
+        {row ? "Edit manual rate" : "Override"}
+        <span className="sr-only"> {layer.label}</span>
+      </button>
+    </p>
+  );
+}
+
+function ProgramsNotCounted({ sku, editing }: { sku: SkuResultRow; editing: ManualEditing | null }) {
+  if (sku.programs.length === 0) return null;
+  return (
+    <div className="mt-2">
+      <p className="text-[10px] font-medium tracking-wide text-neutral-muted uppercase">Programs not counted</p>
+      <ul className="mt-1 flex flex-col gap-1">
+        {sku.programs.map((p) => (
+          <li key={p.programKey}>
+            <span className="font-medium text-move-navy">{p.name}</span>: {p.text}
+            {p.covered ? (
+              <span className="font-medium text-move-navy"> {COVERED_TEXT}</span>
+            ) : (
+              editing && (
+                <>
+                  {" "}
+                  <button type="button" className={linkButtonClass} onClick={() => editing.onApplyManually(sku.skuLineId, p)}>
+                    Apply manually<span className="sr-only"> ({p.name})</span>
+                  </button>
+                </>
+              )
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function SkuDuties({ sku, editing }: { sku: SkuResultRow; editing: ManualEditing | null }) {
   if (sku.status === "duty_error") {
     return (
       <p className="text-xs text-danger">
@@ -50,7 +136,7 @@ function SkuDuties({ sku }: { sku: SkuResultRow }) {
       </p>
     );
   }
-  if (sku.layers.length === 0) return null;
+  if (sku.layers.length === 0 && sku.programs.length === 0 && !editing) return null;
   return (
     <details className="text-xs">
       <summary className="cursor-pointer font-medium text-move-green">
@@ -68,7 +154,11 @@ function SkuDuties({ sku }: { sku: SkuResultRow }) {
           {sku.layers.map((l) => (
             <tr key={`${l.label}-${l.heading ?? ""}`} className="border-t border-neutral-border align-top">
               <td className="py-1.5 pr-2">
-                <p className="font-medium text-move-navy">{l.label}</p>
+                <p className="flex flex-wrap items-center gap-1.5 font-medium text-move-navy">
+                  {l.label}
+                  {l.manual && <ManualMark />}
+                </p>
+                {l.manual && <ManualLayerDetails manual={l.manual} />}
                 {l.heading && <p className="text-neutral-muted">Chapter 99 heading {l.heading}</p>}
                 {l.detail && <p className="text-neutral-muted">{l.detail}</p>}
                 <p className="text-neutral-muted">
@@ -83,6 +173,7 @@ function SkuDuties({ sku }: { sku: SkuResultRow }) {
                     {n}
                   </p>
                 ))}
+                {editing && <LayerActions sku={sku} layer={l} editing={editing} />}
               </td>
               <td className="py-1.5 pr-2 whitespace-nowrap">{l.rate}</td>
               <td className="py-1.5 text-right whitespace-nowrap tabular-nums">{l.amount}</td>
@@ -96,20 +187,17 @@ function SkuDuties({ sku }: { sku: SkuResultRow }) {
           {sku.lastVerifiedStale && " (over 30 days ago; ask a tariff editor to review it)"}
         </p>
       )}
+      <ProgramsNotCounted sku={sku} editing={editing} />
+      {editing && (
+        <button type="button" className={`${linkButtonClass} mt-2`} onClick={() => editing.onAddDuty(sku.skuLineId)}>
+          Add manual duty<span className="sr-only"> for {sku.skuCode}</span>
+        </button>
+      )}
     </details>
   );
 }
 
-// A manual rate applies (the editing UI comes later): said in words.
-function ManualRateBadge() {
-  return (
-    <span className="rounded-full border border-neutral-border bg-neutral-bg px-2 py-0.5 text-xs font-semibold text-move-navy">
-      {INCLUDES_MANUAL_RATE}
-    </span>
-  );
-}
-
-function SkuTable({ skus, complete }: { skus: SkuResultRow[]; complete: boolean }) {
+function SkuTable({ skus, complete, editing }: { skus: SkuResultRow[]; complete: boolean; editing: ManualEditing | null }) {
   return (
     <table className="w-full text-left text-sm text-move-navy">
       <caption className="sr-only">Per SKU</caption>
@@ -129,10 +217,10 @@ function SkuTable({ skus, complete }: { skus: SkuResultRow[]; complete: boolean 
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <Status kind={s.status === "ok" ? "complete" : s.status === "duty_error" ? "error" : "incomplete"}>{s.statusLabel}</Status>
                 {s.dutiesIncomplete && <IncompleteEstimateBadge />}
-                {s.includesManualRate && <ManualRateBadge />}
+                {s.includesManualRate && <IncludesManualRate />}
               </div>
               <div className="mt-1">
-                <SkuDuties sku={s} />
+                <SkuDuties sku={s} editing={editing} />
               </div>
             </td>
             {complete && <td className="py-2 pr-2 text-right whitespace-nowrap tabular-nums">{s.perUnit}</td>}
@@ -164,7 +252,7 @@ function Warnings({ warnings }: { warnings: string[] }) {
   );
 }
 
-function Body({ view }: { view: ResultView }) {
+function Body({ view, editing }: { view: ResultView; editing: ManualEditing | null }) {
   switch (view.state) {
     case "complete":
       return (
@@ -173,7 +261,7 @@ function Body({ view }: { view: ResultView }) {
             <div className="flex flex-wrap items-center gap-2">
               <Status kind="complete">Complete</Status>
               {view.incomplete && <IncompleteEstimateBadge />}
-              {view.includesManualRate && <ManualRateBadge />}
+              {view.includesManualRate && <IncludesManualRate />}
             </div>
             <p className="text-xs text-neutral-muted">Landed cost per unit</p>
             <p className="font-display text-4xl font-semibold text-move-navy tabular-nums" data-testid="lc-per-unit">
@@ -206,7 +294,7 @@ function Body({ view }: { view: ResultView }) {
             </tbody>
           </table>
           {view.percentagesRounded && <p className="-mt-2 text-xs text-neutral-muted">Percentages are rounded.</p>}
-          <SkuTable skus={view.skus} complete />
+          <SkuTable skus={view.skus} complete editing={editing} />
           <div>
             <p className="mb-1 text-xs font-semibold tracking-wide text-neutral-muted uppercase">Fees</p>
             <ul className="flex flex-col gap-1 text-xs text-move-navy">
@@ -227,7 +315,11 @@ function Body({ view }: { view: ResultView }) {
             <ul className="flex flex-col gap-1">
               {view.missing.map((m) => (
                 <li key={`${m.label}-${m.targetId}`}>
-                  {m.targetId ? (
+                  {m.conflict && editing ? (
+                    <button type="button" onClick={() => editing.onConflict(m.conflict!.overrideId)} className="text-left underline underline-offset-2 hover:no-underline">
+                      {m.label}
+                    </button>
+                  ) : m.targetId ? (
                     <button type="button" onClick={() => focusField(m.targetId)} className="text-left underline underline-offset-2 hover:no-underline">
                       {m.label}
                     </button>
@@ -238,7 +330,7 @@ function Body({ view }: { view: ResultView }) {
               ))}
             </ul>
           </Notice>
-          <SkuTable skus={view.skus} complete={false} />
+          <SkuTable skus={view.skus} complete={false} editing={editing} />
           <Warnings warnings={view.warnings} />
         </>
       );
@@ -249,7 +341,7 @@ function Body({ view }: { view: ResultView }) {
           <Notice tone="error">
             <p>{view.message}</p>
           </Notice>
-          <SkuTable skus={view.skus} complete={false} />
+          <SkuTable skus={view.skus} complete={false} editing={editing} />
         </>
       );
     case "duties_unavailable":
@@ -295,6 +387,7 @@ export function ResultPanel({
   lastSaved,
   originLabel = null,
   subtitle = null,
+  editing = null,
 }: {
   view: ResultView | null;
   dirty: boolean;
@@ -302,6 +395,8 @@ export function ResultPanel({
   originLabel?: string | null;
   // In place of "As of your last save…" (a locked version).
   subtitle?: string | null;
+  // Null: read-only (not the owner or an admin, or a locked version).
+  editing?: ManualEditing | null;
 }) {
   return (
     <section className={`${cardClass} flex flex-col gap-4`} aria-labelledby="lc-result-title" aria-live="polite">
@@ -317,7 +412,7 @@ export function ResultPanel({
         )}
       </div>
       {view ? (
-        <Body view={view} />
+        <Body view={view} editing={editing} />
       ) : (
         <Notice>
           <p>Not calculated yet: save to see this origin&apos;s result.</p>

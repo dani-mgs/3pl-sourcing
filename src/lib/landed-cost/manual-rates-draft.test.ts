@@ -43,8 +43,8 @@ describe("parsing manual rates", () => {
       { ref: "o2", kind: "add", layerKey: "", label: " Anti-dumping ", ratePercent: "", amountUsd: "1,234.50", reason: " Case A-570-001 " },
     ]);
     expect(d.scenarios[0].items[0].overrides).toEqual([
-      { ref: "o1", id: null, kind: "replace", layerKey: "section_301_china", label: null, ratePercent: "0", amountUsd: null, reason: "Exclusion granted" },
-      { ref: "o2", id: null, kind: "add", layerKey: null, label: "Anti-dumping", ratePercent: null, amountUsd: "1234.50", reason: "Case A-570-001" },
+      { ref: "o1", id: null, kind: "replace", layerKey: "section_301_china", label: null, ratePercent: "0", amountUsd: null, reason: "Exclusion granted", confirmAppRate: false },
+      { ref: "o2", id: null, kind: "add", layerKey: null, label: "Anti-dumping", ratePercent: null, amountUsd: "1234.50", reason: "Case A-570-001", confirmAppRate: false },
     ]);
   });
 

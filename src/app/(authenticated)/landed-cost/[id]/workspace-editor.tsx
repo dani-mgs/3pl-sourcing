@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Eye, Info, RefreshCw } from "lucide-react";
 import { applySaveResult, isDirty, issueTarget, toEditorDraft, toSaveInput, type EditorDraft } from "@/lib/landed-cost/editor-draft";
 import type { ComparisonView } from "@/lib/landed-cost/comparison-view";
+import { manualRateList } from "@/lib/landed-cost/manual-rate-draft";
 import type { ResultView } from "@/lib/landed-cost/result-view";
 import type { DutyUnit } from "@/lib/landed-cost/server-compute";
 import type { Workspace } from "@/lib/landed-cost/workspace-schema";
@@ -15,6 +16,7 @@ import { CompareAfterSave, ComparisonArea } from "./comparison-area";
 import { DeleteWorkspaceButton } from "./delete-workspace-button";
 import { ExportCsvButton } from "./export-csv-button";
 import { LockVersionButton } from "./locked-versions";
+import { ManualRatesSection } from "./manual-rates-section";
 import type { FieldErrors } from "./fields";
 import { FreightSection } from "./freight-section";
 import { AddOriginButtons, OriginActions, OriginTabs } from "./origin-controls";
@@ -22,6 +24,7 @@ import { OtherCostsSection } from "./other-costs-section";
 import { ResultPanel } from "./result-panel";
 import { ShipmentSection, WorkspaceFields, type Countries, type EntryDateBounds } from "./shipment-section";
 import { SkuTable } from "./sku-table";
+import { useManualRates } from "./use-manual-rates";
 import { useUnsavedWarning } from "./use-unsaved-warning";
 
 type SaveErrors = { message: string; summary: { message: string; id: string | null; scenarioRef: string | null }[]; fields: FieldErrors };
@@ -136,9 +139,26 @@ export function WorkspaceEditor({
   }
 
   const sectionProps = { draft, disabled, errors: errors?.fields ?? {}, update };
+  const view = selected.id ? (views[selected.id] ?? null) : null;
+  // Manual rates: everyone sees them; the owner or an admin edits them.
+  const manual = useManualRates({ draft, saved, update, scenarioRef: selected.ref, view, newRef });
+  const manualSection = (step: string) => (
+    <ManualRatesSection
+      rows={manualRateList(draft, saved, selected.ref, view)}
+      step={step}
+      actions={canEdit && !isPending ? { edit: manual.editRow, remove: manual.removeRow, keepMyRate: manual.keepRow, fixConflict: manual.resolveConflict } : null}
+      overrideIdOf={(ref) => Object.values(selected.overrides).flat().find((o) => o.ref === ref)?.id ?? null}
+    />
+  );
   const panel = (
     <aside className="xl:sticky xl:top-24 xl:self-start">
-      <ResultPanel view={selected.id ? (views[selected.id] ?? null) : null} dirty={dirty} lastSaved={lastSaved} originLabel={multi ? selected.label : null} />
+      <ResultPanel
+        view={view}
+        dirty={dirty}
+        lastSaved={lastSaved}
+        originLabel={multi ? selected.label : null}
+        editing={canEdit && !isPending ? manual.editing : null}
+      />
     </aside>
   );
   const paste = canEdit ? { originRef: selected.ref, onApplied: setNotice } : null;
@@ -225,6 +245,7 @@ export function WorkspaceEditor({
             <SkuTable {...sectionProps} mode="combined" scenario={selected} dutyQuantityUnits={dutyQuantityUnits} htsRelease={htsRelease} newRef={newRef} paste={paste} />
             <FreightSection {...sectionProps} scenario={selected} step="3" />
             <OtherCostsSection {...sectionProps} scenario={selected} step="4" newRef={newRef} />
+            {manualSection("5")}
           </div>
           {panel}
         </div>
@@ -260,11 +281,13 @@ export function WorkspaceEditor({
               <SkuTable {...sectionProps} mode="items" scenario={selected} dutyQuantityUnits={dutyQuantityUnits} htsRelease={htsRelease} newRef={newRef} />
               <FreightSection {...sectionProps} scenario={selected} step="C" />
               <OtherCostsSection {...sectionProps} scenario={selected} step="D" newRef={newRef} />
+              {manualSection("E")}
             </div>
             {panel}
           </div>
         </>
       )}
+      {canEdit && manual.dialogs}
     </div>
   );
 }

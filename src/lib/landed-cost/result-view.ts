@@ -2,9 +2,11 @@ import { formatRateDate } from "@/lib/fx/rate-provenance";
 import { formatCurrency } from "@/lib/currency";
 import { NO_REVIEWED_DUTIES_TEXT } from "@/lib/tariff/effective-rate";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
-import { centsToRational } from "@/lib/tariff/rational";
-import { usd } from "@/lib/tariff/amount-text";
+import { centsToRational, parseDecimal } from "@/lib/tariff/rational";
+import { pctText, usd } from "@/lib/tariff/amount-text";
+import type { ProgramWarningKind } from "@/lib/tariff/programs";
 import { baselineScenario, missingFieldId, scenarioFieldId, skuFieldId, workspaceFieldId } from "./editor-draft";
+import { layerKeyOf, type DutyLine, type ManualLayer, type ManualRateConflict } from "./manual-rates";
 import { perUnit, shareTenths, tenthsText } from "./money";
 import type { ScenarioField, SkuField } from "./scenario-inputs";
 import type { Workspace } from "./workspace-schema";
@@ -14,9 +16,35 @@ import type { ViewDutyUnit, ViewOutcome, ViewResult, ViewSkuStatus } from "./vie
 // scenario, as plain text ready to show (no bigint or Rational reaches the
 // browser). Pure. Every status carries a word; colour only repeats it.
 
-export type MissingItem = { label: string; targetId: string | null };
+// A conflict's entry also names its manual rate, so the panel can open it.
+export type MissingItem = { label: string; targetId: string | null; conflict?: { overrideId: string; code: ManualRateConflict["code"] } };
+
+// A manual layer, worded: "0%" or "$150.00 fixed"; "App rate: +25% ($150.00)".
+export type ManualLayerView = {
+  overrideId: string;
+  kind: "replace" | "add";
+  layerName: string;
+  value: string;
+  appRate: string | null;
+  reason: string;
+  setBy: string;
+  setByName: string;
+  // "Oct 1, 2026".
+  setOn: string;
+  // Only when someone else changed it, or on another day.
+  changedBy: string | null;
+  note: string | null;
+};
+
+// A program the app names but doesn't count in the total, which can be applied manually.
+export type ProgramNote = { programKey: string; name: string; text: string; kind: ProgramWarningKind; covered: boolean };
+export const MANUAL_PROGRAM_KINDS: readonly ProgramWarningKind[] = ["pending_review", "not_loaded", "conditional", "depends_on", "unconfirmed"];
 
 export type DutyLayer = {
+  // The app's layer a manual rate can replace ("base" or a program key);
+  // null for a manual layer, which is edited instead.
+  layerKey: string | null;
+  manual: ManualLayerView | null;
   label: string;
   heading: string | null;
   rate: string;
@@ -43,6 +71,11 @@ export type SkuResultRow = {
   dutiesIncomplete: boolean;
   includesManualRate: boolean;
   layers: DutyLayer[];
+  // Programs named but not counted (pending review, not loaded, conditional,
+  // depends on, unconfirmed).
+  programs: ProgramNote[];
+  // Manual rates that block this SKU's total.
+  conflicts: ManualRateConflict[];
   lastVerified: string | null;
   lastVerifiedStale: boolean;
   // A duty error's message.
@@ -99,7 +132,8 @@ const STATUS_LABELS: Record<ViewSkuStatus["status"], string> = {
 };
 
 export const INCLUDES_MANUAL_RATE = "Includes manual rate";
-export const COVERED_BY_MANUAL_RATE = " (covered by a manual rate)";
+export const COVERED_TEXT = "Covered by a manual rate.";
+export const COVERED_BY_MANUAL_RATE = ` ${COVERED_TEXT}`;
 
 // The duty quantity's label in the rate's unit: kg is the goods' net weight.
 export function dutyQuantityLabel(unit: ViewDutyUnit): string {
@@ -107,6 +141,40 @@ export function dutyQuantityLabel(unit: ViewDutyUnit): string {
 }
 
 const money = (cents: bigint) => usd(centsToRational(cents));
+const dateOf = (iso: string) => formatRateDate(iso.slice(0, 10));
+
+export function manualLayerView(m: ManualLayer): ManualLayerView {
+  const changed = m.changedAt.slice(0, 10) !== m.setAt.slice(0, 10) || m.changedByName !== m.setByName;
+  return {
+    overrideId: m.overrideId,
+    kind: m.kind,
+    layerName: m.layerName,
+    value: m.ratePercent != null ? pctText(parseDecimal(m.ratePercent)) : `${usd(parseDecimal(m.amountUsd!))} fixed`,
+    appRate: m.engineRateText != null ? `${m.engineRateText}${m.engineAmountUsd != null ? ` (${usd(parseDecimal(m.engineAmountUsd))})` : ""}` : null,
+    reason: m.reason,
+    setBy: `Set by ${m.setByName} on ${dateOf(m.setAt)}`,
+    setByName: m.setByName,
+    setOn: dateOf(m.setAt),
+    changedBy: changed ? `Changed by ${m.changedByName} on ${dateOf(m.changedAt)}` : null,
+    note: m.note,
+  };
+}
+
+function layerView(l: DutyLine): DutyLayer {
+  return {
+    layerKey: layerKeyOf(l),
+    manual: l.manual ? manualLayerView(l.manual) : null,
+    label: l.label,
+    heading: l.heading ?? null,
+    rate: l.rateText,
+    amount: formatCurrency(l.amountUsd, "USD"),
+    detail: l.detail,
+    sourceLabel: l.sourceLabel,
+    sourceUrl: l.sourceUrl,
+    checkedOn: l.sourceCheckedOn ? formatRateDate(l.sourceCheckedOn) : null,
+    notes: l.notes ?? [],
+  };
+}
 
 // Each part's share of the total, rounded on its own, half up to 0.1%; a
 // part above zero that rounds to 0.0% (under 0.05%) shows "<0.1%". So the
@@ -140,17 +208,13 @@ function skuRows(workspace: Workspace, outcome: ViewOutcome): SkuResultRow[] {
       dutyRate: duty?.effectiveDutyRate ?? null,
       dutiesIncomplete: duty?.incomplete ?? false,
       includesManualRate: (duty?.lines ?? []).some((l) => l.manual),
-      layers: (duty?.lines ?? []).map((l) => ({
-        label: l.label,
-        heading: l.heading ?? null,
-        rate: l.rateText,
-        amount: formatCurrency(l.amountUsd, "USD"),
-        detail: l.detail,
-        sourceLabel: l.sourceLabel,
-        sourceUrl: l.sourceUrl,
-        checkedOn: l.sourceCheckedOn ? formatRateDate(l.sourceCheckedOn) : null,
-        notes: l.notes ?? [],
-      })),
+      layers: (duty?.lines ?? []).map(layerView),
+      programs: (duty?.warnings ?? []).flatMap((w) =>
+        w.kind && MANUAL_PROGRAM_KINDS.includes(w.kind)
+          ? [{ programKey: w.programKey, name: w.name, text: w.text, kind: w.kind, covered: w.coveredByManualRate === true }]
+          : [],
+      ),
+      conflicts: s.status === "manual_rate_conflict" ? s.conflicts : [],
       lastVerified: duty ? (duty.oldestReview?.text ?? NO_REVIEWED_DUTIES_TEXT) : null,
       lastVerifiedStale: duty?.oldestReview?.stale ?? false,
       message: s.status === "duty_error" ? s.message : null,
@@ -171,7 +235,7 @@ export function missingItems(workspace: Workspace, outcome: Extract<ViewOutcome,
       items.push({ label: `${code}: ${s.message}`, targetId: skuFieldId(s.skuLineId, "htsCode") });
     }
     if (s.status === "manual_rate_conflict") {
-      for (const m of s.messages) items.push({ label: `${code}: ${m}`, targetId: null });
+      for (const c of s.conflicts) items.push({ label: `${code}: ${c.message}`, targetId: null, conflict: { overrideId: c.overrideId, code: c.code } });
     }
     if (s.status === "ok") continue;
     for (const f of s.missing) {

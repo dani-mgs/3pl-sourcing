@@ -264,6 +264,7 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Why deferred:** Phase 3b (the editor, and the full details on screen).
 - **Severity:** Low
 - **Where:** `src/lib/landed-cost/manual-rates.ts`, `[id]/result-panel.tsx`
+- **Resolved:** 2026-10-22, Phase 3b: the editor (Override, Apply manually, Add manual duty, the per-origin Manual rates section and its dialog, the conflict fixes), the full details on screen and in the PDF and CSV, and /help.
 
 ### Landed Cost: deploy-window compatibility to remove after Phase 3a ships
 - **Added:** 2026-10-21
@@ -274,7 +275,7 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ### Landed Cost manual rates aren't copied when an origin is duplicated
 - **Added:** 2026-10-21
-- **What:** "Duplicate this origin" copies packing, freight split and other costs but not manual rates (they're about that origin's duties). Decide in 3b whether to offer copying them.
+- **What:** "Duplicate this origin" copies packing, freight split and other costs but not manual rates (they're about that origin's duties). Phase 3b kept it that way and says so in the dialog ("Manual rates are not copied."); offering to copy them is still open.
 - **Severity:** Low
 - **Where:** `src/lib/landed-cost/origin-draft.ts`
 

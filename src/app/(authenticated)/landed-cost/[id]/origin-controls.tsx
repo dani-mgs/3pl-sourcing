@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { EditorDraft } from "@/lib/landed-cost/editor-draft";
 import { MAX_ORIGINS_REASON, addBlankOrigin, canAddOrigin, duplicateOrigin, removeOrigin, setBaseline } from "@/lib/landed-cost/origin-draft";
+import { manualRateCount } from "@/lib/landed-cost/manual-rate-draft";
 import { fieldClass, hintClass, labelClass, secondaryButtonClass } from "../styles";
 import type { Countries } from "./shipment-section";
 
@@ -62,7 +63,7 @@ export function AddOriginButtons({
             <DialogTitle>{kind === "duplicate" ? "Duplicate this origin" : "Add blank origin"}</DialogTitle>
             <DialogDescription>
               {kind === "duplicate"
-                ? `Copies ${source?.label ?? "this origin"}'s mode, incoterm, entry type, freight split, divisor, packing and other costs. FOB prices and the freight total start empty: enter them for the new origin.`
+                ? `Copies ${source?.label ?? "this origin"}'s mode, incoterm, entry type, freight split, divisor, packing and other costs. FOB prices and the freight total start empty: enter them for the new origin. Manual rates are not copied.`
                 : "Starts empty (Sea, FOB, automatic entry): enter its prices, packing and freight."}{" "}
               Nothing is saved until you save the draft.
             </DialogDescription>
@@ -144,6 +145,7 @@ export function OriginTabs({
               {name(s.originCountry)}
               {s.ref === draft.baselineRef && <> · Baseline</>}
               {s.id == null && <> · not saved yet</>}
+              {manualRateCount(draft, s.ref) > 0 && <> · Manual rates ({manualRateCount(draft, s.ref)})</>}
             </span>
           </button>
         );

@@ -58,6 +58,13 @@ describe("engineRatesFor", () => {
     expect(r.ok && r.rates(first(d))).toEqual({ rateText: "+20%", amountUsd: "120.00" });
   });
 
+  test("Keep my rate after the app's rate changed: the stored app rate is refreshed, the value kept", async () => {
+    const d = draft([replace({ id: O1, ratePercent: "0", confirmAppRate: true })]);
+    const r = await engineRatesFor(stubSupabase(tables()), d, saved(stored()), CALCULATED_ON);
+    expect(r.ok && r.rates(first(d))).toEqual({ rateText: "+25%", amountUsd: "150.00" });
+    expect(first(d).ratePercent).toBe("0");
+  });
+
   test("a changed value is worked out again", async () => {
     const d = draft([replace({ id: O1, ratePercent: "5" })]);
     const r = await engineRatesFor(stubSupabase(tables()), d, saved(stored()), CALCULATED_ON);

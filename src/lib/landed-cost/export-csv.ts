@@ -1,9 +1,12 @@
 import { buildCsv, buildMultiSectionCsv, escapeCsvField, sanitizeFilename } from "@/lib/forwarder/export-csv";
+import { pctText } from "@/lib/tariff/amount-text";
 import { countryName } from "@/lib/tariff/countries";
 import { NO_REVIEWED_DUTIES_TEXT } from "@/lib/tariff/effective-rate";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
+import { parseDecimal } from "@/lib/tariff/rational";
 import { toComparisonView } from "./comparison-view";
 import { COMPONENT_KEYS, type ComponentKey } from "./components";
+import type { DutyLine } from "./manual-rates";
 import { parseCents, perUnit } from "./money";
 import { INCLUDES_MANUAL_RATE, missingItems, shares } from "./result-view";
 import type { Scenario, Workspace } from "./workspace-schema";
@@ -109,7 +112,29 @@ function inputSections(workspace: Workspace, s: Scenario): Section[] {
   ];
 }
 
-function resultSections(workspace: Workspace, outcome: ViewOutcome): Section[] {
+// Whether any SKU of any origin has a manual layer: only then do the
+// manual-rate columns appear, so every other export stays as it was.
+export function hasManualRates(result: ViewResult): boolean {
+  return result.state === "ready" && result.scenarios.some((o) => o.skus.some((s) => s.status !== "duty_error" && (s.duty?.lines ?? []).some((l) => l.manual)));
+}
+
+const MANUAL_COLUMNS = ["Manual", "Manual value", "App rate", "Reason", "Set by", "Set on"];
+
+// Our own cells never start with = + - @, so the formula guard never has to
+// prefix them: the app rate drops its "+" ("+25%" → "25%"); the value is 0 or
+// more ("0%", "Fixed 12.34") and the date is ISO. Reason and Set by are typed
+// text and stay with the guard.
+const plainRateText = (text: string) => text.replace(/^\+/, "");
+
+function manualCells(l: DutyLine): Cell[] {
+  const m = l.manual;
+  if (!m) return ["No", "", "", "", "", ""];
+  const value = m.ratePercent != null ? pctText(parseDecimal(m.ratePercent)) : `Fixed ${m.amountUsd}`;
+  const appRate = m.engineRateText != null ? `${plainRateText(m.engineRateText)}${m.engineAmountUsd != null ? ` (${m.engineAmountUsd})` : ""}` : "";
+  return ["Yes", value, appRate, m.reason, m.setByName, m.setAt.slice(0, 10)];
+}
+
+function resultSections(workspace: Workspace, outcome: ViewOutcome, manual: boolean): Section[] {
   const label = outcome.label;
   const codes = new Map(workspace.skuLines.map((l) => [l.id, l]));
   const totals = outcome.state === "complete" ? new Map(outcome.totals.skus.map((t) => [t.skuId, t])) : null;
@@ -141,7 +166,7 @@ function resultSections(workspace: Workspace, outcome: ViewOutcome): Section[] {
         s.status === "duty_error"
           ? `${SKU_STATUS.duty_error}: ${s.message}`
           : s.status === "manual_rate_conflict"
-            ? `${SKU_STATUS.manual_rate_conflict}: ${s.messages.join(" ")}`
+            ? `${SKU_STATUS.manual_rate_conflict}: ${s.conflicts.map((c) => c.message).join(" ")}`
             : SKU_STATUS[s.status],
         money((x) => x.productCents),
         money((x) => x.freightCents),
@@ -158,12 +183,15 @@ function resultSections(workspace: Workspace, outcome: ViewOutcome): Section[] {
 
   const layers = section(
     `${label}: duty layers`,
-    ["SKU", "Layer", "Heading", "Rate", "Amount (USD)", "Source", "Source URL", "Source checked on", "Last verified"],
+    ["SKU", "Layer", "Heading", "Rate", "Amount (USD)", "Source", "Source URL", "Source checked on", "Last verified", ...(manual ? MANUAL_COLUMNS : [])],
     outcome.skus.flatMap((s) => {
       if (s.status === "duty_error" || !s.duty) return [];
       const code = codes.get(s.skuLineId)?.skuCode;
       const verified = s.duty.oldestReview?.text ?? NO_REVIEWED_DUTIES_TEXT;
-      return s.duty.lines.map((l): Cell[] => [code, l.label, l.heading, l.rateText, plainUsd(l.amountUsd), l.sourceLabel, l.sourceUrl, l.sourceCheckedOn, verified]);
+      return s.duty.lines.map((l): Cell[] => [
+        code, l.label, l.heading, l.rateText, plainUsd(l.amountUsd), l.sourceLabel, l.sourceUrl, l.sourceCheckedOn, verified,
+        ...(manual ? manualCells(l) : []),
+      ]);
     }),
   );
 
@@ -291,6 +319,7 @@ function comparisonSections(workspace: Workspace, result: Extract<ViewResult, { 
 // from its snapshot, never recalculated) when `locked` is given.
 export function buildWorkspaceCsv(workspace: Workspace, result: ViewResult, locked: LockedCsv | null = null): string {
   const sections: Section[] = [workspaceSection(workspace, result.calculatedOn, locked), skuSection(workspace)];
+  const manual = hasManualRates(result);
   const notCalculated = result.state === "ready" ? null : result.state === "no_sku_lines" ? "Add at least one SKU." : result.message;
   for (const s of workspace.scenarios) {
     sections.push(...inputSections(workspace, s));
@@ -299,7 +328,7 @@ export function buildWorkspaceCsv(workspace: Workspace, result: ViewResult, lock
       continue;
     }
     const outcome = result.scenarios.find((o) => o.scenarioId === s.id);
-    if (outcome) sections.push(...resultSections(workspace, outcome));
+    if (outcome) sections.push(...resultSections(workspace, outcome, manual));
   }
   if (workspace.scenarios.length > 1) {
     sections.push(

@@ -4,7 +4,7 @@ import { checkEntryDate, entryDateBounds } from "@/lib/tariff/entry-date";
 import type { CallErrorCode, DutyBatchResult, LineDutyResult, LineErrorCode } from "./duty-request";
 import { toScenarioSkuDuty } from "./duty-adapter";
 import type { FeeRowWithDates } from "./entry-fees";
-import { applyRateOverrides } from "./manual-rates";
+import { applyRateOverrides, type ManualRateConflict } from "./manual-rates";
 import { compareScenarios, type ScenarioComparison } from "./scenario-comparison";
 import { dutyLines, prepareScenario, type PreparedScenario, type PreparedSku, type ScenarioField, type SkuField } from "./scenario-inputs";
 import { computeScenarioTotals, type ScenarioTotals } from "./scenario-totals";
@@ -37,7 +37,7 @@ export type SkuStatus =
   | { status: "duty_error"; skuLineId: string; code: LineErrorCode; message: string; unit: DutyUnit | null; missing: SkuField[] }
   // A manual rate that no longer fits the app's duties (manual-rates.ts):
   // blocking, like a missing input; `missing` lists any inputs still to enter.
-  | { status: "manual_rate_conflict"; skuLineId: string; messages: string[]; duty: SkuDuty; missing: SkuField[] };
+  | { status: "manual_rate_conflict"; skuLineId: string; conflicts: ManualRateConflict[]; duty: SkuDuty; missing: SkuField[] };
 
 type Base = { scenarioId: string; label: string; isBaseline: boolean; skus: SkuStatus[] };
 export type ScenarioOutcome =
@@ -62,7 +62,7 @@ export type WorkspaceResult =
 const LOAD_FAILED = "Duties and fees couldn't be loaded right now. Try again.";
 
 // A line's duties after its manual rates, with whether one applies and what blocks it.
-type LineDuty = { result: LineDutyResult; includesManualRate: boolean; conflicts: string[] };
+type LineDuty = { result: LineDutyResult; includesManualRate: boolean; conflicts: ManualRateConflict[] };
 
 function withOverrides(sku: PreparedSku, result: LineDutyResult | undefined, names: Map<string, string>): LineDuty | undefined {
   if (!result) return undefined;
@@ -82,7 +82,7 @@ function skuStatus(sku: PreparedSku, line: LineDuty | undefined): SkuStatus {
   const missing: SkuField[] = needsQuantity ? [...sku.missing, "duty_quantity"] : sku.missing;
   const known = duty?.ok ? duty.duty : null;
   if (known && line && line.conflicts.length > 0) {
-    return { status: "manual_rate_conflict", skuLineId, messages: line.conflicts, duty: known, missing };
+    return { status: "manual_rate_conflict", skuLineId, conflicts: line.conflicts, duty: known, missing };
   }
   if (missing.length > 0 || !known) {
     return { status: "inputs_missing", skuLineId, missing, dutyQuantityUnit: needsQuantity?.unit ?? null, duty: known };

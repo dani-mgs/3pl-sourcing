@@ -29,7 +29,11 @@ export type RankRow = {
   position: string | null;
   // "$2.34/unit more than the baseline (13.5%)", "Same as the baseline", or "Baseline".
   vsBaseline: string;
+  // Shown as "Includes manual rate".
+  includesManualRate: boolean;
 };
+
+export const INCLUDES_MANUAL_RATE_MARK = "Includes manual rate";
 
 export type Bar = { scenarioId: string; label: string; perUnit: string; widthPct: number; marks: string[] };
 
@@ -267,6 +271,7 @@ export function toComparisonView(result: ViewResult | null, workspace: Workspace
               total: money(o.totals.totalCents),
               position,
               vsBaseline: o.isBaseline ? "Baseline" : vsBaselineText(r.differenceCents as bigint, baseline.totals.totalCents, units),
+              includesManualRate: o.totals.status.includesManualRate,
             };
           })
           .sort((a, b) => a.rank - b.rank)
@@ -279,7 +284,12 @@ export function toComparisonView(result: ViewResult | null, workspace: Workspace
     label: o.label,
     perUnit: money(o.totals.perUnitCents),
     widthPct: dearest > B0 ? Math.max(2, Number((o.totals.perUnitCents * BigInt(100)) / dearest)) : 0,
-    marks: [o.isBaseline ? "Baseline" : null, !isComparable(o) ? "Not comparable" : null, lowestIds.has(o.scenarioId) ? "Lowest" : null].filter(
+    marks: [
+      o.isBaseline ? "Baseline" : null,
+      !isComparable(o) ? "Not comparable" : null,
+      lowestIds.has(o.scenarioId) ? "Lowest" : null,
+      o.totals.status.includesManualRate ? INCLUDES_MANUAL_RATE_MARK : null,
+    ].filter(
       (m): m is string => m != null,
     ),
   }));

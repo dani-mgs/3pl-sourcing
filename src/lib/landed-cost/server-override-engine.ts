@@ -14,7 +14,8 @@ import type { RateOverride, Workspace } from "./workspace-schema";
 // app's rate can be shown (manual-rates.ts). Never from the browser.
 //
 // A replace that's unchanged since it was saved (same kind, layer and value;
-// a new reason doesn't count) keeps what was stored. A new or changed one is
+// a new reason doesn't count) keeps what was stored, unless the user kept
+// their rate after the app's changed ("Keep my rate", confirmAppRate). A new or changed one is
 // worked out now, on the draft being saved (its HTS code, origin, entered
 // value and entry date), in one batch for all of them; the save is refused
 // when the line has no FOB price yet or the app doesn't apply that layer
@@ -70,7 +71,7 @@ export async function engineRatesFor(
       it.overrides.forEach((o, k) => {
         if (o.kind !== "replace") return;
         const before = o.id ? stored.get(o.id) : undefined;
-        if (unchanged(o, before)) {
+        if (!o.confirmAppRate && unchanged(o, before)) {
           rates.set(o, { rateText: before.engineRateText, amountUsd: before.engineAmountUsd });
           return;
         }
