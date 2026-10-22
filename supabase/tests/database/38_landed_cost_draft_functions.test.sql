@@ -6,7 +6,7 @@
 -- creates, so it works on a database with data. Rolled back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(50);
+select plan(52);
 
 create function pg_temp.act_as(uid uuid)
 returns void language plpgsql as $$
@@ -70,7 +70,7 @@ create function pg_temp.draft() returns jsonb language sql as $$
             'sku_ref', i.sku_line_id, 'fob_unit_price_usd', i.fob_unit_price_usd::text,
             'pcs_per_carton', i.pcs_per_carton::text, 'carton_length_cm', i.carton_length_cm::text,
             'carton_width_cm', i.carton_width_cm::text, 'carton_height_cm', i.carton_height_cm::text,
-            'carton_gross_kg', i.carton_gross_kg::text) order by i.sku_line_id)
+            'carton_gross_kg', i.carton_gross_kg::text, 'overrides', '[]'::jsonb) order by i.sku_line_id)
           from public.landed_cost_scenario_items i where i.scenario_id = s.id), '[]'),
         'other_costs', coalesce((
           select jsonb_agg(jsonb_build_object('id', c.id, 'label', c.label, 'amount_usd', c.amount_usd::text,
@@ -115,8 +115,20 @@ begin
   execute format('select %I::text from public.landed_cost_workspaces where id = %L', col, '00000000-0000-4000-8000-000000380001') into v;
   return v;
 end $$;
+-- A draft as a page from before manual rates sent it: no `overrides` on any item.
+create function pg_temp.old_style(d jsonb) returns jsonb language sql as $$
+  select jsonb_set(d, '{scenarios}', (
+    select jsonb_agg(s || jsonb_build_object('items', (select coalesce(jsonb_agg(i - 'overrides'), '[]') from jsonb_array_elements(s -> 'items') i)))
+    from jsonb_array_elements(d -> 'scenarios') s));
+$$;
+-- W1 as stored: name, row ids, counts and every item's FOB price.
+create function pg_temp.state() returns text language sql as $$
+  select pg_temp.w1('name') || '|' || pg_temp.ids() || '|' || array_to_string(pg_temp.counts(), ',') || '|' ||
+    coalesce((select string_agg(fob_unit_price_usd::text, ',' order by scenario_id, sku_line_id)
+              from public.landed_cost_scenario_items where workspace_id = '00000000-0000-4000-8000-000000380001'), '');
+$$;
 grant execute on function pg_temp.draft(), pg_temp.save(jsonb), pg_temp.result(), pg_temp.counts(), pg_temp.ids(),
-  pg_temp.w1(text) to authenticated;
+  pg_temp.w1(text), pg_temp.old_style(jsonb), pg_temp.state() to authenticated;
 
 -- ---- Structure ---------------------------------------------------------------------------
 select is(
@@ -218,13 +230,13 @@ select lives_ok(
            'freight_total_usd', '854.00',
            'items', jsonb_build_array(jsonb_build_object('sku_ref', '00000000-0000-4000-8000-000000381001',
              'fob_unit_price_usd', '1', 'pcs_per_carton', '10', 'carton_length_cm', '40.5', 'carton_width_cm', '30',
-             'carton_height_cm', '20', 'carton_gross_kg', '12.345')),
+             'carton_height_cm', '20', 'carton_gross_kg', '12.345', 'overrides', '[]'::jsonb)),
            'other_costs', '[{"label": "Inland trucking", "amount_usd": "150.00", "sort_order": 0}]'::jsonb),
          jsonb_build_object('ref', 'new-S2', 'label', 'Vietnam', 'origin_country', 'VN', 'incoterm', 'FOB',
            'shipment_mode', 'Air', 'entry_type', 'auto', 'freight_basis', 'units', 'sort_order', 1,
            'items', jsonb_build_array(
-             jsonb_build_object('sku_ref', '00000000-0000-4000-8000-000000381001', 'fob_unit_price_usd', '8'),
-             '{"sku_ref": "new-L3", "fob_unit_price_usd": "2.5"}'::jsonb),
+             jsonb_build_object('sku_ref', '00000000-0000-4000-8000-000000381001', 'fob_unit_price_usd', '8', 'overrides', '[]'::jsonb),
+             '{"sku_ref": "new-L3", "fob_unit_price_usd": "2.5", "overrides": []}'::jsonb),
            'other_costs', '[]'::jsonb)))) $$,
   'the owner saves the whole draft');
 select is(pg_temp.counts(), array[3, 2, 3, 1], 'three SKU lines, two scenarios, three items, one other cost');
@@ -302,6 +314,14 @@ select throws_ok(
   $$ select pg_temp.save(jsonb_set(pg_temp.draft(), '{sku_lines}', (pg_temp.draft() -> 'sku_lines') ||
        '[{"ref": "x", "id": "00000000-0000-4000-8000-000000382001", "sku_code": "SKU-X", "hts_code": "6402993110", "quantity": "1", "sort_order": 9}]')) $$,
   'LC422', 'A SKU line in the draft isn''t in this workspace.', 'another workspace''s row id is refused');
+
+-- ---- A page from before manual rates (no `overrides` on its items) --------------------------
+select set_config('lc38.state', pg_temp.state(), true);
+select throws_ok(
+  $$ select pg_temp.save(pg_temp.old_style(jsonb_set(jsonb_set(pg_temp.draft(), '{name}', '"Old page"'),
+       '{scenarios,0,items,0,fob_unit_price_usd}', '"99"'))) $$,
+  'LC426', 'This page is out of date.', 'an old-style draft (items without `overrides`) is refused');
+select is(pg_temp.state(), current_setting('lc38.state'), '... and nothing in the workspace changed');
 
 -- ---- Removing a scenario (not the last) --------------------------------------------------
 select lives_ok(

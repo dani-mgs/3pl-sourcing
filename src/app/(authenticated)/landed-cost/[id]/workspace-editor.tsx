@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Eye, Info, RefreshCw } from "lucide-react";
 import { applySaveResult, isDirty, issueTarget, toEditorDraft, toSaveInput, type EditorDraft } from "@/lib/landed-cost/editor-draft";
 import type { ComparisonView } from "@/lib/landed-cost/comparison-view";
+import { OUTDATED } from "@/lib/landed-cost/draft-errors";
 import { manualRateList } from "@/lib/landed-cost/manual-rate-draft";
 import type { ResultView } from "@/lib/landed-cost/result-view";
 import type { DutyUnit } from "@/lib/landed-cost/server-compute";
@@ -85,7 +86,8 @@ export function WorkspaceEditor({
   );
   const [expectedUpdatedAt, setExpectedUpdatedAt] = useState(workspace.updatedAt);
   const [errors, setErrors] = useState<SaveErrors | null>(null);
-  const [stale, setStale] = useState(false);
+  // The reload prompt: changed by someone else, or a page out of date.
+  const [stale, setStale] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const refCount = useRef(0);
@@ -111,7 +113,7 @@ export function WorkspaceEditor({
       const result = await saveDraftAction(toSaveInput(draft, workspace.id, expectedUpdatedAt));
       if (!result.ok) {
         if (result.code === "stale") {
-          setStale(true);
+          setStale(result.error === OUTDATED ? OUTDATED : STALE);
           return;
         }
         const summary = (result.issues ?? []).map((i) => ({ message: i.message, ...issueTarget(i.path, draft) }));
@@ -186,10 +188,10 @@ export function WorkspaceEditor({
               )}
               {/* One origin: adding another starts the comparison. */}
               {!multi && addOrigin}
-              <button type="button" onClick={save} disabled={isPending || stale} className={primaryButtonClass}>
+              <button type="button" onClick={save} disabled={isPending || stale != null} className={primaryButtonClass}>
                 {isPending ? "Saving…" : "Save draft"}
               </button>
-              <LockVersionButton workspaceId={workspace.id} updatedAt={expectedUpdatedAt} dirty={dirty} blocker={lockBlocker} disabled={isPending || stale} />
+              <LockVersionButton workspaceId={workspace.id} updatedAt={expectedUpdatedAt} dirty={dirty} blocker={lockBlocker} disabled={isPending || stale != null} />
               <DeleteWorkspaceButton workspaceId={workspace.id} name={workspace.name} disabled={isPending} />
             </>
           )}
@@ -202,9 +204,9 @@ export function WorkspaceEditor({
           Owned by {ownerName}, view only.
         </p>
       )}
-      {stale && (
+      {stale != null && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#FBBF24] bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]" role="alert">
-          <p className="font-medium">{STALE} Your unsaved changes will be lost.</p>
+          <p className="font-medium">{stale} Your unsaved changes will be lost.</p>
           <button type="button" onClick={() => startTransition(() => router.refresh())} className={secondaryButtonClass}>
             <RefreshCw aria-hidden="true" className="size-4" /> Reload
           </button>

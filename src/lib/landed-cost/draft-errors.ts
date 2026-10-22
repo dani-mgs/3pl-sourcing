@@ -12,6 +12,9 @@ export const OWNER_ONLY = "Only the workspace's owner or an admin can edit it.";
 export const NOT_FOUND = "This workspace doesn't exist, or you can't open it.";
 export const STALE =
   "This workspace was changed by someone else since you opened it. Reload it to see their changes, then make yours again.";
+// A page opened before the app's last change sent an old-style draft or
+// version (LC426, migration 20261022134839).
+export const OUTDATED = "This page is out of date. Reload to continue.";
 const INVALID = "The draft couldn't be saved: it doesn't match the workspace any more. Reload it and try again.";
 const FAILED = "The workspace couldn't be saved right now. Try again.";
 
@@ -31,6 +34,8 @@ export function draftError(error: DbError): DraftError {
   switch (error.code) {
     case "LC409":
       return { code: "stale", message: STALE };
+    case "LC426":
+      return { code: "stale", message: OUTDATED };
     case "42501":
       return { code: "forbidden", message: OWNER_ONLY };
     case "P0002":
