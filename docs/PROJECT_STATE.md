@@ -97,7 +97,7 @@ npm run qa:portal-scan                  # after any change to what the portal sh
 
 **Database changes**
 - Never raw SQL against Supabase (dashboard or one-off). Migrations only: `npx supabase migration new <name>`, SQL in the file, committed with the feature code.
-- **Never `npx supabase db reset`**; apply with `npx supabase migration up`. (AGENTS.md's step 3 still says `db reset`; the standing instruction is `migration up`.)
+- **Never `npx supabase db reset`** (the local database holds QA accounts, demo data and guide tooling); apply with `npx supabase migration up`, then `npm run test:db`.
 - Change an existing function with a NEW migration (`create or replace`), never by editing an applied one.
 - Backfills disable `updated_at` triggers during the backfill.
 

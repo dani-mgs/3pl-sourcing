@@ -7,7 +7,7 @@ A reusable test-case matrix for a full regression of the hub (3PL Sourcing, Forw
 **Environment (local only, never production).**
 
 1. Use Node 22 (`.nvmrc`).
-2. Run `npx supabase start`, then `npx supabase db reset`, then `npm run qa:seed`. The seed prints a new random password for the test users. Keep it in your terminal and never commit it.
+2. Run `npx supabase start`, then `npx supabase migration up`, then `npm run qa:seed`. Never run `npx supabase db reset`: the local database holds data we need (QA accounts, demo data, guide tooling). The seed prints a new random password for the test users. Keep it in your terminal and never commit it.
 3. Run the app from a separate git worktree, so no `.env` file is loaded. Pass the local values from `npx supabase status -o env` on the command line:
 
    ```sh
@@ -98,7 +98,7 @@ for tz in UTC America/Los_Angeles Asia/Ho_Chi_Minh Pacific/Kiritimati Pacific/Pa
 
 | ID | Module | Scenario | Test data | Steps | Expected result |
 |---|---|---|---|---|---|
-| GATE-01 | Database | pgTAP after reset | Migrations only | `npx supabase db reset`, then `npm run test:db` | Every file is `ok`; `Result: PASS` |
+| GATE-01 | Database | pgTAP on the migrated database | Migrations applied | `npx supabase migration up`, then `npm run test:db` | Every file is `ok`; `Result: PASS` |
 | GATE-02 | Unit tests | Vitest in the 7 timezones | — | The loop above | Every run passes; the same count in every timezone; skips are only the documented ones |
 | GATE-03 | Lint | ESLint | — | `npm run lint` | Exit 0, no errors |
 | GATE-04 | Types | TypeScript | — | `npx next typegen && npx tsc --noEmit` | Exit 0 (a fresh checkout needs `next typegen` first for the `PageProps`/`LayoutProps` globals) |
