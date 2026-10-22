@@ -5,13 +5,14 @@
 -- that isn't today, a release that isn't current, an HTS code not in it, a
 -- version of anything but the saved draft as it is now, and amounts that
 -- don't add up. Version numbers are never reused, even after a delete; the
--- counter table is invisible to every API role. Rows can't be updated by anyone, signed-in users can't insert,
+-- counter table is invisible to every API role. Only schema version 2 locks
+-- (20261022134839); a version 1 row is refused. Rows can't be updated by anyone, signed-in users can't insert,
 -- any staff member reads, the creator, owner or an admin deletes, and a
 -- workspace with versions can't be deleted. Counts only the rows this file
 -- creates. Rolled back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(75);
+select plan(76);
 
 create function pg_temp.act_as(uid uuid)
 returns void language plpgsql as $$
@@ -102,7 +103,7 @@ create function pg_temp.inputs() returns jsonb language sql as $$
         'shipmentMode', s.shipment_mode, 'entryType', s.entry_type, 'freightTotalUsd', s.freight_total_usd::text,
         'freightBasis', s.freight_basis, 'volumetricDivisor', null, 'isBaseline', s.id = w.baseline_scenario_id,
         'items', (select coalesce(jsonb_agg(jsonb_build_object('skuLineId', i.sku_line_id, 'fobUnitPriceUsd', i.fob_unit_price_usd::text,
-                    'pcsPerCarton', null, 'cartonLengthCm', null, 'cartonWidthCm', null, 'cartonHeightCm', null, 'cartonGrossKg', null)), '[]')
+                    'pcsPerCarton', null, 'cartonLengthCm', null, 'cartonWidthCm', null, 'cartonHeightCm', null, 'cartonGrossKg', null, 'overrides', '[]'::jsonb)), '[]')
                   from public.landed_cost_scenario_items i where i.scenario_id = s.id),
         'otherCosts', (select coalesce(jsonb_agg(jsonb_build_object('id', c.id, 'label', c.label, 'amountUsd', c.amount_usd::text)), '[]')
                        from public.landed_cost_other_costs c where c.scenario_id = s.id)) order by s.sort_order)
@@ -119,7 +120,7 @@ create function pg_temp.payload() returns jsonb language sql as $$
     'workspace_id', '00000000-0000-4000-8000-000000390001', 'as_of_date', (now() at time zone 'utc')::date,
     'workspace_name', 'LC39', 'entry_date', '2026-11-01', 'workspace_updated_at', '2026-10-21 01:02:03.123456+00',
     'hts_release_name', 'pgTAPLC39', 'hts_release_title', 'Revision 39', 'hts_release_start_date', '2026-07-01',
-    'schema_version', 1, 'inputs', pg_temp.inputs(),
+    'schema_version', 2, 'inputs', pg_temp.inputs(),
     'result', jsonb_build_object(
       'calculatedOn', (now() at time zone 'utc')::date, 'entryDate', '2026-11-01',
       'release', jsonb_build_object('name', 'pgTAPLC39', 'title', 'Revision 39', 'startDate', '2026-07-01'),
@@ -302,6 +303,9 @@ select throws_ok($$ select pg_temp.lock('00000000-0000-4000-8000-0000000039a1',
 select throws_ok($$ select pg_temp.lock('00000000-0000-4000-8000-0000000039a1',
     jsonb_set(pg_temp.payload(), '{result,origins}', (pg_temp.payload() -> 'result' -> 'origins') - 1)) $$, '23514', 'Every origin must be in the version.',
   'a version missing an origin');
+select throws_ok($$ select pg_temp.lock('00000000-0000-4000-8000-0000000039a1',
+    jsonb_set(pg_temp.payload(), '{schema_version}', '1') #- '{inputs,scenarios,0,items,0,overrides}') $$,
+  'LC426', 'This page is out of date.', 'a version 1 row (a page from before manual rates) is refused');
 select is(pg_temp.mine(), 0::bigint, 'nothing was stored by any refused call');
 
 -- ---- Locked: the owner, then an admin ----------------------------------------------------------

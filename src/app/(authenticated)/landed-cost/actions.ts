@@ -7,7 +7,7 @@ import { requireStaff } from "@/lib/auth/require-staff";
 import type { StaffRole } from "@/lib/auth/get-user-role";
 import { todayUtc } from "@/lib/fx/server-rates";
 import { isLandedCostEnabled } from "@/lib/landed-cost/feature-flag";
-import { NOT_FOUND, OWNER_ONLY, draftError, type DraftErrorCode } from "@/lib/landed-cost/draft-errors";
+import { NOT_FOUND, OUTDATED, OWNER_ONLY, draftError, type DraftErrorCode } from "@/lib/landed-cost/draft-errors";
 import { buildWorkspaceCsv, versionFilename, workspaceCsvFilename } from "@/lib/landed-cost/export-csv";
 import { renderVersionPdf } from "@/lib/landed-cost/render-version-pdf";
 import { loadLockedVersion } from "@/lib/landed-cost/server-snapshots";
@@ -168,7 +168,7 @@ export async function saveDraftAction(input: unknown): Promise<SaveDraftState> {
     p_payload: savePayload(draft.data, engineRates),
   });
   if (error) {
-    if (error.code !== "LC409") console.error("saveDraftAction error:", error);
+    if (error.code !== "LC409" && error.code !== "LC426") console.error("saveDraftAction error:", error);
     const mapped = draftError(error);
     return fail(mapped.code, mapped.message);
   }
@@ -285,6 +285,8 @@ export async function lockWorkspaceAction(input: unknown): Promise<LockWorkspace
     switch (saved.code) {
       case "LC409":
         return fail("stale", LOCK_STALE);
+      case "LC426":
+        return fail("stale", OUTDATED);
       case "42501":
         return fail("forbidden", OWNER_ONLY);
       case "P0002":

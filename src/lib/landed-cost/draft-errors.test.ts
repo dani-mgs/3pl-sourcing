@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { NOT_FOUND, OWNER_ONLY, STALE, draftError } from "./draft-errors";
+import { NOT_FOUND, OUTDATED, OWNER_ONLY, STALE, draftError } from "./draft-errors";
 
 // Database errors become our own words; a database message is never shown.
 
@@ -8,6 +8,11 @@ describe("draftError", () => {
     expect(draftError({ code: "LC409", message: "This workspace was changed since you opened it." })).toEqual({ code: "stale", message: STALE });
     expect(draftError({ code: "42501", message: "new row violates row-level security policy" })).toEqual({ code: "forbidden", message: OWNER_ONLY });
     expect(draftError({ code: "P0002" })).toEqual({ code: "not_found", message: NOT_FOUND });
+  });
+
+  test("a page from before the last change (LC426): the reload message", () => {
+    expect(draftError({ code: "LC426", message: "This page is out of date." })).toEqual({ code: "stale", message: OUTDATED });
+    expect(OUTDATED).toBe("This page is out of date. Reload to continue.");
   });
 
   test.each([

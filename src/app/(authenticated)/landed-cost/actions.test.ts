@@ -209,6 +209,11 @@ describe("saveDraftAction", () => {
     expect(await saveDraftAction(saveInput())).toMatchObject({ ok: false, code: "stale", error: expect.stringMatching(/changed by someone else/) });
   });
 
+  test("an old-style draft refused by the database (LC426): the reload message", async () => {
+    rpcResult = { data: null, error: { code: "LC426", message: "This page is out of date." } };
+    expect(await saveDraftAction(saveInput())).toMatchObject({ ok: false, code: "stale", error: "This page is out of date. Reload to continue." });
+  });
+
   test("a database error never reaches the user as SQL", async () => {
     rpcResult = { data: null, error: { code: "23514", message: 'new row for relation "landed_cost_scenarios" violates check constraint "x"' } };
     const result = await saveDraftAction(saveInput());
@@ -367,6 +372,13 @@ describe("lockWorkspaceAction", () => {
       expect(result).toMatchObject({ ok: false, code: expected });
       expect(JSON.stringify(result)).not.toContain("SQL detail");
     }
+  });
+
+  test("a version 1 row refused by the database (LC426): the reload message", async () => {
+    loadResult = { ok: true, workspace: await golden() };
+    await realCompute();
+    saveLandedCostSnapshot.mockResolvedValueOnce({ ok: false, code: "LC426", message: "This page is out of date." });
+    expect(await lockWorkspaceAction(lockInput())).toMatchObject({ ok: false, code: "stale", error: "This page is out of date. Reload to continue." });
   });
 
   test("a bad id or timestamp is refused before anything is read", async () => {

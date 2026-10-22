@@ -266,13 +266,6 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Where:** `src/lib/landed-cost/manual-rates.ts`, `[id]/result-panel.tsx`
 - **Resolved:** 2026-10-22, Phase 3b: the editor (Override, Apply manually, Add manual duty, the per-origin Manual rates section and its dialog, the conflict fixes), the full details on screen and in the PDF and CSV, and /help.
 
-### Landed Cost: deploy-window compatibility to remove after Phase 3a ships
-- **Added:** 2026-10-21
-- **What:** For the minutes when the old code runs against the new functions, `save_landed_cost_draft` treats an item without `overrides` as "leave its manual rates as they are", and `save_landed_cost_snapshot` still takes schema version 1 rows while a workspace has no manual rates. Once 3a is deployed, a later migration can require the key and version 2. Stored version 1 rows must keep parsing in the app either way.
-- **Why deferred:** Needed until the 3a code is live.
-- **Severity:** Low
-- **Where:** `supabase/migrations/20261021135010_landed_cost_rate_overrides.sql`
-
 ### Landed Cost manual rates aren't copied when an origin is duplicated
 - **Added:** 2026-10-21
 - **What:** "Duplicate this origin" copies packing, freight split and other costs but not manual rates (they're about that origin's duties). Phase 3b kept it that way and says so in the dialog ("Manual rates are not copied."); offering to copy them is still open.
@@ -356,6 +349,14 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 - **Severity:** Low
 
 ## Resolved
+
+### Landed Cost: deploy-window compatibility to remove after Phase 3a ships
+- **Added:** 2026-10-21
+- **What:** For the minutes when the old code runs against the new functions, `save_landed_cost_draft` treats an item without `overrides` as "leave its manual rates as they are", and `save_landed_cost_snapshot` still takes schema version 1 rows while a workspace has no manual rates. Once 3a is deployed, a later migration can require the key and version 2. Stored version 1 rows must keep parsing in the app either way.
+- **Why deferred:** Needed until the 3a code is live.
+- **Severity:** Low
+- **Where:** `supabase/migrations/20261021135010_landed_cost_rate_overrides.sql`
+- **Resolved:** 2026-10-22. Migration `20261022134839_landed_cost_remove_compat.sql`: `save_landed_cost_draft` refuses an item without `overrides`, and `save_landed_cost_snapshot` refuses schema version 1, both with LC426 ("This page is out of date. Reload to continue."), before anything is written. The snapshots' check stays `in (1, 2)`: stored version 1 rows stay valid and still parse, show and export byte for byte as before.
 
 ### Landed Cost: col::text reads not yet verified against a real API
 - **Added:** 2026-10-21

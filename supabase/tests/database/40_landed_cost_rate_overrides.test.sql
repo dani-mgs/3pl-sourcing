@@ -4,10 +4,11 @@
 -- never from the caller; rows can't mix workspaces; every check refuses bad
 -- data; they go with their item. save_landed_cost_draft saves them with the
 -- rest of the draft (atomically, ids stable, unchanged rows untouched) and
--- still takes a draft without them (the app before this change).
--- save_landed_cost_snapshot takes schema version 2 with them (re-checking the
--- inputs, each manual amount and the duty sums) and version 1 only while the
--- workspace has none. Counts only the rows this file creates. Rolled back.
+-- refuses a draft without them (a page from before manual rates; LC426,
+-- 20261022134839). save_landed_cost_snapshot takes schema version 2 with them
+-- (re-checking the inputs, each manual amount and the duty sums) and refuses
+-- version 1, while stored version 1 rows stay valid and readable. Counts only
+-- the rows this file creates. Rolled back.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(69);
@@ -205,8 +206,10 @@ create temp table seen as
 grant select on seen to authenticated;
 
 select pg_temp.act_as('00000000-0000-4000-8000-0000000040a1');
-select lives_ok($$ select pg_temp.save(pg_temp.draft('LC40 old app', null)) $$, 'a draft without `overrides` (the app before this change) still saves');
-select is(pg_temp.mine(), 1, '...and leaves the item''s manual rates as they are');
+select throws_ok($$ select pg_temp.save(pg_temp.draft('LC40 old app', null)) $$,
+  'LC426', 'This page is out of date.', 'a draft without `overrides` (a page from before manual rates) is refused');
+select ok(pg_temp.mine() = 1 and (select name from landed_cost_workspaces where id = '00000000-0000-4000-8000-000000400001') <> 'LC40 old app',
+  '... and nothing was written: the manual rates and the name are as they were');
 select lives_ok($$ select pg_temp.save(pg_temp.draft('LC40', jsonb_build_array(pg_temp.base_row()))) $$, 'the same manual rate sent back unchanged');
 select ok(
   (select r.set_at = s.set_at and r.changed_at = s.changed_at and r.updated_at = s.updated_at
@@ -357,12 +360,8 @@ create function pg_temp.versions() returns int language sql as $$
   select count(*)::int from public.landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000400001';
 $$;
 
-select throws_ok($$ select pg_temp.lock(pg_temp.row(false, pg_temp.lines(), '32.74', '1522.07', '15.22', true) - 'x') $$,
-  'LC422', null, 'version 1 can''t carry manual layers');
-select throws_ok(
-  $$ select pg_temp.lock(pg_temp.row(false, jsonb_build_array(pg_temp.line('duty', 'general', '20.40')), '20.40', '1509.73', '15.10', false)) $$,
-  'LC409', 'This workspace has manual rates: reload the page and lock again.',
-  'a version 1 row (the app before this change) is refused while the workspace has manual rates');
+select throws_ok($$ select pg_temp.lock(pg_temp.row(false, pg_temp.lines(), '32.74', '1522.07', '15.22', true)) $$,
+  'LC426', 'This page is out of date.', 'a version 1 row (a page from before manual rates) is refused');
 select lives_ok($$ select pg_temp.lock(pg_temp.row(true, pg_temp.lines(), '32.74', '1522.07', '15.22', true)) $$,
   'version 2 with the manual rates locks, a pending-review warning present and not counted');
 select is((select schema_version from landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000400001'), 2, 'stored as version 2');
@@ -389,14 +388,26 @@ select throws_ok(
   'LC422', null, 'a version 2 item must list its manual rates');
 select throws_ok($$ select pg_temp.lock(jsonb_set(pg_temp.row(true, pg_temp.lines(), '32.74', '1522.07', '15.22', true), '{schema_version}', '3')) $$,
   'LC422', null, 'schema version 3 doesn''t exist');
--- Without manual rates, a version 1 row (the app before this change) locks as before.
+-- Without manual rates, a version 1 row is refused too.
 delete from landed_cost_rate_overrides where workspace_id = '00000000-0000-4000-8000-000000400001';
-select lives_ok(
+select throws_ok(
   $$ select pg_temp.lock(pg_temp.row(false, jsonb_build_array(pg_temp.line('duty', 'general', '20.40')), '20.40', '1509.73', '15.10', false)) $$,
-  'with no manual rates, a version 1 row still locks');
+  'LC426', 'This page is out of date.', 'with no manual rates, a version 1 row is refused too');
 select is(
   (select array_agg(schema_version order by version_no) from landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000400001'),
-  array[2, 1], 'v1 (version 2) and v2 (version 1)');
+  array[2], 'only the version 2 row was stored');
+-- A version 1 row locked before this change (written as the table's owner)
+-- stays valid, and staff still read it.
+insert into landed_cost_snapshots (workspace_id, version_no, created_by, as_of_date, workspace_name, entry_date, workspace_updated_at,
+  hts_release_id, hts_release_name, schema_version, inputs, result, origin_count, baseline_label, baseline_per_unit_usd, incomplete)
+select workspace_id, 9, created_by, as_of_date, workspace_name, entry_date, workspace_updated_at,
+  hts_release_id, hts_release_name, 1, inputs, result, origin_count, baseline_label, baseline_per_unit_usd, incomplete
+from landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000400001' and schema_version = 2;
+select pg_temp.act_as('00000000-0000-4000-8000-0000000040a2');
+select is(
+  (select array_agg(schema_version order by version_no) from landed_cost_snapshots where workspace_id = '00000000-0000-4000-8000-000000400001'),
+  array[2, 1], 'an existing version 1 row is still valid and readable');
+reset role;
 
 -- Deleting the workspace's versions, then the workspace, takes its manual rates with it.
 select pg_temp.ovr('add', null, 'Anti-dumping', 10, null);
