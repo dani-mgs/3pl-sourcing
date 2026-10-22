@@ -1,6 +1,7 @@
 import { AlertTriangle, Info, Trophy } from "lucide-react";
 import type { ReactNode } from "react";
 import type { ComparisonView, ExcludedOrigin } from "@/lib/landed-cost/comparison-view";
+import { IncludesManualRate } from "./manual-layer";
 import { cardClass, hintClass, sectionTitleClass } from "../styles";
 
 // The origins side by side, from the last save (toComparisonView). Every
@@ -90,6 +91,11 @@ function Ready({ view }: { view: Extract<ComparisonView, { state: "ready" }> }) 
                       )}
                     </p>
                     {!r.isBaseline && <p className="text-xs text-neutral-muted">{r.vsBaseline}</p>}
+                    {r.includesManualRate && (
+                      <p className="mt-1">
+                        <IncludesManualRate />
+                      </p>
+                    )}
                   </td>
                   <td className="py-2 pr-2 text-right tabular-nums">{r.perUnit}</td>
                   <td className="py-2 text-right tabular-nums">{r.total}</td>

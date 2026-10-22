@@ -4,6 +4,7 @@ import { countryName } from "@/lib/tariff/countries";
 import { parseDecimal } from "@/lib/tariff/rational";
 import { toComparisonView, type ComparisonView } from "./comparison-view";
 import { CHARACTERS_NOTE, pdfText } from "./pdf-text";
+import { hasManualRates } from "./export-csv";
 import { toResultViews, type ResultView } from "./result-view";
 import type { ViewResult } from "./view-result";
 import type { Workspace } from "./workspace-schema";
@@ -39,6 +40,8 @@ export type VersionReport = {
   headerLines: string[];
   // "Incomplete estimate: …" with its reasons, or null.
   banner: { title: string; lines: string[] } | null;
+  // "Includes manual rates" with each one, or null when there are none.
+  manualBox: { title: string; lines: string[] } | null;
   // CHARACTERS_NOTE when a typed character couldn't be drawn.
   characterNote: string | null;
   blocks: ReportBlock[];
@@ -50,6 +53,7 @@ export type VersionReport = {
 };
 
 export const INCOMPLETE_TITLE = "Incomplete estimate: some duties or fees are not final";
+export const MANUAL_RATES_TITLE = "Includes manual rates";
 
 // What the version page, the PDF and the CSV say about a stored version.
 export function describeVersion(
@@ -88,6 +92,7 @@ export function buildVersionReport(meta: VersionMeta, restored: { workspace: Wor
   const t = pdfText();
   const { workspace, result } = restored;
   const views = toResultViews(result, workspace);
+  const anyManual = hasManualRates(result);
   const comparison = toComparisonView(result, workspace);
   const name = t.user(meta.workspaceName);
   const multi = workspace.scenarios.length > 1;
@@ -126,11 +131,12 @@ export function buildVersionReport(meta: VersionMeta, restored: { workspace: Wor
       blocks.push({ kind: "paragraph", text: t.own("This origin has no result in the stored version."), tone: "muted" });
       return;
     }
-    blocks.push(...originBlocks(view, s, codes, t));
+    blocks.push(...originBlocks(view, s, codes, t, anyManual));
   });
 
   // ---- The header and banner (after the blocks, so every typed string is checked) ----
   const banner = meta.incomplete ? incompleteBanner(workspace, views, t) : null;
+  const manualBox = anyManual ? manualRatesBox(workspace, views, t) : null;
   const headerLines = [
     `Locked version v${meta.versionNo}, locked on ${meta.lockedOn} by ${t.user(meta.byName)}`,
     `Entry date ${meta.entryDate} · HTS release ${t.user(meta.release)} · Duty data as of ${meta.asOf}`,
@@ -140,6 +146,7 @@ export function buildVersionReport(meta: VersionMeta, restored: { workspace: Wor
     title: t.own("Landed cost estimate"),
     headerLines: [name, ...headerLines],
     banner,
+    manualBox,
     characterNote: t.replaced() ? CHARACTERS_NOTE : null,
     blocks,
     footerLabel: `${name} · v${meta.versionNo}`,
@@ -149,6 +156,21 @@ export function buildVersionReport(meta: VersionMeta, restored: { workspace: Wor
     creationDate: new Date(meta.lockedAt),
     documentTitle: `Landed cost estimate - ${name} v${meta.versionNo}`,
   };
+}
+
+// Each manual rate: origin, SKU, layer, value and reason.
+function manualRatesBox(workspace: Workspace, views: Record<string, ResultView>, t: ReturnType<typeof pdfText>) {
+  const lines: string[] = [];
+  for (const s of workspace.scenarios) {
+    const view = views[s.id];
+    if (view?.state !== "complete") continue;
+    for (const k of view.skus) {
+      for (const l of k.layers) {
+        if (l.manual) lines.push(t.user(`${s.label}, ${k.skuCode}: ${l.manual.layerName}, ${l.manual.value}. Reason: ${l.manual.reason}`));
+      }
+    }
+  }
+  return { title: t.own(MANUAL_RATES_TITLE), lines };
 }
 
 function incompleteBanner(workspace: Workspace, views: Record<string, ResultView>, t: ReturnType<typeof pdfText>) {
@@ -196,7 +218,7 @@ function comparisonBlocks(view: ComparisonView, t: ReturnType<typeof pdfText>): 
       rows: view.ranking.map((r) => [
         String(r.rank),
         t.user(`${r.label}${r.isBaseline ? " (baseline)" : ""}`),
-        t.own(r.position ?? ""),
+        t.own([r.position, r.includesManualRate ? "Includes manual rate" : null].filter(Boolean).join("; ")),
         r.perUnit,
         r.total,
         t.own(r.vsBaseline),
@@ -252,6 +274,8 @@ function originBlocks(
   s: Workspace["scenarios"][number],
   lines: Map<string, Workspace["skuLines"][number]>,
   t: ReturnType<typeof pdfText>,
+  // Any manual rate in the version: the duty layer tables gain a "Manual" column.
+  anyManual: boolean,
 ): ReportBlock[] {
   const out: ReportBlock[] = [];
   const items = new Map(s.items.map((i) => [i.skuLineId, i]));
@@ -314,18 +338,50 @@ function originBlocks(
         { header: "Amount", width: 0.13, align: "right" },
         { header: "Source", width: 0.27 },
         { header: "Checked on", width: 0.14 },
+        ...(anyManual ? [{ header: "Manual", width: 0.1 }] : []),
       ],
       rows: k.layers.map((l) => [
-        t.own(`${l.label}${l.heading ? ` (${l.heading})` : ""}${l.detail ? `: ${l.detail}` : ""}`),
+        // A manual duty's label is typed text.
+        l.manual ? t.user(l.label) : t.own(`${l.label}${l.heading ? ` (${l.heading})` : ""}${l.detail ? `: ${l.detail}` : ""}`),
         t.own(l.rate),
         l.amount,
         t.own(l.sourceLabel),
         l.checkedOn ?? "",
+        ...(anyManual ? [l.manual ? t.own("Yes") : ""] : []),
       ]),
     });
     // Already worded: "Duty rates last verified: …" or that there are no reviewed duties.
     if (k.lastVerified) out.push({ kind: "paragraph", text: t.own(k.lastVerified), tone: "muted" });
     for (const note of k.layers.flatMap((l) => l.notes)) out.push({ kind: "paragraph", text: t.own(note), tone: "muted" });
+  }
+
+  const manual = view.skus.flatMap((k) => k.layers.flatMap((l) => (l.manual ? [{ sku: k.skuCode, m: l.manual }] : [])));
+  if (manual.length > 0) {
+    out.push({ kind: "heading", level: 2, text: t.own("Manual rates") });
+    out.push({
+      kind: "table",
+      columns: [
+        { header: "SKU", width: 0.12 },
+        { header: "Layer", width: 0.18 },
+        { header: "Value", width: 0.1 },
+        { header: "App rate", width: 0.14 },
+        { header: "Reason", width: 0.24 },
+        { header: "Set by", width: 0.1 },
+        { header: "Set on", width: 0.12 },
+      ],
+      rows: manual.map(({ sku, m }) => [
+        t.user(sku),
+        t.user(m.layerName),
+        t.own(m.value),
+        t.own(m.appRate ?? "—"),
+        t.user(m.reason),
+        t.user(m.setByName),
+        t.own(m.setOn),
+      ]),
+    });
+    for (const { sku, m } of manual) {
+      if (m.note) out.push({ kind: "paragraph", text: t.user(`${sku}, ${m.layerName}: ${m.note}.`), tone: "muted" });
+    }
   }
 
   out.push({ kind: "heading", level: 2, text: t.own("Fees") });

@@ -3,7 +3,7 @@ import { stubSupabase } from "@/lib/tariff/__fixtures__/supabase-stub";
 import { CALCULATED_ON, reviewedStatus } from "./__fixtures__/duty-tables";
 import { item, scenario, tables, vietnamScenario, workspace } from "./__fixtures__/workspace-builders";
 import { toComparisonView } from "./comparison-view";
-import { MANUAL_RATE_SUFFIX, NO_LONGER_MATCHES, NOW_APPLIED, overrideCents } from "./manual-rates";
+import { NO_LONGER_MATCHES, NOW_APPLIED, overrideCents } from "./manual-rates";
 import { COVERED_BY_MANUAL_RATE, INCLUDES_MANUAL_RATE, toResultView } from "./result-view";
 import { computeWorkspaceResult, type ScenarioOutcome } from "./server-compute";
 import type { RateOverride, Workspace } from "./workspace-schema";
@@ -59,13 +59,14 @@ describe("replace a layer the app applied", () => {
     expect(duty.dutiesUsd).toBe(95.4);
     expect(duty.effectiveDutyRate).toBe("15.9%");
     const s301 = duty.lines.find((l) => l.code === "section_301_china")!;
-    expect(s301.label.endsWith(MANUAL_RATE_SUFFIX)).toBe(true);
+    // The app's label, heading and source stay; the manual details are on `manual`.
+    expect(s301.label).toBe("Section 301 (China) (Illustrative)");
     expect([s301.rateText, s301.amountUsd]).toEqual(["0%", 0]);
     expect(s301.manual).toMatchObject({
       kind: "replace", layerName: "Section 301 (China)", ratePercent: "0", reason: "Exclusion granted",
       setByName: "Dani", changedByName: "Sam", engineRateText: "+25%", engineAmountUsd: "150.00", note: null,
     });
-    expect(s301.detail).toBe("Manual rate, set by Dani on Oct 1, 2026. The app's rate: +25% ($150.00). Reason: Exclusion granted");
+    expect(s301.detail).not.toContain("Exclusion granted");
     // The other layers are the app's, unchanged; the duties are their sum.
     expect(duty.lines.filter((l) => !l.manual).map((l) => l.amountUsd)).toEqual([20.4, 75]);
     expect(duty.lines.reduce((a, l) => a + cents(l.amountUsd), 0)).toBe(9540);
@@ -85,17 +86,30 @@ describe("replace a layer the app applied", () => {
     const o = complete(china((await compute(withOverrides([override({ engineRateText: "+20%" })]))).scenarios));
     const s301 = okDuty(o).lines.find((l) => l.code === "section_301_china")!;
     expect(s301.manual?.note).toBe("App rate changed from +20% to +25% since this override was set");
-    expect(s301.detail).toContain("App rate changed from +20% to +25% since this override was set.");
+    const w = withOverrides([override({ engineRateText: "+20%" })]);
+    const view = toResultView(await compute(w), w);
+    if (view.state !== "complete") throw new Error(view.state);
+    expect(view.skus[0].layers.find((l) => l.manual)?.manual).toMatchObject({
+      value: "0%", appRate: "+25% ($150.00)", note: "App rate changed from +20% to +25% since this override was set",
+      setBy: "Set by Dani on Oct 1, 2026", changedBy: "Changed by Sam on Oct 2, 2026",
+    });
   });
 
   test("a layer the app no longer applies blocks the SKU's total until it's removed or changed", async () => {
     const result = await compute(withOverrides([override({ layerKey: "section_232_steel" })]));
     const o = china(result.scenarios);
     expect(o.state).toBe("incomplete");
-    expect(o.skus[0]).toMatchObject({ status: "manual_rate_conflict", messages: [`${NO_LONGER_MATCHES} (section_232_steel). Remove or change it.`] });
+    expect(o.skus[0]).toMatchObject({
+      status: "manual_rate_conflict",
+      conflicts: [{ code: "no_longer_matches", layerName: "section_232_steel", message: `${NO_LONGER_MATCHES} (section_232_steel). Remove it or keep it as a manual duty.` }],
+    });
     const view = toResultView(result, withOverrides([override({ layerKey: "section_232_steel" })]));
     if (view.state !== "incomplete") throw new Error(view.state);
-    expect(view.missing.map((m) => m.label)).toEqual([`SKU-001: ${NO_LONGER_MATCHES} (section_232_steel). Remove or change it.`]);
+    expect(view.missing).toEqual([{
+      label: `SKU-001: ${NO_LONGER_MATCHES} (section_232_steel). Remove it or keep it as a manual duty.`,
+      targetId: null,
+      conflict: { overrideId: (o.skus[0] as { conflicts: { overrideId: string }[] }).conflicts[0].overrideId, code: "no_longer_matches" },
+    }]);
     expect(view.skus[0].statusLabel).toBe("Manual rate to fix");
   });
 });
@@ -109,8 +123,8 @@ describe("add a duty the app didn't apply", () => {
     const o = complete(china((await compute(w)).scenarios));
     const duty = okDuty(o);
     expect(duty.lines.slice(-2).map((l) => [l.label, l.rateText, l.amountUsd, l.sourceLabel])).toEqual([
-      [`Anti-dumping${MANUAL_RATE_SUFFIX}`, "10%", 60, "Manual rate"],
-      [`Countervailing${MANUAL_RATE_SUFFIX}`, "Fixed amount", 12.34, "Manual rate"],
+      ["Anti-dumping", "10%", 60, "Manual rate"],
+      ["Countervailing", "Fixed amount", 12.34, "Manual rate"],
     ]);
     expect(duty.dutiesUsd).toBe(317.74);
     expect(o.totals.totalCents).toBe(BigInt(173473 + 6000 + 1234));
@@ -145,7 +159,7 @@ describe("add a duty the app didn't apply", () => {
   test("a program the app now applies itself blocks the total (it would be counted twice)", async () => {
     const o = china((await compute(withOverrides([override({ kind: "add", layerKey: "section_301_china", label: "Section 301 (China)", ratePercent: "25", engineRateText: null, engineAmountUsd: null })]))).scenarios);
     expect(o.state).toBe("incomplete");
-    expect(o.skus[0]).toMatchObject({ status: "manual_rate_conflict", messages: [`${NOW_APPLIED} (Section 301 (China)).`] });
+    expect(o.skus[0]).toMatchObject({ status: "manual_rate_conflict", conflicts: [{ code: "now_applied", message: `${NOW_APPLIED} (Section 301 (China)).` }] });
   });
 });
 

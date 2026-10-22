@@ -50,4 +50,16 @@ describe("/help and the Landed Cost flag", () => {
     expect(html).toContain("Incoterms EXW, FCA, FAS and FOB only");
     expect(html).toContain("SKU, Description, HTS code, Quantity, FOB per unit (USD), Pcs per carton, L (cm), W (cm), H (cm), Carton kg");
   });
+
+  test("manual rates: when to use each kind, who, the rules, conflicts, duplicates and exports; no longer 'not available yet'", () => {
+    const html = render("true").replace(/<[^>]+>/g, "").replace(/&#x27;/g, "'");
+    for (const words of [
+      "Manual rates", "Override, on a duty layer the app applied", "Apply manually", "Add manual duty",
+      "0 to 1,000%", "A reason is required. Up to 10 per SKU in an origin.",
+      "Only the workspace's owner or an admin can set them", "MPF and HMF can never be overridden.",
+      "A manual rate never makes a result complete", "Keep as a manual duty", "Keep my rate as an override",
+      "Duplicate this origin doesn't copy manual rates", "Locked versions keep them",
+    ]) expect(html).toContain(words);
+    expect(html).not.toContain("manual rate overrides");
+  });
 });

@@ -14,6 +14,7 @@ const MUTED = "#6B7280";
 const BORDER = "#D1D5DB";
 const AMBER_BG = "#FFFBEB";
 const AMBER = "#92400E";
+const MANUAL_BG = "#F7F8FA";
 const MARGIN = 48;
 const FOOTER_HEIGHT = 34;
 const BODY = 9;
@@ -139,6 +140,23 @@ function block(doc: Doc, b: ReportBlock) {
   }
 }
 
+// A boxed title and bulleted lines (the incomplete banner, the manual rates).
+function box(doc: Doc, content: { title: string; lines: string[] }, colors: { fill: string; stroke: string; text: string }) {
+  const text = [content.title, ...content.lines.map((l) => `•  ${l}`)];
+  doc.fontSize(BODY);
+  const inner = contentWidth(doc) - 16;
+  const h = text.reduce((acc, line, i) => acc + doc.font(i === 0 ? "Helvetica-Bold" : "Helvetica").heightOfString(line, { width: inner }) + 2, 0) + 12;
+  ensure(doc, h);
+  const y = doc.y;
+  doc.rect(MARGIN, y, contentWidth(doc), h).fillAndStroke(colors.fill, colors.stroke);
+  doc.y = y + 6;
+  text.forEach((line, i) => {
+    doc.font(i === 0 ? "Helvetica-Bold" : "Helvetica").fillColor(colors.text).text(line, MARGIN + 8, doc.y, { width: inner });
+    doc.y += 2;
+  });
+  doc.y = y + h + 10;
+}
+
 function header(doc: Doc, report: VersionReport) {
   doc.font("Helvetica-Bold").fontSize(18).fillColor(NAVY).text(report.title, MARGIN, MARGIN, { width: contentWidth(doc) });
   const [name, ...rest] = report.headerLines;
@@ -147,21 +165,8 @@ function header(doc: Doc, report: VersionReport) {
   for (const line of rest) doc.text(line, { width: contentWidth(doc) });
   doc.y += 10;
 
-  if (report.banner) {
-    const text = [report.banner.title, ...report.banner.lines.map((l) => `•  ${l}`)];
-    doc.fontSize(BODY);
-    const inner = contentWidth(doc) - 16;
-    const h = text.reduce((acc, line, i) => acc + doc.font(i === 0 ? "Helvetica-Bold" : "Helvetica").heightOfString(line, { width: inner }) + 2, 0) + 12;
-    ensure(doc, h);
-    const y = doc.y;
-    doc.rect(MARGIN, y, contentWidth(doc), h).fillAndStroke(AMBER_BG, "#FBBF24");
-    doc.y = y + 6;
-    text.forEach((line, i) => {
-      doc.font(i === 0 ? "Helvetica-Bold" : "Helvetica").fillColor(AMBER).text(line, MARGIN + 8, doc.y, { width: inner });
-      doc.y += 2;
-    });
-    doc.y = y + h + 10;
-  }
+  if (report.banner) box(doc, report.banner, { fill: AMBER_BG, stroke: "#FBBF24", text: AMBER });
+  if (report.manualBox) box(doc, report.manualBox, { fill: MANUAL_BG, stroke: BORDER, text: NAVY });
   if (report.characterNote) paragraph(doc, report.characterNote, "muted");
 }
 

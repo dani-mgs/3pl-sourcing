@@ -79,7 +79,8 @@ describe("schema version 2", () => {
     expect(china.skus[0].duty.lines[1].manual?.reason).toBe("Exclusion granted");
     expect(china.totals.status.includesManualRate).toBe(true);
     const csv = buildWorkspaceCsv(back.workspace, back.result, LOCKED);
-    expect(csv).toContain("Section 301 (China) (Illustrative) (manual rate)");
+    // The manual columns (a leading "+" is escaped, as every formula-like cell is).
+    expect(csv).toContain("SKU-001,Section 301 (China) (Illustrative),9903.88.03,0%,0.00,Illustrative,https://example.gov/,2026-10-02,\"Duty rates last verified: Sep 20, 2026 (oldest reviewed program: Section 301 (China))\",Yes,0%,'+25% (150.00),Exclusion granted,Dani,2026-10-01");
     expect(csv).toContain("Complete; Includes manual rate");
     const report = buildVersionReport(versionMeta(), back);
     expect(report.blocks.some((b) => b.kind === "paragraph" && b.text === "Includes manual rate: each one is marked in the duty layers below.")).toBe(true);

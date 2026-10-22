@@ -33,8 +33,8 @@ describe("golden: China (baseline) vs Vietnam, formal entry, through the pipelin
   test("ranking: China first and lowest; Vietnam against the baseline, as a share of the baseline", async () => {
     const v = ready(await compare(golden2()));
     expect(v.ranking).toEqual([
-      { scenarioId: S1, rank: 1, label: "China", isBaseline: true, perUnit: "$17.35", total: "$1,734.73", position: "Lowest landed cost", vsBaseline: "Baseline" },
-      { scenarioId: S2, rank: 2, label: "Vietnam", isBaseline: false, perUnit: "$19.69", total: "$1,968.58", position: "Highest landed cost", vsBaseline: "$2.34/unit more than the baseline (13.5%)" },
+      { scenarioId: S1, rank: 1, label: "China", isBaseline: true, perUnit: "$17.35", total: "$1,734.73", position: "Lowest landed cost", vsBaseline: "Baseline", includesManualRate: false },
+      { scenarioId: S2, rank: 2, label: "Vietnam", isBaseline: false, perUnit: "$19.69", total: "$1,968.58", position: "Highest landed cost", vsBaseline: "$2.34/unit more than the baseline (13.5%)", includesManualRate: false },
     ]);
   });
 

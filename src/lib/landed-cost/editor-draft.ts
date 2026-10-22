@@ -45,6 +45,8 @@ export type OverrideRow = {
   ratePercent: string;
   amountUsd: string;
   reason: string;
+  // "Keep my rate" after the app's rate changed: refreshed on the next save.
+  confirmAppRate?: boolean;
 };
 
 export type ScenarioFields = {
@@ -264,7 +266,9 @@ export function applySaveResult(
             skuRef(ref),
             rows.map((o) => {
               const id = overrideId(o);
-              return { ...o, ref: id ?? o.ref, id };
+              const { confirmAppRate, ...row } = o;
+              void confirmAppRate;
+              return { ...row, ref: id ?? o.ref, id };
             }),
           ]),
         ),

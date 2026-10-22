@@ -1,5 +1,6 @@
 import { MAX_EDITOR_COSTS, MAX_EDITOR_SKUS } from "@/lib/landed-cost/editor-draft";
 import { MAX_ORIGINS } from "@/lib/landed-cost/origin-draft";
+import { MAX_OVERRIDES_PER_ITEM, MAX_RATE_PERCENT } from "@/lib/landed-cost/parse-draft";
 import { PASTE_FIELD_LABELS } from "@/lib/landed-cost/parse-sku-paste";
 import { SUPPORTED_INCOTERMS } from "@/lib/landed-cost/scenario-totals";
 import { AIR_CARGO_DIVISOR, COURIER_DIVISOR, SEA_KG_PER_CBM } from "@/lib/landed-cost/shipment-measures";
@@ -180,6 +181,47 @@ export function LandedCostSection() {
         </li>
       </Bullets>
 
+      <SubHeading>Manual rates</SubHeading>
+      <p>
+        When you know a duty better than the app (a ruling, an exclusion, a broker&apos;s figure),
+        set a manual rate for one SKU in one origin.
+      </p>
+      <Bullets>
+        <li>
+          <Ui>Override</Ui>, on a duty layer the app applied (the base duty or a program),
+          replaces it with your value, 0 included. The app&apos;s own rate is kept beside it.
+        </li>
+        <li>
+          <Ui>Apply manually</Ui>, next to a program the app names but doesn&apos;t count (pending
+          review, not loaded, conditional), adds it with your value. <Ui>Add manual duty</Ui> adds
+          one the app doesn&apos;t know, with your label (for example an anti-dumping duty).
+        </li>
+        <li>
+          The value is a rate (% of goods value, 0 to {n(MAX_RATE_PERCENT)}%) or a fixed USD amount.
+          A reason is required. Up to {MAX_OVERRIDES_PER_ITEM} per SKU in an origin.
+        </li>
+        <li>
+          Only the workspace&apos;s owner or an admin can set them; everyone else sees every detail,
+          including who set it and when. MPF and HMF can never be overridden.
+        </li>
+        <li>
+          A manual rate never makes a result complete: the origin shows{" "}
+          <Ui>Includes manual rate</Ui>, the comparison says so, and the app&apos;s own warnings
+          stay (marked <Ui>Covered by a manual rate</Ui>).
+        </li>
+        <li>
+          If the app stops applying a layer you overrode, or starts applying a program you added,
+          the SKU has no total until you fix it: <Ui>Remove</Ui>, <Ui>Keep as a manual duty</Ui>{" "}
+          or <Ui>Keep my rate as an override</Ui>. If the app&apos;s rate for an overridden layer
+          changes, you see <Ui>App rate changed</Ui>: remove yours or <Ui>Keep my rate</Ui>.
+        </li>
+        <li>
+          Changes count once you <Ui>Save draft</Ui>. <Ui>Duplicate this origin</Ui> doesn&apos;t
+          copy manual rates. Locked versions keep them, and the PDF and CSV list each one with its
+          reason.
+        </li>
+      </Bullets>
+
       <SubHeading>Paste from Excel</SubHeading>
       <Bullets>
         <li>
@@ -216,7 +258,7 @@ export function LandedCostSection() {
           Incoterms {incoterms} only: their prices don&apos;t include international freight.
         </li>
         <li>
-          Not available yet: manual rate overrides, delivered incoterms (such as CIF or DDP),
+          Not available yet: delivered incoterms (such as CIF or DDP),
           linking a forwarder quote, and non-Latin text in PDFs (such characters show as
           &ldquo;?&rdquo;).
         </li>

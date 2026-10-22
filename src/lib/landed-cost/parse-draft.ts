@@ -141,6 +141,9 @@ export const overrideSchema = z
     ratePercent: optionalNumber(ratePercent, `Enter the rate as a percentage from 0 to ${MAX_RATE_PERCENT}, with up to 4 decimals.`),
     amountUsd: optionalNumber((s) => parseCents(s) != null, "Enter the amount in USD as 0 or more, with up to 2 decimals."),
     reason: text(1, 500, "Enter a reason of 1 to 500 characters."),
+    // "Keep my rate" after the app's rate changed: the save action stores the
+    // app's current rate, so the note clears. Never sent to the database.
+    confirmAppRate: z.boolean().optional().transform((v) => v === true),
   })
   .superRefine((o, ctx) => {
     const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });
