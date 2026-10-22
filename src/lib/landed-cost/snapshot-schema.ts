@@ -4,6 +4,7 @@ import type { EstimateLine, ReleaseInfo } from "@/lib/tariff/calculate";
 import type { ProgramWarning } from "@/lib/tariff/programs";
 import { COMPONENT_KEYS } from "./components";
 import type { ScenarioComparison, ScenarioResult } from "./scenario-comparison";
+import type { DutyLine } from "./manual-rates";
 import type { ScenarioOutcome, WorkspaceResult } from "./server-compute";
 import type { ViewDuty, ViewOutcome, ViewResult } from "./view-result";
 import type { Workspace } from "./workspace-schema";
@@ -17,8 +18,13 @@ import type { Workspace } from "./workspace-schema";
 // restoreSnapshot turns it into the inputs the result and comparison views
 // read (view-result.ts), so a version is shown by the same code as the live
 // page. Pure.
+//
+// Schema versions: 1 (before manual rates) and 2 (each item's manual rates in
+// the inputs, and each duty layer's `manual` details in the result). New
+// versions are locked as 2; a stored version 1 still parses, and reads back
+// as a version 2 with no manual rates, so it shows and exports as before.
 
-export const SNAPSHOT_SCHEMA_VERSION = 1;
+export const SNAPSHOT_SCHEMA_VERSION = 2;
 
 const B0 = BigInt(0);
 const HUNDRED = BigInt(100);
@@ -47,6 +53,7 @@ const count = z.string().regex(/^\d+$/);
 const integer = z.string().regex(/^-?\d+$/);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const nullableText = z.string().nullable();
+const decimalText = z.string().regex(/^\d+(\.\d+)?$/);
 
 const lineSchema = z.object({
   kind: z.enum(["duty", "additional", "fee"]),
@@ -65,6 +72,24 @@ const lineSchema = z.object({
   notes: z.array(z.string()).optional(),
 });
 
+const manualSchema = z.object({
+  overrideId: z.uuid(),
+  kind: z.enum(["replace", "add"]),
+  layerName: z.string(),
+  ratePercent: decimalText.nullable(),
+  amountUsd: money.nullable(),
+  reason: z.string(),
+  setByName: z.string(),
+  setAt: z.string(),
+  changedByName: z.string(),
+  changedAt: z.string(),
+  engineRateText: nullableText,
+  engineAmountUsd: money.nullable(),
+  note: nullableText,
+});
+// A duty layer: version 2 says whether it's manual (null: the app's).
+const dutyLineSchemaV2 = lineSchema.extend({ manual: manualSchema.nullable() });
+
 const warningSchema = z.object({
   programKey: z.string(),
   name: z.string(),
@@ -76,6 +101,8 @@ const warningSchema = z.object({
   indicativePct: z.number().nullable().optional(),
   hint: nullableText.optional(),
   counted: z.boolean().optional(),
+  // Version 2: a manual rate covers this program.
+  coveredByManualRate: z.boolean().optional(),
 });
 
 const reviewSchema = z.object({
@@ -87,14 +114,14 @@ const reviewSchema = z.object({
   staleReason: nullableText,
 });
 
-const dutySchema = z.object({
+const dutySchemaOf = <L extends z.ZodType>(line: L) => z.object({
   htsCode: z.string().regex(/^\d{8}(\d{2})?$/),
   rateColumn: z.enum(["general", "column2"]),
   rateText: z.string(),
   effectiveDutyRate: nullableText,
   incomplete: z.boolean(),
   dutiesUsd: money,
-  lines: z.array(lineSchema),
+  lines: z.array(line),
   warnings: z.array(warningSchema),
   dutyReviews: z.array(reviewSchema),
   oldestReview: z
@@ -112,7 +139,7 @@ const dutySchema = z.object({
   ),
 });
 
-const skuSchema = z.object({
+const skuSchemaOf = <L extends z.ZodType>(line: L) => z.object({
   skuLineId: z.uuid(),
   quantity: count,
   productUsd: money,
@@ -125,12 +152,12 @@ const skuSchema = z.object({
   perUnitUsd: money,
   // The exact per-unit cost in cents, as a fraction.
   perUnitExact: z.object({ n: integer, d: count }),
-  duty: dutySchema,
+  duty: dutySchemaOf(line),
 });
 
 const feeSchema = z.object({ usd: money, line: lineSchema });
 
-const originSchema = z.object({
+const originSchemaOf = <L extends z.ZodType>(line: L) => z.object({
   scenarioId: z.uuid(),
   label: z.string(),
   isBaseline: z.boolean(),
@@ -147,7 +174,7 @@ const originSchema = z.object({
     warnings: z.array(z.object({ kind: z.literal("fees_not_entered"), text: z.string(), fiscalYear: z.number().int(), startsOn: date })),
   }),
   otherCosts: z.array(z.object({ label: z.string(), amountUsd: money })),
-  skus: z.array(skuSchema).min(1),
+  skus: z.array(skuSchemaOf(line)).min(1),
 });
 
 const comparisonResultSchema = z.object({
@@ -168,17 +195,45 @@ const comparisonResultSchema = z.object({
   rankPosition: z.enum(["Only Comparable Scenario", "Lowest Landed Cost", "Highest Landed Cost"]).nullable(),
 });
 
-export const snapshotResultSchema = z.object({
+const resultSchemaOf = <L extends z.ZodType>(line: L) => z.object({
   calculatedOn: date,
   entryDate: date,
   release: z.object({ name: z.string(), title: nullableText, startDate: date.nullable() }),
-  origins: z.array(originSchema).min(1),
+  origins: z.array(originSchemaOf(line)).min(1),
   comparison: z.object({ baselineId: z.uuid(), caution: z.array(z.string()), results: z.array(comparisonResultSchema) }).nullable(),
   comparisonNote: nullableText,
 });
+export const snapshotResultSchema = resultSchemaOf(dutyLineSchemaV2);
+const snapshotResultSchemaV1 = resultSchemaOf(lineSchema);
 
-const decimalText = z.string().regex(/^\d+(\.\d+)?$/);
-export const snapshotInputsSchema = z.object({
+const overrideSchema = z.object({
+  id: z.uuid(),
+  kind: z.enum(["replace", "add"]),
+  layerKey: nullableText,
+  label: nullableText,
+  ratePercent: decimalText.nullable(),
+  amountUsd: decimalText.nullable(),
+  reason: z.string(),
+  engineRateText: nullableText,
+  engineAmountUsd: decimalText.nullable(),
+  sortOrder: z.number().int(),
+  setBy: z.uuid(),
+  setAt: z.string(),
+  changedBy: z.uuid(),
+  changedAt: z.string(),
+});
+const itemSchemaV1 = z.object({
+  skuLineId: z.uuid(),
+  fobUnitPriceUsd: decimalText.nullable(),
+  pcsPerCarton: decimalText.nullable(),
+  cartonLengthCm: decimalText.nullable(),
+  cartonWidthCm: decimalText.nullable(),
+  cartonHeightCm: decimalText.nullable(),
+  cartonGrossKg: decimalText.nullable(),
+});
+const itemSchemaV2 = itemSchemaV1.extend({ overrides: z.array(overrideSchema) });
+
+const inputsSchemaOf = <I extends z.ZodType>(item: I) => z.object({
   id: z.uuid(),
   ownerId: z.uuid(),
   name: z.string(),
@@ -210,21 +265,14 @@ export const snapshotInputsSchema = z.object({
       freightBasis: z.enum(["chargeable_weight", "value", "units"]),
       volumetricDivisor: decimalText.nullable(),
       isBaseline: z.boolean(),
-      items: z.array(
-        z.object({
-          skuLineId: z.uuid(),
-          fobUnitPriceUsd: decimalText.nullable(),
-          pcsPerCarton: decimalText.nullable(),
-          cartonLengthCm: decimalText.nullable(),
-          cartonWidthCm: decimalText.nullable(),
-          cartonHeightCm: decimalText.nullable(),
-          cartonGrossKg: decimalText.nullable(),
-        }),
-      ),
+      items: z.array(item),
       otherCosts: z.array(z.object({ id: z.uuid(), label: z.string(), amountUsd: decimalText })),
     }),
   ),
 });
+
+export const snapshotInputsSchema = inputsSchemaOf(itemSchemaV2);
+const snapshotInputsSchemaV1 = inputsSchemaOf(itemSchemaV1);
 
 export type SnapshotResult = z.output<typeof snapshotResultSchema>;
 export type SnapshotInputs = z.output<typeof snapshotInputsSchema>;
@@ -249,6 +297,9 @@ const lineOut = (l: EstimateLine) => ({
   ...(l.sourceCheckedOn !== undefined && { sourceCheckedOn: l.sourceCheckedOn }),
   ...(l.notes !== undefined && { notes: l.notes }),
 });
+
+// A duty layer: the app's (manual null) or a manual one.
+const dutyLineOut = (l: DutyLine) => ({ ...lineOut(l), manual: l.manual ? { ...l.manual } : null });
 
 function originOut(o: Complete) {
   const t = o.totals;
@@ -294,7 +345,7 @@ function originOut(o: Complete) {
           effectiveDutyRate: d.effectiveDutyRate,
           incomplete: d.incomplete,
           dutiesUsd: centsToMoney(d.dutiesCents),
-          lines: d.lines.map(lineOut),
+          lines: d.lines.map(dutyLineOut),
           warnings: d.warnings.map((w) => ({ ...w })),
           dutyReviews: d.dutyReviews.map((r) => ({ ...r })),
           oldestReview: d.oldestReview ? { ...d.oldestReview } : null,
@@ -386,7 +437,7 @@ export function buildSnapshotRow(workspace: Workspace, result: WorkspaceResult):
     skuLines: workspace.skuLines.map((l) => ({ ...l, dutyQuantity: l.dutyQuantity ? { ...l.dutyQuantity } : null })),
     scenarios: workspace.scenarios.map((s) => ({
       ...s,
-      items: s.items.map((i) => ({ ...i })),
+      items: s.items.map((i) => ({ ...i, overrides: i.overrides.map((o) => ({ ...o })) })),
       otherCosts: s.otherCosts.map((c) => ({ ...c })),
     })),
   };
@@ -417,16 +468,41 @@ export function buildSnapshotRow(workspace: Workspace, result: WorkspaceResult):
 export type ParsedSnapshot = { inputs: SnapshotInputs; result: SnapshotResult };
 
 export function parseSnapshot(row: { schema_version: unknown; inputs: unknown; result: unknown }): { ok: true; snapshot: ParsedSnapshot } | { ok: false } {
-  if (row.schema_version !== SNAPSHOT_SCHEMA_VERSION) return { ok: false };
-  const inputs = snapshotInputsSchema.safeParse(row.inputs);
-  const result = snapshotResultSchema.safeParse(row.result);
-  if (!inputs.success || !result.success) return { ok: false };
-  return { ok: true, snapshot: { inputs: inputs.data, result: result.data } };
+  if (row.schema_version === 2) {
+    const inputs = snapshotInputsSchema.safeParse(row.inputs);
+    const result = snapshotResultSchema.safeParse(row.result);
+    if (!inputs.success || !result.success) return { ok: false };
+    return { ok: true, snapshot: { inputs: inputs.data, result: result.data } };
+  }
+  if (row.schema_version === 1) {
+    // Before manual rates: none in the inputs, every layer the app's.
+    const inputs = snapshotInputsSchemaV1.safeParse(row.inputs);
+    const result = snapshotResultSchemaV1.safeParse(row.result);
+    if (!inputs.success || !result.success) return { ok: false };
+    return {
+      ok: true,
+      snapshot: {
+        inputs: {
+          ...inputs.data,
+          scenarios: inputs.data.scenarios.map((s) => ({ ...s, items: s.items.map((i) => ({ ...i, overrides: [] })) })),
+        },
+        result: {
+          ...result.data,
+          origins: result.data.origins.map((o) => ({
+            ...o,
+            skus: o.skus.map((k) => ({ ...k, duty: { ...k.duty, lines: k.duty.lines.map((l) => ({ ...l, manual: null })) } })),
+          })),
+        },
+      },
+    };
+  }
+  return { ok: false };
 }
 
 const lineIn = (l: z.output<typeof lineSchema>): EstimateLine => ({ ...l, amountUsd: moneyToUsd(l.amountUsd) });
+const dutyLineIn = (l: z.output<typeof dutyLineSchemaV2>): DutyLine => ({ ...l, amountUsd: moneyToUsd(l.amountUsd) });
 
-function originIn(o: z.output<typeof originSchema>): ViewOutcome {
+function originIn(o: SnapshotResult["origins"][number]): ViewOutcome {
   const skus = o.skus.map((s) => {
     const duty: ViewDuty = {
       htsCode: s.duty.htsCode,
@@ -434,7 +510,7 @@ function originIn(o: z.output<typeof originSchema>): ViewOutcome {
       dutiesUsd: moneyToUsd(s.duty.dutiesUsd),
       effectiveDutyRate: s.duty.effectiveDutyRate,
       incomplete: s.duty.incomplete,
-      lines: s.duty.lines.map(lineIn),
+      lines: s.duty.lines.map(dutyLineIn),
       warnings: s.duty.warnings as ProgramWarning[],
       oldestReview: s.duty.oldestReview,
     };

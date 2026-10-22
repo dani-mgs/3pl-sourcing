@@ -1,13 +1,14 @@
 import { evaluateAdditionalDuties, type DutyReviewNote, type DutyRow, type ProgramReview } from "@/lib/tariff/additional-duties";
-import { calculateBaseDuty, type EstimateLine, type ReleaseInfo } from "@/lib/tariff/calculate";
+import { calculateBaseDuty, type ReleaseInfo } from "@/lib/tariff/calculate";
 import { effectiveRates, oldestReview, type OldestReview } from "@/lib/tariff/effective-rate";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
 import type { HtsLineRecord } from "@/lib/tariff/hts-line-match";
-import { isIncompleteEstimate, type DutyProgramRow, type ProgramWarning } from "@/lib/tariff/programs";
+import { isIncompleteEstimate, type DutyProgramRow } from "@/lib/tariff/programs";
 import { centsToNumber, parseDecimal, toCents, type Rational } from "@/lib/tariff/rational";
 import { parseRateText, unitLabelOf } from "@/lib/tariff/rate-text";
 import { scheduledChanges, type ScheduledChange } from "@/lib/tariff/scheduled-changes";
 import type { LineError } from "./duty-request";
+import type { DutyLine, DutyWarning } from "./manual-rates";
 
 // One SKU line's duties for one origin: the Tariff Calculator's base duty
 // (calculateBaseDuty) and additional duties (evaluateAdditionalDuties), in the
@@ -28,9 +29,9 @@ export type SkuDuty = {
   additionalDutiesUsd: number;
   dutiesCents: bigint;
   dutiesUsd: number;
-  // Base duty, then additional duties.
-  lines: EstimateLine[];
-  warnings: ProgramWarning[];
+  // Base duty, then additional duties (and any manual ones, manual-rates.ts).
+  lines: DutyLine[];
+  warnings: DutyWarning[];
   dutyReviews: DutyReviewNote[];
   incomplete: boolean;
   oldestReview: OldestReview | null;

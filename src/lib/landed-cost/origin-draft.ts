@@ -47,7 +47,8 @@ function withOrigin(draft: EditorDraft, scenario: ScenarioDraft): EditorDraft {
 }
 
 // A copy of `sourceRef` in another country: its mode, incoterm, entry type,
-// freight basis, divisor, per-SKU packing and other costs. The FOB prices and
+// freight basis, divisor, per-SKU packing and other costs (not its manual
+// rates, which are per origin). The FOB prices and
 // the freight total start empty, so the new origin shows "inputs missing"
 // until they're entered (never the source's prices by mistake); the
 // supplier starts blank.
@@ -69,6 +70,8 @@ export function duplicateOrigin(draft: EditorDraft, sourceRef: string, origin: N
     items: Object.fromEntries(
       draft.skus.map((s) => [s.ref, { ...(source.items[s.ref] ?? EMPTY_ITEM), fobUnitPriceUsd: "" }]),
     ),
+    // Manual rates are per origin: not copied.
+    overrides: {},
     otherCosts: source.otherCosts.map((c) => ({ ...c, ref: costRef(), id: null })),
   });
 }
@@ -88,6 +91,7 @@ export function addBlankOrigin(draft: EditorDraft, origin: NewOrigin): EditorDra
     freightBasis: "chargeable_weight",
     volumetricDivisor: "",
     items: Object.fromEntries(draft.skus.map((s) => [s.ref, { ...EMPTY_ITEM }])),
+    overrides: {},
     otherCosts: [],
   });
 }

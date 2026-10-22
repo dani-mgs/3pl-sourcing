@@ -60,6 +60,10 @@ insert into landed_cost_scenario_items (workspace_id, scenario_id, sku_line_id, 
   ('00000000-0000-4000-8000-000000003701', '00000000-0000-4000-8000-000000003703', '00000000-0000-4000-8000-000000003702', 6);
 insert into landed_cost_other_costs (workspace_id, scenario_id, label, amount_usd) values
   ('00000000-0000-4000-8000-000000003701', '00000000-0000-4000-8000-000000003703', 'Broker fee', 95);
+insert into landed_cost_rate_overrides (workspace_id, scenario_id, sku_line_id, kind, layer_key, rate_percent, reason,
+  engine_rate_text, engine_amount_usd, set_by, changed_by) values
+  ('00000000-0000-4000-8000-000000003701', '00000000-0000-4000-8000-000000003703', '00000000-0000-4000-8000-000000003702',
+   'replace', 'base', 0, 'Broker ruling', '3.4%', 20.40, '00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-0000000000a1');
 -- A locked version (written as the table's owner; the app goes through save_landed_cost_snapshot).
 insert into landed_cost_snapshots (workspace_id, version_no, created_by, as_of_date, workspace_name, entry_date, workspace_updated_at,
   hts_release_id, hts_release_name, schema_version, inputs, result, origin_count, baseline_label, baseline_per_unit_usd, incomplete) values
@@ -96,7 +100,7 @@ select is(
 select is(
   (select count(*)::int from pg_class c join pg_namespace s on s.oid = c.relnamespace
    where s.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity),
-  34, 'there are 34 RLS tables (a new one needs the policy too)');
+  35, 'there are 35 RLS tables (a new one needs the policy too)');
 
 select is(
   (select prosecdef from pg_proc where oid = 'public.search_hts_lines(text[], text, integer)'::regprocedure),

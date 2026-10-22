@@ -4,11 +4,13 @@ import { checkEntryDate, entryDateBounds } from "@/lib/tariff/entry-date";
 import type { CallErrorCode, DutyBatchResult, LineDutyResult, LineErrorCode } from "./duty-request";
 import { toScenarioSkuDuty } from "./duty-adapter";
 import type { FeeRowWithDates } from "./entry-fees";
+import { applyRateOverrides } from "./manual-rates";
 import { compareScenarios, type ScenarioComparison } from "./scenario-comparison";
 import { dutyLines, prepareScenario, type PreparedScenario, type PreparedSku, type ScenarioField, type SkuField } from "./scenario-inputs";
 import { computeScenarioTotals, type ScenarioTotals } from "./scenario-totals";
 import { loadSkuDuties } from "./server-duty-batch";
 import { readFeeRows } from "./server-duty-reads";
+import { loadFirstNames } from "./server-workspace-list";
 import { shipmentTotals, type ShipmentTotals, type SkuMeasures } from "./shipment-measures";
 import type { SkuDuty } from "./sku-duty";
 import type { Workspace } from "./workspace-schema";
@@ -18,8 +20,10 @@ import type { Workspace } from "./workspace-schema";
 // missing or the duties; per complete scenario, the landed cost; and the
 // comparison of complete scenarios with the baseline. A scenario shows totals
 // only when every SKU line is complete: never a partial total. Duties for
-// every scenario x SKU line come from ONE loadSkuDuties call. Uses the
-// caller's client (RLS applies); the caller checks requireStaff() first.
+// every scenario x SKU line come from ONE loadSkuDuties call; each line's
+// manual rates are applied after it (manual-rates.ts), and a manual rate that
+// no longer fits blocks that SKU's total. Uses the caller's client (RLS
+// applies); the caller checks requireStaff() first.
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -30,7 +34,10 @@ export type SkuStatus =
   // `duty` is set when the duties are known but other inputs are missing.
   | { status: "inputs_missing"; skuLineId: string; missing: SkuField[]; dutyQuantityUnit: DutyUnit | null; duty: SkuDuty | null }
   // `missing` lists any inputs still to enter as well.
-  | { status: "duty_error"; skuLineId: string; code: LineErrorCode; message: string; unit: DutyUnit | null; missing: SkuField[] };
+  | { status: "duty_error"; skuLineId: string; code: LineErrorCode; message: string; unit: DutyUnit | null; missing: SkuField[] }
+  // A manual rate that no longer fits the app's duties (manual-rates.ts):
+  // blocking, like a missing input; `missing` lists any inputs still to enter.
+  | { status: "manual_rate_conflict"; skuLineId: string; messages: string[]; duty: SkuDuty; missing: SkuField[] };
 
 type Base = { scenarioId: string; label: string; isBaseline: boolean; skus: SkuStatus[] };
 export type ScenarioOutcome =
@@ -54,14 +61,29 @@ export type WorkspaceResult =
 
 const LOAD_FAILED = "Duties and fees couldn't be loaded right now. Try again.";
 
-function skuStatus(sku: PreparedSku, duty: LineDutyResult | undefined): SkuStatus {
+// A line's duties after its manual rates, with whether one applies and what blocks it.
+type LineDuty = { result: LineDutyResult; includesManualRate: boolean; conflicts: string[] };
+
+function withOverrides(sku: PreparedSku, result: LineDutyResult | undefined, names: Map<string, string>): LineDuty | undefined {
+  if (!result) return undefined;
+  const overrides = sku.item?.overrides ?? [];
+  if (!result.ok || overrides.length === 0 || sku.enteredValueUsd == null) return { result, includesManualRate: false, conflicts: [] };
+  const applied = applyRateOverrides(result.duty, overrides, sku.enteredValueUsd, names);
+  return { result: { ...result, duty: applied.duty }, includesManualRate: applied.includesManualRate, conflicts: applied.conflicts };
+}
+
+function skuStatus(sku: PreparedSku, line: LineDuty | undefined): SkuStatus {
   const skuLineId = sku.skuLine.id;
+  const duty = line?.result;
   if (duty && !duty.ok && duty.code !== "needs_quantity") {
     return { status: "duty_error", skuLineId, code: duty.code, message: duty.message, unit: duty.unit ?? null, missing: sku.missing };
   }
   const needsQuantity = duty && !duty.ok ? duty : null;
   const missing: SkuField[] = needsQuantity ? [...sku.missing, "duty_quantity"] : sku.missing;
   const known = duty?.ok ? duty.duty : null;
+  if (known && line && line.conflicts.length > 0) {
+    return { status: "manual_rate_conflict", skuLineId, messages: line.conflicts, duty: known, missing };
+  }
   if (missing.length > 0 || !known) {
     return { status: "inputs_missing", skuLineId, missing, dutyQuantityUnit: needsQuantity?.unit ?? null, duty: known };
   }
@@ -70,7 +92,7 @@ function skuStatus(sku: PreparedSku, duty: LineDutyResult | undefined): SkuStatu
 
 function scenarioOutcome(
   prepared: PreparedScenario,
-  duties: Map<string, LineDutyResult>,
+  duties: Map<string, LineDuty>,
   feeRows: FeeRowWithDates[],
   entryDate: string,
   baselineId: string | null,
@@ -90,7 +112,8 @@ function scenarioOutcome(
     freightTotalUsd: scenario.freightTotalUsd!,
     freightBasis: scenario.freightBasis,
     skus: prepared.skus.map((s) => {
-      const adapted = toScenarioSkuDuty(duties.get(s.lineId)!);
+      const line = duties.get(s.lineId)!;
+      const adapted = toScenarioSkuDuty(line.result, line.includesManualRate);
       if (!adapted.ok) throw new Error("unreachable: an ok SKU has an ok duty");
       return {
         skuId: s.skuLine.id,
@@ -127,6 +150,22 @@ function comparisonOf(workspace: Workspace, outcomes: ScenarioOutcome[]): { comp
   return compared.ok ? { comparison: compared.comparison, comparisonNote: null } : { comparison: null, comparisonNote: compared.error };
 }
 
+// The first names of whoever set or changed a manual rate (shown with it).
+// Not loading them never blocks the result: the layer says "a staff member".
+async function overrideNames(supabase: Supabase, workspace: Workspace): Promise<Map<string, string>> {
+  const ids = new Set(
+    workspace.scenarios.flatMap((s) => s.items.flatMap((i) => (i.overrides ?? []).flatMap((o) => [o.setBy, o.changedBy]))),
+  );
+  if (ids.size === 0) return new Map();
+  try {
+    const names = await loadFirstNames(supabase, [...ids]);
+    return new Map([...names].flatMap(([id, name]) => (name ? [[id, name] as const] : [])));
+  } catch (error) {
+    console.error("computeWorkspaceResult names error:", error);
+    return new Map();
+  }
+}
+
 export async function computeWorkspaceResult(
   supabase: Supabase,
   workspace: Workspace,
@@ -156,7 +195,14 @@ export async function computeWorkspaceResult(
   }
   if (!duties.ok) return { state: "duties_unavailable", calculatedOn, entryDate, code: duties.code, message: duties.message };
 
-  const byLine = new Map(duties.lines.map((l) => [l.lineId, l]));
+  const names = await overrideNames(supabase, workspace);
+  const results = new Map(duties.lines.map((l) => [l.lineId, l]));
+  const byLine = new Map(
+    prepared.flatMap((p) => p.skus.flatMap((s) => {
+      const line = withOverrides(s, results.get(s.lineId), names);
+      return line ? [[s.lineId, line] as const] : [];
+    })),
+  );
   const scenarios = prepared.map((p) => scenarioOutcome(p, byLine, feeRows, entryDate, workspace.baselineScenarioId));
   return { state: "ready", calculatedOn, entryDate, scenarios, ...comparisonOf(workspace, scenarios) };
 }

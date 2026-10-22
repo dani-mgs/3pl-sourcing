@@ -3,11 +3,13 @@ import type { createClient } from "@/lib/supabase/server";
 import {
   ITEM_COLUMNS,
   OTHER_COST_COLUMNS,
+  OVERRIDE_COLUMNS,
   SCENARIO_COLUMNS,
   SKU_LINE_COLUMNS,
   WORKSPACE_COLUMNS,
   itemRowSchema,
   otherCostRowSchema,
+  overrideRowSchema,
   scenarioRowSchema,
   skuLineRowSchema,
   workspaceRowSchema,
@@ -15,11 +17,11 @@ import {
 } from "./workspace-schema";
 
 // SERVER-ONLY. Reads one Landed Cost workspace with its SKU lines, scenarios,
-// per-scenario items and other costs, through the caller's client (RLS: any
-// staff member reads; a client or anon gets nothing, which reads as not
-// found). Five reads in parallel, each well under the API's 1,000 rows: the
-// tables cap a workspace at 100 SKU lines x 5 scenarios and 20 other costs per
-// scenario. Every row is parsed with Zod.
+// per-scenario items, manual rates and other costs, through the caller's
+// client (RLS: any staff member reads; a client or anon gets nothing, which
+// reads as not found). Six reads in parallel. Each is under the API's 1,000
+// rows except, in theory, the manual rates (up to 10 per item x 500 items),
+// so those are read in pages. Every row is parsed with Zod.
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -46,15 +48,35 @@ function parseRows<T extends z.ZodType>(schema: T, rows: unknown[]): z.infer<T>[
 const byOrder = (a: { sort_order: number; key: string }, b: { sort_order: number; key: string }) =>
   a.sort_order - b.sort_order || a.key.localeCompare(b.key);
 
+const OVERRIDE_PAGE = 1000;
+
+// Every manual rate of the workspace, a page at a time (ordered by id so the
+// pages don't overlap).
+async function loadOverrideRows(supabase: Supabase, workspaceId: string): Promise<unknown[]> {
+  const rows: unknown[] = [];
+  for (let from = 0; ; from += OVERRIDE_PAGE) {
+    const { data, error } = await supabase
+      .from("landed_cost_rate_overrides")
+      .select(OVERRIDE_COLUMNS)
+      .eq("workspace_id", workspaceId)
+      .order("id")
+      .range(from, from + OVERRIDE_PAGE - 1);
+    if (error) throw error;
+    rows.push(...(data ?? []));
+    if ((data ?? []).length < OVERRIDE_PAGE) return rows;
+  }
+}
+
 export async function loadWorkspace(supabase: Supabase, workspaceId: string): Promise<LoadWorkspaceResult> {
   if (!z.uuid().safeParse(workspaceId).success) return { ok: false, code: "not_found", message: NOT_FOUND };
   try {
-    const [workspace, skuLines, scenarios, items, otherCosts] = await Promise.all([
+    const [workspace, skuLines, scenarios, items, otherCosts, overrides] = await Promise.all([
       supabase.from("landed_cost_workspaces").select(WORKSPACE_COLUMNS).eq("id", workspaceId).maybeSingle(),
       supabase.from("landed_cost_sku_lines").select(SKU_LINE_COLUMNS).eq("workspace_id", workspaceId),
       supabase.from("landed_cost_scenarios").select(SCENARIO_COLUMNS).eq("workspace_id", workspaceId),
       supabase.from("landed_cost_scenario_items").select(ITEM_COLUMNS).eq("workspace_id", workspaceId),
       supabase.from("landed_cost_other_costs").select(OTHER_COST_COLUMNS).eq("workspace_id", workspaceId),
+      loadOverrideRows(supabase, workspaceId),
     ]);
     for (const result of [workspace, skuLines, scenarios, items, otherCosts]) if (result.error) throw result.error;
     if (!workspace.data) return { ok: false, code: "not_found", message: NOT_FOUND };
@@ -64,7 +86,8 @@ export async function loadWorkspace(supabase: Supabase, workspaceId: string): Pr
     const scens = parseRows(scenarioRowSchema, scenarios.data ?? []);
     const its = parseRows(itemRowSchema, items.data ?? []);
     const costs = parseRows(otherCostRowSchema, otherCosts.data ?? []);
-    if (!w.success || !lines || !scens || !its || !costs) {
+    const manual = parseRows(overrideRowSchema, overrides);
+    if (!w.success || !lines || !scens || !its || !costs || !manual) {
       if (!w.success) console.error("loadWorkspace: unexpected workspace row", w.error.issues.slice(0, 3));
       return { ok: false, code: "invalid_data", message: "This workspace's data couldn't be read. Ask an admin to check it." };
     }
@@ -115,6 +138,25 @@ export async function loadWorkspace(supabase: Supabase, workspaceId: string): Pr
                 cartonWidthCm: i.carton_width_cm,
                 cartonHeightCm: i.carton_height_cm,
                 cartonGrossKg: i.carton_gross_kg,
+                overrides: manual
+                  .filter((o) => o.scenario_id === s.id && o.sku_line_id === i.sku_line_id)
+                  .sort((a, b) => a.sort_order - b.sort_order || a.set_at.localeCompare(b.set_at) || a.id.localeCompare(b.id))
+                  .map((o) => ({
+                    id: o.id,
+                    kind: o.kind,
+                    layerKey: o.layer_key,
+                    label: o.label,
+                    ratePercent: o.rate_percent,
+                    amountUsd: o.amount_usd,
+                    reason: o.reason,
+                    engineRateText: o.engine_rate_text,
+                    engineAmountUsd: o.engine_amount_usd,
+                    sortOrder: o.sort_order,
+                    setBy: o.set_by,
+                    setAt: o.set_at,
+                    changedBy: o.changed_by,
+                    changedAt: o.changed_at,
+                  })),
               })),
             otherCosts: costs
               .filter((c) => c.scenario_id === s.id)

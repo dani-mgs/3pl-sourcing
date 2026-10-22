@@ -33,6 +33,20 @@ export type ItemInputs = {
 
 export type CostRow = { ref: string; id: string | null; label: string; amountUsd: string };
 
+// A manual rate on one SKU in one origin (manual-rates.ts), as text. Carried
+// through the draft as it was loaded (the editing UI comes later), so a save
+// keeps it. Who set or changed it, and when, are never sent.
+export type OverrideRow = {
+  ref: string;
+  id: string | null;
+  kind: "replace" | "add";
+  layerKey: string;
+  label: string;
+  ratePercent: string;
+  amountUsd: string;
+  reason: string;
+};
+
 export type ScenarioFields = {
   ref: string;
   id: string | null;
@@ -50,6 +64,8 @@ export type ScenarioFields = {
 export type ScenarioDraft = ScenarioFields & {
   // This origin's inputs per SKU row, by the row's ref (empty when absent).
   items: Record<string, ItemInputs>;
+  // This origin's manual rates per SKU row, by the row's ref (absent: none).
+  overrides: Record<string, OverrideRow[]>;
   otherCosts: CostRow[];
 };
 
@@ -111,6 +127,23 @@ function scenarioDraft(s: Scenario, workspace: Workspace): ScenarioDraft {
     freightBasis: s.freightBasis,
     volumetricDivisor: text(s.volumetricDivisor),
     items: Object.fromEntries(workspace.skuLines.map((l) => [l.id, itemInputs(items.get(l.id))])),
+    overrides: Object.fromEntries(
+      s.items
+        .filter((i) => (i.overrides ?? []).length > 0)
+        .map((i) => [
+          i.skuLineId,
+          i.overrides.map((o) => ({
+            ref: o.id,
+            id: o.id,
+            kind: o.kind,
+            layerKey: text(o.layerKey),
+            label: text(o.label),
+            ratePercent: text(o.ratePercent),
+            amountUsd: text(o.amountUsd),
+            reason: o.reason,
+          })),
+        ]),
+    ),
     otherCosts: s.otherCosts.map((c) => ({ ref: c.id, id: c.id, label: c.label, amountUsd: c.amountUsd })),
   };
 }
@@ -161,7 +194,9 @@ export function removeSkuRow(draft: EditorDraft, ref: string): EditorDraft {
     scenarios: draft.scenarios.map((s) => {
       const items = { ...s.items };
       delete items[ref];
-      return { ...s, items };
+      const overrides = { ...s.overrides };
+      delete overrides[ref];
+      return { ...s, items, overrides };
     }),
   };
 }
@@ -187,22 +222,27 @@ export function toSaveInput(draft: EditorDraft, workspaceId: string, expectedUpd
         dutyQuantity: s.dutyQuantity,
         dutyQuantityUnit: s.dutyQuantity.trim() === "" ? "" : s.dutyQuantityUnit,
       })),
-      scenarios: draft.scenarios.map(({ items, otherCosts, ...fields }) => ({
+      scenarios: draft.scenarios.map(({ items, overrides, otherCosts, ...fields }) => ({
         ...fields,
-        items: draft.skus.map((s) => ({ skuRef: s.ref, ...(items[s.ref] ?? EMPTY_ITEM) })),
+        items: draft.skus.map((s) => ({
+          skuRef: s.ref,
+          ...(items[s.ref] ?? EMPTY_ITEM),
+          overrides: (overrides[s.ref] ?? []).map((o) => ({ ...o })),
+        })),
         otherCosts: otherCosts.map((c) => ({ id: c.id, label: c.label, amountUsd: c.amountUsd })),
       })),
     },
   };
 }
 
-// After a save: each new SKU row and origin takes the id the database gave
-// it, which becomes its ref too. (Other costs get theirs when the page
-// reloads from the server.)
+// After a save: each new SKU row, origin and manual rate takes the id the
+// database gave it, which becomes its ref too. (Other costs get theirs when
+// the page reloads from the server.)
 export function applySaveResult(
   draft: EditorDraft,
-  ids: { skuLines: Record<string, string>; scenarios: Record<string, string> },
+  ids: { skuLines: Record<string, string>; scenarios: Record<string, string>; overrides?: Record<string, string> },
 ): EditorDraft {
+  const overrideId = (o: OverrideRow) => ids.overrides?.[o.ref] ?? o.id;
   const skuRef = (ref: string) => ids.skuLines[ref] ?? ref;
   const scenarioRef = (ref: string) => ids.scenarios[ref] ?? ref;
   return {
@@ -219,6 +259,15 @@ export function applySaveResult(
         ref: id ?? s.ref,
         id,
         items: Object.fromEntries(Object.entries(s.items).map(([ref, inputs]) => [skuRef(ref), inputs])),
+        overrides: Object.fromEntries(
+          Object.entries(s.overrides).map(([ref, rows]) => [
+            skuRef(ref),
+            rows.map((o) => {
+              const id = overrideId(o);
+              return { ...o, ref: id ?? o.ref, id };
+            }),
+          ]),
+        ),
       };
     }),
   };

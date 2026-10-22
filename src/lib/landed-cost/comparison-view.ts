@@ -185,16 +185,27 @@ function uncountedPrograms(outcome: Complete): string[] {
   return [...names];
 }
 
-function cautionOf(compared: Complete[], cautions: string[]): string | null {
+// Each manual rate in an origin's SKUs, e.g. "SKU-001 Section 301 (China) manual rate".
+function manualRates(outcome: Complete, workspace: Workspace): string[] {
+  const codes = new Map(workspace.skuLines.map((l) => [l.id, l.skuCode]));
+  return outcome.skus.flatMap((s) =>
+    s.status === "ok" ? s.duty.lines.flatMap((l) => (l.manual ? [`${codes.get(s.skuLineId) ?? "SKU"} ${l.manual.layerName} manual rate`] : [])) : [],
+  );
+}
+
+function cautionOf(compared: Complete[], cautions: string[], workspace: Workspace): string | null {
   const reasons: string[] = [];
   for (const o of compared) {
     const programs = uncountedPrograms(o);
     if (o.totals.status.incomplete) {
       reasons.push(programs.length > 0 ? `${o.label}: ${programs.join(", ")}.` : `${o.label}: duties or fees not final.`);
     }
+    const manual = manualRates(o, workspace);
+    if (manual.length > 0) reasons.push(`${o.label}: ${manual.join("; ")}.`);
   }
-  // compareScenarios' other reasons (manual or unverified rates).
-  for (const c of cautions) if (!/: incomplete \(/.test(c)) reasons.push(c);
+  // compareScenarios' other reasons (unverified rates). Incomplete and manual
+  // ones are named above, with their programs.
+  for (const c of cautions) if (!/: incomplete \(|: includes a manually entered rate\.$/.test(c)) reasons.push(c);
   return reasons.length > 0 ? `Ranking may change: ${reasons.join(" ")}` : null;
 }
 
@@ -319,7 +330,7 @@ export function toComparisonView(result: ViewResult | null, workspace: Workspace
       .filter((o) => !isComparable(o))
       .map((o) => ({ label: o.label, reasons: (byId.get(o.scenarioId)?.notComparableReasons ?? []).map((r) => withCodes(r, workspace)) })),
     excluded,
-    caution: cautionOf(comparable, result.comparison.caution),
+    caution: cautionOf(comparable, result.comparison.caution, workspace),
     modes: modeLabels(comparable.map((o) => ({ label: o.label, mode: modeOf.get(o.scenarioId) ?? "" }))),
   };
 }

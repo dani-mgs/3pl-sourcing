@@ -162,7 +162,7 @@ describe("refused or unreadable", () => {
     const { built } = await lock(golden());
     if (!built.ok) throw new Error(built.error);
     const good = throughJson(built.row) as { schema_version: number; inputs: unknown; result: { origins: { totalUsd: unknown }[] } };
-    expect(parseSnapshot({ ...good, schema_version: 2 }).ok).toBe(false);
+    expect(parseSnapshot({ ...good, schema_version: 3 }).ok).toBe(false);
     good.result.origins[0].totalUsd = 1734.73;
     expect(parseSnapshot(good).ok).toBe(false);
     expect(parseSnapshot({ schema_version: 1, inputs: null, result: {} }).ok).toBe(false);

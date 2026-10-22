@@ -38,7 +38,7 @@ export const skuLine = (over: Partial<SkuLine> = {}): SkuLine => ({
 });
 export const item = (over: Partial<ScenarioItem> = {}): ScenarioItem => ({
   skuLineId: L1, fobUnitPriceUsd: "6.00", pcsPerCarton: "10", cartonLengthCm: "40", cartonWidthCm: "30",
-  cartonHeightCm: "20", cartonGrossKg: "5", ...over,
+  cartonHeightCm: "20", cartonGrossKg: "5", overrides: [], ...over,
 });
 export const scenario = (over: Partial<Scenario> = {}): Scenario => ({
   id: S1, label: "China", originCountry: "CN", supplierName: null, incoterm: "FOB", shipmentMode: "Sea", entryType: "formal",

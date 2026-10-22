@@ -61,7 +61,7 @@ select is(
 select is(
   (select count(*)::int from pg_class c join pg_namespace n on n.oid = c.relnamespace
    where n.nspname = 'public' and c.relname like 'landed_cost%' and c.relkind = 'r' and c.relrowsecurity),
-  7, 'all seven tables have RLS (the five workspace tables, landed_cost_snapshots and its counter, pgTAP 39)');
+  8, 'all eight tables have RLS (the five workspace tables, the manual rates (pgTAP 40), landed_cost_snapshots and its counter (pgTAP 39))');
 select is(
   (select count(*)::int from information_schema.role_table_grants
    where table_schema = 'public' and table_name like 'landed_cost%' and grantee = 'service_role'),

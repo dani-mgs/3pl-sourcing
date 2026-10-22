@@ -73,6 +73,14 @@ const saveLandedCostSnapshot = vi.fn(async (userId: string, row: unknown) => {
     | { ok: false; code: string | null; message: string | null };
 });
 vi.mock("@/lib/landed-cost/snapshot-store", () => ({ saveLandedCostSnapshot }));
+// The app's own rate for a replaced layer (tested in server-override-engine.test.ts).
+type EngineResult = { ok: true; rates: () => { rateText: string; amountUsd: string } | null } | { ok: false; error: string; issues: { path: string; message: string }[] };
+let engineResult: EngineResult = { ok: true, rates: () => ({ rateText: "+25%", amountUsd: "150.00" }) };
+const engineRatesFor = vi.fn(async (...args: unknown[]) => {
+  void args;
+  return engineResult;
+});
+vi.mock("@/lib/landed-cost/server-override-engine", () => ({ engineRatesFor }));
 vi.mock("@/lib/landed-cost/server-workspace-list", () => ({ loadFirstNames: async () => new Map([["00000000-0000-4000-8000-0000000000a1", "Dani"]]) }));
 
 const {
@@ -111,6 +119,8 @@ beforeEach(() => {
   computeWorkspaceResult.mockReset();
   computeWorkspaceResult.mockImplementation(async () => ({ state: "no_sku_lines", calculatedOn: "2026-10-21", entryDate: "2026-11-01" }));
   saveLandedCostSnapshot.mockClear();
+  engineRatesFor.mockClear();
+  engineResult = { ok: true, rates: () => ({ rateText: "+25%", amountUsd: "150.00" }) };
   snapshotCount = 0;
   snapshotRow = null;
 });
@@ -122,7 +132,7 @@ describe("saveDraftAction", () => {
     expect(result).toEqual({
       ok: true,
       updatedAt: "2026-10-21T02:05:00.000001+00:00",
-      ids: { skuLines: { [LINE]: LINE }, scenarios: { [SCENARIO]: SCENARIO } },
+      ids: { skuLines: { [LINE]: LINE }, scenarios: { [SCENARIO]: SCENARIO }, overrides: {} },
     });
     const [name, args] = rpc.mock.calls[0];
     expect(name).toBe("save_landed_cost_draft");
@@ -151,6 +161,40 @@ describe("saveDraftAction", () => {
       ok: false, code: "forbidden", error: "Only the workspace's owner or an admin can edit it.", issues: undefined,
     });
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  test("manual rates: the app's rate for a replaced layer comes from the server; who, when and the browser's rates are dropped", async () => {
+    loadResult = { ok: true, workspace: { id: WORKSPACE, scenarios: [] } };
+    const withOverride = draft();
+    (withOverride.scenarios[0].items[0] as Record<string, unknown>).overrides = [{
+      ref: "o1", id: null, kind: "replace", layerKey: "section_301_china", ratePercent: "0", reason: "Exclusion",
+      engineRateText: "+99%", engineAmountUsd: "1.00", setBy: "u2", setAt: "2020-01-01T00:00:00Z", changedBy: "u2",
+    }];
+    rpcResult = { data: { updated_at: "2026-10-21T02:05:00.000001+00:00", sku_lines: {}, scenarios: {}, overrides: { o1: "00000000-0000-4000-8000-000000000310" } }, error: null };
+    const result = await saveDraftAction(saveInput({ draft: withOverride }));
+    expect(result).toMatchObject({ ok: true, ids: { overrides: { o1: "00000000-0000-4000-8000-000000000310" } } });
+    expect(loadWorkspace).toHaveBeenCalledWith(expect.anything(), WORKSPACE);
+    expect(engineRatesFor.mock.calls[0][2]).toEqual({ id: WORKSPACE, scenarios: [] });
+    const payload = rpc.mock.calls[0][1].p_payload as { scenarios: { items: { overrides: Record<string, unknown>[] }[] }[] };
+    expect(payload.scenarios[0].items[0].overrides).toEqual([{
+      ref: "o1", kind: "replace", layer_key: "section_301_china", label: null, rate_percent: "0", amount_usd: null, reason: "Exclusion",
+      engine_rate_text: "+25%", engine_amount_usd: "150.00", sort_order: 0,
+    }]);
+  });
+
+  test("manual rates: a replace the app can't work out is refused before the database", async () => {
+    loadResult = { ok: true, workspace: { id: WORKSPACE, scenarios: [] } };
+    engineResult = { ok: false, error: "SKU-001 in China: the app doesn't apply x.", issues: [{ path: "scenarios.0.items.0.overrides.0.layerKey", message: "SKU-001 in China: the app doesn't apply x." }] };
+    const withOverride = draft();
+    (withOverride.scenarios[0].items[0] as Record<string, unknown>).overrides = [{ ref: "o1", kind: "replace", layerKey: "x", ratePercent: "0", reason: "r" }];
+    expect(await saveDraftAction(saveInput({ draft: withOverride }))).toMatchObject({ ok: false, code: "invalid", issues: [{ path: "scenarios.0.items.0.overrides.0.layerKey" }] });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  test("without a replace, nothing extra is loaded", async () => {
+    expect((await saveDraftAction(saveInput())).ok).toBe(true);
+    expect(loadWorkspace).not.toHaveBeenCalled();
+    expect(engineRatesFor).not.toHaveBeenCalled();
   });
 
   test("an admin can save someone else's workspace", async () => {

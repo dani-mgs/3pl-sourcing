@@ -5,7 +5,7 @@ import { formatHtsCode } from "@/lib/tariff/hts-code";
 import { toComparisonView } from "./comparison-view";
 import { COMPONENT_KEYS, type ComponentKey } from "./components";
 import { parseCents, perUnit } from "./money";
-import { missingItems, shares } from "./result-view";
+import { INCLUDES_MANUAL_RATE, missingItems, shares } from "./result-view";
 import type { Scenario, Workspace } from "./workspace-schema";
 import type { ViewOutcome, ViewResult } from "./view-result";
 
@@ -49,7 +49,7 @@ const lines = (title: string, values: string[]): Section => ({
 const MODE = { Sea: "Sea (ocean)", Air: "Air", Road: "Road" } as const;
 const ENTRY = { auto: "Automatic", formal: "Formal" } as const;
 const FREIGHT_BASIS = { chargeable_weight: "Chargeable weight", value: "Value (FOB)", units: "Units" } as const;
-const SKU_STATUS = { ok: "Complete", inputs_missing: "Inputs missing", duty_error: "Duty error" } as const;
+const SKU_STATUS = { ok: "Complete", inputs_missing: "Inputs missing", duty_error: "Duty error", manual_rate_conflict: "Manual rate to fix" } as const;
 const COMPONENT_NOUNS: Record<ComponentKey, string> = {
   fob: "Product (FOB)",
   freight: "Freight",
@@ -138,7 +138,11 @@ function resultSections(workspace: Workspace, outcome: ViewOutcome): Section[] {
       return [
         line?.skuCode,
         line ? formatHtsCode(line.htsCode) : "",
-        s.status === "duty_error" ? `${SKU_STATUS.duty_error}: ${s.message}` : SKU_STATUS[s.status],
+        s.status === "duty_error"
+          ? `${SKU_STATUS.duty_error}: ${s.message}`
+          : s.status === "manual_rate_conflict"
+            ? `${SKU_STATUS.manual_rate_conflict}: ${s.messages.join(" ")}`
+            : SKU_STATUS[s.status],
         money((x) => x.productCents),
         money((x) => x.freightCents),
         t ? plainCents(t.dutiesCents) : duty ? plainCents(duty.dutiesCents) : "",
@@ -199,7 +203,7 @@ function resultSections(workspace: Workspace, outcome: ViewOutcome): Section[] {
     ...parts.map(([name, cents], i): Cell[] => [name, plainCents(cents), plainCents(perUnit(cents, t.units).cents), pct.texts[i]]),
     ["Total", plainCents(t.totalCents), plainCents(t.perUnitCents), ""],
     ["Units (pcs)", t.units.toString(), "", ""],
-    ["Status", t.status.incomplete ? "Complete; duties or fees not final" : "Complete", "", ""],
+    ["Status", [t.status.incomplete ? "Complete; duties or fees not final" : "Complete", ...(t.status.includesManualRate ? [INCLUDES_MANUAL_RATE] : [])].join("; "), "", ""],
   ]);
   return [perSku, layers, feeSection, totalsSection];
 }

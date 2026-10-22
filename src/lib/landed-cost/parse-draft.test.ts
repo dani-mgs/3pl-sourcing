@@ -78,7 +78,7 @@ describe("normalising", () => {
     expect(p.sku_lines[1].sort_order).toBe(1);
     expect(p.scenarios[0].items[0]).toEqual({
       sku_ref: L1, fob_unit_price_usd: "6.00", pcs_per_carton: null, carton_length_cm: null, carton_width_cm: null,
-      carton_height_cm: null, carton_gross_kg: null,
+      carton_height_cm: null, carton_gross_kg: null, overrides: [],
     });
     expect(p.scenarios[0].other_costs).toEqual([{ label: "Broker fee", amount_usd: "95", sort_order: 0 }]);
   });

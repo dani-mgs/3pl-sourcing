@@ -20,6 +20,9 @@ export const ITEM_COLUMNS =
   "workspace_id, scenario_id, sku_line_id, fob_unit_price_usd::text, pcs_per_carton::text, " +
   "carton_length_cm::text, carton_width_cm::text, carton_height_cm::text, carton_gross_kg::text";
 export const OTHER_COST_COLUMNS = "id, workspace_id, scenario_id, label, amount_usd::text, sort_order";
+export const OVERRIDE_COLUMNS =
+  "id, workspace_id, scenario_id, sku_line_id, kind, layer_key, label, rate_percent::text, amount_usd::text, reason, " +
+  "engine_rate_text, engine_amount_usd::text, sort_order, set_by, set_at, changed_by, changed_at";
 
 export const workspaceRowSchema = z.object({
   id: uuid,
@@ -80,6 +83,28 @@ export const otherCostRowSchema = z.object({
   sort_order: z.number().int(),
 });
 
+// A manual rate (migration 20261021135010): who set and changed it, and when,
+// are written by the database from the session.
+export const overrideRowSchema = z.object({
+  id: uuid,
+  workspace_id: uuid,
+  scenario_id: uuid,
+  sku_line_id: uuid,
+  kind: z.enum(["replace", "add"]),
+  layer_key: z.string().nullable(),
+  label: z.string().nullable(),
+  rate_percent: decimal.nullable(),
+  amount_usd: decimal.nullable(),
+  reason: z.string(),
+  engine_rate_text: z.string().nullable(),
+  engine_amount_usd: decimal.nullable(),
+  sort_order: z.number().int(),
+  set_by: uuid,
+  set_at: z.string(),
+  changed_by: uuid,
+  changed_at: z.string(),
+});
+
 export type SkuLine = {
   id: string;
   skuCode: string;
@@ -98,6 +123,30 @@ export type ScenarioItem = {
   cartonWidthCm: string | null;
   cartonHeightCm: string | null;
   cartonGrossKg: string | null;
+  // Manual rates for this SKU line in this origin (manual-rates.ts), in order.
+  overrides: RateOverride[];
+};
+
+// One manual rate. replace: a layer the app applied ("base" or a program
+// key); add: a program the app didn't apply (its key) or a free-labelled duty
+// (no key). Exactly one of ratePercent (% of the line's entered value) and
+// amountUsd. engineRateText / engineAmountUsd: the app's own rate and amount
+// for a replaced layer when the manual rate was set.
+export type RateOverride = {
+  id: string;
+  kind: "replace" | "add";
+  layerKey: string | null;
+  label: string | null;
+  ratePercent: string | null;
+  amountUsd: string | null;
+  reason: string;
+  engineRateText: string | null;
+  engineAmountUsd: string | null;
+  sortOrder: number;
+  setBy: string;
+  setAt: string;
+  changedBy: string;
+  changedAt: string;
 };
 
 export type OtherCostLine = { id: string; label: string; amountUsd: string };

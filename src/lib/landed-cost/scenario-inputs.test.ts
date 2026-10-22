@@ -9,7 +9,7 @@ const line: SkuLine = { id: "l1", skuCode: "SKU-001", description: null, htsCode
 const scenario = (over: Partial<Scenario> = {}): Scenario => ({
   id: "s1", label: "Mexico", originCountry: "MX", supplierName: null, incoterm: "FCA", shipmentMode: "Road", entryType: "auto",
   freightTotalUsd: "100", freightBasis: "chargeable_weight", volumetricDivisor: null, isBaseline: true, otherCosts: [],
-  items: [{ skuLineId: "l1", fobUnitPriceUsd: "0.333", pcsPerCarton: "10", cartonLengthCm: "100", cartonWidthCm: "100", cartonHeightCm: "100", cartonGrossKg: "2" }],
+  items: [{ skuLineId: "l1", fobUnitPriceUsd: "0.333", pcsPerCarton: "10", cartonLengthCm: "100", cartonWidthCm: "100", cartonHeightCm: "100", cartonGrossKg: "2", overrides: [] }],
   ...over,
 });
 
