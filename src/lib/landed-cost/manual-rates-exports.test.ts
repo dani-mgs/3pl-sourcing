@@ -67,11 +67,20 @@ describe("golden China with Section 301 (China) at 0%: duties $95.40, total $1,5
     const w = twoOrigins([override]);
     for (const csv of [buildWorkspaceCsv(w, await compute(w)), buildWorkspaceCsv(restored(await stored(w)).workspace, restored(await stored(w)).result, LOCKED)]) {
       expect(csv).toContain("Source checked on,Last verified,Manual,Manual value,App rate,Reason,Set by,Set on");
-      expect(csv).toContain(",Yes,0%,'+25% (150.00),Exclusion granted,Dani,2026-10-01");
+      expect(csv).toContain(",Yes,0%,25% (150.00),Exclusion granted,Dani,2026-10-01");
+      expect(csv).not.toContain("'+25%");
       expect(csv).toContain(",No,,,,,");
       expect(csv).toContain("Duties,95.40,");
       expect(csv).toContain("Total,1584.73,15.85,");
     }
+  });
+
+  test("the app's own manual cells never start with = + - @ (no guard apostrophe); typed text keeps the guard", async () => {
+    const fixed = { ...override, id: "00000000-0000-4000-8000-000000000303", kind: "add" as const, layerKey: null, label: "Duty", ratePercent: null, amountUsd: "12.34", engineRateText: null, engineAmountUsd: null, reason: "=SUM(A1)" };
+    const w = twoOrigins([override, fixed]);
+    const csv = buildWorkspaceCsv(w, await compute(w));
+    expect(csv).toContain(",Yes,0%,25% (150.00),Exclusion granted,Dani,2026-10-01");
+    expect(csv).toContain(",Yes,Fixed 12.34,,'=SUM(A1),Dani,2026-10-01");
   });
 
   test("the PDF: the page-1 box, the Manual column, and the origin's Manual rates table", async () => {

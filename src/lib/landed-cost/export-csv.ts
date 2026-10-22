@@ -120,11 +120,17 @@ export function hasManualRates(result: ViewResult): boolean {
 
 const MANUAL_COLUMNS = ["Manual", "Manual value", "App rate", "Reason", "Set by", "Set on"];
 
+// Our own cells never start with = + - @, so the formula guard never has to
+// prefix them: the app rate drops its "+" ("+25%" → "25%"); the value is 0 or
+// more ("0%", "Fixed 12.34") and the date is ISO. Reason and Set by are typed
+// text and stay with the guard.
+const plainRateText = (text: string) => text.replace(/^\+/, "");
+
 function manualCells(l: DutyLine): Cell[] {
   const m = l.manual;
   if (!m) return ["No", "", "", "", "", ""];
   const value = m.ratePercent != null ? pctText(parseDecimal(m.ratePercent)) : `Fixed ${m.amountUsd}`;
-  const appRate = m.engineRateText != null ? `${m.engineRateText}${m.engineAmountUsd != null ? ` (${m.engineAmountUsd})` : ""}` : "";
+  const appRate = m.engineRateText != null ? `${plainRateText(m.engineRateText)}${m.engineAmountUsd != null ? ` (${m.engineAmountUsd})` : ""}` : "";
   return ["Yes", value, appRate, m.reason, m.setByName, m.setAt.slice(0, 10)];
 }
 
