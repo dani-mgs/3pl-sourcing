@@ -3,9 +3,9 @@
 Run of [regression-plan-2026-10-23.md](regression-plan-2026-10-23.md). Case IDs refer to
 [regression-test-cases.md](regression-test-cases.md) and to the new cases in the plan.
 
-**Status: stopped after checkpoint 2 — the environment broke.** The local `npx supabase` CLI
-stopped working mid-run, so the app can no longer be started (see "Run stopped" below). The
-Progress table is the authoritative list of what was done and what remains.
+**Status: in progress, resumed.** The run stopped once when the local `npx supabase` CLI broke
+(see "The CLI break" below); the CLI was repaired and the run picked up at CLR-01. The Progress
+table is the authoritative list of what is done and what remains.
 
 - **Build tested:** `732d806` on branch `qa/regression-2026-10-23`.
 - **Environment:**
@@ -30,7 +30,7 @@ Progress table is the authoritative list of what was done and what remains.
   `docs/qa/`.
 - **No passwords, keys, tokens or email addresses of real users appear in this report.**
 
-## ⛔ Run stopped — the local Supabase CLI broke
+## The CLI break (recovered)
 
 After checkpoint 2 the dev server was restarted for checkpoint 3 and `qa-run.mjs` refused:
 
@@ -52,10 +52,9 @@ and the build can't run either. Repairing it needs `npm install` / `npx -y`, bot
 this run, and `scripts/` may not be edited.
 
 Per the plan ("Stop only if the environment is broken: the app won't start"), the run stopped
-here. Checkpoints 3–6 were never started. **To resume:** repair the CLI (for example
-`npm i -g supabase` or reinstall the npx cache entry), check `npx supabase status -o env`
-prints the local `API_URL`, then say "continue" — the Progress table names the first remaining
-case.
+there and was committed. **It has since been repaired:** `npx supabase status -o env` prints
+the local `API_URL` again, `qa-run.mjs check` passes, the dev server starts, and the run
+resumed at CLR-01 with no earlier case redone. The data was untouched throughout.
 
 ## Summary
 
@@ -91,7 +90,7 @@ case.
 | 0 | Setup | **Done** | — |
 | 1 | Automated gates | **Done** | GATE-05 only, and it can't run in this mode (N-2) |
 | 2 | Landed Cost | **Done** (2 cases deferred) | LCM-07 (needs a duty-data change as the tariff editor, deferred to checkpoint 4) and LCM-11 (no schema-version-1 version exists locally); the LCV-07 PDF contents are unread (N-3) |
-| 3 | Security and roles | **Not started — blocked** | CLR-01–08, CLI-01–05, existing AUTH / ADM / RLS cases, POR-05 |
+| 3 | Security and roles | In progress | Done: CLR-01–08, CLI-01–05, POR-01–05. Remaining: the existing AUTH-01–12, ADM-01–17 and RLS-01–15 cases |
 | 4 | Tariff | **Not started — blocked** | TAR-01–46, plus the deferred LCM-07 |
 | 5 | Portal and client features | **Not started — blocked** | POR-01–04, POR-06–15 |
 | 6 | Everything else | **Not started — blocked** | 3PL, FWD, HELP-01–10, X-01–14 |
@@ -179,6 +178,34 @@ FOB, entry type Automatic.
 | LCF-02 | ✅ Pass | On port 3101 with `LANDED_COST_ENABLED=false`: the nav has only 3PL Sourcing, Forwarder Sourcing and Tariff Calculator, and the hub card reads "Landed Cost Calculator — **Coming Soon**" with no link. `/landed-cost` → **404**, `/landed-cost/<real id>` → **404**, `/landed-cost/<real id>/versions/<real id>` → **404** (HTTP status, not a styled page with data). `/help` has **no `landed-cost` anchor** and none of the Landed Cost sections; its only mention of the words is the module list's "Landed Cost Calculator — SOON". The actions themselves were not forged by hand: with every route a 404 there is no UI path to them, and the flag gate in the actions is covered by GATE-02. |
 | LCF-03 | ✅ Pass | After the flag went off (3101) and on again (3100), `/landed-cost` listed all three workspaces intact with their owner, entry date, origin and SKU counts — `ZZQA LC <script>…` (Vietnam, 1 SKU), `ZZQA LC Entry` (Mexico, 2) and `ZZQA LC Main` (Mexico, 2). The locked versions were last seen whole (v3 and v4 on ZZQA LC Main) just before the flag cycle, and the rows were still present in the database afterwards; the versions **table** was not re-opened in the browser after the cycle because the CLI broke at that moment. |
 | LCM-10 | ❌ Fail (B-15) | v4 of ZZQA LC Main, locked with four manual rates, **cannot be opened**: "This version can't be displayed: its stored data isn't in a form this page can read. Nothing was changed.", and the page offers neither Download PDF nor Export CSV, so the page-1 box, the per-origin tables and the duty-layer columns can't be checked at all. Minimal reproduction and cause in B-15: it is the **fixed-amount** manual rate that breaks it (a percentage-only version opens and exports normally). |
+
+## 3. Security and roles
+
+Flag on, port 3100. Sessions used: `zzqa-admin`, `zzqa-expert1`, `zzqa-expert2`, the demo
+client users `northwind-ops`, `kettle-ops` and `solace-ops`, and two client users this run
+created, `zzqa-client-a` (ZZQA Existing Client Co) and `zzqa-client-b` (ZZQA Café & Crème).
+PostgREST checks use each session's own JWT, taken from the page (N-4).
+
+| ID | Result | Evidence |
+|---|---|---|
+| CLR-01 | ✅ Pass | As a client (`northwind-ops`), `/` redirects to **/portal**, and `/3pl-sourcing`, `/forwarder-sourcing`, `/tariff-calculator`, `/landed-cost`, `/admin`, `/client-access`, `/client-updates`, `/market-reports`, `/client-requests` and `/help` each return **404 with a 9-byte body**. No response contained any of "ZZQA", "Pakkable", "Incumbent", "Administration" or "duty-data". |
+| CLR-02 | ✅ Pass | With real staff-side ids, as a client: the 3PL project, the forwarder project, a forwarder detail URL, the Landed Cost workspace, a locked version URL, `/tariff-calculator/duty-data`, `/tariff-calculator/duty-data/fees` and two `/client-access/<id>/preview` URLs (its own client and another's) **all return 404 with an empty body**, no "ZZQA", "Mexico", "SKU-A" or partner names anywhere. A saved duty estimate URL could not be included: no `duty_estimates` row exists yet (none is created until the Tariff checkpoint). |
+| CLR-03 | ✅ Pass | The portal exposes **no id-bearing URL at all** — its only links are `/portal`, `/portal/market-report` and a `mailto:` — so there is nothing to swap; adding `?client=<other id>` or `?update=<other client's update id>` changed nothing (the only UUID echoed back is the one in the query string). The `my_*` functions **take no arguments**: `my_portal_updates` and `my_market_reports` with a forged `p_client_id` → **404 `PGRST202`**, and with no argument they return only this client's own rows (3 updates, 1 request). The staff functions `portal_updates_for_client`, `market_reports_for_client` and `client_requests_for_client`, called with another client's id, return **0 rows**. |
+| CLR-04 | ✅ Pass | A client JWT reading `select=*&limit=5` on 20 internal tables — `clients`, `three_pl_projects`, `three_pl_providers`, `forwarder_projects`, `forwarders`, `forwarder_quotes`, `duty_estimates`, `client_updates`, `client_market_reports`, `market_report_partner_labels`, `client_requests`, `profiles`, the five `landed_cost_*` tables, `customs_fees`, `hts_lines`, `fx_rates` — returns **0 rows from every one**, including its own client row and its own updates. (The portal scan also reports one readable table for paid/free-flagged users, `client_entitlements`, which carries the plan only; the scan's verdict is still "clean".) |
+| CLR-05 | ✅ Pass | Client writes refused everywhere: `PATCH clients` 0 rows, `POST clients` **403 42501**, `DELETE clients` 0 rows, `PATCH client_updates` 0 rows, `POST client_updates` 403 42501, `PATCH client_requests` 403 42501, `POST client_requests` (with the table's real columns) **403 42501**, `PATCH client_requests.staff_reply` 403 42501, `PATCH client_market_reports` 403 42501, `POST landed_cost_workspaces` 403 42501, and `PATCH`/`POST profiles` on its own row 403 42501. |
+| CLR-06 | ✅ Pass | `auth.updateUser` with `app_metadata: { role: "admin" }` → **403**. A `profiles` PATCH of its own `role` or `client_id` → **403 42501**. `auth.updateUser` with `data: { role: "admin" }` is accepted by GoTrue (200) as documented for ADM-17, and changes nothing that matters: after a page load the fresh token still reads **`app_metadata.role: "client"`**, `/admin` is still **404**, and `profiles` still returns 0 rows. |
+| CLR-07 | ✅ Pass | As `zzqa-admin`, `/portal`, `/portal/market-report` and `/portal/change-password` each return **404 with a 9-byte body**. Staff reach a client view only through "View as client". |
+| CLR-08 | ✅ Pass | Signed out, every one of `/portal`, `/portal/market-report`, `/portal/change-password`, `/landed-cost`, `/client-access`, `/client-updates`, `/market-reports`, `/client-requests`, `/admin` and `/` lands on **/login**. The same holds for AUTH-05's routes (`/3pl-sourcing`, `/forwarder-sourcing`, `/tariff-calculator`, `/help`) and for a project URL in each module. |
+| CLI-01 | ✅ Pass | As admin, created `zzqa-client-a@example.test` for ZZQA Existing Client Co. The page warns "Admins can add portal users for any client. No email is sent…", and on success shows the one-time password **once** with "It won't be shown again… At their first sign-in they must choose their own password before they see anything." The stored profile is **`role: client`, `tariff_editor: false`**, `client_id` = that client, and the user appears under "ZZQA Existing Client Co · Free (Move summary)". Signing in with that password landed straight on **/portal/change-password**, and the portal was unreachable until a new password was set. |
+| CLI-02 | ✅ Pass | As `zzqa-expert1` the form says "You can add portal users for clients of projects you own", and the Client dropdown lists **only the 12 ZZQA clients whose projects expert1 owns** — no demo client and not ZZQA Expert Two Client. Creating a user for a client it does own (ZZQA Café & Crème) succeeded with `role: client`. Tampering with the select to submit **Brightline's real client id** was refused by the server: "**You can only add portal users for clients of projects you own. Ask an admin to add this user.**" and no user was created. |
+| CLI-03 | ⚠️ Pass (UI + data) | As admin every portal user row has a **Reset password** control, whose dialog warns "Their current password stops working at once, and they must choose a new one at their next sign-in"; confirming issued a new one-time password, and signing in with it forced the change-password page. As `zzqa-expert1` the same page renders **zero** Reset password controls (the only button is Create portal user). The "call the action directly" half was not forged by hand — a Next Server Action request can't be replayed from the page — so that half rests on the UI absence plus `create-client-user.test.ts` and `server-action-guard.test.ts` in GATE-01/02. |
+| CLI-04 | ✅ Pass | The plan toggle lives in Administration → Clients and is staff-only (a client gets 404 on `/admin`, CLR-01). As admin, "Give Market Report" on ZZQA Existing Client Co asked "…Their portal users will be able to open it once it ships." and after confirming the row read **"Market Report (paid)"** with "**Saved. It takes effect on their next page load or save; they don't need to sign out.**" Its portal user, signing in afterwards, saw "Viewing: Move summary (included) · **Market Report (your plan)**" where it had previously read "Market Report (paid, **locked**)". Reverted with "Move to free plan" ("…will see the Move summary only, not the Market Report"), and the row is **Free (Move summary)** again. |
+| CLI-05 | ✅ Pass | `/client-access` at **390px**: no horizontal page scroll (`scrollWidth` = `innerWidth` = 390), **no element's right edge past the viewport** outside a scroll container, and all three form controls plus Create portal user visible and within the viewport (right edges 349 and 184). |
+| POR-01 | ✅ Pass | `northwind-ops`, `kettle-ops` and `zzqa-client-a` each land on **/portal** straight after signing in; `zzqa-admin` and `zzqa-expert1` land on `/` and get 404 on `/portal` (CLR-07). |
+| POR-02 | ✅ Pass | `solace-ops` (seeded with must-change-password) is sent to **/portal/change-password**, and `/portal` and `/portal/market-report` both redirect back there. Reads still work (2 updates visible), but **every client write is refused**: `submit_client_request` with its own real engagement key, `submit_market_report_interest` and `submit_client_introduction` each return **400 `CQ403` "not allowed"**. Solace's password was deliberately left unchanged. The same block was seen on the freshly created `zzqa-client-a` before its first password change, and writes worked normally after it. |
+| POR-03 | ✅ Pass | Kettle & Pine has **6** `client_updates` rows on the staff side, one of them a draft; `my_portal_updates` returns exactly **5**, every one with a `published_at`. The draft is absent. Northwind's 3 updates (0 drafts) all show. |
+| POR-04 | ✅ Pass (Northwind) | `/portal` and `/portal/market-report` HTML as Northwind: **no** `INTERNAL-CANARY`, notes, assessment, next action, key notes, 3PL amounts, `owner_id`, `client_id`, or any UUID; the only other-client-looking match, "Harbor", is the shortlisted partner "**Harborline 3PL**" in Northwind's own update, not the client Harbor Pet Supply. The RPC payload carries opaque `*_key` values instead of ids, and its one contact block is **Move's own** (`sourcing@move.example`, the Move contact's first name), not a partner's. Only shortlisted/recommended/backup partners are named. The paid client's report is checked in POR-06 (checkpoint 5). |
+| POR-05 | ✅ Pass | `qa:portal-scan` against `http://localhost:3100` ends **"clean"**: 5 client users, 30 tables/views, 23 functions, 195 identifying terms of anonymised partners, 12 report prices, 1 partner behind introduction requests; 9 pages and 12 URL guesses per user; exit 0. |
 
 ## Bugs
 
