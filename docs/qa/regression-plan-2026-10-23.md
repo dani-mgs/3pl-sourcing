@@ -7,19 +7,14 @@ The run is mostly unattended. It follows the standing rules: local only, 7 timez
 ## Environment
 
 - **Database:** the local Supabase stack only (API `127.0.0.1:54321`, DB `127.0.0.1:54322`). **Never `db reset`**: the local DB holds QA accounts, demo data and guide tooling. If `npx supabase migration list --local` shows anything pending, apply it with `npx supabase migration up`. On 2026-10-23 all 63 migrations were applied.
-- **App:** run from a separate git worktree, so no `.env` file exists there or gets loaded. The local values come from `npx supabase status -o env` and are passed on the command line. Use port `3100` with the flag on and port `3101` with it off. Never touch the user's `:3000` server, and never run `npm run dev`, `build` or `start` in the main checkout, because that loads `.env.local`.
+- **App:** run from a detached git worktree at `../3pl-sourcing-qa`, so no `.env` file exists there or gets loaded. Everything app-side goes through `scripts/qa/qa-run.mjs`, which:
+  - reads the local URL and keys from `npx supabase status -o env` into the child process only, never printing them;
+  - refuses to run if that URL isn't `127.0.0.1:54321`/`localhost:54321`, or if the worktree holds any `.env*` file;
+  - strips inherited Supabase, Anthropic, cron and flag variables;
+  - runs under the Node version in `.nvmrc`, taken from `~/.nvm`. `nvm use` doesn't survive between Bash calls, so it isn't used.
 
-  ```sh
-  NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
-  NEXT_PUBLIC_SUPABASE_ANON_KEY=<local ANON_KEY> \
-  SUPABASE_SERVICE_ROLE_KEY=<local SERVICE_ROLE_KEY> \
-  CRON_SECRET=<any local value> \
-  LANDED_COST_ENABLED=true \
-  npx next dev -p 3100
-  ```
-
-  `ANTHROPIC_API_KEY` stays unset, so cases marked *needs AI* aren't tested.
-- **Node:** use 22 (`.nvmrc`). The shell default is 20, so run `nvm use` first.
+  Only one `next dev` can run per worktree. The app runs on `:3100` with the flag on; for the flag-off cases, stop it and start it on `:3101` with the flag off. Never touch the user's `:3000` server, and never run `npm run dev`, `build` or `start` in the main checkout, because that loads `.env.local` (all three are denied). `ANTHROPIC_API_KEY` stays unset, so cases marked *needs AI* aren't tested.
+- **Node:** 22 (`.nvmrc`) through `qa-run.mjs`. The shell default is 20; the main-checkout commands that run under it are the `npx supabase` CLI and git only.
 - **Browser:** Chromium through the Playwright MCP server, at 1280px and 390px. Snapshots and console logs go to `.playwright-mcp/` (gitignored). Screenshots are scratchpad-only and are deleted at cleanup.
 - **Timezones (Vitest):** UTC, America/Los_Angeles, Asia/Ho_Chi_Minh, Pacific/Kiritimati, Pacific/Pago_Pago, Australia/Lord_Howe, Asia/Manila. Run one command per timezone (`TZ=<tz> npx vitest run`), not a `for` loop, so each command matches the permission allow-list.
 
@@ -143,14 +138,43 @@ The run is mostly unattended. It follows the standing rules: local only, 7 timez
 | HELP-09 | The help sections for client access, updates, Market Report and requests match the CLI and POR results. |
 | HELP-10 | The tariff help covers incomplete estimates, the verification date, fee history and rollover, and polysilicon, matching TAR-39 to TAR-45. |
 
+## Exact commands
+
+Run every command from the main checkout (`/Users/macaron/AI Projects/3pl-sourcing`), exactly as written, one per Bash call: no `cd`, no `&&` chains, no `for` loops. Each one is matched by `.claude/settings.local.json`.
+
+| Step | Command |
+|---|---|
+| Stack check | `npx supabase status -o env` (only the `*_URL` lines are read) |
+| Migrations | `npx supabase migration list --local`, then `npx supabase migration up` only if one is pending |
+| Worktree | `git worktree add --detach ../3pl-sourcing-qa HEAD` |
+| Dependencies (APFS clone, no download) | `cp -cR node_modules ../3pl-sourcing-qa/node_modules` |
+| Environment check | `node scripts/qa/qa-run.mjs check` |
+| Seeds | `node scripts/qa/qa-run.mjs npm qa:seed` and `node scripts/qa/qa-run.mjs npm demo:seed` |
+| GATE-01 pgTAP | `node scripts/qa/qa-run.mjs npm test:db` |
+| GATE-02 Vitest, one call per timezone | `TZ=UTC node scripts/qa/qa-run.mjs npm test` · `TZ=America/Los_Angeles …` · `TZ=Asia/Ho_Chi_Minh …` · `TZ=Pacific/Kiritimati …` · `TZ=Pacific/Pago_Pago …` · `TZ=Australia/Lord_Howe …` · `TZ=Asia/Manila node scripts/qa/qa-run.mjs npm test` |
+| GATE-03 lint | `node scripts/qa/qa-run.mjs npm lint` |
+| GATE-04 types | `node scripts/qa/qa-run.mjs npm typecheck` |
+| GATE-05 seed guard | write a fake `npx` to the scratchpad, then `PATH=<scratchpad>/fake-npx:/usr/bin:/bin node scripts/qa/seed-qa.mjs` (it must exit 1) |
+| GATE-06 production build (new) | `node scripts/qa/qa-run.mjs build --flag on` (`next build` in the worktree, local env) |
+| App, flag on | `node scripts/qa/qa-run.mjs start --port 3100 --flag on` (Bash `run_in_background`) |
+| Stop the app | `node scripts/qa/qa-run.mjs stop --port 3100` |
+| App, flag off | `node scripts/qa/qa-run.mjs start --port 3101 --flag off`, then `node scripts/qa/qa-run.mjs stop --port 3101` |
+| Portal scan | `node scripts/qa/qa-run.mjs npm qa:portal-scan -- http://localhost:3100` |
+| API checks | `curl http://127.0.0.1:54321/...` and `curl http://localhost:3100/...` |
+| Browser | Playwright MCP tools (`mcp__playwright__*`), `http://localhost:3100` and `:3101` only |
+| Checkpoint commit | `git add docs/qa/regression-report-2026-10-23.md docs/qa/regression-test-cases.md`, then `git commit -m "docs(qa): regression report 2026-10-23 — <module>" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"` |
+| Cleanup | `node scripts/qa/qa-run.mjs stop --port <port>`, `rm -f .playwright-mcp/*`, `git worktree remove --force ../3pl-sourcing-qa`, `git worktree list` |
+
+**`git add` names explicit paths under `docs/qa/` or `scripts/qa/` only.** Never `git add .`, `-A`, `--all`, `-u` or `git commit -a`; the deny rules block them. Check with `git status --short` before each commit, and leave anything outside those folders unstaged.
+
 ## Run order and checkpoints
 
 Each checkpoint ends with a `docs(qa): regression report 2026-10-23 — <module>` commit (report and matrix only, never pushed).
 
 | # | Checkpoint | Cases |
 |---|---|---|
-| 0 | Setup | `nvm use`, worktree, `supabase status`, `migration list --local`, `qa:seed`, `demo:seed`, start the app on 3100 (flag on) |
-| 1 | Automated gates | GATE-01 (with `migration up`, not `db reset`), GATE-02 in 7 timezones (includes TAR-46), GATE-03, GATE-04, GATE-05 |
+| 0 | Setup | Stack check, migrations, worktree, dependency clone, `qa-run.mjs check`, `qa:seed`, `demo:seed` |
+| 1 | Automated gates | GATE-01 (with `migration up`, not `db reset`), GATE-02 in 7 timezones (includes TAR-46), GATE-03, GATE-04, GATE-05, GATE-06 (build); then start the app on 3100 (flag on) |
 | 2 | Landed Cost | LCF-01, LC-01–20, LCV-01–08, LCM-01–11, then LCF-02 and LCF-03 on 3101 |
 | 3 | Security and roles | CLR-01–08, CLI-01–05, the existing AUTH, ADM and RLS cases, POR-05 (portal scan) |
 | 4 | Tariff | TAR-01–46 |
@@ -160,7 +184,9 @@ Each checkpoint ends with a `docs(qa): regression report 2026-10-23 — <module>
 
 **If time or usage runs short,** finish in this priority order: gates, Landed Cost, security and roles, tariff, everything else. Write the report's Progress table first, so an unfinished run still shows what was and wasn't covered.
 
-**Stop and report at once** if a Critical bug turns up: cross-user or cross-client data access, an RLS gap, an admin or staff action open to a client or non-admin, a wrong duty, cost or ratio figure, a locked version that changes, or data loss. Commit the report up to that point, then stop.
+**A Critical bug does not stop the run.** Critical means cross-user or cross-client data access, an RLS gap, an admin or staff action open to a client or non-admin, a wrong duty, cost or ratio figure, a locked version that changes, or data loss. Record it as a bug, add it to a "⚠️ Critical bugs" box at the very top of the report (above the Summary) and in the next checkpoint commit, then carry on.
+
+**Stop only if the environment is broken:** the app won't start, the Supabase target isn't local (`qa-run.mjs` refuses), or the local stack is down. Write what happened, the last command and its output in the report's Progress table, commit, and stop.
 
 ## Report format
 
@@ -180,7 +206,7 @@ No screenshots, passwords, keys or tokens appear in the report.
 These are blocked by `.claude/settings.local.json`:
 
 - **Shared database and deploys:** `db reset`, `db push`, `supabase link`, anything containing `supabase.co`, and `git push`.
-- **Destructive git and dependency changes:** `git merge`, `git reset --hard`, checking out `main`, and `npm install` / `npm uninstall` / `npx -y`.
+- **Destructive git and dependency changes:** `git merge`, `git reset --hard`, checking out `main`, `git add .`/`-A`/`--all`/`-u`, `git commit -a`, and `npm install` / `npm uninstall` / `npx -y`.
 - **External-network and generator scripts:** `tariff:fetch`, `tariff:verify`, `tariff:extract` and `tariff:seed`.
 - **Scripts that load `.env.local`:** `dev`, `build` and `start` in the main checkout.
 - **Edits to the app:** any edit to `src/` or `supabase/`.
