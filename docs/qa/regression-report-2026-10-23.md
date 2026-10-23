@@ -3,8 +3,9 @@
 Run of [regression-plan-2026-10-23.md](regression-plan-2026-10-23.md). Case IDs refer to
 [regression-test-cases.md](regression-test-cases.md) and to the new cases in the plan.
 
-**Status: in progress.** The Progress table below is the authoritative list of what is done
-and what remains.
+**Status: stopped after checkpoint 2 — the environment broke.** The local `npx supabase` CLI
+stopped working mid-run, so the app can no longer be started (see "Run stopped" below). The
+Progress table is the authoritative list of what was done and what remains.
 
 - **Build tested:** `732d806` on branch `qa/regression-2026-10-23`.
 - **Environment:**
@@ -29,11 +30,51 @@ and what remains.
   `docs/qa/`.
 - **No passwords, keys, tokens or email addresses of real users appear in this report.**
 
+## ⛔ Run stopped — the local Supabase CLI broke
+
+After checkpoint 2 the dev server was restarted for checkpoint 3 and `qa-run.mjs` refused:
+
+```
+$ node scripts/qa/qa-run.mjs start --port 3100 --flag on
+qa-run: Couldn't read the local Supabase status. Start it with `npx supabase start`.   (exit 1)
+
+$ npx supabase status -o env
+Error: No matching Supabase CLI binary package found for darwin-arm64
+  at …/.npm/_npx/aa8e5c70f9d8d161/node_modules/supabase/dist/supabase.js:36
+Node.js v22.23.3
+```
+
+Tried twice, same result. **The stack itself is still running** — `curl http://127.0.0.1:54321/rest/v1/`
+returns **200** — so nothing is wrong with the database or the data; it is the npx-cached
+Supabase CLI whose platform binary package has gone missing. `qa-run.mjs` reads the local URL
+and keys only through that CLI, so with it broken the app can't start, and `test:db`, the seeds
+and the build can't run either. Repairing it needs `npm install` / `npx -y`, both denied for
+this run, and `scripts/` may not be edited.
+
+Per the plan ("Stop only if the environment is broken: the app won't start"), the run stopped
+here. Checkpoints 3–6 were never started. **To resume:** repair the CLI (for example
+`npm i -g supabase` or reinstall the npx cache entry), check `npx supabase status -o env`
+prints the local `API_URL`, then say "continue" — the Progress table names the first remaining
+case.
+
 ## Summary
 
-Filled in at the end of the run. See Progress for current coverage.
-
-- **New bugs so far: 3** — **B-15 (High)** a locked Landed Cost version holding a fixed-amount
+- **Cases run: 42 of ~290.** **37 pass** (31 clean, 6 with a linked bug or a stated partial),
+  **1 fail** (LCM-10, bug B-15), **4 not tested** for a stated reason (GATE-05, LCM-07, LCM-11
+  and the LCV-07 PDF contents), and the rest — all of checkpoints 3–6 — not reached. **0 cases
+  retired.**
+- **Automated gates: all green except GATE-05.** pgTAP **1,340/1,340** in 40 files. Vitest
+  **2,225 passing / 1 skipped** in **all 7 timezones**, identical counts. Lint clean. Typecheck
+  clean. Production build clean with the flag on. GATE-05 (the seed's non-local guard) can't be
+  run in this mode — see N-2.
+- **New bugs: 3** — 0 Critical, **1 High**, **1 Medium**, **1 Low**.
+- **No Critical bug:** no cross-user or cross-client access and no RLS gap (every non-owner
+  write returned 0 rows, every forged insert 42501), no wrong duty, cost or ratio figure —
+  every money figure checked matched a hand calculation to the cent, including half-up
+  rounding — no locked version changed, and no data lost.
+- **B-4 to B-12** (all reported fixed in the 2026-10-09 report): **not retested** — they belong
+  to the AUTH, ADM, RLS, 3PL and forwarder cases in checkpoints 3–6, which were not reached.
+- **New bugs: 3** — **B-15 (High)** a locked Landed Cost version holding a fixed-amount
   manual rate can never be opened or exported; **B-14 (Medium)** a SKU's "Incomplete estimate"
   badge disappears when a manual rate covers its only uncounted program, inconsistently by
   origin; **B-13 (Low)** the Delete workspace dialog offers Delete before the locked-versions
@@ -49,12 +90,15 @@ Filled in at the end of the run. See Progress for current coverage.
 |---|---|---|---|
 | 0 | Setup | **Done** | — |
 | 1 | Automated gates | **Done** | GATE-05 only, and it can't run in this mode (N-2) |
-| 2 | Landed Cost | In progress | Done: LCF-01, LC-01–15, LC-18, LCV-01–05, LCV-07, LCV-08. Remaining: LC-16, LC-17, LC-19, LC-20, LCV-06, the LCV-05 two-tab half, the LCV-07 PDF contents, LCM-01–11, LCF-02, LCF-03 |
-| 3 | Security and roles | Not started | CLR-01–08, CLI-01–05, existing AUTH / ADM / RLS cases, POR-05 |
-| 4 | Tariff | Not started | TAR-01–46 |
-| 5 | Portal and client features | Not started | POR-01–04, POR-06–15 |
-| 6 | Everything else | Not started | 3PL, FWD, HELP-01–10, X-01–14 |
-| 7 | Cleanup | Not started | Stop the dev servers, delete scratchpad screenshots, final summary commit. The worktree is the user's to remove. |
+| 2 | Landed Cost | **Done** (2 cases deferred) | LCM-07 (needs a duty-data change as the tariff editor, deferred to checkpoint 4) and LCM-11 (no schema-version-1 version exists locally); the LCV-07 PDF contents are unread (N-3) |
+| 3 | Security and roles | **Not started — blocked** | CLR-01–08, CLI-01–05, existing AUTH / ADM / RLS cases, POR-05 |
+| 4 | Tariff | **Not started — blocked** | TAR-01–46, plus the deferred LCM-07 |
+| 5 | Portal and client features | **Not started — blocked** | POR-01–04, POR-06–15 |
+| 6 | Everything else | **Not started — blocked** | 3PL, FWD, HELP-01–10, X-01–14 |
+| 7 | Cleanup | **Done** | Both dev servers are stopped; no screenshots were taken; test data left in place is listed in N-5. The worktree is left for the user, as asked. |
+
+The first remaining case on resume is **CLR-01** (checkpoint 3). Nothing in checkpoints 0–2
+needs redoing.
 
 ### Checkpoint 0 — Setup (done)
 
@@ -104,8 +148,7 @@ FOB, entry type Automatic.
 | LC-08 | ✅ Pass | The Incoterm select offers exactly **EXW, FCA, FAS, FOB** on the create form and on every origin, and nothing else is selectable. Forged through PostgREST with the owner's own session JWT, `PATCH landed_cost_scenarios` with `incoterm: "DDP"` → **400 `23514` "violates check constraint landed_cost_scenarios_incoterm_check"**, and the row still read `FOB` afterwards. `entry_type: "bogus"` → the same, on `landed_cost_scenarios_entry_type_check`. |
 | LC-09 | ✅ Pass | With four origins missing their FOB prices and freight, the Result shows no total for them and the compare panel lists, per origin: "Vietnam: Missing: Freight total (USD); SKU-A: FOB price per unit (USD); SKU-B: FOB price per unit (USD)." (same for India, Thailand, Canada), under the heading "LEFT OUT OF THE COMPARISON". The lock control is disabled with "Complete every origin before locking: …" naming the same fields. |
 | LC-10 | ✅ Pass | Completed Vietnam (SKU-A $9, SKU-B $21, freight $2,500). Hand calculation: entered value $19,500; duties 16.5% × $9,000 = $1,485.00; MPF 0.3464% × 19,500 = $67.55; HMF 0.125% × 19,500 = $24.38; total 19,500 + 2,500 + 1,485 + 67.55 + 24.38 + 400 = **$23,976.93**, per unit **$15.98**. The panel shows exactly that, ranks Vietnam 1 "Lowest landed cost" and Mexico 2 "Baseline / Highest landed cost", and the verdict "Vietnam is $0.11/unit cheaper than Mexico (0.7%)" with "$167.35 less per shipment" — both match ($16.0962 − $15.9846 = $0.1116; 0.1116 ÷ 16.0962 = 0.69%; 24,144.28 − 23,976.93 = 167.35). The drivers list is right to the cent: product $500.00 less, freight $500.00 more, duties $165.00 less, fees $2.35 less, "Same other costs". **Sub-cent wording:** the fees line reads "**less than $0.01/unit less on fees (MPF and HMF)** ($2.35 less per shipment)" — never $0.00. **Incoterm rule:** India was completed on EXW and is not ranked; it appears under "Not comparable with the baseline" as "India: Incoterm EXW differs from the baseline's FOB. Its own totals still show; it isn't ranked." Incomplete origins stay in the Missing list, so no origin is dropped silently. |
-| LC-11 | ✅ Pass | Mexico shares: product 20,000 ÷ 24,144.28 = 82.835% → **82.8%**; freight 8.284% → **8.3%**; duties 6.833% → **6.8%**; MPF 0.287% → **0.3%**; HMF 0.104% → **0.1%**; other 1.657% → **1.7%**. Each is rounded per item (they sum to 100.0 here), and the table carries the note "Percentages are rounded." Still to confirm against the exact `/help` wording in HELP-08. |
-
+| LC-11 | ✅ Pass | Mexico shares: product 20,000 ÷ 24,144.28 = 82.835% → **82.8%**; freight 8.284% → **8.3%**; duties 6.833% → **6.8%**; MPF 0.287% → **0.3%**; HMF 0.104% → **0.1%**; other 1.657% → **1.7%**. Each is rounded per item (they sum to 100.0 here), and the table carries the note "Percentages are rounded." Not confirmed against the exact `/help` wording, which was HELP-08's job in checkpoint 6. |
 | LC-12 | ✅ Pass | Tariff Calculator, 6109.10.00.12 · Mexico · Sea · $10,000 · entry Oct 23, 2026 → **Base duty $1,650.00 (16.5%)**, MPF $34.64, HMF $12.50, "EXCLUDES 1 additional duty program", "Incomplete estimate", "Not included: Section 301 (forced labour) — could add 10% (about $1,000.00, 9903.05.55); pending expert review". Landed Cost for the same line, origin, value and date gives the same $1,650.00 duty, the same $34.64 MPF share and the same $12.50 HMF share, and the same pending-review warning. |
 | LC-13 | ✅ Pass | Pasted the experts' real headings (SKU code, Product description, HTSUS, Qty, FOB Unit Cost (USD), Box Configuration (pcs/carton), Length (cm), W (cm), H (cm), Total Weight / Master Carton (kg)) plus two calculated columns. Preview: "1 to update, 1 to add", **COLUMNS NOT IMPORTED — "Total FOB Value: Not recognised." and "Landed cost per unit: Rates and fees come from the tariff engine."** The existing SKU matched by exact code; its blank cells showed **"kept"** for description, pcs/carton and carton kg, and kept those values after Apply. The new row was added with `Ceramic mugs é & 🚚` intact and HTS normalised to 9403.60.80.81. `$11.50` and `1,200` parsed to 11.50 and 1200; nothing was deleted. **Per-origin:** with the Vietnam origin selected the dialog said "FOB price and packing go to Vietnam"; after applying 7.77 / 3.33 the Vietnam FOB and pcs/ctn changed and Mexico still read 11.50 / 1 and 4.25 / 40. Units are taken from the headings (cm, kg) and never guessed. |
 | LC-14 | ✅ Pass | Pasted text in the number columns, a duplicate SKU code and an unknown column. Preview: "0 to update, 0 to add, 3 with errors (skipped if you apply the valid rows)", "Mystery column: Not recognised.", and per row: "The SKU code "SKU-E" appears more than once in this paste.", "Enter the quantity as a whole number from 1 to 999,999,999,999.", "Enter the FOB price in USD with up to 4 decimals, e.g. 6.25." The apply button read **"Apply valid rows (0 of 3)"**. After Cancel the SKU rows were byte-for-byte unchanged — nothing half-applied, no database or Zod text. |
@@ -115,18 +158,26 @@ FOB, entry type Automatic.
 | LCV-02 | ✅ Pass | Deleted v2 ("Delete locked version v2 (Oct 23, 2026)? This cannot be undone. The workspace isn't changed."), then locked again → the new version is **v3**, not a reused v2. Later v1 was deleted too (through the API, as its creator and owner) and the list kept v3 alone, so no renumbering happened either. |
 | LCV-03 | ✅ Pass | The v1 page is headed "Locked version v1, locked on Oct 23, 2026 by ZZQA Expert One", "Read-only", "This is the result as it was locked; later changes to the workspace or duty data don't show here." It has **zero form controls** — no edit path in the UI. Through PostgREST with the owner's JWT, `PATCH landed_cost_snapshots` → **403 `42501` "permission denied for table landed_cost_snapshots"** (no UPDATE grant to `authenticated` at all, so the immutability trigger is never even reached). |
 | LCV-04 | ✅ Pass | Every origin carried "Section 301 (forced labour) … pending expert review" (Canada also "Section 338 (Canada) not loaded"), and the lock went through: the version row reads **"v1 Incomplete"**, the version page "Incomplete: duties or fees not final", and the stored row has `incomplete: true`. Pending reviews did not block the lock. |
-| LCV-05 | ⚠️ Pass (UI half) | With an unsaved edit the lock control is disabled and reads **"Save your changes first: a version locks the last save."** The two-tab / stale-`expectedUpdatedAt` half is still to do. |
-| LCV-07 | ⚠️ Pass (partly) | A draft offers **Export CSV only** — no PDF control anywhere on the workspace page. A locked version offers **both**: `landed-cost-ZZQA-LC-Main-v1-2026-10-23.csv` and `landed-cost-ZZQA-LC-Main-v1-2026-10-23.pdf` (`application/pdf`, 23,767 bytes). The version CSV is built from what was stored: `Status,"LOCKED VERSION v1, locked on Oct 23, 2026 by ZZQA Expert One. These figures are fixed."`, plus `HTS release,ZZQA local test release (ZZQA-local)` and `Duty data as of,"Oct 23, 2026"`, and no DRAFT marker. The PDF's **contents** are not yet inspected (the download lands outside the readable path; see N-3). |
+| LCV-07 | ⚠️ Pass (partly) | A draft offers **Export CSV only** — no PDF control anywhere on the workspace page. A locked version offers **both**: `landed-cost-ZZQA-LC-Main-v1-2026-10-23.csv` and `landed-cost-ZZQA-LC-Main-v1-2026-10-23.pdf` (`application/pdf`, 23,767 bytes). The version CSV is built from what was stored: `Status,"LOCKED VERSION v1, locked on Oct 23, 2026 by ZZQA Expert One. These figures are fixed."`, plus `HTS release,ZZQA local test release (ZZQA-local)` and `Duty data as of,"Oct 23, 2026"`, and no DRAFT marker. The PDF's **contents** were not inspected (the download lands outside the readable path; see N-3). |
 | LCV-08 | ✅ Pass | With the expert's own session JWT: `POST landed_cost_snapshots` → **403 `42501` permission denied for table landed_cost_snapshots**; `POST /rpc/save_landed_cost_snapshot` → **404 `PGRST202`**, i.e. the function isn't exposed to `authenticated` at all (service role only), which matches the documented exception. Reads of the table are allowed, as staff are meant to see versions. |
-
 | LCM-01 | ✅ Pass | "Override Base duty (general rate)" on SKU-A opened "Override a duty layer — SKU-A in Mexico · Base duty (general rate) · **App rate: 16.5% ($1,650.00)**. Nothing is saved until you save the draft." Entering 25% previewed "**$2,500.00 for this SKU**" (25% × $10,000, the server's rounding), and after Save draft the layer row read "Manual rate: 25% · App rate: 16.5% ($1,650.00)" with the duty $2,500.00. A 0% override is accepted by the same field (the message names 0 as the lower bound). |
 | LCM-02 | ✅ Pass | **Apply manually** on a program the app names but doesn't count: the "Programs not counted" list for Section 301 (forced labour) offers "Apply manually (Section 301 (forced labour))" → "Add a manual duty — SKU-A in Mexico · Section 301 (forced labour)"; 10% applied as a new layer worth $1,000.00. **Add manual duty** with a free label: "QA anti-dumping duty" on SKU-B, kept verbatim in the layer list, the manual-rates table and the comparison caution. |
 | LCM-03 | ✅ Pass | The fixed-amount rate (SKU-B, "QA anti-dumping duty", $500.00) previewed "$500.00 for this SKU" and lands as "Fixed amount · $500.00". Hand calculation with all three manual rates: duties SKU-A 25% × $10,000 + 10% × $10,000 = **$3,500.00** (effective 35.0%), SKU-B $0 base + $500 fixed = **$500.00** (effective 5.0%), total duties **$4,000.00**; MPF stays 0.3464% of $20,000 = $69.28 and HMF $25.00, so manual duties are **not** in the customs value; shipment total 20,000 + 2,000 + 4,000 + 69.28 + 25 + 400 = **$26,494.28**, per unit **$17.66**; SKU-A $15.25 and SKU-B $22.49. Every figure matched. |
 | LCM-04 | ✅ Pass | `1000.5` and `-1` → "Enter the rate as a percentage from 0 to 1000, with up to 4 decimals." with Apply disabled. A valid rate with an empty reason → Apply stays disabled. At ten manual rates on one SKU in one origin the dialog shows "**A SKU can have at most 10 manual rates in an origin.**" and Apply stays disabled; the same message comes from the database (`23514`) when the eleventh row is forged through PostgREST. MPF/HMF as a layer, forged as `layer_key: "mpf"` and `"hmf"`, → **400 `23514` landed_cost_rate_overrides_kind_fields_check**; `rate_percent: 2000` → **400 `23514` landed_cost_rate_overrides_kind_check**. |
 | LCM-05 | ✅ Pass | An applied override shows "Not saved yet" with an em dash in the Set column. Navigating away raises the browser's unsaved-changes prompt; on leaving and returning, Manual rates was back to **(0) None** — nothing saved. |
 | LCM-06 | ✅ Pass | The origin and both SKUs carry "**Includes manual rate**"; the result keeps "**Incomplete estimate**" at origin level, matching section E's own rule "A manual rate never makes a result complete"; the covered warning stays and is marked "**Covered by a manual rate.**" while SKU-B's uncovered copy stays plain. The comparison caution names each one: "Mexico: SKU-A Base duty manual rate; SKU-A Section 301 (forced labour) manual rate; SKU-B QA anti-dumping duty manual rate", and Mexico's ranking row is tagged "Includes manual rate". (Per-SKU badge exception: B-14.) |
-| LCM-07 | ⏭ Not tested yet | Needs the app to start or stop applying a layer a manual rate refers to, which needs a duty-data change as the tariff editor. Deferred to the Tariff checkpoint, where that editor session happens anyway (TAR-36/42/43), so the change can be made and reverted once. |
+| LCM-07 | ⏭ Not tested | Needs the app to start or stop applying a layer a manual rate refers to, which needs a duty-data change as the tariff editor. It was deferred to the Tariff checkpoint so that change (and its revert) could happen in one editor session, and that checkpoint was never reached. Two near misses were checked and correctly produced **no** conflict: changing the origin country (Mexico → Germany) kept the Section 301 (forced labour) program in scope, and changing the HTS code moved the app's rate without removing the layer (that path is LCM-08, which passed). |
 | LCM-08 | ✅ Pass | Changed SKU-A's HTS from 6109.10.00.12 to 7318.15.80.66 (8.5%). The layer then read "Manual rate: 25% · App rate: 8.5% ($850.00)" plus "**App rate changed from 16.5% to 8.5% since this override was set**", the manual-rates table status became "**App rate changed**", and the actions became "Remove (use the app's rate)" and "**Keep my rate**". The total still used the manual 25% ($2,500.00). Clicking "Keep my rate" and saving returned the status to "Applied" with the rate unchanged. |
+| LC-16 | ✅ Pass | As `zzqa-expert2` the workspace page opens read-only: the header reads "Owned by ZZQA Expert One, view only.", **all 34 form controls are disabled or read-only**, the Add SKU / Remove SKU / Add cost / Remove cost buttons are present but **disabled**, and Save draft, Lock this version and Delete workspace are absent entirely. The only enabled controls are Export CSV, the origin tabs and the version PDF links. Reaching the same URL directly gives the same read-only page, never a form. |
+| LC-17 | ✅ Pass | As expert2, with that session's own JWT: `PATCH landed_cost_workspaces` (rename) → **0 rows**; `DELETE landed_cost_workspaces` → 0 rows; `PATCH landed_cost_scenarios` (freight) → 0 rows; `DELETE landed_cost_sku_lines` → 0 rows; `PATCH` and `DELETE landed_cost_rate_overrides` → 0 rows each; `DELETE landed_cost_snapshots` → 0 rows; `POST landed_cost_rate_overrides` → **403 `42501`**. Reads are allowed (1 row), as intended for staff. Afterwards the name was still "ZZQA LC Main", both versions (v3, v4) were still there and all four manual rates were unchanged. |
+| LC-19 | ✅ Pass | Created a workspace named `ZZQA LC <script>alert('x')</script> Café & Crème 🚚 ünïcödé long name that keeps going…` with a SKU code `ZZQA-é&🚚` and the description `<script>alert('desc')</script> é & 🚚`. All three strings are shown **literally** in the heading, the SKU table and the workspaces list; `main` contains **no `script` element** and no dialog fired. At **1280px** `scrollWidth` equals `innerWidth`; at **390px** there is no horizontal scroll and **no element's right edge passes the viewport** outside an `overflow-x: auto` container. The workspace name is stored truncated to the field's maximum (it ends "…wrapping in the"), which is the input's own limit, not a defect. |
+| LC-20 | ✅ Pass | Double-clicking **Create workspace** created exactly **one** workspace (three in total afterwards, one per intended creation). Double-clicking **Save draft** produced exactly **one** `saveDraftAction` call in the server log for that workspace. |
+| LCV-05 | ✅ Pass | UI half: with an unsaved edit the lock control is disabled and reads "Save your changes first: a version locks the last save." **Two tabs:** tab A held an unsaved freight of 151; tab B changed the same field to 999 and saved; tab A's Save draft was then refused with "**This workspace was changed by someone else. Reload to see the latest version. Your unsaved changes will be lost.**" plus a Reload action. The stored value stayed **999** — the stale write never landed. |
+| LCV-06 | ✅ Pass | As expert2 the Delete column of the Locked versions table is **empty** (only the PDF link), and `DELETE landed_cost_snapshots` for that workspace changed **0 rows**. As the creator and owner, expert1 can delete: both the UI control and an API DELETE worked (v2 through the UI, v1 through the API). |
+| LCM-09 | ✅ Pass | As expert2 the Manual rates section lists all four rates with their reasons but its subtitle changes to "**Set by the workspace's owner or an admin.**" and it contains **no buttons at all** — no Add, Edit or Remove, in the section or in the per-SKU duty layers. "Set by ZZQA Expert One on Oct 23, 2026" comes from the session, not the browser (expert2 never saw an editable field). Through the API as expert2: insert → 403 `42501`, update and delete → 0 rows. The Server-Action half is covered by those RLS results plus `server-action-guard.test.ts` in GATE-02; no action was forged by hand. |
+| LCM-11 | ⏭ Not tested | No schema-version-1 locked version exists in the local database: every `landed_cost_snapshots` row is `schema_version: 2`, and the only Landed Cost data locally is what this run created (`demo:seed` creates no workspaces or versions). Writing one by hand would not be a faithful test, and `authenticated` has no INSERT on that table in any case. |
+| LCF-02 | ✅ Pass | On port 3101 with `LANDED_COST_ENABLED=false`: the nav has only 3PL Sourcing, Forwarder Sourcing and Tariff Calculator, and the hub card reads "Landed Cost Calculator — **Coming Soon**" with no link. `/landed-cost` → **404**, `/landed-cost/<real id>` → **404**, `/landed-cost/<real id>/versions/<real id>` → **404** (HTTP status, not a styled page with data). `/help` has **no `landed-cost` anchor** and none of the Landed Cost sections; its only mention of the words is the module list's "Landed Cost Calculator — SOON". The actions themselves were not forged by hand: with every route a 404 there is no UI path to them, and the flag gate in the actions is covered by GATE-02. |
+| LCF-03 | ✅ Pass | After the flag went off (3101) and on again (3100), `/landed-cost` listed all three workspaces intact with their owner, entry date, origin and SKU counts — `ZZQA LC <script>…` (Vietnam, 1 SKU), `ZZQA LC Entry` (Mexico, 2) and `ZZQA LC Main` (Mexico, 2). The locked versions were last seen whole (v3 and v4 on ZZQA LC Main) just before the flag cycle, and the rows were still present in the database afterwards; the versions **table** was not re-opened in the browser after the cycle because the CLI broke at that moment. |
 | LCM-10 | ❌ Fail (B-15) | v4 of ZZQA LC Main, locked with four manual rates, **cannot be opened**: "This version can't be displayed: its stored data isn't in a form this page can read. Nothing was changed.", and the page offers neither Download PDF nor Export CSV, so the page-1 box, the per-origin tables and the duty-layer columns can't be checked at all. Minimal reproduction and cause in B-15: it is the **fixed-amount** manual rate that breaks it (a percentage-only version opens and exports normally). |
 
 ## Bugs
@@ -166,6 +217,19 @@ FOB, entry type Automatic.
   writes outside the primary working directory appear to be refused in this mode regardless
   of the allow-list. The user created and populated the worktree instead, and this run does
   not create or remove it.
+- **N-5 — Test data left in the local database.** Three Landed Cost workspaces owned by
+  `zzqa-expert1`, all named with the `ZZQA` prefix: **ZZQA LC Main** (5 origins, 2 SKUs,
+  4 manual rates, locked versions v3 and v4), **ZZQA LC Entry** (2 SKUs, locked versions v1,
+  v2, v3) and **ZZQA LC &lt;script&gt;… Café & Crème 🚚 …** (1 SKU). They are deliberately
+  **not** deleted: B-15 and B-14 reproduce on them, so they are the evidence. v4 of ZZQA LC
+  Main and v3 of ZZQA LC Entry are the two versions that cannot be opened. The next `qa:seed`
+  does not remove them (it clears ZZQA clients, 3PL and forwarder data, not Landed Cost
+  workspaces), so delete them by hand once the bugs are fixed or triaged — the eight
+  "QA filler" manual rates created while testing the per-SKU limit were already removed.
+- **N-6 — The Supabase CLI broke mid-run, not the stack.** See "Run stopped". `npx supabase`
+  worked for the setup, the gates and both seeds, then began failing with "No matching Supabase
+  CLI binary package found for darwin-arm64" while the local stack kept serving (REST 200).
+  Nothing in the app or the data caused it.
 - **N-3 — Downloads and PDF contents.** The Playwright MCP server resolves its paths against
   the QA worktree, so downloads land in `../3pl-sourcing-qa/.playwright-mcp/`, which this
   session may not read. CSV contents were therefore captured in the page (by wrapping
@@ -182,3 +246,23 @@ FOB, entry type Automatic.
   simply seeded the local stack. To make the gate runnable unattended, either allow
   `chmod +x` inside the scratchpad, or give `seed-qa.mjs` a test-only way to inject the
   status output so no executable has to be created.
+
+## Not tested, and why
+
+| Scope | Why |
+|---|---|
+| All of checkpoints 3–6: CLR-01–08, CLI-01–05, the existing AUTH, ADM and RLS cases, POR-01–15, TAR-01–46, 3PL-01–37, FWD-01–44, HELP-01–10, X-01–14 | The local Supabase CLI broke, so the app can no longer be started (see "Run stopped"). Nothing was skipped for an application reason. |
+| GATE-05 | Needs an executable fake `npx`; `chmod` is refused in this mode (N-2). |
+| LCM-07 | Needs a duty-data change as the tariff editor; deferred to checkpoint 4, which was never reached. |
+| LCM-11 | No schema-version-1 locked version exists locally (N-5 lists what does). |
+| The LCV-07 PDF contents | The version PDF downloads correctly (`application/pdf`, 23,767 bytes) but lands outside the readable path, so its page-1 box and per-origin tables were not read (N-3). |
+| Cases marked *needs AI* (3PL-20, FWD-08) | `ANTHROPIC_API_KEY` is unset by design; both are covered by unit tests in GATE-02. |
+
+## What the next run should pick up first
+
+1. **B-15** blocks the point of locking a version, so it is the one to fix before anything else
+   in Landed Cost ships; the two broken versions are still in the local database as evidence.
+2. **B-14** then needs a decision on what the per-SKU "Incomplete estimate" badge is meant to
+   mean when a manual rate covers the only uncounted program.
+3. Resume the run at **CLR-01**, then take the deferred **LCM-07** during checkpoint 4's editor
+   session.
