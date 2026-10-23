@@ -33,7 +33,13 @@ and what remains.
 
 Filled in at the end of the run. See Progress for current coverage.
 
-- **New bugs so far:** none. Numbering continues at **B-13**.
+- **New bugs so far: 3** — **B-15 (High)** a locked Landed Cost version holding a fixed-amount
+  manual rate can never be opened or exported; **B-14 (Medium)** a SKU's "Incomplete estimate"
+  badge disappears when a manual rate covers its only uncounted program, inconsistently by
+  origin; **B-13 (Low)** the Delete workspace dialog offers Delete before the locked-versions
+  guard refuses. No Critical bug so far: no cross-user or cross-client access, no RLS gap, no
+  wrong money figure (every figure checked matched a hand calculation), and no locked version
+  changed.
 - **B-4 to B-12** (all reported fixed in the 2026-10-09 report): status recorded in the
   Security and roles / 3PL / Forwarder sections as those cases run.
 
@@ -113,7 +119,36 @@ FOB, entry type Automatic.
 | LCV-07 | ⚠️ Pass (partly) | A draft offers **Export CSV only** — no PDF control anywhere on the workspace page. A locked version offers **both**: `landed-cost-ZZQA-LC-Main-v1-2026-10-23.csv` and `landed-cost-ZZQA-LC-Main-v1-2026-10-23.pdf` (`application/pdf`, 23,767 bytes). The version CSV is built from what was stored: `Status,"LOCKED VERSION v1, locked on Oct 23, 2026 by ZZQA Expert One. These figures are fixed."`, plus `HTS release,ZZQA local test release (ZZQA-local)` and `Duty data as of,"Oct 23, 2026"`, and no DRAFT marker. The PDF's **contents** are not yet inspected (the download lands outside the readable path; see N-3). |
 | LCV-08 | ✅ Pass | With the expert's own session JWT: `POST landed_cost_snapshots` → **403 `42501` permission denied for table landed_cost_snapshots**; `POST /rpc/save_landed_cost_snapshot` → **404 `PGRST202`**, i.e. the function isn't exposed to `authenticated` at all (service role only), which matches the documented exception. Reads of the table are allowed, as staff are meant to see versions. |
 
+| LCM-01 | ✅ Pass | "Override Base duty (general rate)" on SKU-A opened "Override a duty layer — SKU-A in Mexico · Base duty (general rate) · **App rate: 16.5% ($1,650.00)**. Nothing is saved until you save the draft." Entering 25% previewed "**$2,500.00 for this SKU**" (25% × $10,000, the server's rounding), and after Save draft the layer row read "Manual rate: 25% · App rate: 16.5% ($1,650.00)" with the duty $2,500.00. A 0% override is accepted by the same field (the message names 0 as the lower bound). |
+| LCM-02 | ✅ Pass | **Apply manually** on a program the app names but doesn't count: the "Programs not counted" list for Section 301 (forced labour) offers "Apply manually (Section 301 (forced labour))" → "Add a manual duty — SKU-A in Mexico · Section 301 (forced labour)"; 10% applied as a new layer worth $1,000.00. **Add manual duty** with a free label: "QA anti-dumping duty" on SKU-B, kept verbatim in the layer list, the manual-rates table and the comparison caution. |
+| LCM-03 | ✅ Pass | The fixed-amount rate (SKU-B, "QA anti-dumping duty", $500.00) previewed "$500.00 for this SKU" and lands as "Fixed amount · $500.00". Hand calculation with all three manual rates: duties SKU-A 25% × $10,000 + 10% × $10,000 = **$3,500.00** (effective 35.0%), SKU-B $0 base + $500 fixed = **$500.00** (effective 5.0%), total duties **$4,000.00**; MPF stays 0.3464% of $20,000 = $69.28 and HMF $25.00, so manual duties are **not** in the customs value; shipment total 20,000 + 2,000 + 4,000 + 69.28 + 25 + 400 = **$26,494.28**, per unit **$17.66**; SKU-A $15.25 and SKU-B $22.49. Every figure matched. |
+| LCM-04 | ✅ Pass | `1000.5` and `-1` → "Enter the rate as a percentage from 0 to 1000, with up to 4 decimals." with Apply disabled. A valid rate with an empty reason → Apply stays disabled. At ten manual rates on one SKU in one origin the dialog shows "**A SKU can have at most 10 manual rates in an origin.**" and Apply stays disabled; the same message comes from the database (`23514`) when the eleventh row is forged through PostgREST. MPF/HMF as a layer, forged as `layer_key: "mpf"` and `"hmf"`, → **400 `23514` landed_cost_rate_overrides_kind_fields_check**; `rate_percent: 2000` → **400 `23514` landed_cost_rate_overrides_kind_check**. |
+| LCM-05 | ✅ Pass | An applied override shows "Not saved yet" with an em dash in the Set column. Navigating away raises the browser's unsaved-changes prompt; on leaving and returning, Manual rates was back to **(0) None** — nothing saved. |
+| LCM-06 | ✅ Pass | The origin and both SKUs carry "**Includes manual rate**"; the result keeps "**Incomplete estimate**" at origin level, matching section E's own rule "A manual rate never makes a result complete"; the covered warning stays and is marked "**Covered by a manual rate.**" while SKU-B's uncovered copy stays plain. The comparison caution names each one: "Mexico: SKU-A Base duty manual rate; SKU-A Section 301 (forced labour) manual rate; SKU-B QA anti-dumping duty manual rate", and Mexico's ranking row is tagged "Includes manual rate". (Per-SKU badge exception: B-14.) |
+| LCM-07 | ⏭ Not tested yet | Needs the app to start or stop applying a layer a manual rate refers to, which needs a duty-data change as the tariff editor. Deferred to the Tariff checkpoint, where that editor session happens anyway (TAR-36/42/43), so the change can be made and reverted once. |
+| LCM-08 | ✅ Pass | Changed SKU-A's HTS from 6109.10.00.12 to 7318.15.80.66 (8.5%). The layer then read "Manual rate: 25% · App rate: 8.5% ($850.00)" plus "**App rate changed from 16.5% to 8.5% since this override was set**", the manual-rates table status became "**App rate changed**", and the actions became "Remove (use the app's rate)" and "**Keep my rate**". The total still used the manual 25% ($2,500.00). Clicking "Keep my rate" and saving returned the status to "Applied" with the rate unchanged. |
+| LCM-10 | ❌ Fail (B-15) | v4 of ZZQA LC Main, locked with four manual rates, **cannot be opened**: "This version can't be displayed: its stored data isn't in a form this page can read. Nothing was changed.", and the page offers neither Download PDF nor Export CSV, so the page-1 box, the per-origin tables and the duty-layer columns can't be checked at all. Minimal reproduction and cause in B-15: it is the **fixed-amount** manual rate that breaks it (a percentage-only version opens and exports normally). |
+
 ## Bugs
+
+### B-15 — A locked Landed Cost version that contains a fixed-amount manual rate can never be opened or exported
+
+- **Severity:** High. **Cases:** LCM-10, LCV-07 (for such versions).
+- **Steps (minimal, reproduced twice):** in a Landed Cost workspace with one origin and one SKU, add a manual duty with **Value → Fixed USD amount** (e.g. label "QA fixed repro", $250.00, any reason) → Save draft → Lock this version → open the new version.
+- **Expected:** the version page shows the stored result, with the manual rate in full, and offers Download PDF and Export CSV (as it does for a version whose manual rate is a percentage).
+- **Actual:** the page renders only its header and then "**This version can't be displayed: its stored data isn't in a form this page can read. Nothing was changed.**" There are **no export controls**, so the version can never be read or exported again. The browser console shows `loadLockedVersion: stored version doesn't match the schema` with the version id.
+- **Control:** the same workspace locked with a **percentage** manual rate (v2) opens normally and offers both exports; adding the fixed-amount rate and locking again (v3) fails. ZZQA LC Main v4 (four manual rates, one of them fixed) fails the same way; v3 of that workspace, locked before any manual rate, still opens.
+- **Stored data:** the row is intact — nothing is lost, and the result JSON differs from a readable one only in the manual block: for the fixed-amount rate `manual.ratePercent` is `null` and `manual.amountUsd` is a string (`"250.00"`), alongside `manual.engineRateText` / `manual.engineAmountUsd` and `duty.warnings[].coveredByManualRate`.
+- **Suspect file:** the locked-version loader's schema (`loadLockedVersion`, the snapshot schema used by `src/app/(authenticated)/landed-cost/[id]/versions/[versionId]/`), which appears to require `ratePercent` on a manual line instead of accepting either a rate or a fixed amount. pgTAP 40 and the unit tests pass, so the gap is between what `save_landed_cost_snapshot()` stores and what the version page accepts.
+
+### B-14 — "Incomplete estimate" disappears from a SKU when its only uncounted program is covered by a manual rate, but only for some origins
+
+- **Severity:** Medium. **Case:** LCM-06.
+- **Steps:** ZZQA LC Main, SKU-A (an override on base duty plus a manual duty on the uncounted Section 301 (forced labour) program, so its "Programs not counted" entry reads "… Covered by a manual rate."). Save with **Country of origin = Mexico**, read SKU-A's badges; change the same origin to **Germany**, save, read them again.
+- **Expected:** the same marking in both cases, and per the app's own rule ("A manual rate never makes a result complete") a SKU whose only uncounted, still-unreviewed program is covered by a hand-entered rate should keep "Incomplete estimate".
+- **Actual:** with Mexico, SKU-A shows "Complete · Incomplete estimate · Includes manual rate". With Germany, the same SKU with the same layers and the same single covered program shows only "**Complete · Includes manual rate**" — the "Incomplete estimate" badge is gone, so that SKU's duty figures read as final. SKU-B, covered the same way in the same Germany origin, **keeps** the badge, so the marking is also inconsistent between two SKUs of one origin.
+- **Not affected:** the origin-level badge stayed "Incomplete estimate" in every combination tried, and the locked version row and page still read "Incomplete", so no locked version was marked complete.
+- **Suspect file:** the per-SKU incomplete/coverage logic in the Landed Cost result builder (`src/lib/landed-cost/`), where a warning marked `coveredByManualRate` seems to be dropped from the per-SKU incompleteness test in some program configurations.
 
 ### B-13 — Delete workspace offers Delete, then refuses, when the workspace has locked versions
 
