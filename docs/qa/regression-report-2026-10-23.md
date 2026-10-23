@@ -90,14 +90,14 @@ resumed at CLR-01 with no earlier case redone. The data was untouched throughout
 | 0 | Setup | **Done** | — |
 | 1 | Automated gates | **Done** | GATE-05 only, and it can't run in this mode (N-2) |
 | 2 | Landed Cost | **Done** (2 cases deferred) | LCM-07 (needs a duty-data change as the tariff editor, deferred to checkpoint 4) and LCM-11 (no schema-version-1 version exists locally); the LCV-07 PDF contents are unread (N-3) |
-| 3 | Security and roles | In progress | Done: CLR-01–08, CLI-01–05, POR-01–05. Remaining: the existing AUTH-01–12, ADM-01–17 and RLS-01–15 cases |
-| 4 | Tariff | **Not started — blocked** | TAR-01–46, plus the deferred LCM-07 |
-| 5 | Portal and client features | **Not started — blocked** | POR-01–04, POR-06–15 |
-| 6 | Everything else | **Not started — blocked** | 3PL, FWD, HELP-01–10, X-01–14 |
-| 7 | Cleanup | **Done** | Both dev servers are stopped; no screenshots were taken; test data left in place is listed in N-5. The worktree is left for the user, as asked. |
+| 3 | Security and roles | **Done** (4 cases deferred) | RLS-09, RLS-10, RLS-11 and RLS-15 need a saved duty estimate, which TAR-31 creates in checkpoint 4 |
+| 4 | Tariff | Not started | TAR-01–46, the deferred LCM-07, and RLS-09/10/11/15 |
+| 5 | Portal and client features | Not started | POR-06–15 (POR-01–05 are done) |
+| 6 | Everything else | Not started | 3PL-01–37, FWD-01–44, HELP-01–10, X-01–14 |
+| 7 | Cleanup | Not started | Stop the dev server, final summary commit. Test data left in place is listed in N-5; the worktree is left for the user, as asked. |
 
-The first remaining case on resume is **CLR-01** (checkpoint 3). Nothing in checkpoints 0–2
-needs redoing.
+The first remaining case is **TAR-01** (checkpoint 4). Nothing in checkpoints 0–3 needs
+redoing.
 
 ### Checkpoint 0 — Setup (done)
 
@@ -205,6 +205,46 @@ PostgREST checks use each session's own JWT, taken from the page (N-4).
 | POR-02 | ✅ Pass | `solace-ops` (seeded with must-change-password) is sent to **/portal/change-password**, and `/portal` and `/portal/market-report` both redirect back there. Reads still work (2 updates visible), but **every client write is refused**: `submit_client_request` with its own real engagement key, `submit_market_report_interest` and `submit_client_introduction` each return **400 `CQ403` "not allowed"**. Solace's password was deliberately left unchanged. The same block was seen on the freshly created `zzqa-client-a` before its first password change, and writes worked normally after it. |
 | POR-03 | ✅ Pass | Kettle & Pine has **6** `client_updates` rows on the staff side, one of them a draft; `my_portal_updates` returns exactly **5**, every one with a `published_at`. The draft is absent. Northwind's 3 updates (0 drafts) all show. |
 | POR-04 | ✅ Pass (Northwind) | `/portal` and `/portal/market-report` HTML as Northwind: **no** `INTERNAL-CANARY`, notes, assessment, next action, key notes, 3PL amounts, `owner_id`, `client_id`, or any UUID; the only other-client-looking match, "Harbor", is the shortlisted partner "**Harborline 3PL**" in Northwind's own update, not the client Harbor Pet Supply. The RPC payload carries opaque `*_key` values instead of ids, and its one contact block is **Move's own** (`sourcing@move.example`, the Move contact's first name), not a partner's. Only shortlisted/recommended/backup partners are named. The paid client's report is checked in POR-06 (checkpoint 5). |
+| AUTH-01 | ✅ Pass | Signed in as each of `zzqa-admin`, `zzqa-editor`, `zzqa-expert1`, `zzqa-expert2`, `zzqa-target` and four client users. Staff land on the hub and the account menu shows the name (e.g. "ZZQA Expert One"). |
+| AUTH-02 | ✅ Pass | A wrong password gives "**Invalid email or password.**", the email is kept (`zzqa-expert1@example.test` still in the field) and the password field is cleared. No raw auth error text. |
+| AUTH-03 | ✅ Pass | Both fields are `required`; with the form empty `form.checkValidity()` is false and the browser message is "Please fill out this field." Nothing is submitted and there is no crash. |
+| AUTH-04 | ✅ Pass | Account menu → Log Out returns to `/login`. Afterwards `/3pl-sourcing` redirects to `/login`, and pressing **Back** twice lands on `/login` with no modules, no account menu and an empty `main` — no protected data from the cache. |
+| AUTH-05 | ✅ Pass | Signed out, `/`, `/3pl-sourcing`, `/forwarder-sourcing`, `/tariff-calculator`, `/help`, `/admin` and a project URL in each module all land on **/login** (see also CLR-08 for the portal and client-access routes). |
+| AUTH-06 | ✅ Pass | `zzqa-target`'s access token was captured **while it was an ordinary expert** (its claims read `app_metadata.role: logistics_expert` throughout). With that unchanged token: an admin-only write (PATCH of a forwarder project it does not own) → **0 rows**; after the admin promoted target, the very same token → **1 row**; after the admin demoted it again, the same token → **0 rows**, and the project's `invoice_value` never changed. The role is therefore read live, not from the token — the B-1/B-2 behaviour. The admin's banner reads "**Saved. It takes effect on their next page load or save; they don't need to sign out.**" The browser half ("target opens /admin without signing out") could not be shown in the same browser profile, which holds one session at a time; pgTAP 22 in GATE-01 covers it. |
+| AUTH-07 | ✅ Pass | Same token, same method, for the tariff editor flag: `PATCH customs_fees.rate_pct` → **0 rows** as a non-editor, **1 row** right after the admin granted "Make tariff editor", **0 rows** right after "Revoke tariff editor" — with no new sign-in and the same pre-change token. The admin saw the same "Saved. It takes effect…" line both times. |
+| AUTH-08 | ✅ Pass | As `zzqa-expert2`, `/admin` → **404**, and the account menu holds only "Client access" and "Log Out" — no Administration item. |
+| AUTH-09 | ✅ Pass | As `zzqa-editor` (tariff editor), `/admin` → **404** and the body contains no user email addresses. The same session reaches `/tariff-calculator/duty-data` and `/duty-data/fees` with **200**, as an editor should. |
+| AUTH-10 | ✅ Pass | As `zzqa-admin` the account menu lists **Administration → /admin**, Client access and Log Out, and `/admin` loads with its four sections (Administration, Project Reassignment, Clients, User & Role Management). |
+| AUTH-11 | ✅ Pass | Signed in as the editor, a full page load of `/` keeps the session: still signed in, account menu shows "ZZQA Editor". |
+| AUTH-12 | ✅ Pass | The hub home lists the module cards (3PL Sourcing, Forwarder Sourcing, Tariff Calculator, Landed Cost Calculator, plus two "Coming Soon") and each working module links correctly. The only console errors in the session were from this run's own deliberate 404 and 403 probes. |
+| ADM-01 | ✅ Pass | `/admin` lists every user with role and editor flag, including the ZZQA users and the client users shown as "client user · <client>" (e.g. "brightline-ops@demo.example.test · client user · Brightline Apparel"). |
+| ADM-02 | ✅ Pass | "Make tariff editor" on `zzqa-target` warned "They'll be able to change duty and fee data, which every estimate uses."; after confirming the row read "logistics_expert · **tariff editor**" and the flag worked at once (AUTH-07). |
+| ADM-03 | ✅ Pass | "Revoke tariff editor" warned "They'll no longer be able to change duty and fee data."; the flag cleared from the row and the permission stopped working at once (AUTH-07). |
+| ADM-04 | ✅ Pass | "Promote to Admin" warned "They'll be able to manage users, edit and reassign everyone's projects, edit shared clients and change duty data."; after confirming, the row read "**admin**" and the control became "Demote to Logistics Expert". |
+| ADM-05 | ✅ Pass | The demote dialog reads "If they're an admin now, they lose Administration and admin rights on other people's projects."; after confirming, the row is back to **logistics_expert**. |
+| ADM-06 | ✅ Pass | The admin's own row (`zzqa-admin@example.test · admin`) carries **no buttons at all** — no demote and no delete. |
+| ADM-07 | ⚠️ Pass (header half untested) | "Edit name for ZZQA Target" → "Edit Display Name — Update the name shown for this user across the app." Saved **"ZZQA Target Renamed é&🚚"**, which then appears in the user list and in the Reassign dropdown as "**ZZQA Target Renamed é&🚚 (zzqa-target@example.test)**"; owner lines on `/admin` read "Currently owned by Name · email", and a non-admin sees the name alone ("Owned by ZZQA Expert One" on the Landed Cost page). Role and tariff-editor flag unchanged. The renamed user's **own header** without re-login was not checked (one browser session at a time); pgTAP 23 covers the storage side. |
+| ADM-08 | ✅ Pass | Create User validation, all plain language: a duplicate email → "**A user with that email already exists.**"; `not-an-email` → "**Enter a valid email address.**" (plus the browser's own "Please include an '@'…"); a 5-character password → "**Password must be at least 8 characters.**" The dialog stays open and nothing is created. |
+| ADM-09 | ✅ Pass | Created `zzqa-created@example.test` ("ZZQA Created", Logistics Expert); it appears in the user list immediately. |
+| ADM-10 | ✅ Pass | Delete on `zzqa-created` asked "Delete zzqa-created@example.test? This cannot be undone."; after confirming it is gone from the list. |
+| ADM-11 | ✅ Pass | Delete on `zzqa-expert1` opens "**Can't delete this user — This user owns 14 project(s). Reassign ownership before deleting this user.**" with only a Close button. expert1 was not deleted. |
+| ADM-12 | ✅ Pass | Reassigned ZZQA Expert Two Client's 3PL project from ZZQA Expert Two to ZZQA Expert One and back; the stored `owner_id` followed each time (verified by reading the row), and the Reassign list shows "Name (email)". |
+| ADM-13 | ✅ Pass | The same for that client's forwarder project, also reassigned and restored. Both projects end the run owned by ZZQA Expert Two, as seeded. |
+| ADM-14 | ✅ Pass | Edit client on ZZQA Existing Client Co ("Changes apply to every project for this client.") — business model B2C → "B2B & B2C (QA)" showed in the Clients list at once, then reverted to **B2C**. |
+| ADM-15 | ✅ Pass | For a client in use the Delete control is **disabled**, with the reason inline next to it: "Has 2 projects and 1 portal user". The section header also states "A client can only be deleted once it has no projects and no portal users." |
+| ADM-16 | ⚠️ Pass (data layer) | With an expert's token: `PATCH profiles.role` on another user → **403 42501**, `PATCH profiles.tariff_editor` → 403 42501, `DELETE profiles` → 403 42501, and expert2's row still reads `logistics_expert` / `tariff_editor: false`. The Server Actions themselves were not replayed by hand; `server-action-guard.test.ts` in GATE-02 and the absent UI (AUTH-08) cover that half. |
+| ADM-17 | ✅ Pass | As `zzqa-target`: `PUT /auth/v1/user` with `app_metadata` → **403**, with `data: { first_name: "ZZQA Admin" }` → **403** (the session had been signed out, so GoTrue refused outright; for a live client session the same call is accepted and changes nothing, CLR-06). `PATCH profiles.first_name` on its own row → **403 42501**, `POST profiles` → 403 42501. The profile still reads the admin-set name "ZZQA Target Renamed é&🚚" with role `logistics_expert`. |
+| RLS-01 | ✅ Pass | As expert2, the E1 3PL project page loads (200) with "Owned by … view only" and **no save control** in the markup. |
+| RLS-02 | ✅ Pass | `/3pl-sourcing/projects/<E1>/info/edit` → **404**. |
+| RLS-03 | ✅ Pass | `/3pl-sourcing/projects/<E1>/providers/new` → **404** (and the project page offers no add/edit controls). |
+| RLS-04 | ✅ Pass | The wizard steps `/3pl-sourcing/new/<E1 id>`, `/new/<E1 id>/providers` and `/new/<E1 id>/review` → **404** each. |
+| RLS-05 | ✅ Pass | `/forwarder-sourcing/<E1>/edit` → **404**; the project page itself loads view-only. |
+| RLS-06 | ✅ Pass | `/forwarders/new`, `/forwarders/<id>/edit`, `/quotes/new` and `/quotes/<id>/edit` under the E1 forwarder project → **404** each. |
+| RLS-07 | ✅ Pass | As expert2 through PostgREST: `PATCH forwarder_projects`, `PATCH forwarder_quotes`, `DELETE forwarder_quotes`, `DELETE forwarder_projects` → **0 rows each**; reads of the same rows are allowed (1 row). |
+| RLS-08 | ✅ Pass | `PATCH three_pl_projects`, `PATCH three_pl_providers`, `DELETE three_pl_providers` on E1 rows → **0 rows each**. |
+| RLS-12 | ✅ Pass | As a non-editor expert, `customs_fees` is readable but `PATCH rate_pct` → **0 rows** and `POST customs_fees` → **403 42501**. |
+| RLS-13 | ✅ Pass | A request with **no credentials** reaches PostgREST as the `anon` role and is refused on every table tried — `clients`, `three_pl_projects`, `forwarder_projects`, `duty_estimates`, `profiles`, `client_updates`, `landed_cost_workspaces` → **401 `42501` permission denied**, and `POST clients` likewise. The anon grant revocations themselves are enforced by the strict pgTAP anon check in GATE-01 (1,340 tests, all passing). The anon **key** was not used as such: it is not present in the pages' loaded bundles, and reading it from configuration is out of bounds for this run. |
+| RLS-14 | ✅ Pass | `GET /api/cron/fx-rates` with no `Authorization` → **401**; with `Authorization: Bearer wrong-secret` → **401**. `GET /api/cron/hts-release` with a wrong secret → **401**. |
 | POR-05 | ✅ Pass | `qa:portal-scan` against `http://localhost:3100` ends **"clean"**: 5 client users, 30 tables/views, 23 functions, 195 identifying terms of anonymised partners, 12 report prices, 1 partner behind introduction requests; 9 pages and 12 URL guesses per user; exit 0. |
 
 ## Bugs
@@ -244,6 +284,17 @@ PostgREST checks use each session's own JWT, taken from the page (N-4).
   writes outside the primary working directory appear to be refused in this mode regardless
   of the allow-list. The user created and populated the worktree instead, and this run does
   not create or remove it.
+- **N-7 — Accounts and data changed in checkpoint 3, and their state at the end.**
+  `zzqa-client-a@example.test` (ZZQA Existing Client Co) and `zzqa-client-b@example.test`
+  (ZZQA Café & Crème) were created as portal users and left in place; the next `qa:seed`
+  removes portal users of ZZQA clients. `zzqa-created@example.test` was created and deleted
+  again. `zzqa-target` is left as a **logistics expert, not a tariff editor**, renamed to
+  "ZZQA Target Renamed é&🚚" (the seed resets the name). `zzqa-expert2`'s two projects were
+  reassigned and **restored** to Expert Two, ZZQA Existing Client Co's business model was
+  edited and **reverted** to B2C, and its plan was toggled to Market Report and **back to
+  free**. `solace-ops`'s must-change-password state was deliberately **not** consumed. Every
+  `customs_fees` write in AUTH-07 wrote each field's existing value back, so no duty data
+  changed.
 - **N-5 — Test data left in the local database.** Three Landed Cost workspaces owned by
   `zzqa-expert1`, all named with the `ZZQA` prefix: **ZZQA LC Main** (5 origins, 2 SKUs,
   4 manual rates, locked versions v3 and v4), **ZZQA LC Entry** (2 SKUs, locked versions v1,
