@@ -17,7 +17,7 @@ Never run raw SQL directly against Supabase (dashboard or one-off commands).
 Always follow this flow:
 1. Create a migration file: `npx supabase migration new <descriptive_name>`
 2. Write the SQL inside that generated file
-3. Test locally: `npx supabase db reset`
+3. Test locally: `npx supabase migration up`, then `npm run test:db`. Never run `npx supabase db reset`: the local database holds data we need (QA accounts, demo data, guide tooling).
 4. Commit the migration file to git in the same commit/PR as the related feature code
 5. Deploy with the migration first, chained: `npx supabase db push && git push`
 
