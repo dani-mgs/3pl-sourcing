@@ -91,7 +91,7 @@ resumed at CLR-01 with no earlier case redone. The data was untouched throughout
 | 1 | Automated gates | **Done** | GATE-05 only, and it can't run in this mode (N-2) |
 | 2 | Landed Cost | **Done** (2 cases deferred) | LCM-07 (needs a duty-data change as the tariff editor, deferred to checkpoint 4) and LCM-11 (no schema-version-1 version exists locally); the LCV-07 PDF contents are unread (N-3) |
 | 3 | Security and roles | **Done** (4 cases deferred) | RLS-09, RLS-10, RLS-11 and RLS-15 need a saved duty estimate, which TAR-31 creates in checkpoint 4 |
-| 4 | Tariff | Not started | TAR-01–46, the deferred LCM-07, and RLS-09/10/11/15 |
+| 4 | Tariff | In progress | Done: TAR-01–31, TAR-33, TAR-38, TAR-39, RLS-10, RLS-11. Remaining: TAR-32 (second half), TAR-34–37, TAR-40, TAR-41–45, RLS-09, RLS-15, and the deferred LCM-07 — most of them in the tariff-editor session (N-8) |
 | 5 | Portal and client features | Not started | POR-06–15 (POR-01–05 are done) |
 | 6 | Everything else | Not started | 3PL-01–37, FWD-01–44, HELP-01–10, X-01–14 |
 | 7 | Cleanup | Not started | Stop the dev server, final summary commit. Test data left in place is listed in N-5; the worktree is left for the user, as asked. |
@@ -247,6 +247,55 @@ PostgREST checks use each session's own JWT, taken from the page (N-4).
 | RLS-14 | ✅ Pass | `GET /api/cron/fx-rates` with no `Authorization` → **401**; with `Authorization: Bearer wrong-secret` → **401**. `GET /api/cron/hts-release` with a wrong secret → **401**. |
 | POR-05 | ✅ Pass | `qa:portal-scan` against `http://localhost:3100` ends **"clean"**: 5 client users, 30 tables/views, 23 functions, 195 identifying terms of anonymised partners, 12 report prices, 1 partner behind introduction requests; 9 pages and 12 URL guesses per user; exit 0. |
 
+## 4. Tariff Calculator
+
+All on the `ZZQA-local` release, signed in as `zzqa-expert1` unless stated. **The run crossed
+midnight UTC during this checkpoint:** cases up to TAR-12 ran with the app's today =
+**2026-10-23**, and from TAR-13 onwards today = **2026-10-24**. Each case below names the
+entry date it used, so the dates are unambiguous. Nothing else about the environment changed.
+
+| ID | Result | Evidence |
+|---|---|---|
+| TAR-01 | ✅ Pass | Lookup "syringes" → "1 line, in code order (not ranked)." and **9018.31.00.40 Syringes, with or without needles: other**, under its parent heading 9018 with the path "Chapter 90 › 9018 …", "General rate: Free", "Units: No.", plus "Section 301 (China) may apply · if from China" and a "Use this code" button. |
+| TAR-02 | ✅ Pass | Lookup "8703" → "2 lines": the heading **8703** (with its program hints: 301 China, 232 metals, 232 vehicles and parts) and its child **8703.80.00.00** "Other vehicles, with only electric motor for propulsion · General rate: 2.5%". |
+| TAR-03 | ✅ Pass | Lookup "zzzqqq" → "**No lines found.** Tariff wording is formal ("footwear", not "shoes"), common words like "other" are ignored, and every word must appear. Try fewer or more formal words, or a heading code." |
+| TAR-04 | ✅ Pass | 0101.21.00.10 → "**0101.21.00.10 isn't in the current HTS (ZZQA local test release). Check the code.**" and no estimate. |
+| TAR-05 | ✅ Pass | `8703.80.00` → the 10-digit line 8703.80.00.00 with the note "**Matched the only 10-digit line under the 8-digit code you entered.**", base duty 2.5% = $250.00. |
+| TAR-06 | ✅ Pass | 6109.10.00.12 · Mexico · Sea · $10,000 → **base duty 16.5% = $1,650.00**, MPF $34.64, HMF $12.50, total $1,697.14, "Effective rate … 16.5% duties · 17.0% with MPF and HMF", and "**Special programs listed in the HTS (not applied): Free (AU,BH,CL,CO,IL,JO,KR,MA,OM,P,PA,PE,S,SG)**". Each line names its source and effective date (HTSUS ZZQA local test release from Sep 23, 2026; the MPF Federal Register notice from Oct 1, 2026; 19 CFR 24.24 from Jan 1, 1991). |
+| TAR-07 | ✅ Pass | 2204.21.50.60 with no quantity → "**The rate for 2204.21.50.60 is charged per unit. Enter the quantity in liters.**" and no estimate — never a silent $0. With quantity 1,000 the specific rate computes to **$63.00** (6.3¢ × 1,000). |
+| TAR-08 | ✅ Pass | 8703.80.00.00 · China · $10,000 → the header reads "Base duty + fees (USD) — **EXCLUDES 3 additional duty programs that may apply**", and the China 301 row is named in full: "**Not included: Section 301 (China) — could add 100% (about $10,000.00, 9903.91.03); pending expert review**". In this local seed no duty program is reviewed, so it is excluded and stated rather than added; the total ($297.14) counts base duty and fees only, and "Incomplete estimate / Not final: 3 additional duty programs are not included." says so. |
+| TAR-09 | ✅ Pass | 6109.10.00.12 · Vietnam → "**Not included: Section 301 (forced labour) — could add 12.5% (about $1,250.00, 9903.05.84); pending expert review**" — the forced-labour program is picked by origin, with the matrix's expected rate and heading. |
+| TAR-10 | ✅ Pass | 7318.15.80.66 · China → "**EXCLUDES 3 additional duty programs that may apply**" and exactly three "Not included" lines: 301 (China) 25% (9903.88.03), 301 (forced labour) "exempt if Section 232 (steel, aluminium, copper) applies (9903.05.90)", and 232 (steel, aluminium, copper) 50% (9903.82.02). N matches the listed programs. |
+| TAR-11 | ✅ Pass | 8471.30.01.00 · Mexico → base duty **$0.00** (Free) and "EXCLUDES **1** additional duty program", with exactly one listed (301 forced labour, 10%, 9903.05.55) — N matches the triggered programs only. |
+| TAR-12 | ✅ Pass | Each 232 type is named for its chapter, from China: **8708.29.50.60 → "Section 232 (vehicles and parts)"**; **9403.60.80.81 → "Section 232 (timber, lumber and derivatives)"**; **8542.31.00.01 → "Section 232 (semiconductors)"**; **3004.90.92.90 → "Section 232 (pharmaceuticals)"**; **8806.21.00.00 → "Section 232 (unmanned aircraft systems)"**. Each also lists the 301 lines that apply, and the forced-labour row correctly reads "exempt if Section 232 (<that type>) applies" where relevant. |
+| TAR-13 | ✅ Pass | 8486.10.00.00 · China · entry **2026-10-23** → **no 301 duty in the total** (base duty $0.00, fees $47.14). The Key dates panel shows the exclusion is in the data: "Nov 10, 2026 · Section 301 (China) · **9903.88.70 USTR product exclusion** · Ends: exemption · China; listed products". |
+| TAR-14 | ✅ Pass | The same line at entry **2026-11-09**, the exclusion's last day → still no 301 duty; the result adds "Estimated for entry on Nov 9, 2026 (not today)" and "Calculated on Oct 23, 2026 for entry on Nov 9, 2026. Base duty rate is from the HTS schedule in force today …; Additional duties and fees are those known today to be in force on the entry date". |
+| TAR-15 | ⚠️ Pass with a note | At entry **2026-11-10** the exclusion has ended according to Key dates ("9903.88.70 … Ends"), but the estimate is unchanged and carries no per-line scheduled-change note, because **every** related program is "program not counted in estimates yet (pending review)" in this seed — so there is no duty to switch on. The matrix's second branch (a scheduled-change note) is met by the **Key dates** panel rather than by a line in the estimate. The exclusion's effect on a counted program can only be shown once a program is reviewed (N-8). |
+| TAR-16 | ✅ Pass | 8716.39.00.90 · China · entry **2026-11-10** → base duty 3.1% = $310.00, "EXCLUDES 4 additional duty programs", and the **unconfirmed** row is **not** added and not offered as a "could add" figure; Key dates shows it as "Section 301 (China) · **9903.91.12** Intermodal chassis (from November 10, 2026) · Starts: **+100%, rate unconfirmed**". The confirmed-rate programs still appear with their own figures, so the unconfirmed row never displaces a confirmed one. |
+| TAR-17 | ✅ Pass | The result page's **Key dates (4 upcoming)** panel reads "Changes already in the duty data, by the day they take effect…" and lists four entries, all dated **Nov 10, 2026**: 9903.88.69 and 9903.88.70 exclusions ending, and 9903.91.12 / 9903.91.14 starting at +100% with unconfirmed rates. |
+| TAR-18 | ✅ Pass | The entry-date field enforces the window with `min=2026-10-23` and `max=2027-10-25` (today−1 to today+366 on 2026-10-24). 2026-10-22 → "**Value must be 10/23/2026 or later.**"; 2027-10-27 → "**Value must be 10/25/2027 or earlier.**"; the form is invalid in both cases and no estimate is produced. The helper text reads "Duty applies on the day the goods enter the US. Default: today. Past dates aren't supported: base duty rates come from the HTS schedule in force today." |
+| TAR-19 | ✅ Pass | $2,500.00 → "Merchandise Processing Fee (**informal entry, automated**) — **Assumes an informal entry (value up to $2,500.00)** — $2.77 flat — **$2.77**". |
+| TAR-20 | ✅ Pass | $2,500.01 → "(formal entry) 0.3464% of $2,500.01; **Minimum applied** … **$34.58**". |
+| TAR-21 | ✅ Pass | $9,981.00 → **$34.58** with "Minimum applied" (calculated 34.5742). |
+| TAR-22 | ✅ Pass | $9,982.68 → **$34.58** and **no** Minimum label (0.3464% × 9,982.68 = 34.5800 exactly). |
+| TAR-23 | ✅ Pass | $50,000.00 → **$173.20**. |
+| TAR-24 | ✅ Pass | $193,666.28 → **$670.86** with **no** Maximum label (0.3464% × 193,666.28 = 670.8600). |
+| TAR-25 | ✅ Pass | $250,000.00 → **$670.86** with "**Maximum applied**". |
+| TAR-26 | ✅ Pass | Sea, $10,000 → "Harbor Maintenance Fee 0.125% of $10,000.00 … **$12.50**". |
+| TAR-27 | ✅ Pass | Air, $10,000 → **no HMF line** at all. |
+| TAR-28 | ✅ Pass | Road, $10,000 → **no HMF line**. |
+| TAR-29 | ✅ Pass | EUR 10,000 → customs value **$10,800.00** (× 1.08, the seeded rate), with "1 EUR = 1.08 USD · as of Oct 23, 2026 · **Daily reference rate**" and "The rate is locked when the estimate is saved." Fees $50.91 = MPF 0.3464% × 10,800 ($37.41) + HMF 0.125% × 10,800 ($13.50). |
+| TAR-30 | ✅ Pass | Customs value `0` and `-1` → "**Value must be greater than or equal to 0.01.**" (field invalid, nothing submitted); `abc` leaves the number field empty → "Please fill out this field."; HTS `12` → "**Enter an 8- or 10-digit HTS code (10 digits recommended), e.g. 7208.10.15.00.**" No crash and no raw database or Zod text. |
+| TAR-31 | ✅ Pass | Saved the 8703 · China result with the reference "ZZQA est é&🚚" → lands on `/tariff-calculator/estimates/<id>` headed "**Locked Oct 24, 2026 by ZZQA Expert One · rates and dates as saved; not recalculated**", with the same figures as the preview ($297.14; base $250.00; fees $47.14) and the label kept verbatim, emoji included. |
+| TAR-32 | ⚠️ Pass (immutability half) | The saved estimate page has **no edit control and zero form fields** — only "Delete estimate". The "figures unchanged after reference data changes" half needs a duty-data edit as the tariff editor and is still to do. |
+| TAR-33 | ✅ Pass | The owner deleted their own estimate (through PostgREST with its own session, 1 row) and it was gone afterwards (0 rows). The UI control exists as "Delete estimate" on the estimate page. |
+| TAR-38 | ✅ Pass | Double-clicking **Save estimate** produced exactly **one** estimate: `duty_estimates` holds a single row (total $1,697.14, reference "ZZQA est é&🚚"). |
+| TAR-39 | ⚠️ Pass (3 of 4 places) | The result header shows "**Incomplete estimate** / Not final: N additional duty programs are not included", the saved estimate page shows the same, and the **Saved estimates** table row carries "**Incomplete estimate — Excludes 1 additional duty program**". The forwarder-quote badge is still to check in checkpoint 6 (TAR-35 / FWD). |
+| TAR-41 | ⏭ Not tested | No "duty rates last verified" date appears anywhere in a result, because **no additional duty program is reviewed** in the local seed — every one reads "pending expert review", and the version CSV's "Last verified" column carries the sentence "No reviewed additional duties in this estimate" instead of a date. Showing the date needs a program marked reviewed by the tariff editor (N-8). |
+| RLS-09 | ⏭ Not tested | Needs expert2 to attempt deleting expert1's estimate; the estimate that existed at that point was deleted by RLS-11's own DELETE probe. Re-test with the estimate now saved. |
+| RLS-10 | ✅ Pass | `PATCH duty_estimates` on the owner's own saved estimate → **403 `42501` permission denied** — immutable even to its owner. |
+| RLS-11 | ✅ Pass | `POST duty_estimates` → **403 `42501`**; `POST /rpc/save_duty_estimate` → **404 `PGRST202`**, i.e. the function is not exposed to `authenticated` at all (service role only, through `saveEstimate`), matching the documented exception. |
+
 ## Bugs
 
 ### B-15 — A locked Landed Cost version that contains a fixed-amount manual rate can never be opened or exported
@@ -284,6 +333,13 @@ PostgREST checks use each session's own JWT, taken from the page (N-4).
   writes outside the primary working directory appear to be refused in this mode regardless
   of the allow-list. The user created and populated the worktree instead, and this run does
   not create or remove it.
+- **N-8 — No duty program is reviewed in the local data, which gates four cases.** Every
+  additional duty program in the `ZZQA-local` seed reads "pending expert review", so nothing
+  is ever **counted** in a total. That is the correct behaviour and is stated clearly in every
+  estimate, but it means TAR-15's switch-on, TAR-41's verification date, TAR-08's "added"
+  branch and LCM-07's conflict can only be shown after a tariff editor marks a program
+  reviewed. That editor session is the next step in checkpoint 4; the change is reverted
+  afterwards.
 - **N-7 — Accounts and data changed in checkpoint 3, and their state at the end.**
   `zzqa-client-a@example.test` (ZZQA Existing Client Co) and `zzqa-client-b@example.test`
   (ZZQA Café & Crème) were created as portal users and left in place; the next `qa:seed`
