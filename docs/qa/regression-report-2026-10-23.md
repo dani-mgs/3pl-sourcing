@@ -93,11 +93,11 @@ resumed at CLR-01 with no earlier case redone. The data was untouched throughout
 | 2 | Landed Cost | **Done** (2 cases deferred) | LCM-07 (needs a duty-data change as the tariff editor, deferred to checkpoint 4) and LCM-11 (no schema-version-1 version exists locally); the LCV-07 PDF contents are unread (N-3) |
 | 3 | Security and roles | **Done** (4 cases deferred) | RLS-09, RLS-10, RLS-11 and RLS-15 need a saved duty estimate, which TAR-31 creates in checkpoint 4 |
 | 4 | Tariff | **Done** (4 cases gated) | TAR-41, TAR-43, TAR-45 and the deferred LCM-07 can't be shown on this data — see N-8 (no reviewed program), TAR-43 (no roll-over window yet) and TAR-45 (polysilicon not loaded) |
-| 5 | Portal and client features | In progress | POR-06–15 (POR-01–05 are done) |
-| 6 | Everything else | Not started | 3PL-01–37, FWD-01–44, HELP-01–10, X-01–14 |
-| 7 | Cleanup | Not started | Stop the dev server, final summary commit. Test data left in place is listed in N-5; the worktree is left for the user, as asked. |
+| 5 | Portal and client features | **Done** | — |
+| 6 | Everything else | In progress | 3PL-01–37, FWD-01–44, HELP-01–10, X-01–14 |
+| 7 | Cleanup | Not started | Stop the dev server, final summary commit. Test data left in place is listed in N-5, N-7, N-9 and N-10; the worktree is left for the user, as asked. |
 
-The first remaining case is **TAR-01** (checkpoint 4). Nothing in checkpoints 0–3 needs
+The first remaining case is **3PL-01** (checkpoint 6). Nothing in checkpoints 0–5 needs
 redoing.
 
 ### Checkpoint 0 — Setup (done)
@@ -308,6 +308,24 @@ entry date it used, so the dates are unambiguous. Nothing else about the environ
 | RLS-10 | ✅ Pass | `PATCH duty_estimates` on the owner's own saved estimate → **403 `42501` permission denied** — immutable even to its owner. |
 | RLS-11 | ✅ Pass | `POST duty_estimates` → **403 `42501`**; `POST /rpc/save_duty_estimate` → **404 `PGRST202`**, i.e. the function is not exposed to `authenticated` at all (service role only, through `saveEstimate`), matching the documented exception. |
 
+## 5. Portal and client features
+
+Demo clients: Brightline Apparel (paid), Ridgeway Outdoor (free), Northwind and Kettle & Pine
+(free), Solace (must change password). Staff work as `zzqa-admin`.
+
+| ID | Result | Evidence |
+|---|---|---|
+| POR-06 | ✅ Pass | Brightline's `/portal/market-report` shows the full report: "Viewing: Move summary (included) · **Market Report (your plan)**", 12 forwarders contacted, 6 like-for-like, market range $9,000–$10,600, median $9,610, "What you pay today $10,000". The three shortlisted forwarders are **named**; the other nine are **Partner D…L**. Each lettered row carries exactly letter, Profile (**size band · region**, e.g. "Global · East Asia"), price per shipment, "vs. today" (or "Not comparable"), transit days, **Move's take**, Outcome and an Introduction control — **no name, HQ, domain or contact**, and the page's HTML contains no external domain or `@` address. The report explains the lettering itself ("…to protect their confidentiality, and their profiles are rounded to a size and a region so they can't be identified"). |
+| POR-07 | ✅ Pass | Ridgeway's report page shows "Market Report · **LOCKED · PAID PLAN**" with a teaser list and "The Market Report is part of the paid plan. Ask your Move contact to find out more." `my_market_reports` returns **0 rows**, and the rendered HTML contains **none** of the report's figures or labels (no $9,610, $9,000, $10,600, $8,700, $10,150, no partner names, no "Partner D"). |
+| POR-08 | ✅ Pass | Each kind creates exactly one request. **Approve:** "Approve Pacific Bridge Logistics?" → a real **double-click** on "Yes, approve" created **one** `approve` row (the portal then showed "Approved Oct 24 by you. Note: QA approve 2026-10-23 Status: Sent"). **Request changes:** Northwind's "Request changes" → one `request_changes` row, echoed back as "Changes requested Oct 24 by you. What should change: …". **Ask a question:** created `question` rows. Note: two identical questions exist because of a *programmatic* two-click probe of mine (not a user double-click); the real double-click test above shows the guard works. |
+| POR-09 | ✅ Pass | `/client-requests` as admin lists every kind with its client, user and date. Replying once stored "Reply shown to the client · ZZQA · Oct 24 — QA reply …" and the request moved from **Open** to **Answered**; the reply box then disappeared, and a second reply through `reply_to_client_request` → **400 `CQ409` "already answered"**. "Withdraw reply (admin)" warns "The client will see "Move withdrew this reply; a new one is coming" instead of the text, and the project owner can reply again. The withdrawn text stays visible to staff." After withdrawing: the row is back to `status: seen`, `staff_reply: null`, `reply_history` holds **1** entry, and the client's own view shows "**Move withdrew this reply; a new one is coming.**" with `reply: null, reply_withdrawn: true` and no trace of the text. |
+| POR-10 | ✅ Pass | As the paid client, "Request introduction" on **Partner E** asks "Ask Move to introduce you to Partner E? … Your name and the time will be recorded." After sending, the row reads "Introduction requested **Sent · You**" and the client still sees only the letter — no forwarder name anywhere near it. On the staff side the same request reads "**Introduction · Partner E (Redwood Gateway Freight)**" (and the seeded one "Partner D (Meridian Ocean Logistics)"), with the page stating "Partner names behind letters are shown to staff only." A **free** client calling `submit_client_introduction` → **400 `CQ403` "not allowed"**. |
+| POR-11 | ✅ Pass | **Free plan only:** Ridgeway's `submit_market_report_interest` → **200 `{already_sent: true}`** (idempotent; the seeded request stands, and the page shows "You asked about the Market Report on Oct 23 (you). Status: Sent."). **Paid plan can't:** Brightline's same call → **400 `CQ409` "already on the paid plan"**, and no Unlock control exists anywhere in its portal. |
+| POR-12 | ✅ Pass | `/client-access/<id>/preview` is banner-marked "Viewing as Brightline Apparel. This is exactly what their portal users see: only published updates, and the Market Report only on the paid plan. **Read-only.**" It renders the client's content with **no client action buttons** and no internal markers (no assessment, owner, notes, 3PL costs). `/preview/market-report` renders with **letters only and no real forwarder names**, even though the same staff session sees the names in the requests inbox. |
+| POR-13 | ✅ Pass | The share form states the rules ("Only shortlisted partners are named; everyone else appears only in the counts. Internal notes, assessments and statuses are never shared", "drafts never do"). Set a QA headline → **Preview** rendered the client-shaped update (stage rail, headline, summary, "Next: Your decision, by Oct 28", the shortlist chart with $10,000 today vs $9,000/$9,420/…) with **no internal text**. **Publish…** warns "Published updates can't be edited. To correct one, publish a new one…"; after confirming, a new `client_updates` row exists with `published_at` set, the **Published updates** history lists it newest-first ("Oct 24 · Stage 5 · QA regression 2026-10-23 — quotes are in · by ZZQA"), and the client-side view (the read-only preview) shows the same headline — preview and published content match. |
+| POR-14 | ✅ Pass | The builder states the letter rules and the outcome rules ("Unfit, Do Not Contact or Withdrawn / No Response all show as "Not taken forward", with no price, transit time or comment"), and only shortlisted forwarders can be recommended. **The Move's-take guard works:** typing "Meridian Ocean Logistics has good coverage…" into Partner D's take and previewing produced "**Move's take for Meridian Ocean Logistics could identify Meridian Ocean Logistics ("meridian"). Rewrite it without names, places, websites or contacts.**" and **disabled Publish**. Restoring neutral wording re-enabled it, and Publish ("Published reports can't be edited… the client only ever sees the latest") created a new published `client_market_reports` row with "Published for Brightline Apparel." |
+| POR-15 | ✅ Pass | At **390px**, `/portal`: no horizontal scroll and **no element past the viewport**. `/portal/market-report`: the same, **no visible table at all** (the wide partner table is replaced by stacked cards), and all six "Request introduction" buttons are visible and inside the viewport (right edge 336 of 390). |
+
 ## Bugs
 
 ### B-16 — The Expert CSV leaves out the project's duty estimates
@@ -353,6 +371,14 @@ entry date it used, so the dates are unambiguous. Nothing else about the environ
   writes outside the primary working directory appear to be refused in this mode regardless
   of the allow-list. The user created and populated the worktree instead, and this run does
   not create or remove it.
+- **N-10 — Demo client data this run added.** Checkpoint 5 exercised the real client flows, so
+  the demo data now carries: one **published client update** for Brightline ("QA regression
+  2026-10-23 — quotes are in"), one **published Market Report** for Brightline (same content as
+  the seeded one, with the Move's-take text restored), an **approval** and two **questions**
+  from Brightline (one of them replied-to and then withdrawn, which is the POR-09 evidence),
+  one **introduction request** for Partner E, and one **change request** from Northwind. The
+  next `npm run demo:seed` replaces all of it. Nothing was deleted and no seeded update,
+  report or request was altered.
 - **N-9 — One deliberate residue in the local fee data.** TAR-36 needed a real fee change, and
   the fee model is append-only (a row is changed by end-dating it and adding its replacement),
   so no edit can be undone exactly. The test was put in a quiet future window and reverted:
