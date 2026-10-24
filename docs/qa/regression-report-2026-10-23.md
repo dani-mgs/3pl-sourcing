@@ -66,14 +66,15 @@ resumed at CLR-01 with no earlier case redone. The data was untouched throughout
   **2,225 passing / 1 skipped** in **all 7 timezones**, identical counts. Lint clean. Typecheck
   clean. Production build clean with the flag on. GATE-05 (the seed's non-local guard) can't be
   run in this mode — see N-2.
-- **New bugs: 3** — 0 Critical, **1 High**, **1 Medium**, **1 Low**.
+- **New bugs: 4** — 0 Critical, **1 High**, **2 Medium**, **1 Low**.
 - **No Critical bug:** no cross-user or cross-client access and no RLS gap (every non-owner
   write returned 0 rows, every forged insert 42501), no wrong duty, cost or ratio figure —
   every money figure checked matched a hand calculation to the cent, including half-up
   rounding — no locked version changed, and no data lost.
 - **B-4 to B-12** (all reported fixed in the 2026-10-09 report): **not retested** — they belong
   to the AUTH, ADM, RLS, 3PL and forwarder cases in checkpoints 3–6, which were not reached.
-- **New bugs: 3** — **B-15 (High)** a locked Landed Cost version holding a fixed-amount
+- **New bugs: 4** — **B-16 (Medium)** the Expert CSV leaves out a project's linked duty
+  estimates; **B-15 (High)** a locked Landed Cost version holding a fixed-amount
   manual rate can never be opened or exported; **B-14 (Medium)** a SKU's "Incomplete estimate"
   badge disappears when a manual rate covers its only uncounted program, inconsistently by
   origin; **B-13 (Low)** the Delete workspace dialog offers Delete before the locked-versions
@@ -91,8 +92,8 @@ resumed at CLR-01 with no earlier case redone. The data was untouched throughout
 | 1 | Automated gates | **Done** | GATE-05 only, and it can't run in this mode (N-2) |
 | 2 | Landed Cost | **Done** (2 cases deferred) | LCM-07 (needs a duty-data change as the tariff editor, deferred to checkpoint 4) and LCM-11 (no schema-version-1 version exists locally); the LCV-07 PDF contents are unread (N-3) |
 | 3 | Security and roles | **Done** (4 cases deferred) | RLS-09, RLS-10, RLS-11 and RLS-15 need a saved duty estimate, which TAR-31 creates in checkpoint 4 |
-| 4 | Tariff | In progress | Done: TAR-01–31, TAR-33, TAR-38, TAR-39, RLS-10, RLS-11. Remaining: TAR-32 (second half), TAR-34–37, TAR-40, TAR-41–45, RLS-09, RLS-15, and the deferred LCM-07 — most of them in the tariff-editor session (N-8) |
-| 5 | Portal and client features | Not started | POR-06–15 (POR-01–05 are done) |
+| 4 | Tariff | **Done** (4 cases gated) | TAR-41, TAR-43, TAR-45 and the deferred LCM-07 can't be shown on this data — see N-8 (no reviewed program), TAR-43 (no roll-over window yet) and TAR-45 (polysilicon not loaded) |
+| 5 | Portal and client features | In progress | POR-06–15 (POR-01–05 are done) |
 | 6 | Everything else | Not started | 3PL-01–37, FWD-01–44, HELP-01–10, X-01–14 |
 | 7 | Cleanup | Not started | Stop the dev server, final summary commit. Test data left in place is listed in N-5; the worktree is left for the user, as asked. |
 
@@ -292,11 +293,30 @@ entry date it used, so the dates are unambiguous. Nothing else about the environ
 | TAR-38 | ✅ Pass | Double-clicking **Save estimate** produced exactly **one** estimate: `duty_estimates` holds a single row (total $1,697.14, reference "ZZQA est é&🚚"). |
 | TAR-39 | ⚠️ Pass (3 of 4 places) | The result header shows "**Incomplete estimate** / Not final: N additional duty programs are not included", the saved estimate page shows the same, and the **Saved estimates** table row carries "**Incomplete estimate — Excludes 1 additional duty program**". The forwarder-quote badge is still to check in checkpoint 6 (TAR-35 / FWD). |
 | TAR-41 | ⏭ Not tested | No "duty rates last verified" date appears anywhere in a result, because **no additional duty program is reviewed** in the local seed — every one reads "pending expert review", and the version CSV's "Last verified" column carries the sentence "No reviewed additional duties in this estimate" instead of a date. Showing the date needs a program marked reviewed by the tariff editor (N-8). |
-| RLS-09 | ⏭ Not tested | Needs expert2 to attempt deleting expert1's estimate; the estimate that existed at that point was deleted by RLS-11's own DELETE probe. Re-test with the estimate now saved. |
+| TAR-32 | ✅ Pass | Two halves. **No edit path:** the saved estimate page has zero form fields and only "Delete estimate". **Immutable across reference-data changes:** an estimate was saved with entry date 2027-06-02 while a test HMF row of 0.2% was in force (fees $54.64, HMF $20.00); after the fee was reverted to 0.125%, the saved estimate **still shows "Harbor Maintenance Fee 0.2% … $20.00" and fees $54.64**, while a fresh calculation for the same entry date shows **0.125% … $12.50** and fees $47.14. "Locked Oct 24, 2026 by ZZQA Editor · rates and dates as saved; not recalculated". |
+| TAR-34 | ✅ Pass | As `zzqa-expert2`, expert1's estimate opens and reads "Locked Oct 24, 2026 by **ZZQA Expert One** · … · Linked to ZZQA Pakkable-style Co", with **no Delete control** anywhere on the page. |
+| TAR-35 | ✅ Pass | The forwarder project offers "Estimate duties" → `/tariff-calculator?project=<id>`, a pre-filled flow headed "Pre-filled from ZZQA Pakkable-style Co … Every value below is a suggestion. Check each one and tick Confirmed; nothing is calculated or saved until you do. The estimate will be linked to this project." Calculate stays disabled until every Confirmed box is ticked ("Tick Confirmed beside each input to calculate."). With the confirmed deduction applied the customs value is $46,500 (invoice $50,000 less the $3,500 freight), base duty 16.5% = **$7,672.50**, fees $219.21 (MPF $161.08 + HMF $58.13) — all three match by hand. "Save to project" stores it, and the project page then shows "**Duty estimates · Project · Our estimate $7,891.71 (as of Oct 24, 2026) · Incomplete estimate · EXCLUDES 2 additional duty programs … Pending expert review: Section 301 (China), Section 301 (forced labour)**". The quote ranking and savings are untouched: Bravo is still "Lowest Freight Cost · Below Baseline $500.00 (14.3%)" with a 6.0% ratio. |
+| TAR-36 | ✅ Pass | As `zzqa-editor`, `/tariff-calculator/duty-data/fees` opens (an expert gets 404, TAR-37). Followed the page's own rule ("To change one, end-date the current row and add the new one from the next day"): end-dated HMF at 2027-05-31 and added a 0.2% row from 2027-06-01. The row list then showed "0.2% · Jun 1, 2027 · **Created Oct 24, 2026 by ZZQA Editor**" and the old row "0.125% · Jan 1, 1991 – May 31, 2027 · **Last changed Oct 24, 2026 by ZZQA Editor** · History (1)". **The change applies by entry date only:** entry 2026-10-24 → HMF 0.125% / $12.50; entry 2027-06-02 → **0.2% / $20.00**. Reverted by end-dating the test row and adding 0.125% from 2027-06-02; a fresh calculation is back to $12.50. (Residue: HMF is 0.2% on the single date 2027-06-01 — see N-9.) |
+| TAR-40 | ❌ Fail (B-16) | The Expert CSV for a project with a linked duty estimate has exactly three sections — PROJECT DETAILS, FORWARDERS, QUOTE COMPARISON — and **no duty-estimate rows at all**: no "Duty estimate" heading, no "Incomplete" flag and not even the estimate's total ($7,891.71), even though the project page shows all three. The Client CSV correctly omits them. |
+| TAR-42 | ✅ Pass | The fees page's CHANGES column records, per row, "**Seeded Oct 20, 2026**" plus either "Not changed since" or "**Last changed <date> by <name>**", with a "History (N)" count. Two independent names showed up from real sessions: "Last changed Oct 23, 2026 by **ZZQA Target Renamed é&🚚**" (left by AUTH-07's probe, under the display name an admin had set) and "Created / Last changed Oct 24, 2026 by **ZZQA Editor**" (this session). The name therefore comes from the acting session's profile, not from the browser. |
+| TAR-43 | ⏭ Not tested | The rollover reminder has no trigger today: the fees in force are FY2027 (effective Oct 1, 2026) and the next roll-over is Oct 1, 2027, eleven months away. Nothing on the fees page mentions a fiscal year or roll-over, for the editor or anyone else, so the "editor sees it, an expert doesn't" comparison can't be made without moving the clock. The related logic is unit-tested in GATE-02. |
+| TAR-44 | ✅ Pass | 8471.30.01.00 · Mexico · $10,000 · entry **2027-10-05** (FY2028, no fees entered) → "**Not final: MPF fees for FY2028 (from Oct 1, 2027) aren't entered yet; FY2027's are used.**" and "Customs user fees are re-set each 1 October. The entry date is in the next fiscal year, so the fees shown are those entered so far for that date." The MPF line still shows the FY2027 row (in effect from Oct 1, 2026). |
+| TAR-45 | ⏭ Not tested | **Section 232 (polysilicon and derivatives)** is listed on the duty-data page as "**Not loaded · 0 rows · Never reviewed**", so it can match no HTS line and no warning can fire on any entry date; nor does the `ZZQA-local` release contain a polysilicon line (its chapters are 24, 30, 61, 73, 84, 85, 87, 88, 94 and 22). The 2026-12-04 boundary is therefore untestable locally. |
+| TAR-46 | ✅ Pass | Unit level, in GATE-02: the paged duty read fails loudly rather than truncating (`fix(tariff): fail unpaged…`), covered by the 2,225 passing tests in all seven timezones. |
+| RLS-09 | ✅ Pass | As expert2, `DELETE duty_estimates` on expert1's estimate → **0 rows**, the estimate is still there, and `PATCH` → **403 42501**. The UI shows no Delete control for a non-owner (TAR-34). |
+| RLS-15 | ✅ Pass | As expert2, opening `/tariff-calculator?project=<expert1's project>` shows "**Only the project's owner or an admin can create duty estimates for it. You can still use the calculator below without linking.**" There is no "Save to project" control, and the unlinked calculator still works. |
 | RLS-10 | ✅ Pass | `PATCH duty_estimates` on the owner's own saved estimate → **403 `42501` permission denied** — immutable even to its owner. |
 | RLS-11 | ✅ Pass | `POST duty_estimates` → **403 `42501`**; `POST /rpc/save_duty_estimate` → **404 `PGRST202`**, i.e. the function is not exposed to `authenticated` at all (service role only, through `saveEstimate`), matching the documented exception. |
 
 ## Bugs
+
+### B-16 — The Expert CSV leaves out the project's duty estimates
+
+- **Severity:** Medium. **Cases:** TAR-40 (fails), FWD-34 (the "duty estimates" half).
+- **Steps:** on a forwarder project with a linked duty estimate (here ZZQA Pakkable-style Co with "Our estimate $7,891.71"), Export → **Expert CSV**.
+- **Expected:** the Expert CSV carries the linked duty estimates, with the incomplete flag on each, as `/help` and the matrix describe (and as the PDF/DOCX are meant not to).
+- **Actual:** the CSV has three sections — PROJECT DETAILS, FORWARDERS, QUOTE COMPARISON — and nothing about duty at all: searching the file finds no "duty estimate", no "Incomplete", and not even the total `7,891.71`. The project page shows all of it, so the information exists and is simply not exported. The Client CSV omits it correctly.
+- **Suspect file:** the expert CSV builder under `src/lib/forwarder/` (the export action is `exportForwarderCsv`-style in `src/app/(authenticated)/forwarder-sourcing/`), which appears never to add a duty-estimates section.
 
 ### B-15 — A locked Landed Cost version that contains a fixed-amount manual rate can never be opened or exported
 
@@ -333,13 +353,26 @@ entry date it used, so the dates are unambiguous. Nothing else about the environ
   writes outside the primary working directory appear to be refused in this mode regardless
   of the allow-list. The user created and populated the worktree instead, and this run does
   not create or remove it.
+- **N-9 — One deliberate residue in the local fee data.** TAR-36 needed a real fee change, and
+  the fee model is append-only (a row is changed by end-dating it and adding its replacement),
+  so no edit can be undone exactly. The test was put in a quiet future window and reverted:
+  HMF is **0.125% everywhere except the single date 2027-06-01, where a 0.2% test row remains**
+  (source label "QA regression 2026-10-23 (test row, revert me)"). Today's and every realistic
+  quote date are unaffected. To clear it, end-date that row before it starts or remove it with
+  a migration; leaving it changes nothing for current work. The saved estimate "ZZQA
+  immutability check" deliberately keeps the 0.2% figures as TAR-32's evidence.
 - **N-8 — No duty program is reviewed in the local data, which gates four cases.** Every
-  additional duty program in the `ZZQA-local` seed reads "pending expert review", so nothing
-  is ever **counted** in a total. That is the correct behaviour and is stated clearly in every
-  estimate, but it means TAR-15's switch-on, TAR-41's verification date, TAR-08's "added"
-  branch and LCM-07's conflict can only be shown after a tariff editor marks a program
-  reviewed. That editor session is the next step in checkpoint 4; the change is reverted
-  afterwards.
+  additional duty program in the `ZZQA-local` seed reads "pending expert review" (or "Not
+  loaded"), so nothing is ever **counted** in a total. That is the correct behaviour and is
+  stated clearly in every estimate, but it means TAR-15's switch-on, TAR-41's verification
+  date, TAR-08's "added" branch and LCM-07's conflict can only be shown once a program is
+  marked reviewed. The editor page offers "Mark reviewed" — and the run **deliberately did not
+  use it**: marking a program reviewed starts counting that program in every estimate and in
+  Landed Cost, and the only way back is to change one of its rows (which puts it back to
+  pending review but leaves an edited row behind). That would alter the local duty data this
+  team works with and would invalidate the figures recorded for B-14 and B-15. A fee change,
+  which *is* reversible in effect, was used instead (TAR-36, N-9). To test these four cases,
+  do it deliberately on a stack you are happy to re-seed.
 - **N-7 — Accounts and data changed in checkpoint 3, and their state at the end.**
   `zzqa-client-a@example.test` (ZZQA Existing Client Co) and `zzqa-client-b@example.test`
   (ZZQA Café & Crème) were created as portal users and left in place; the next `qa:seed`
