@@ -49,6 +49,8 @@ insert into forwarders (id, forwarder_project_id, company_name) values
   ('00000000-0000-4000-8000-000000000402', '00000000-0000-4000-8000-000000000401', 'pgTAP Forwarder');
 insert into forwarder_quotes (forwarder_id, notes) values ('00000000-0000-4000-8000-000000000402', 'q');
 insert into fx_rates (rate_date, currency, rate_to_usd) values ('2026-10-01', 'EUR', 1.08);
+insert into forwarder_audits (id, owner_id, inputs) values
+  ('00000000-0000-4000-8000-000000004101', '00000000-0000-4000-8000-0000000000a1', '{}');
 -- A Landed Cost workspace with one row in each child table.
 insert into landed_cost_workspaces (id, owner_id, name, entry_date) values
   ('00000000-0000-4000-8000-000000003701', '00000000-0000-4000-8000-0000000000a1', 'pgTAP workspace', '2026-11-01');
@@ -100,7 +102,7 @@ select is(
 select is(
   (select count(*)::int from pg_class c join pg_namespace s on s.oid = c.relnamespace
    where s.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity),
-  35, 'there are 35 RLS tables (a new one needs the policy too)');
+  36, 'there are 36 RLS tables (a new one needs the policy too)');
 
 select is(
   (select prosecdef from pg_proc where oid = 'public.search_hts_lines(text[], text, integer)'::regprocedure),
@@ -122,7 +124,7 @@ select pg_temp.act_as('00000000-0000-4000-8000-0000000000f1');
 select is(has_staff_role(), false, 'no role in app_metadata (only in user_metadata) is no role');
 select is(
   (select coalesce(sum(n), 0)::int from pg_temp.visible_rows()), 0,
-  'an account without a role reads 0 rows from all 32 RLS tables');
+  'an account without a role reads 0 rows from all 36 RLS tables');
 select is_empty($$ select * from fx_rates_latest $$, 'nor through the views');
 select is_empty($$ select * from public.search_hts_lines(array['footwear'], null, 10) $$, 'nor through the HTS search');
 select is_empty($$ select * from public.search_hts_lines(null, '6402', 10) $$, 'nor by HTS code');

@@ -2,7 +2,7 @@
 -- on any table or view in public, and every read is refused outright.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(41);
+select plan(42);
 
 -- Strict: anon holds no privilege at all on any public table or view. Lists
 -- the offending table and privilege if one creeps back in (e.g. a new table
@@ -23,7 +23,7 @@ select set_eq(
   $$ select c.relname::text from pg_class c join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relkind in ('r', 'v') $$,
   array['additional_duties', 'additional_duty_scope', 'additional_duty_scope_counts', 'client_entitlements', 'client_market_reports', 'client_requests', 'client_update_inputs', 'client_updates', 'clients', 'customs_fees', 'duty_estimates',
-        'duty_program_review_status', 'duty_program_reviews', 'duty_programs', 'forwarder_projects',
+        'duty_program_review_status', 'duty_program_reviews', 'duty_programs', 'forwarder_audits', 'forwarder_projects',
         'forwarder_quotes', 'forwarders', 'fx_rates', 'fx_rates_latest', 'hts_chapter99_changes',
         'hts_column2_countries', 'hts_lines', 'hts_releases', 'landed_cost_other_costs', 'landed_cost_rate_overrides', 'landed_cost_scenario_items', 'landed_cost_scenarios', 'landed_cost_sku_lines', 'landed_cost_snapshot_counters', 'landed_cost_snapshots', 'landed_cost_workspaces',
         'market_report_partner_labels', 'profiles', 'rate_details',
@@ -55,6 +55,7 @@ select throws_ok('select * from hts_chapter99_changes', '42501', null, 'anon can
 select throws_ok('select * from hts_column2_countries', '42501', null, 'anon cannot read hts_column2_countries');
 select throws_ok('select * from hts_lines', '42501', null, 'anon cannot read hts_lines');
 select throws_ok('select * from hts_releases', '42501', null, 'anon cannot read hts_releases');
+select throws_ok('select * from forwarder_audits', '42501', null, 'anon cannot read forwarder_audits');
 select throws_ok('select * from landed_cost_other_costs', '42501', null, 'anon cannot read landed_cost_other_costs');
 select throws_ok('select * from landed_cost_rate_overrides', '42501', null, 'anon cannot read landed_cost_rate_overrides');
 select throws_ok('select * from landed_cost_scenario_items', '42501', null, 'anon cannot read landed_cost_scenario_items');
