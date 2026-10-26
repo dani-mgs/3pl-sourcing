@@ -2,6 +2,8 @@
 
 A reusable test-case matrix for a full regression of the hub (3PL Sourcing, Forwarder Sourcing, Tariff Calculator, Administration, Help). Each run's results go in a separate report, `docs/qa/regression-report-YYYY-MM-DD.md`, which refers to these IDs.
 
+> **Unattended runs:** `docs/qa/unattended-run-settings.json` is a Claude Code permissions template for an unattended regression (it allows the QA commands and blocks code edits, builds, pushes and database resets). Copy it to `.claude/settings.local.json` only for an unattended run, then remove it afterwards: while it's in place, fixing code isn't possible.
+
 ## How to run a regression
 
 **Environment (local only, never production).**
@@ -21,6 +23,7 @@ A reusable test-case matrix for a full regression of the hub (3PL Sourcing, Forw
    `ANTHROPIC_API_KEY` stays unset, so document AI extraction isn't available (see the cases marked *needs AI*).
 4. Browser: Chromium (Playwright), at 1280px and 390px wide.
 5. Client portal leak scan: with `npm run demo:seed` loaded and the app running on port 3100, run `npm run qa:portal-scan` (or `npm run qa:portal-scan -- http://localhost:<port>`). It signs in as the demo client users with one-time magic-link tokens (no passwords read or changed) and must end with "clean". It also checks the Market Report: no anonymised partner's name, HQ, domain or contact for any client, no report figures for free clients, and the paid client's report really shows. And client requests: no client's request or Move's reply shows for another client, a withdrawn reply never shows, and the write functions refuse other clients' requests. And introductions: no partner letter anywhere a free client can see (pages and API), never the forwarder behind an introduction request for any client, and the introduction and Unlock functions refuse other clients' projects and the wrong plan.
+6. Fee rows created during QA can't be removed through the app (the fees page only end-dates and adds rows, and rows may not overlap or end before they start); avoid creating test fee rows, or note them as residue in the report.
 
 **Timezones for the automated suite.** Run the full Vitest suite once in each of these seven timezones, and reuse the same list in every regression:
 
