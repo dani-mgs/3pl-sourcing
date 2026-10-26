@@ -12,6 +12,7 @@
     "test:db": "npx supabase test db --local",
     "qa:seed": "node scripts/qa/seed-qa.mjs",
     "demo:seed": "node scripts/qa/seed-demo.mjs",
+    "fa:seed-case": "node scripts/forwarder-audit/seed-case.mjs",
     "qa:portal-scan": "node scripts/qa/portal-scan.mjs",
     "tariff:fetch": "node scripts/tariff/fetch-sources.mjs",
     "tariff:extract": "node scripts/tariff/extract-2a.mjs && node scripts/tariff/extract-2b.mjs",

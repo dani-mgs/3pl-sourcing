@@ -6,8 +6,10 @@ import {
   UploadSection,
 } from "./concept-sections";
 import { isLandedCostEnabled } from "@/lib/landed-cost/feature-flag";
+import { isForwarderAuditEnabled } from "@/lib/forwarder-audit/feature-flag";
 import { hubModules } from "@/lib/modules";
 import { FaqSection } from "./faq-section";
+import { ForwarderAuditSection } from "./forwarder-audit-section";
 import { LandedCostSection } from "./landed-cost-section";
 import { TariffSection } from "./tariff-section";
 import { ForwarderSection, OverviewSection, ThreePlSection } from "./workflow-sections";
@@ -18,6 +20,7 @@ const CONTENTS = [
   { id: "forwarder", label: "Forwarder Sourcing" },
   { id: "tariff", label: "Tariff Calculator" },
   { id: "landed-cost", label: "Landed Cost" },
+  { id: "forwarder-audit", label: "Forwarder Audit" },
   { id: "concepts", label: "Key concepts" },
   { id: "upload", label: "AI document upload" },
   { id: "exports", label: "Exports" },
@@ -28,11 +31,15 @@ const CONTENTS = [
 
 // Static how-to page for any signed-in user (the (authenticated) layout
 // handles sign-in). No data access. Landed Cost's section, its contents link
-// and its "Live" badge follow LANDED_COST_ENABLED. When behavior described
+// and its "Live" badge follow LANDED_COST_ENABLED; Forwarder Audit's follow
+// FORWARDER_AUDIT_ENABLED. When behavior described
 // here changes, update it in the same change (AGENTS.md).
 export default function HelpPage() {
   const landedCost = isLandedCostEnabled();
-  const contents = landedCost ? CONTENTS : CONTENTS.filter((item) => item.id !== "landed-cost");
+  const forwarderAudit = isForwarderAuditEnabled();
+  const contents = CONTENTS.filter(
+    (item) => (item.id !== "landed-cost" || landedCost) && (item.id !== "forwarder-audit" || forwarderAudit),
+  );
   return (
     <div className="mx-auto max-w-6xl px-8 py-10 max-sm:px-4">
       <h1 className="mb-2 font-display text-2xl font-semibold text-move-navy">How to use the Decision Hub</h1>
@@ -60,11 +67,12 @@ export default function HelpPage() {
         </nav>
 
         <div className="flex min-w-0 flex-col gap-6">
-          <OverviewSection modules={hubModules(landedCost)} />
+          <OverviewSection modules={hubModules(landedCost, forwarderAudit)} />
           <ThreePlSection />
           <ForwarderSection />
           <TariffSection />
           {landedCost && <LandedCostSection />}
+          {forwarderAudit && <ForwarderAuditSection />}
           <ConceptsSection />
           <UploadSection />
           <ExportSection />

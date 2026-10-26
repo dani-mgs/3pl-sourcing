@@ -1,8 +1,8 @@
 # MOVE Supply Chain Decision Hub — Project State & Handover
 
-_Last updated: 2026-10-22, reflecting `main` at `041d9d7` (the merge of the Landed Cost cleanup, `997da88`)._
+_Last updated: 2026-10-26. Sections 1, 3 to 8 reflect `main` as of 2026-10-22 (`041d9d7`, the Landed Cost cleanup merge, `997da88`) and later fixes; section 2b describes the unmerged branch `feat/forwarder-audit`._
 
-**Live:** 3PL Sourcing, Forwarder Sourcing, Tariff Calculator, client dashboard Phases 0–3b (portal, Market Report, requests, introductions), Landed Cost (Phases 1–5b, 3a, 3b, cleanup). **Next:** nothing planned; see section 6 for what waits on people. **Parked:** 3PL Audit, Forwarder Audit (shown as "coming soon"); client dashboard Phase 4 (ideas only); Landed Cost Phase 6 (dropped).
+**Live:** 3PL Sourcing, Forwarder Sourcing, Tariff Calculator, client dashboard Phases 0–3b (portal, Market Report, requests, introductions), Landed Cost (Phases 1–5b, 3a, 3b, cleanup). **Next:** nothing planned; see section 6 for what waits on people. **Built, not yet deployed:** Forwarder Audit (branch `feat/forwarder-audit`, behind `FORWARDER_AUDIT_ENABLED`; section 2b). **Parked:** 3PL Audit (shown as "coming soon"); client dashboard Phase 4 (ideas only); Landed Cost Phase 6 (dropped).
 
 History is in git and `docs/CHANGELOG.md`; this file is the short version. "Confirmed by Dani" = stated by the project owner, not provable from the repo.
 
@@ -19,7 +19,8 @@ Internal hub for Move Supply Chain Logistics Experts: source and compare 3PLs an
 | Client dashboard / portal | Live, Phases 0–3b | `/client-access`, `/portal`, `/market-reports`, `/client-requests` |
 | Market Report (paid plan) | Live (Phase 2c) | `src/lib/client-updates/`, `src/app/(authenticated)/market-reports/` |
 | Landed Cost | Live behind `LANDED_COST_ENABLED` | `src/app/(authenticated)/landed-cost/`, `src/lib/landed-cost/` |
-| 3PL Audit, Forwarder Audit | Not built ("coming soon" in the nav) | `src/lib/modules.ts` |
+| Forwarder Audit | Built behind `FORWARDER_AUDIT_ENABLED`; not on `main` or deployed until merged and pushed | `src/app/(authenticated)/forwarder-audit/`, `src/lib/forwarder-audit/` |
+| 3PL Audit | Not built ("coming soon" in the nav) | `src/lib/modules.ts` |
 
 **Production:** `main` through the Landed Cost cleanup (`997da88`) is deployed (confirmed by Dani, per deploy, 2026-10-22). All migrations up to `20261022134839_landed_cost_remove_compat.sql` are in the repo; the dry run before that deploy listed only that one as pending.
 
@@ -55,6 +56,14 @@ Full cost of one shipment per unit and in total (product, freight, duties, MPF, 
 - **Phase 6 (forwarder quote link): DROPPED** by decision 2026-10-22 (confirmed by Dani).
 
 **Not built:** breakeven figure, freight quotes, delivered incoterms, .xlsx upload, non-Latin text in PDFs, copying manual rates when an origin is duplicated (TECH_DEBT).
+
+## 2b. Forwarder Audit
+Audits one freight quotation against the CI/PL, line by line; a port of the frozen v1.0 workbook (`docs/forwarder-audit/`). Details: `docs/FEATURES/forwarder-audit.md`, `/help` → Forwarder Audit.
+- **Built** (Phases A to C, branch `feat/forwarder-audit`): the pure engine `src/lib/forwarder-audit/` matched cell by cell to LibreOffice recalculations (golden fixtures; `python3 scripts/forwarder-audit/golden.py` regenerates them), the table `forwarder_audits` (migration `20261026140623_forwarder_audits`, pgTAP 41), the list, editor and printable Summary, and /help.
+- **Flag:** `FORWARDER_AUDIT_ENABLED=true` turns it on (pages, actions, nav, /help section); anything else is a 404, refused actions and "Soon". Locally: `FORWARDER_AUDIT_ENABLED=true npm run dev`; `npm run fa:seed-case <case-name>` loads a workbook case (Node 22).
+- **Rules:** inputs only are stored; results are recalculated every time; v1.0 rules are frozen, quirks included (TECH_DEBT "Forwarder Audit: v1.0 workbook quirks"); the "20 checks" grouping is inferred. Staff-only RLS, owner-or-admin writes, no service role.
+- **Not built:** .xlsx import, locked versions, editable settings, a 3PL Audit.
+- **Before it's live:** Dani's click-through against the 3 real workbooks, then merge, `npx supabase db push && git push`, and set the flag in Vercel (redeploy).
 
 ## 3. Security model (details: `docs/SECURITY.md`)
 - **Staff vs client:** staff roles are `admin` and `logistics_expert`; `client` is a role but never a staff role (never add it to `has_staff_role()`, `STAFF_ROLES` or `staffRole()`; `role-list-sync.test.ts`). Roles live in `app_metadata` (users can't edit it); database checks read the live role from `auth.users`, not the token.
@@ -116,6 +125,7 @@ npm run qa:portal-scan                  # after any change to what the portal sh
 - **Landed Cost:** one scenario per workspace not a table constraint; admins can't reassign ownership; no breakeven; a new origin has no result until saved; paste only (no .xlsx); the database can't re-prove a locked version's duty amounts; manual rates not copied on duplicate; PDF Windows-1252 only; delivered incoterms not supported.
 - **Tariff Calculator:** reference-validation open items (2026-10-19); expert data gaps and PR 2b items; scheduled-change warning knows only loaded rows; no past entry dates; rounding and single-line MPF are assumptions; HTS lookup path lacks chapter titles; polysilicon named before it starts; fee rollover wording for non-editors unreachable; duty reads not paged; estimates not in the Expert PDF/DOCX; saved estimates can't prove inputs.
 - **Client dashboard:** remove the live demo client; no invite/reset/request emails (no SMTP); introductions are a request, not a workflow; reply guard blocks the client's own cities; requests can't be closed; a must-change-password client can read updates via the API; a paid client's whole report is in the page data; "Move's take" guard is word-based; demo seed content hand-written; portal "today" is UTC; no nudge after project changes.
+- **Forwarder Audit:** v1.0 workbook quirks kept for parity (B1–B12, questions for v1.1); the Summary prints the last saved inputs (no locked versions); pgTAP 07 fails on the local database (duplicate fee rows, pre-existing).
 - **Forwarder / 3PL:** forwarder ranking basis (open decision); 3PL recommendation page unreachable; 3PL comparison has no tie handling; New Project button clipped at phone width.
 - **Cross-cutting:** extra Auth call per staff action; PGRST303 retried only in crons; no timeout on document parsing; no rate limit on AI extraction; email shown when no display name; inconsistent timestamp column names.
 
@@ -162,7 +172,7 @@ npm run qa:portal-scan                  # after any change to what the portal sh
 ## 7. File map
 | Area | Path |
 |---|---|
-| Migrations / pgTAP | `supabase/migrations/`, `supabase/tests/database/` (Landed Cost: 37–40) |
+| Migrations / pgTAP | `supabase/migrations/`, `supabase/tests/database/` (Landed Cost: 37–40; Forwarder Audit: 41) |
 | Auth, ownership, guards | `src/lib/auth/` (`require-client.ts`), `requireStaff()` |
 | Supabase clients | `src/lib/supabase/` (`admin-client.ts` = service role, server-only) |
 | Clients | `src/lib/clients.ts`, `src/lib/clients-server.ts` |
@@ -171,6 +181,7 @@ npm run qa:portal-scan                  # after any change to what the portal sh
 | AI extraction | `src/lib/document-extraction.ts` |
 | Client users, updates, portal | `src/lib/client-users/`, `src/lib/client-updates/`, `src/components/client-portal/`, `src/app/portal/` |
 | Client requests | `src/lib/client-requests/` (wording in `text.ts`), `src/app/(authenticated)/client-requests/` |
+| Forwarder Audit | `src/lib/forwarder-audit/` (`engine.ts`, `lists.ts`, `calc-semantics.ts`, `input-schema.ts`, `summary-sheet.ts`, `__fixtures__/golden/`), `src/app/(authenticated)/forwarder-audit/`, `scripts/forwarder-audit/` |
 | QA | `scripts/qa/`, `docs/qa/` (`regression-test-cases.md` holds the timezone list) |
 
 ## 8. Fragile areas (don't break)
@@ -180,4 +191,5 @@ npm run qa:portal-scan                  # after any change to what the portal sh
 - While `must_change_password` is set, every client write is refused (database and app).
 - The `create_*_project_with_client` field lists must match the form parsers (Vitest drift checks).
 - `one_incumbent_per_client` drives 3PL baseline math; `src/lib/chip-value.ts` is delimiter-safe (labels contain commas).
+- Forwarder Audit: the engine matches the workbook cell by cell (`forwarder-audit.golden.test.ts`); change a rule only with a new workbook version, regenerated fixtures, then the engine. The input schema (`input-schema.ts`) must keep accepting what the engine's `cell-map.ts` reads.
 - Landed Cost: the SQL key lists in the draft and snapshot functions match the TypeScript schemas (db-sync tests); exports without manual rates are pinned by sha256 hashes (`manual-rates-exports.test.ts`); CSV cells go through the formula-injection guard.
