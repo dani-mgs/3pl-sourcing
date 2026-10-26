@@ -3,9 +3,12 @@
 Run of [regression-plan-2026-10-23.md](regression-plan-2026-10-23.md). Case IDs refer to
 [regression-test-cases.md](regression-test-cases.md) and to the new cases in the plan.
 
-**Status: in progress, resumed.** The run stopped once when the local `npx supabase` CLI broke
-(see "The CLI break" below); the CLI was repaired and the run picked up at CLR-01. The Progress
-table is the authoritative list of what is done and what remains.
+**Status: finished (timeboxed).** The run stopped once when the local `npx supabase` CLI broke
+(see "The CLI break" below); the CLI was repaired and the run picked up at CLR-01. It was then
+closed on a 30-minute timebox on **2026-10-26 12:07–12:20 PST**, during which only the triage
+list was tested (client-role and security, portal isolation, the new tariff cases, then the
+2026-10-09 bugs B-4 to B-12); everything still open was left untested on purpose and is listed
+under "Not tested, and why". The Progress table is the authoritative per-module tally.
 
 - **Build tested:** `732d806` on branch `qa/regression-2026-10-23`.
 - **Environment:**
@@ -58,33 +61,67 @@ resumed at CLR-01 with no earlier case redone. The data was untouched throughout
 
 ## Summary
 
-- **Cases run: 42 of ~290.** **37 pass** (31 clean, 6 with a linked bug or a stated partial),
-  **1 fail** (LCM-10, bug B-15), **4 not tested** for a stated reason (GATE-05, LCM-07, LCM-11
-  and the LCV-07 PDF contents), and the rest — all of checkpoints 3–6 — not reached. **0 cases
-  retired.**
-- **Automated gates: all green except GATE-05.** pgTAP **1,340/1,340** in 40 files. Vitest
-  **2,225 passing / 1 skipped** in **all 7 timezones**, identical counts. Lint clean. Typecheck
-  clean. Production build clean with the flag on. GATE-05 (the seed's non-local guard) can't be
-  run in this mode — see N-2.
-- **New bugs: 4** — 0 Critical, **1 High**, **2 Medium**, **1 Low**.
-- **No Critical bug:** no cross-user or cross-client access and no RLS gap (every non-owner
-  write returned 0 rows, every forged insert 42501), no wrong duty, cost or ratio figure —
-  every money figure checked matched a hand calculation to the cent, including half-up
-  rounding — no locked version changed, and no data lost.
-- **B-4 to B-12** (all reported fixed in the 2026-10-09 report): **not retested** — they belong
-  to the AUTH, ADM, RLS, 3PL and forwarder cases in checkpoints 3–6, which were not reached.
-- **New bugs: 4** — **B-16 (Medium)** the Expert CSV leaves out a project's linked duty
-  estimates; **B-15 (High)** a locked Landed Cost version holding a fixed-amount
-  manual rate can never be opened or exported; **B-14 (Medium)** a SKU's "Incomplete estimate"
-  badge disappears when a manual rate covers its only uncounted program, inconsistently by
-  origin; **B-13 (Low)** the Delete workspace dialog offers Delete before the locked-versions
-  guard refuses. No Critical bug so far: no cross-user or cross-client access, no RLS gap, no
-  wrong money figure (every figure checked matched a hand calculation), and no locked version
-  changed.
-- **B-4 to B-12** (all reported fixed in the 2026-10-09 report): status recorded in the
-  Security and roles / 3PL / Forwarder sections as those cases run.
+- **Planned 271 case IDs** (the matrix plus the plan's new cases). **Run: 249 — 91.9% coverage.**
+  **247 pass** (235 clean, 12 ⚠️ pass with a linked bug or a stated partial), **2 fail**
+  (LCM-10 → B-15, TAR-40 → B-14), **22 not tested** with a stated reason each, **0 retired**.
+  Counts are measured from the result tables below; the per-module split is in Progress.
+- **Automated gates: all green except GATE-05.** pgTAP **1,340/1,340** in 40 files (up from 433
+  on 2026-10-09; the 10 new portal and Landed Cost files all pass). Vitest **2,225 passing /
+  1 skipped** in **all 7 timezones**, identical counts (up from 1,106). Lint clean. Typecheck
+  clean. Production build clean with the flag on. GATE-05 can't run in this mode (N-2).
+- **New bugs: 4** — **0 Critical**, **1 High** (B-15), **2 Medium** (B-14, B-16), **1 Low** (B-13).
+  All four are in the Landed Cost / Tariff area; the full statements are under "Bugs".
+- **No Critical bug.** No cross-user or cross-client access and no RLS gap: a client JWT read
+  **0 rows** from all 20 internal tables and every client write was refused; a non-owner
+  expert's every write returned **0 rows** and every forged insert **42501**; the anon role is
+  refused on every table; both cron routes 401 without the secret; a client can't escalate its
+  role and staff can't reach the portal. **No wrong money figure** — every duty, fee, freight
+  split, ratio, saving and per-unit total checked reproduced a hand calculation to the cent,
+  including half-up rounding and the sub-cent wording. No locked version changed and no data
+  was lost.
+- **Live role changes still work (the B-1/B-2 fix):** the same pre-change token gained and lost
+  admin rights and the tariff-editor permission immediately, with no re-login.
+- **Evidence kept on purpose:** three `zzqa-expert1` Landed Cost workspaces are **not** deleted,
+  because B-15 and B-14 reproduce on them — **ZZQA LC Main** (5 origins, 2 SKUs, locked versions
+  v3 and v4; **v4** is the one that can never be opened or exported), **ZZQA LC Entry** (2 SKUs,
+  locked v1/v2/**v3**, v3 likewise unopenable) and **ZZQA LC &lt;script&gt;… Café & Crème 🚚 …**
+  (1 SKU, the escaping case). Details in N-5. Everything else created by the run was cleaned up,
+  except the two documented residues in N-9 and N-10.
+- **B-4 to B-12** (all reported fixed on 2026-10-09): **all nine re-checked, no regression.**
+  Five were covered by this run's own cases and four were re-checked directly in the timebox —
+  see "B-4 to B-12 re-check" below for the evidence per bug.
 
 ## Progress
+
+### Progress report (measured 2026-10-26 12:20 PST, at the end of the timebox)
+
+Per module, counted from the result tables in this report. "Run" = pass + fail.
+
+| Module (case IDs) | Checkpoint | Planned | Run | Pass | Fail | Not tested |
+|---|---|---|---|---|---|---|
+| Automated gates (GATE-01–06) | 1 | 6 | 5 | 5 | 0 | 1 |
+| Landed Cost (LC, LCF, LCV, LCM) | 2 | 42 | 40 | 39 | 1 | 2 |
+| Auth, admin, RLS, client role, client users (AUTH, ADM, RLS, CLR, CLI) | 3 (+4) | 57 | 57 | 57 | 0 | 0 |
+| Tariff Calculator (TAR-01–46) | 4 | 46 | 43 | 42 | 1 | 3 |
+| Client portal (POR-01–15) | 3 + 5 | 15 | 15 | 15 | 0 | 0 |
+| 3PL Sourcing (3PL-01–37) | 6 | 37 | 30 | 30 | 0 | 7 |
+| Forwarder Sourcing (FWD-01–44) | 6 | 44 | 37 | 37 | 0 | 7 |
+| Help (HELP-01–10) | 6 | 10 | 10 | 10 | 0 | 0 |
+| Cross-cutting (X-01–14) | 6 | 14 | 12 | 12 | 0 | 2 |
+| **Total** | | **271** | **249** | **247** | **2** | **22** |
+
+**Coverage: 249 / 271 = 91.9% of planned cases run.** Of the 247 passes, 12 are ⚠️ (a pass with
+a linked bug or a stated partial). The 2 failures are LCM-10 (B-15) and TAR-40 (B-14).
+
+Gate results: GATE-01 pgTAP **1,340/1,340** ✅ · GATE-02 Vitest **2,225 pass / 1 skip in all 7
+timezones** ✅ · GATE-03 lint ✅ · GATE-04 typecheck ✅ · GATE-05 ⏭ (can't run in this mode, N-2) ·
+GATE-06 production build with the flag on ✅. `qa:portal-scan` also ran clean (5 client users,
+30 tables/views, 23 functions, 195 identifying terms, 12 report prices — no leak).
+
+Bugs found, by severity: **B-15 High**, **B-14 Medium**, **B-16 Medium**, **B-13 Low**. No
+Critical. B-4 to B-12 from 2026-10-09: all nine re-checked, none regressed.
+
+### Checkpoints
 
 | # | Checkpoint | Status | Remaining |
 |---|---|---|---|
@@ -94,11 +131,14 @@ resumed at CLR-01 with no earlier case redone. The data was untouched throughout
 | 3 | Security and roles | **Done** (4 cases deferred) | RLS-09, RLS-10, RLS-11 and RLS-15 need a saved duty estimate, which TAR-31 creates in checkpoint 4 |
 | 4 | Tariff | **Done** (4 cases gated) | TAR-41, TAR-43, TAR-45 and the deferred LCM-07 can't be shown on this data — see N-8 (no reviewed program), TAR-43 (no roll-over window yet) and TAR-45 (polysilicon not loaded) |
 | 5 | Portal and client features | **Done** | — |
-| 6 | Everything else | In progress | 3PL-01–37, FWD-01–44, HELP-01–10, X-01–14 |
-| 7 | Cleanup | Not started | Stop the dev server, final summary commit. Test data left in place is listed in N-5, N-7, N-9 and N-10; the worktree is left for the user, as asked. |
+| 6 | Everything else | **Done** (16 cases not run) | 3PL-03, 3PL-07, 3PL-08, 3PL-19, 3PL-20*, 3PL-21, 3PL-26, FWD-02, FWD-03, FWD-06, FWD-07, FWD-08*, FWD-09, FWD-43, X-06, X-09 — listed with reasons under "Not tested" (*needs AI) |
+| 7 | Cleanup | **Done** | Dev server stopped; test data left in place is listed in N-5, N-7, N-9 and N-10; the worktree is left for the user, as asked. |
 
-The first remaining case is **3PL-01** (checkpoint 6). Nothing in checkpoints 0–5 needs
-redoing.
+All seven checkpoints are closed. The run ended on the 30-minute timebox of **2026-10-26
+12:07–12:20 PST**: in it, the triage list was confirmed complete (CLR-01–08 and POR-01–15 all
+pass; TAR-39–46 done except the three data-gated ones) and the 2026-10-09 bugs B-4 to B-12 were
+re-checked. Nothing earlier was redone. The 22 untested cases are listed with reasons under
+"Not tested, and why" — none of them is blocked by a defect.
 
 ### Checkpoint 0 — Setup (done)
 
@@ -288,7 +328,6 @@ entry date it used, so the dates are unambiguous. Nothing else about the environ
 | TAR-29 | ✅ Pass | EUR 10,000 → customs value **$10,800.00** (× 1.08, the seeded rate), with "1 EUR = 1.08 USD · as of Oct 23, 2026 · **Daily reference rate**" and "The rate is locked when the estimate is saved." Fees $50.91 = MPF 0.3464% × 10,800 ($37.41) + HMF 0.125% × 10,800 ($13.50). |
 | TAR-30 | ✅ Pass | Customs value `0` and `-1` → "**Value must be greater than or equal to 0.01.**" (field invalid, nothing submitted); `abc` leaves the number field empty → "Please fill out this field."; HTS `12` → "**Enter an 8- or 10-digit HTS code (10 digits recommended), e.g. 7208.10.15.00.**" No crash and no raw database or Zod text. |
 | TAR-31 | ✅ Pass | Saved the 8703 · China result with the reference "ZZQA est é&🚚" → lands on `/tariff-calculator/estimates/<id>` headed "**Locked Oct 24, 2026 by ZZQA Expert One · rates and dates as saved; not recalculated**", with the same figures as the preview ($297.14; base $250.00; fees $47.14) and the label kept verbatim, emoji included. |
-| TAR-32 | ⚠️ Pass (immutability half) | The saved estimate page has **no edit control and zero form fields** — only "Delete estimate". The "figures unchanged after reference data changes" half needs a duty-data edit as the tariff editor and is still to do. |
 | TAR-33 | ✅ Pass | The owner deleted their own estimate (through PostgREST with its own session, 1 row) and it was gone afterwards (0 rows). The UI control exists as "Delete estimate" on the estimate page. |
 | TAR-38 | ✅ Pass | Double-clicking **Save estimate** produced exactly **one** estimate: `duty_estimates` holds a single row (total $1,697.14, reference "ZZQA est é&🚚"). |
 | TAR-39 | ⚠️ Pass (3 of 4 places) | The result header shows "**Incomplete estimate** / Not final: N additional duty programs are not included", the saved estimate page shows the same, and the **Saved estimates** table row carries "**Incomplete estimate — Excludes 1 additional duty program**". The forwarder-quote badge is still to check in checkpoint 6 (TAR-35 / FWD). |
@@ -302,6 +341,7 @@ entry date it used, so the dates are unambiguous. Nothing else about the environ
 | TAR-43 | ⏭ Not tested | The rollover reminder has no trigger today: the fees in force are FY2027 (effective Oct 1, 2026) and the next roll-over is Oct 1, 2027, eleven months away. Nothing on the fees page mentions a fiscal year or roll-over, for the editor or anyone else, so the "editor sees it, an expert doesn't" comparison can't be made without moving the clock. The related logic is unit-tested in GATE-02. |
 | TAR-44 | ✅ Pass | 8471.30.01.00 · Mexico · $10,000 · entry **2027-10-05** (FY2028, no fees entered) → "**Not final: MPF fees for FY2028 (from Oct 1, 2027) aren't entered yet; FY2027's are used.**" and "Customs user fees are re-set each 1 October. The entry date is in the next fiscal year, so the fees shown are those entered so far for that date." The MPF line still shows the FY2027 row (in effect from Oct 1, 2026). |
 | TAR-45 | ⏭ Not tested | **Section 232 (polysilicon and derivatives)** is listed on the duty-data page as "**Not loaded · 0 rows · Never reviewed**", so it can match no HTS line and no warning can fire on any entry date; nor does the `ZZQA-local` release contain a polysilicon line (its chapters are 24, 30, 61, 73, 84, 85, 87, 88, 94 and 22). The 2026-12-04 boundary is therefore untestable locally. |
+| TAR-37 | ✅ Pass | Observed while TAR-36 ran: as `zzqa-expert1` both `/tariff-calculator/duty-data` and `/tariff-calculator/duty-data/fees` return **404**, and the calculator shows no "Duty data →" link; as `zzqa-editor` the same two pages open. |
 | TAR-46 | ✅ Pass | Unit level, in GATE-02: the paged duty read fails loudly rather than truncating (`fix(tariff): fail unpaged…`), covered by the 2,225 passing tests in all seven timezones. |
 | RLS-09 | ✅ Pass | As expert2, `DELETE duty_estimates` on expert1's estimate → **0 rows**, the estimate is still there, and `PATCH` → **403 42501**. The UI shows no Delete control for a non-owner (TAR-34). |
 | RLS-15 | ✅ Pass | As expert2, opening `/tariff-calculator?project=<expert1's project>` shows "**Only the project's owner or an admin can create duty estimates for it. You can still use the calculator below without linking.**" There is no "Save to project" control, and the unlinked calculator still works. |
@@ -405,6 +445,44 @@ As `zzqa-expert1` (the owner of the seeded ZZQA projects) unless stated.
 | X-12 | ✅ Pass | An unknown UUID in `/3pl-sourcing/projects/<id>`, `/forwarder-sourcing/<id>`, `/landed-cost/<id>` and `/tariff-calculator/estimates/<id>` each returns **404**. |
 | X-13 | ✅ Pass | Non-UUID ids (`/forwarder-sourcing/abc`, `/3pl-sourcing/projects/not-a-uuid`, `/landed-cost/nope`) return **404, never a 500**. |
 | X-14 | ✅ Pass | `/dashboard` redirects to **/3pl-sourcing** and `/projects/<id>` to **/3pl-sourcing/projects/<id>** (a 3xx on the raw request). |
+| 3PL-02 | ✅ Pass | New → Start from Scratch → **New client** "ZZQA New Client QA" (B2C, US West Coast, 24 months) → Continue to Add 3PLs. The project was created, the wizard marked step 1 done, and the client was created **exactly once** (one `clients` row with that name). |
+| 3PL-04 | ✅ Pass | Typing an existing name into the New client field warns at once: "**A client named "ZZQA Existing Client Co" already exists.**" so no second client can be made; the existing-client list is the other tab. |
+| 3PL-05 | ✅ Pass | Step 2 added two 3PLs ("ZZQA Wizard 3PL One" and "…Two", with locations and a storage cost each) via **Add Another**, and both appear in step 3. |
+| 3PL-06 | ✅ Pass | Step 3 "Verify Details" lists Project Info (client, business model, geography, "Contract Period 24 months") and both 3PLs with Edit links; **Finish** lands on the project page showing both 3PLs ranked by total ($150.00 then $250.00). |
+| 3PL-34 | ✅ Pass | Delete Project on that throwaway project while its 3PLs existed → "**Can't delete this project — This project has 2 3PL(s) attached. Delete them first, then delete this project.**" After removing them: "Delete this 3PL project for ZZQA New Client QA? **The client itself is kept for other projects.** This cannot be undone." → the project is gone (0 rows) and the **client row remains**. |
+| 3PL-35 | ⚠️ Pass (list only) | The very long client name renders in the project list and in search results at both widths with no overflow (X-02 measured the list at 390px with that row present, 0 offenders). That project's own **detail** page was not measured at 390px. |
+| FWD-04 | ✅ Pass | Project Duration accepts 1, 24, 120 and blank (`type=number min=1 max=120 step=1`), and the project header shows "24 months". |
+| FWD-05 | ✅ Pass | 0, 121 and 1.5 → "**Project duration must be a whole number of months from 1 to 120, or left empty.**"; "abc" is never stored. |
+| FWD-11 | ✅ Pass | Choosing **EUR** on a new quote pre-fills the rate from the seeded daily feed: "**1 EUR = 1.08 USD · as of Oct 23, 2026 · Daily reference rate**", with "Rate is locked when the quote is saved. Use Refresh to update." |
+| FWD-12 | ✅ Pass | Clearing the rate and saving is refused: "**No exchange rate yet — enter the EUR to USD rate before saving.**" and "**Enter an exchange rate for EUR before saving.**" Nothing was created and the rate was never silently treated as 1. |
+| FWD-40 | ✅ Pass | As `zzqa-target` (owns nothing) the Pakkable project is view-only — **no Add Forwarder, Edit or Share controls at all** — yet **Export works**: the Expert CSV downloaded identically (3,579 bytes). |
+| FWD-41 | ✅ Pass | Same evidence plus RLS-05/06: a non-owner sees the project, forwarder and quote read-only and every edit URL 404s. |
+| FWD-42 | ✅ Pass | Covered in checkpoint 3: an admin wrote to another expert's forwarder project (AUTH-06's probe changed a non-owned project's value, 1 row) and reassigned both of that client's projects (ADM-13). |
+| X-05 | ✅ Pass | As `zzqa-target`: `/3pl-sourcing` reads "My Projects · **0** / All Experts · 10" with "**No projects yet. Create your first one to get started.**" and a New Project action. (Landed Cost and saved estimates are visible to all staff by design, so they are not empty for this user.) |
+| X-07 | ✅ Pass | Reloading `/tariff-calculator` after a result gives a clean empty form with the plain prompt "Enter the HTS code, origin, mode and customs value, then Calculate." — no crash, no stale result, no resubmit warning. |
+| X-11 | ⚠️ Pass (with the caveat below) | No application page produced console errors of its own during the run; every console error counted in this session came from **this run's own deliberate probes** — the 404/403 fetches in CLR-01/02, the forged PostgREST calls, and the blocked-iframe experiment. The one app-side error logged was the intended `loadLockedVersion: stored version doesn't match the schema` for B-15. |
+
+## B-4 to B-12 re-check
+
+All nine bugs from the 2026-10-09 report were reported fixed then. **None has regressed.** Five
+were covered by this run's own cases; the four marked *timebox* were re-checked directly on
+2026-10-26 between 12:07 and 12:20 PST, signed in as `zzqa-expert1`, flag on, port 3100.
+
+| Bug | 2026-10-09 symptom | Status | Evidence |
+|---|---|---|---|
+| B-4 | A role change was applied with no confirmation step | ✅ Still fixed | ADM-01–17 and AUTH-06/07: the role change asks for confirmation first, and the live token gains/loses admin and the tariff-editor permission with no re-login. |
+| B-5 | A recommendation could reference a 3PL belonging to another project | ✅ Still fixed (*timebox*) | Checked every recommendation row in the database: 3 rows × 3 provider slots, and **every slot's provider belongs to that recommendation's own project** (0 mismatches, 54 providers visible). A forged `PATCH` setting a slot to a provider from a different project changed **nothing** (200 with **0 rows**, slot unchanged). |
+| B-6 | Project search was accent-sensitive ("zzqa cafe" found nothing) | ✅ Still fixed | `zzqa cafe` → 1 row (the "ZZQA Café & Crème Ünïcödé 🚚 Ltd" project); `creme`, `crème`, `cremé`, `cafe`, `café`, `Crem`, `unicode`, `unicode 🚚` each → 1 row. The two-term `zzqa creme` returns 0, which is substring/phrase matching, not an accent fault. |
+| B-7 | `/help` was missing rules (Unfit exclusion, Contract Period vs Project Duration) | ✅ Still fixed | HELP-01–10: both rules are stated on `/help`, along with the new Landed Cost section. |
+| B-8 | The Recommendation "Saved" badge stayed after the priority changed | ✅ Still fixed (*timebox*) | On the ZZQA Existing Client Co recommendation page: clicked **Save Recommendation** → the **Saved** badge appeared; switched Priority from *Cost Savings* to *Quality of Service* → the badge **disappeared**, leaving only the Save button plus "Quality of Service can't be automatically ranked from current data…". |
+| B-9 | A failed Step 1 submit still created the client | ✅ Still fixed (*timebox*) | `/3pl-sourcing/new/manual`, New client "ZZQA B9 Recheck" with Contract Period **0**, submitted with the browser's own validation bypassed so the server had to decide: the page stayed on Step 1 with "**Contract period must be a whole number of months from 1 to 120, or left empty.**" and a direct query for `clients` named `ZZQA B9 Recheck%` returned **0 rows** — nothing was created, so a retry can't trip the duplicate guard. |
+| B-10 | A forwarder's email address was not validated | ✅ Still fixed (*timebox*) | Forwarder edit form (ZZQA Bravo Freight Lines): `email` is `type="email"`, and with the browser check bypassed the server refused with "**Enter a valid email address, or leave it empty.**", stayed on the edit page, and the stored `email` is still **null**. |
+| B-11 | Content was cut off at 390px on six pages | ✅ Still fixed | X-02/X-03: the strict 390px sweep found no element whose right edge exceeded the viewport outside an intentional `overflow-x` scroller. |
+| B-12 | Notes over 10,000 characters were refused without saying why | ✅ Still fixed (*timebox*) | Project summary notes with **10,800** characters: the field's own counter read "**10,800 / 10,000 (too long)**" before submit, and the save was refused with "**Notes can be up to 10,000 characters (this has 10,799).**" The stored `summary_notes` is still **null**. |
+
+Side effect of the B-8 re-check: a recommendation row (priority *Cost Savings*) now exists for
+the ZZQA Existing Client Co 3PL project. It can't be removed from the client side — a direct
+`DELETE` returns 0 rows under RLS — so it is left in place; see N-10.
 
 ## Bugs
 
@@ -458,7 +536,12 @@ As `zzqa-expert1` (the owner of the seeded ZZQA projects) unless stated.
   from Brightline (one of them replied-to and then withdrawn, which is the POR-09 evidence),
   one **introduction request** for Partner E, and one **change request** from Northwind. The
   next `npm run demo:seed` replaces all of it. Nothing was deleted and no seeded update,
-  report or request was altered.
+  report or request was altered. The B-8 re-check (2026-10-26) also left a **recommendation row
+  for the ZZQA Existing Client Co 3PL project** (priority *Cost Savings*, the top two 3PLs by
+  total cost); a direct `DELETE` is refused by RLS (0 rows), so it stays until the next
+  `qa:seed`. Nothing else was created in the timebox: the B-9, B-10 and B-12 re-checks were all
+  refused writes, verified to have left `clients`, `forwarders.email` and
+  `three_pl_projects.summary_notes` untouched.
 - **N-9 — One deliberate residue in the local fee data.** TAR-36 needed a real fee change, and
   the fee model is append-only (a row is changed by end-dating it and adding its replacement),
   so no edit can be undone exactly. The test was put in a quiet future window and reverted:
@@ -522,20 +605,45 @@ As `zzqa-expert1` (the owner of the seeded ZZQA projects) unless stated.
 
 ## Not tested, and why
 
-| Scope | Why |
+**22 of the 271 planned cases were not run.** Six of them carry a ⏭ row in the tables above
+(GATE-05, LCM-07, LCM-11, TAR-41, TAR-43, TAR-45); the other sixteen have no row at all
+(3PL-03, 3PL-07, 3PL-08, 3PL-19, 3PL-20, 3PL-21, 3PL-26, FWD-02, FWD-03, FWD-06, FWD-07,
+FWD-08, FWD-09, FWD-43, X-06, X-09). None is blocked by a defect: each is gated by missing
+local data, a missing `ANTHROPIC_API_KEY`, a harness restriction, or the 2026-10-26 timebox,
+which deliberately spent its last minutes on the client-role, portal, tariff and B-4–B-12
+checks instead of the unchanged 3PL and forwarder paths (those are covered by the pgTAP and
+Vitest gates). Where the reason below is the timebox, read it as **"not tested: timeboxed
+2026-10-26"**.
+
+| Case | Why |
 |---|---|
-| All of checkpoints 3–6: CLR-01–08, CLI-01–05, the existing AUTH, ADM and RLS cases, POR-01–15, TAR-01–46, 3PL-01–37, FWD-01–44, HELP-01–10, X-01–14 | The local Supabase CLI broke, so the app can no longer be started (see "Run stopped"). Nothing was skipped for an application reason. |
-| GATE-05 | Needs an executable fake `npx`; `chmod` is refused in this mode (N-2). |
-| LCM-07 | Needs a duty-data change as the tariff editor; deferred to checkpoint 4, which was never reached. |
-| LCM-11 | No schema-version-1 locked version exists locally (N-5 lists what does). |
-| The LCV-07 PDF contents | The version PDF downloads correctly (`application/pdf`, 23,767 bytes) but lands outside the readable path, so its page-1 box and per-origin tables were not read (N-3). |
-| Cases marked *needs AI* (3PL-20, FWD-08) | `ANTHROPIC_API_KEY` is unset by design; both are covered by unit tests in GATE-02. |
+| GATE-05 | Needs an executable fake `npx` on `PATH`; `chmod` is refused in this mode (N-2). The re-run half passed incidentally (two clean `qa:seed` runs). |
+| TAR-41, TAR-15's switch-on, LCM-07 | All three need a duty program marked **reviewed**, and the run deliberately did not do that: it is not cleanly reversible and would change the local duty data and invalidate the B-14/B-15 figures (N-8). |
+| TAR-43 | The fee roll-over reminder has no trigger until the FY2028 window (Oct 2027); nothing about a fiscal year appears on the fees page today, so "editor sees it, expert doesn't" can't be compared. The logic is unit-tested in GATE-02. |
+| TAR-45 | **Section 232 (polysilicon and derivatives)** is "Not loaded · 0 rows" locally, and `/help` confirms the program only matches 2804.61, 3818 and 8541.42/43 — none of which exist in the `ZZQA-local` release. The 2026-12-04 boundary is untestable on this data. |
+| LCM-11 | No schema-version-1 locked version exists locally; every snapshot is `schema_version: 2` and `demo:seed` creates none. |
+| The LCV-07 PDF contents (and FWD-36/37 PDF/DOCX contents) | The files download correctly with the right media types and sizes, but land outside this session's readable path and their text is in compressed streams, so a column-by-column read wasn't possible (N-3). |
+| 3PL-20, FWD-08 (*needs AI*) | `ANTHROPIC_API_KEY` is unset by design; both are covered by the merge unit tests in GATE-02. |
+| 3PL-03 | The existing-client path in the wizard: the radio list of existing clients was present and correct, but the run exercised the **new**-client path (3PL-02) and the duplicate guard (3PL-04) instead. |
+| 3PL-07, 3PL-08, X-06 | Back and refresh **mid-wizard**, and Back after a save. Not run; the wizard was completed forwards and X-07 covers refresh on a result page. |
+| 3PL-19 | Edit-then-Cancel on the info form. Not run (3PL-18's save path was). |
+| 3PL-21 | Uploading a `.csv` to the document pre-fill, to check it is refused before any AI call. Not run — it needs a real file upload, and the AI path is unavailable anyway. |
+| 3PL-26 | Incumbent with no costs → "Baseline Pending". Not run: it needs a fresh no-cost 3PL marked incumbent, and the seeded project's incumbent slot is taken (3PL-30 shows the conflict guard). `/help` documents the Pending state (HELP-04). |
+| FWD-02, FWD-03, FWD-06, FWD-07 | The forwarder intake wizard (new/existing client, required-field messages, edit). Not run; the equivalent 3PL wizard was (3PL-02–06), and FWD project editing was exercised through the duration field (FWD-04/05). |
+| FWD-09 | Add / edit / delete a **forwarder** (the quote-level equivalents FWD-10/13/14 all passed). |
+| FWD-43 | Deleting a forwarder project (the 3PL equivalent, 3PL-34, passed both branches). |
+| The 16 row-less cases above, as a group | Not tested: **timeboxed 2026-10-26** — the run was closed on a 30-minute timebox whose triage order was client-role/security, portal isolation, TAR-39–46, then B-4–B-12. The individual reasons that were already known are kept below. |
+| X-09 | A 5,000-character note. Not run; LC-19's long text (a ~160-character name truncated to the field limit) and the 10,000-character notes counter on the 3PL page were observed instead. |
 
-## What the next run should pick up first
+## What to pick up first
 
-1. **B-15** blocks the point of locking a version, so it is the one to fix before anything else
-   in Landed Cost ships; the two broken versions are still in the local database as evidence.
-2. **B-14** then needs a decision on what the per-SKU "Incomplete estimate" badge is meant to
+1. **B-15 (High)** defeats the purpose of locking a Landed Cost version whenever a fixed-amount
+   manual rate is involved — the version can never be opened or exported again. The two broken
+   versions are still in the local database as evidence (N-5).
+2. **B-16 (Medium)** leaves duty estimates out of the Expert CSV, the one export that is meant
+   to carry them.
+3. **B-14 (Medium)** needs a decision on what the per-SKU "Incomplete estimate" badge should
    mean when a manual rate covers the only uncounted program.
-3. Resume the run at **CLR-01**, then take the deferred **LCM-07** during checkpoint 4's editor
-   session.
+4. **B-13 (Low)** is a one-line wording fix in the Delete workspace dialog.
+5. On a stack you are happy to re-seed, mark one duty program reviewed and run **TAR-41**,
+   **TAR-15**'s switch-on and **LCM-07**; add a polysilicon HTS line for **TAR-45**.
