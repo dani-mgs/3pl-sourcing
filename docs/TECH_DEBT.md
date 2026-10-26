@@ -4,6 +4,26 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### Forwarder Audit: v1.0 workbook quirks kept for parity (questions for v1.1)
+- **Added:** 2026-10-26 (Forwarder Audit Phase A)
+- **What:** The engine (`src/lib/forwarder-audit/`) copies the frozen v1.0 workbook exactly, including behaviour that looks like a bug. Each item below is pinned by a LibreOffice golden fixture (`__fixtures__/golden/`), so changing one is a v1.1 rule change: update the workbook, regenerate the fixtures (`python3 scripts/forwarder-audit/golden.py`), then the engine.
+  - **B1 "Under question" double-counts.** A flagged or duplicate line's amount is also inside its service's Incoterm ("May be the seller's cost") and "not requested" amounts; those two can both fire for one service; both lines of a duplicate pair count. Real cases: Synthetic 839.40 counts the two Docs lines (50 + 50) twice; Airspeed 509.60 counts AFS (50.40) twice.
+  - **B2 Per kg without a gross weight, per RT without a volume.** The line isn't priced, but its check reads "Calculated — Not Independently Verified" and no finding is raised; with a forwarder line total the check is `#VALUE!` (shown as such, never thrown). Fixture `gen-workbook-bugs`.
+  - **B3 Per CBM without a volume** uses quantity 0: the line is priced at 0 (or its minimum) with no finding.
+  - **B4 Per unit without a quantity** silently uses 1, though "How to Use" says to enter it (Airspeed "Seal").
+  - **B5 Negative rates** (credits) are floored at 0 by `MAX(rate x qty, minimum)`; a -25 discount with a -25 line total is an Error "differs by -25.00".
+  - **B6 Included / Excluded / Not applicable / no status with basis "at cost"** counts as unpriced: a Risk "Charged at cost - amount not quoted", and the service's coverage turns "Unpriced".
+  - **B7 Blank cells read directly show 0.** With no quotation currency, messages end in " 0" ("differs by 20.00 0"); with no forwarder, the Summary shows "0".
+  - **B8 The agreed-rate check** ignores the minimum charge and uses a fixed 0.005, not the rounding tolerance.
+  - **B9 The 0.01 tolerance boundary depends on floating point:** 0.30 vs 0.31 is "Verified", 100.00 vs 100.01 an Error (`gen-rounding`).
+  - **B10 Charge names are COUNTIFS criteria in the duplicate check:** `*` and `?` are wildcards and a leading `<`, `>` or `=` is an operator, so "THC*" duplicates "THC origin" but not the reverse (`gen-duplicates`).
+  - **B11 A blank answer** to "CI received", "PL received" or "Quotation itemised" doesn't give "Insufficient Information"; only "No" does, though "How to Use" says missing documents do.
+  - **B12 Cosmetic:** "1 risks"; "Only 0 day(s)"; the stated total is compared with Firm lines only; an unknown reviewer flag shows `#N/A` (the dropdown prevents it).
+- **Also:** the workbook runs "20 checks" but never names them; the grouping in our docs is inferred.
+- **Why deferred:** v1.0 is frozen; the app must give the same answers as the workbook staff already use.
+- **Severity:** Medium (B1 overstates "Under question"; B2–B5 can hide a mispriced line); the rest Low.
+- **Where:** `lines.ts` (B2–B6, B8–B10), `findings-lines.ts` and `summary.ts` (B1), `summary-sheet.ts` and `lines.ts` (B7), `summary.ts` (B11).
+
 ### Forwarder "Duty data last reviewed" uses the most recent review, the Calculator the oldest
 - **Added:** 2026-10-26 (B-16)
 - **What:** The forwarder Duty estimates card and the Expert CSV (labels column and DUTY ESTIMATES section) say "Duty data last reviewed <date>", the MOST RECENT review among the programs bearing on the estimate (`lastReviewedOn` in `src/lib/tariff/linked-estimates.ts`). The Tariff Calculator's "Duty rates last verified" uses the OLDEST review (`oldestReview`, `src/lib/tariff/effective-rate.ts`), the cautious choice: it can't overstate how current the data is. One estimate can show different dates in the two places.
