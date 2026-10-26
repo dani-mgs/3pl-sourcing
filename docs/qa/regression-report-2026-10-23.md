@@ -488,6 +488,7 @@ the ZZQA Existing Client Co 3PL project. It can't be removed from the client sid
 
 ### B-16 — The Expert CSV leaves out the project's duty estimates
 
+- **Status: Fixed 2026-10-26.** Cause: the Expert CSV exported only estimates linked to a quote (as quote-table columns); the project-level estimate here ("ZZQA linked est", $7,891.71) was filtered out, so the file had nothing about duty. The Expert CSV now has a DUTY ESTIMATES section with every estimate the project's card shows, read from the saved estimates. The Expert PDF/DOCX still don't carry duty estimates, by design (TECH_DEBT "Duty estimates aren't in the Expert PDF/DOCX"), so the "as the matrix describes" expectation holds for the CSV only. Client exports are unchanged (tested byte for byte).
 - **Severity:** Medium. **Cases:** TAR-40 (fails), FWD-34 (the "duty estimates" half).
 - **Steps:** on a forwarder project with a linked duty estimate (here ZZQA Pakkable-style Co with "Our estimate $7,891.71"), Export → **Expert CSV**.
 - **Expected:** the Expert CSV carries the linked duty estimates, with the incomplete flag on each, as `/help` and the matrix describe (and as the PDF/DOCX are meant not to).

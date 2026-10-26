@@ -4,6 +4,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### Forwarder "Duty data last reviewed" uses the most recent review, the Calculator the oldest
+- **Added:** 2026-10-26 (B-16)
+- **What:** The forwarder Duty estimates card and the Expert CSV (labels column and DUTY ESTIMATES section) say "Duty data last reviewed <date>", the MOST RECENT review among the programs bearing on the estimate (`lastReviewedOn` in `src/lib/tariff/linked-estimates.ts`). The Tariff Calculator's "Duty rates last verified" uses the OLDEST review (`oldestReview`, `src/lib/tariff/effective-rate.ts`), the cautious choice: it can't overstate how current the data is. One estimate can show different dates in the two places.
+- **Why deferred:** B-16 kept the card's wording so the CSV matches what experts see on the page.
+- **Severity:** Low
+- **Where:** Consider aligning the forwarder wording and date with the Calculator: `linked-estimates.ts` (`lastReviewedOn`), `dutyEstimateLabelText` in `src/lib/forwarder/report-data.ts`, the card in `src/app/(authenticated)/forwarder-sourcing/[id]/duty-estimates.tsx`, their tests and /help.
+
 ### Unreviewed exemptions can't be covered by a program-linked manual duty (Landed Cost)
 - **Added:** 2026-10-26 (B-14 follow-up, commit d16d8ed)
 - **What:** A pending program whose own rows say the line is exempt (`exempt_pending`) now makes the estimate incomplete, but Landed Cost's "Programs not counted" doesn't list it (`MANUAL_PROGRAM_KINDS` in `result-view.ts`), so it has no "Apply manually". For an item that isn't actually exempt, the duty can only be added with "Add manual duty", free-labelled, with no program key. It isn't linked to the program, so if the program is later reviewed and the app applies it, both count, with no "This duty is now applied by the app; remove the manual duty" conflict (that check in `applyRateOverrides`, `manual-rates.ts`, needs a `layerKey`).
@@ -211,7 +218,7 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ### Duty estimates aren't in the Expert PDF/DOCX
 - **Added:** 2026-10-05
-- **What:** Linked duty estimates (Tariff PR 3) are exported only in the Expert CSV (Forwarder Quoted Duties, Duty Estimate, As Of, Labels). The Expert PDF and DOCX quote tables don't have them: the tables are already wide and the labels need their own layout.
+- **What:** Linked duty estimates (Tariff PR 3) are exported only in the Expert CSV (quote columns Forwarder Quoted Duties, Duty Estimate, As Of, Entry Date, Labels; and since B-16 a DUTY ESTIMATES section with every linked estimate, the project's own included). The Expert PDF and DOCX quote tables don't have them: the tables are already wide and the labels need their own layout.
 - **Why deferred:** Layout work in both renderers; the CSV covers the expert need for now.
 - **Severity:** Low
 - **Where:** `src/lib/forwarder/report-data.ts` (`dutyEstimateColumns`, `buildForwarderReport`), `render-report-pdf.ts`, `render-report-docx.ts`

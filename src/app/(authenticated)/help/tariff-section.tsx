@@ -392,7 +392,10 @@ export function TariffSection() {
         </li>
         <li>
           Duty estimates never affect ranking, savings or the Quote Comparison numbers, and aren&apos;t
-          in Client exports. The Expert CSV has duty estimate columns with its as-of date, entry date and labels.
+          in Client exports. The Expert CSV has duty estimate columns beside each quote, and a{" "}
+          <Ui>Duty estimates</Ui> section with every estimate the card shows, the project&apos;s own
+          included: its label, HTS code, origin, dates, customs value, base duty, additional duties,
+          fees, total, the forwarder&apos;s quoted duties and its labels, as saved.
         </li>
         <li>
           Deleting a project, forwarder or quote also deletes the duty estimates linked to it; the

@@ -29,6 +29,13 @@ export type ProjectDutyEstimates = {
   countByQuote: Map<string, number>;
 };
 
+// The card's title for an estimate, and its order: the project's own first,
+// then by forwarder and quote. Shared with the Expert CSV (report-data.ts).
+export const dutyEstimateTitle = (quote: Pick<LinkQuote, "forwarder_name" | "label"> | null | undefined) =>
+  quote ? `${quote.forwarder_name} · ${quote.label}` : "Project";
+export const byCardOrder = (a: { title: string; forwarderId: string | null }, b: { title: string; forwarderId: string | null }) =>
+  a.forwarderId == null ? -1 : b.forwarderId == null ? 1 : a.title.localeCompare(b.title);
+
 export async function loadProjectDutyEstimates(
   supabase: Supabase,
   comparison: Pick<ProjectComparison, "project" | "quotes">,
@@ -74,12 +81,11 @@ export async function loadProjectDutyEstimates(
       const quote = summary.quoteId ? quotes.get(summary.quoteId) : null;
       return {
         summary,
-        title: quote ? `${quote.forwarder_name} · ${quote.label}` : "Project",
+        title: dutyEstimateTitle(quote),
         forwarderId: quote?.forwarder_id ?? null,
       };
     })
-    // Project estimate first, then by forwarder and quote.
-    .sort((a, b) => (a.forwarderId == null ? -1 : b.forwarderId == null ? 1 : a.title.localeCompare(b.title)));
+    .sort(byCardOrder);
 
   return { estimates, total: rows.length, countByQuote };
 }
