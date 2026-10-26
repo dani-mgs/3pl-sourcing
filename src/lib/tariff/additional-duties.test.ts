@@ -292,6 +292,28 @@ describe("pending vs reviewed", () => {
     expect(isIncompleteEstimate(reviewed.additional.warnings)).toBe(false);
   });
 
+  // An exemption from unreviewed rows is unverified too; if it's wrong, the
+  // whole duty is missing.
+  test("a pending program whose own rows say the line is exempt is left out: incomplete, with what it adds if not exempt", () => {
+    const r = estimate(LINES.coffee, "BR", { reviews: [review("section_301_forced_labor", "reviewed")] });
+    expect(lineFor(r, "section_301_brazil")).toBeUndefined();
+    expect(lineFor(r, "section_301_forced_labor")!.amountUsd).toBe(1250);
+    const br = warningFor(r, "section_301_brazil")!;
+    expect(br).toMatchObject({ kind: "exempt_pending", counted: true, indicativePct: null });
+    expect(br.text).toBe(
+      "May be exempt (pending review) under 9903.05.03 (Listed subheadings). Not included; if not exempt it adds $2,500.00 at the current unreviewed rate.",
+    );
+    expect(br.hint).toBe("may be exempt (9903.05.03), pending expert review; if not exempt, adds $2,500.00 at the current unreviewed rate");
+    expect(isIncompleteEstimate(r.additional.warnings)).toBe(true);
+  });
+
+  test("the same exemption reviewed: an Exempt line, no warning, complete", () => {
+    const r = estimate(LINES.coffee, "BR");
+    expect(lineFor(r, "section_301_brazil")).toMatchObject({ amountUsd: 0, heading: "9903.05.03", rateText: "Exempt" });
+    expect(warningFor(r, "section_301_brazil")).toBeUndefined();
+    expect(isIncompleteEstimate(r.additional.warnings)).toBe(false);
+  });
+
   test("pending China steel still doesn't over-warn: named, no percentage", () => {
     const r = estimate(LINES.steel, "CN", { reviews: [] });
     expect(warningFor(r, "section_301_forced_labor")).toMatchObject({ kind: "depends_on", indicativePct: null });
