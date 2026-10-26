@@ -63,6 +63,7 @@ export function WorkspaceEditor({
   htsRelease,
   initialOrigin,
   lockBlocker,
+  lockedVersionCount,
 }: {
   workspace: Workspace;
   views: Record<string, ResultView>;
@@ -76,6 +77,8 @@ export function WorkspaceEditor({
   initialOrigin: string | null;
   // Why the last save can't be locked yet (an origin incomplete), or null.
   lockBlocker: string | null;
+  // Locked versions of this workspace (null: the list couldn't be loaded).
+  lockedVersionCount: number | null;
 }) {
   const router = useRouter();
   // The page renders this editor only for a workspace with a scenario.
@@ -192,7 +195,7 @@ export function WorkspaceEditor({
                 {isPending ? "Saving…" : "Save draft"}
               </button>
               <LockVersionButton workspaceId={workspace.id} updatedAt={expectedUpdatedAt} dirty={dirty} blocker={lockBlocker} disabled={isPending || stale != null} />
-              <DeleteWorkspaceButton workspaceId={workspace.id} name={workspace.name} disabled={isPending} />
+              <DeleteWorkspaceButton workspaceId={workspace.id} name={workspace.name} lockedVersionCount={lockedVersionCount} disabled={isPending} />
             </>
           )}
         </div>

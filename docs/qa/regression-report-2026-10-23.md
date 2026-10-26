@@ -516,6 +516,7 @@ the ZZQA Existing Client Co 3PL project. It can't be removed from the client sid
 
 ### B-13 — Delete workspace offers Delete, then refuses, when the workspace has locked versions
 
+- **Status: Fixed 2026-10-26.** With locked versions the dialog now says "This workspace has N locked versions. Delete them first." (the action's own words, from one shared helper) and offers only Close; the server-side refusal stays for a stale page. With none, or when the versions list couldn't load, it is the confirmation as before.
 - **Severity:** Low. **Case:** LC-18.
 - **Steps:** open a Landed Cost workspace that has at least one locked version → Delete workspace → the dialog says only "Delete “<name>” with all its SKUs, inputs and costs? This cannot be undone." with Delete enabled → confirm.
 - **Expected:** the dialog says up front that the locked versions have to go first (or the control is disabled with that reason), as the lock control does for incomplete origins.

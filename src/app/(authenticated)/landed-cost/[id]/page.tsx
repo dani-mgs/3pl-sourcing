@@ -73,6 +73,7 @@ export default async function LandedCostWorkspacePage({ params, searchParams }: 
     loadSnapshotList(supabase, workspace.id),
   ]);
   const lockers = snapshots.ok ? snapshots.versions.map((v) => v.created_by) : [];
+  const lockedVersionCount = snapshots.ok ? snapshots.versions.length : null;
   const names = await loadFirstNames(supabase, [workspace.ownerId, ...lockers]).catch((error) => {
     console.error("LandedCostWorkspacePage names error:", error);
     return new Map<string, string | null>();
@@ -104,7 +105,7 @@ export default async function LandedCostWorkspacePage({ params, searchParams }: 
           <p className="text-sm text-move-navy" role="status">
             This workspace has no scenario, so it can&apos;t be calculated. Delete it and create a new one.
           </p>
-          {canEdit && <DeleteWorkspaceButton workspaceId={workspace.id} name={workspace.name} />}
+          {canEdit && <DeleteWorkspaceButton workspaceId={workspace.id} name={workspace.name} lockedVersionCount={lockedVersionCount} />}
         </div>
       ) : (
         <WorkspaceEditor
@@ -116,6 +117,7 @@ export default async function LandedCostWorkspacePage({ params, searchParams }: 
           comparison={toComparisonView(result, workspace)}
           initialOrigin={typeof origin === "string" ? origin : null}
           lockBlocker={lockBlocker(workspace, result)}
+          lockedVersionCount={lockedVersionCount}
           canEdit={canEdit}
           ownerName={ownerName}
           countries={ORIGIN_COUNTRIES}
