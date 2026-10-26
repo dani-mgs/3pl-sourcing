@@ -7,7 +7,7 @@ import {
   type ReviewStatus,
 } from "./additional-duties";
 import { calculateEstimate, type FeeRow } from "./calculate";
-import type { DutyProgramRow } from "./programs";
+import { isIncompleteEstimate, type DutyProgramRow } from "./programs";
 import { centsToNumber, parseDecimal, toCents } from "./rational";
 
 // Golden cases for additional duties, worked by hand from U.S. notes 50 and
@@ -256,6 +256,40 @@ describe("pending vs reviewed", () => {
     expect(warningFor(r, "section_301_forced_labor")!.hint).toBe(
       "could add 4% (about $400.00, 9903.05.39); pending expert review",
     );
+  });
+
+  // B-14: unreviewed rows that work out to $0 still leave the total unknown.
+  test("a pending minimum-total program the base already meets adds $0 and is still left out: incomplete", () => {
+    const r = estimate(LINES.higherRate, "DE", { reviews: [] });
+    expect(r.additional.additionalDutiesUsd).toBe(0);
+    expect(lineFor(r, "section_301_forced_labor")).toBeUndefined();
+    const fl = warningFor(r, "section_301_forced_labor")!;
+    expect(fl).toMatchObject({ kind: "pending_review", counted: true, indicativePct: 0 });
+    expect(fl.hint).toBe("adds $0.00 at the current unreviewed rate (Base rate 12% already meets the 10% minimum; nothing added); pending expert review");
+    expect(fl.text).toBe(
+      "Section 301 (forced labour) may apply. Duty data is loaded but pending expert review. At the current unreviewed rate it adds $0.00 (Base rate 12% already meets the 10% minimum; nothing added).",
+    );
+    expect(isIncompleteEstimate(r.additional.warnings)).toBe(true);
+  });
+
+  test("the same program reviewed: a $0 line, no warning, complete", () => {
+    const r = estimate(LINES.higherRate, "DE");
+    expect(lineFor(r, "section_301_forced_labor")).toMatchObject({ heading: "9903.05.38", amountUsd: 0 });
+    expect(warningFor(r, "section_301_forced_labor")).toBeUndefined();
+    expect(isIncompleteEstimate(r.additional.warnings)).toBe(false);
+  });
+
+  test("Mexico's flat +10% is unchanged: pending, left out with its amount; reviewed, charged", () => {
+    const programs = PROGRAMS.map((p) => (p.key === "section_301_forced_labor" ? { ...p, trigger_origins: [...p.trigger_origins!, "MX"] } : p));
+    const rows = [...FL_ROWS, row({ chapter99_heading: "9903.05.55", label: "Mexico", rate_pct: 10, origin_countries: ["MX"] })];
+    const pending = estimate(LINES.higherRate, "MX", { programs, rows, reviews: [] });
+    expect(warningFor(pending, "section_301_forced_labor")).toMatchObject({
+      kind: "pending_review", counted: true, indicativePct: 10, hint: "could add 10% (about $1,000.00, 9903.05.55); pending expert review",
+    });
+    expect(isIncompleteEstimate(pending.additional.warnings)).toBe(true);
+    const reviewed = estimate(LINES.higherRate, "MX", { programs, rows });
+    expect(lineFor(reviewed, "section_301_forced_labor")).toMatchObject({ heading: "9903.05.55", amountUsd: 1000 });
+    expect(isIncompleteEstimate(reviewed.additional.warnings)).toBe(false);
   });
 
   test("pending China steel still doesn't over-warn: named, no percentage", () => {

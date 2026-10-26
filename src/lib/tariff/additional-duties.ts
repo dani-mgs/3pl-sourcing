@@ -21,8 +21,9 @@ import {
 //
 // Only rows of REVIEWED programs count toward the total. A pending program is
 // evaluated the same way, but only to describe what it would add ("pending
-// expert review — could add up to 12.5%"), and a program with no rows yet
-// falls back to its indicative HTS rate. Rules, from U.S. notes 16, 20, 31,
+// expert review — could add up to 12.5%"), and is left out of the total
+// (the estimate is incomplete) even when it works out to $0. A program with
+// no rows yet falls back to its indicative HTS rate. Rules, from U.S. notes 16, 20, 31,
 // 50 and 52:
 //   - duties of different programs stack (note 52(a), 50(a)(i), 20, 31);
 //   - within a program one row applies (note 16(a): the 232 metal headings
@@ -560,18 +561,21 @@ export function evaluateAdditionalDuties(input: AdditionalDutiesInput): Addition
           counted: true,
         });
       } else {
+        // Left out even when it works out to $0 (e.g. a minimum total the
+        // base duty already meets): the rows aren't reviewed, so the total
+        // isn't known (B-14).
         const amount = centsToRational(outcome.cents);
         const share = div(mul(amount, HUNDRED), input.customsValueUsd);
+        const zero = outcome.cents === BigInt(0);
         warnings.push({
           ...base,
           kind: "pending_review",
-          text: `${program.warning_text} Duty data is loaded but ${pending}.`,
+          text: `${program.warning_text} Duty data is loaded but ${pending}.${zero ? ` At the current unreviewed rate it adds $0.00 (${outcome.detail}).` : ""}`,
           indicativePct: Number(toFixed(share, 4)),
-          hint:
-            outcome.cents === BigInt(0)
-              ? `would add nothing (${outcome.detail}); ${pending}`
-              : `could add ${pct(share)} (about ${usd(amount)}, ${outcome.heading}); ${pending}`,
-          counted: outcome.cents !== BigInt(0),
+          hint: zero
+            ? `adds $0.00 at the current unreviewed rate (${outcome.detail}); ${pending}`
+            : `could add ${pct(share)} (about ${usd(amount)}, ${outcome.heading}); ${pending}`,
+          counted: true,
         });
       }
       continue;

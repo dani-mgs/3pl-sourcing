@@ -12,12 +12,11 @@ import type { RateOverride } from "./workspace-schema";
 // trimmed to what these cases read) and its four manual rates.
 //
 // The rule: a manual rate never changes the app's incomplete flag; it only
-// marks the warning it covers. What the regression saw is the engine, not the
-// manual rate: for EU origins forced labour is a 10% minimum total, so a SKU
-// whose base duty already meets it (6109.10.00.12, 16.5%) gets a pending
-// warning that adds nothing (counted: false) and isn't incomplete, with or
-// without a manual rate; Mexico's row is a flat +10%, so there it is. The
-// last test records that current behaviour, pending a decision on the rule.
+// marks the warning it covers. What the regression saw was the engine: for EU
+// origins forced labour is a 10% minimum total, so for a SKU whose base duty
+// already meets it (6109.10.00.12, 16.5%) the pending program worked out to
+// $0 and wasn't counted as left out. Now an unreviewed program is left out
+// (incomplete) even at $0, so both origins agree.
 
 const DANI = "00000000-0000-4000-8000-0000000000a1";
 const EXCLUDES = ["section_232_metals", "section_232_vehicles", "section_232_timber", "section_232_semiconductors", "section_232_pharmaceuticals"];
@@ -114,18 +113,18 @@ describe("a manual rate never changes the incomplete flag", () => {
   });
 });
 
-describe("the regression's case (SKU-A 6109.10.00.12, 16.5%): current engine behaviour", () => {
+describe("the regression's case (SKU-A 6109.10.00.12, 16.5%)", () => {
   test("Mexico (+10%): SKU-A is incomplete", async () => {
     const f = await flags("MX", true, "6109100012");
     expect([f.a.incomplete, f.b.incomplete]).toEqual([true, true]);
     expect(f.a.warnings).toEqual(["section_301_forced_labor:pending_review:true:covered"]);
   });
 
-  test("Germany (10% minimum, already met by 16.5%): the pending program adds nothing, so SKU-A isn't incomplete, manual rate or not; SKU-B (Free) is", async () => {
+  test("Germany (10% minimum, already met by 16.5%): the pending program adds $0 but is still left out, so SKU-A is incomplete, manual rate or not", async () => {
     for (const withRates of [false, true]) {
       const f = await flags("DE", withRates, "6109100012");
-      expect([f.origin, f.a.incomplete, f.b.incomplete]).toEqual([true, false, true]);
-      expect(f.a.warnings).toEqual([`section_301_forced_labor:pending_review:false${withRates ? ":covered" : ""}`]);
+      expect([f.origin, f.a.incomplete, f.b.incomplete]).toEqual([true, true, true]);
+      expect(f.a.warnings).toEqual([`section_301_forced_labor:pending_review:true${withRates ? ":covered" : ""}`]);
     }
   });
 });
