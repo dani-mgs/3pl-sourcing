@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { embeddedOne } from "@/lib/clients";
 import { quoteTitle } from "@/lib/forwarder/quote-label";
@@ -29,6 +30,9 @@ import {
 import { ESTIMATE_DISCLAIMER } from "@/lib/tariff/caveats";
 import { INCOMPLETE_ESTIMATE_LABEL } from "@/lib/tariff/programs";
 import { normalizeProject, type LinkQuote } from "@/lib/tariff/forwarder-link";
+import { countryName } from "@/lib/tariff/countries";
+import { formatHtsCode } from "@/lib/tariff/hts-code";
+import { byCardOrder, dutyEstimateTitle } from "./load-duty-estimates";
 import {
   LINKED_ESTIMATE_COLUMNS,
   summarizeLinkedEstimates,
@@ -262,10 +266,11 @@ export function quoteColumns(
 
 // ---- Duty estimates (Expert CSV only) -------------------------------------------
 //
-// The latest saved duty estimate per quote, with its as-of date and labels.
-// Only the Expert CSV carries them: never the client exports, and not the
-// Expert PDF/DOCX yet (docs/TECH_DEBT.md). They're informational and never
-// feed rank or savings.
+// The latest saved duty estimate per quote, with its as-of date and labels,
+// as quote-table columns; and every linked estimate (the project's own
+// included) in its own DUTY ESTIMATES section, below. Only the Expert CSV
+// carries them: never the client exports, and not the Expert PDF/DOCX yet
+// (docs/TECH_DEBT.md). They're informational and never feed rank or savings.
 
 export function dutyEstimateLabelText(summary: LinkedEstimateSummary): string {
   const parts: string[] = [];
@@ -328,6 +333,112 @@ export function dutyEstimateColumns(
   ];
 }
 
+// The Expert CSV's "DUTY ESTIMATES" section: every linked estimate the
+// project's Duty estimates card shows (the latest per quote, and the
+// project's own), in the card's order, with what was saved: never
+// recalculated. The extra columns are read with the export only.
+export const EXPORT_ESTIMATE_COLUMNS = `${LINKED_ESTIMATE_COLUMNS}, label, hts_code, origin_country, customs_value_usd, base_duty_usd, additional_duties_usd, fees_usd`;
+
+const storedEstimateSchema = z.object({
+  id: z.string(),
+  label: z.string().nullable(),
+  hts_code: z.string(),
+  origin_country: z.string(),
+  customs_value_usd: z.union([z.number(), z.string()]),
+  base_duty_usd: z.union([z.number(), z.string()]),
+  additional_duties_usd: z.union([z.number(), z.string()]),
+  fees_usd: z.union([z.number(), z.string()]),
+});
+
+export type DutyEstimateExport = {
+  // "Project", or "Forwarder · quote" (the card's title).
+  title: string;
+  forwarderId: string | null;
+  // What the quote's forwarder quoted for duties (null: the project's own, or not quoted).
+  quotedDutiesUsd: number | null;
+  summary: LinkedEstimateSummary;
+  label: string | null;
+  htsCode: string;
+  originCountry: string;
+  customsValueUsd: number;
+  baseDutyUsd: number;
+  additionalDutiesUsd: number;
+  feesUsd: number;
+};
+
+export function dutyEstimateExports(
+  rows: unknown[],
+  summaries: LinkedEstimateSummary[],
+  quotes: Map<string, LinkQuote>,
+): DutyEstimateExport[] {
+  const stored = new Map(
+    rows.flatMap((row) => {
+      const r = storedEstimateSchema.safeParse(row);
+      return r.success ? [[r.data.id, r.data] as const] : [];
+    }),
+  );
+  return summaries
+    .flatMap((summary): DutyEstimateExport[] => {
+      const s = stored.get(summary.estimateId);
+      if (!s) return [];
+      const quote = summary.quoteId ? quotes.get(summary.quoteId) : null;
+      return [
+        {
+          title: dutyEstimateTitle(quote),
+          forwarderId: quote?.forwarder_id ?? null,
+          quotedDutiesUsd: quote?.duties_taxes_usd ?? null,
+          summary,
+          label: s.label,
+          htsCode: s.hts_code,
+          originCountry: s.origin_country,
+          customsValueUsd: Number(s.customs_value_usd),
+          baseDutyUsd: Number(s.base_duty_usd),
+          additionalDutiesUsd: Number(s.additional_duties_usd),
+          feesUsd: Number(s.fees_usd),
+        },
+      ];
+    })
+    .sort(byCardOrder);
+}
+
+const DUTY_ESTIMATE_HEADERS = [
+  "For",
+  "Estimate Label",
+  "HTS Code",
+  "Origin",
+  "Entry Date",
+  "As Of",
+  "Customs Value (USD)",
+  "Base Duty (USD)",
+  "Additional Duties (USD)",
+  "Fees (USD)",
+  "Total (USD)",
+  "Forwarder Quoted Duties (USD)",
+  "Labels",
+];
+
+export function dutyEstimatesCsv(estimates: DutyEstimateExport[]): string {
+  const usd = (n: number) => formatCurrency(n, "USD");
+  return buildCsv(
+    DUTY_ESTIMATE_HEADERS,
+    estimates.map((e) => [
+      e.title,
+      e.label,
+      formatHtsCode(e.htsCode),
+      countryName(e.originCountry),
+      formatRateDate(e.summary.entryDate),
+      formatRateDate(e.summary.asOfDate),
+      usd(e.customsValueUsd),
+      usd(e.baseDutyUsd),
+      usd(e.additionalDutiesUsd),
+      usd(e.feesUsd),
+      usd(e.summary.totalUsd),
+      e.quotedDutiesUsd != null ? usd(e.quotedDutiesUsd) : null,
+      dutyEstimateLabelText(e.summary),
+    ]),
+  );
+}
+
 export function filterQuotesForVersion(
   results: ForwarderQuoteResult<QuoteExportFields>[],
   version: ExportVersion,
@@ -359,6 +470,8 @@ export type ForwarderReportData = {
   quoteResults: ForwarderQuoteResult<QuoteExportFields>[];
   // Latest linked duty estimate per quote id (Expert CSV only).
   dutyEstimates?: Map<string, LinkedEstimateSummary>;
+  // Every linked estimate the card shows, the project's own included (Expert CSV only).
+  dutyEstimateList?: DutyEstimateExport[];
 };
 
 export async function fetchForwarderReportData(
@@ -386,7 +499,7 @@ export async function fetchForwarderReportData(
         .from("forwarder_quotes")
         .select(`id, forwarder_id, scenario_group, ${QUOTE_FIELDS_SELECT}, forwarders!inner(company_name, status, forwarder_project_id)`)
         .eq("forwarders.forwarder_project_id", projectId),
-      supabase.from("duty_estimates").select(LINKED_ESTIMATE_COLUMNS).eq("forwarder_project_id", projectId),
+      supabase.from("duty_estimates").select(EXPORT_ESTIMATE_COLUMNS).eq("forwarder_project_id", projectId),
     ]);
   // Estimates are an extra column; the report still exports without them.
   if (estimateError) console.error("fetchForwarderReportData duty estimates error:", estimateError);
@@ -450,11 +563,9 @@ export async function fetchForwarderReportData(
       },
     ]),
   );
-  const dutyEstimates = new Map(
-    summarizeLinkedEstimates(estimateRows ?? [], normalizeProject(row), linkQuotes)
-      .filter((e) => e.quoteId != null)
-      .map((e) => [e.quoteId!, e]),
-  );
+  const summaries = summarizeLinkedEstimates(estimateRows ?? [], normalizeProject(row), linkQuotes);
+  const dutyEstimates = new Map(summaries.filter((e) => e.quoteId != null).map((e) => [e.quoteId!, e]));
+  const dutyEstimateList = dutyEstimateExports(estimateRows ?? [], summaries, linkQuotes);
 
   return {
     data: {
@@ -464,6 +575,7 @@ export async function fetchForwarderReportData(
       forwarders: (forwarderRows ?? []) as unknown as ForwarderFields[],
       quoteResults: results,
       dutyEstimates,
+      dutyEstimateList,
     },
   };
 }
@@ -547,8 +659,9 @@ export function buildForwarderReportCsv(data: ForwarderReportData, version: Expo
     version,
     quoteResults,
   );
+  const estimateList = version === "expert" ? (data.dutyEstimateList ?? []) : [];
   const notes = reportNotes(quoteResults);
-  if (estimates.size > 0) {
+  if (estimates.size > 0 || estimateList.length > 0) {
     notes.push(
       "Duty estimates are informational: they don't affect rank or savings. Each is locked as of its date; verify with your customs broker.",
     );
@@ -558,6 +671,7 @@ export function buildForwarderReportCsv(data: ForwarderReportData, version: Expo
     { title: "PROJECT DETAILS", csv: buildCsv(projectTable.headers, projectTable.rows) },
     { title: "FORWARDERS", csv: buildCsv(forwarderTable.headers, forwarderTable.rows) },
     { title: "QUOTE COMPARISON", csv: buildCsv(quoteTable.headers, quoteTable.rows) },
+    ...(estimateList.length > 0 ? [{ title: "DUTY ESTIMATES", csv: dutyEstimatesCsv(estimateList) }] : []),
     ...notesSection(notes),
   ]);
 }

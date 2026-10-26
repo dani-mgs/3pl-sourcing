@@ -212,7 +212,7 @@ export function ExportSection() {
           Quotes: Annual Savings, Legacy Scenario Group (old quotes only), Forwarder Status, Key Strength, Key Weakness / Risk, Important Assumption,
           Overall Assessment, Client Decision, and Notes.
         </li>
-        <li>Duty estimates: only the Expert CSV has them (not the Expert PDF or DOCX yet).</li>
+        <li>Duty estimates: only the Expert CSV has them, quote-linked and the project&apos;s own (not the Expert PDF or DOCX yet).</li>
         <li>
           Excluded forwarders (Unfit, Do Not Contact, Withdrawn / No Response) entirely: they
           aren&apos;t listed under forwarders considered, and none of their quotes appear. The
