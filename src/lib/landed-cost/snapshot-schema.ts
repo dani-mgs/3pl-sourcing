@@ -12,7 +12,9 @@ import type { Workspace } from "./workspace-schema";
 // A locked version (landed_cost_snapshots): the saved inputs and the result
 // calculated from them, stored as JSON when the workspace is locked and never
 // recalculated. Money is an exact decimal string ("1734.73", "-233.85"),
-// counts are integer strings; no amount is a float. buildSnapshotRow makes
+// counts are integer strings; no amount is a float. A manual rate's own value
+// (ratePercent / amountUsd, in the inputs and on its layer) is kept as saved,
+// so "250" as well as "250.00"; the layer's amount is money. buildSnapshotRow makes
 // the row save_landed_cost_snapshot() takes (which re-checks the sums against
 // the live workspace); parseSnapshot reads one back through this schema and
 // restoreSnapshot turns it into the inputs the result and comparison views
@@ -72,12 +74,18 @@ const lineSchema = z.object({
   notes: z.array(z.string()).optional(),
 });
 
+// A manual rate's value as saved: the database's numeric as it was typed
+// ("250", "12.5"), never padded, so not money. Exactly one of the two is set.
+const ratePercentText = z.string().regex(/^\d+(\.\d{1,4})?$/);
+const fixedAmountText = z.string().regex(/^\d+(\.\d{1,2})?$/);
+const oneValue = (v: { ratePercent: string | null; amountUsd: string | null }) => (v.ratePercent == null) !== (v.amountUsd == null);
+
 const manualSchema = z.object({
   overrideId: z.uuid(),
   kind: z.enum(["replace", "add"]),
   layerName: z.string(),
-  ratePercent: decimalText.nullable(),
-  amountUsd: money.nullable(),
+  ratePercent: ratePercentText.nullable(),
+  amountUsd: fixedAmountText.nullable(),
   reason: z.string(),
   setByName: z.string(),
   setAt: z.string(),
@@ -86,7 +94,7 @@ const manualSchema = z.object({
   engineRateText: nullableText,
   engineAmountUsd: money.nullable(),
   note: nullableText,
-});
+}).refine(oneValue);
 // A duty layer: version 2 says whether it's manual (null: the app's).
 const dutyLineSchemaV2 = lineSchema.extend({ manual: manualSchema.nullable() });
 
@@ -211,8 +219,8 @@ const overrideSchema = z.object({
   kind: z.enum(["replace", "add"]),
   layerKey: nullableText,
   label: nullableText,
-  ratePercent: decimalText.nullable(),
-  amountUsd: decimalText.nullable(),
+  ratePercent: ratePercentText.nullable(),
+  amountUsd: fixedAmountText.nullable(),
   reason: z.string(),
   engineRateText: nullableText,
   engineAmountUsd: decimalText.nullable(),
@@ -221,7 +229,7 @@ const overrideSchema = z.object({
   setAt: z.string(),
   changedBy: z.uuid(),
   changedAt: z.string(),
-});
+}).refine(oneValue);
 const itemSchemaV1 = z.object({
   skuLineId: z.uuid(),
   fobUnitPriceUsd: decimalText.nullable(),
