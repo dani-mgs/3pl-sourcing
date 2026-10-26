@@ -8,6 +8,7 @@ import { RequestsLink } from "./requests-link";
 import { ModuleNav } from "./module-nav";
 import { APP_NAME, APP_SHORT_NAME, hubModules } from "@/lib/modules";
 import { isLandedCostEnabled } from "@/lib/landed-cost/feature-flag";
+import { isForwarderAuditEnabled } from "@/lib/forwarder-audit/feature-flag";
 
 // The name is in app_metadata (set by admins only), never user_metadata.
 function getDisplayName(user: {
@@ -65,7 +66,7 @@ export default async function AuthenticatedLayout({
           </span>
         </Link>
 
-        <ModuleNav modules={hubModules(isLandedCostEnabled())} />
+        <ModuleNav modules={hubModules(isLandedCostEnabled(), isForwarderAuditEnabled())} />
 
         <div className="ml-auto flex min-w-0 items-center gap-2">
           {role && <RequestsLink count={typeof badge === "number" ? badge : 0} />}

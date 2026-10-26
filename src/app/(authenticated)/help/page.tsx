@@ -6,6 +6,7 @@ import {
   UploadSection,
 } from "./concept-sections";
 import { isLandedCostEnabled } from "@/lib/landed-cost/feature-flag";
+import { isForwarderAuditEnabled } from "@/lib/forwarder-audit/feature-flag";
 import { hubModules } from "@/lib/modules";
 import { FaqSection } from "./faq-section";
 import { LandedCostSection } from "./landed-cost-section";
@@ -60,7 +61,7 @@ export default function HelpPage() {
         </nav>
 
         <div className="flex min-w-0 flex-col gap-6">
-          <OverviewSection modules={hubModules(landedCost)} />
+          <OverviewSection modules={hubModules(landedCost, isForwarderAuditEnabled())} />
           <ThreePlSection />
           <ForwarderSection />
           <TariffSection />
