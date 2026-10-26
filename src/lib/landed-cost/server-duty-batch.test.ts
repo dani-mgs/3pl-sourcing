@@ -132,6 +132,17 @@ describe("same answer as the Tariff Calculator", () => {
     expect(d.incomplete).toBe(true);
   });
 
+  test("a pending minimum-total program the base already meets (14.6% ≥ 10%): $0 added, still left out, incomplete on both (B-14)", async () => {
+    const euMinimum = row({
+      id: "fl-eu", program_key: "section_301_forced_labor", chapter99_heading: "9903.05.39", chapter99_heading_at_minimum: "9903.05.38",
+      rate_type: "minimum_total", rate_pct: 10, origin_countries: ["DE"], excludes_programs: ["section_232_metals"], exclusion_heading: "9903.05.90",
+    });
+    const d = (await expectSameAsCalculator(withRows([euMinimum]), { hts: "6115100500", origin: "DE" }))!;
+    expect(d.additionalDutiesUsd).toBe(0);
+    expect(d.warnings.find((w) => w.programKey === "section_301_forced_labor")).toMatchObject({ kind: "pending_review", counted: true, indicativePct: 0 });
+    expect(d.incomplete).toBe(true);
+  });
+
   test("depends on Section 232 (not loaded): forced labour named, not charged", async () => {
     const tables = withRows([CHINA_301_7208, FORCED_LABOUR], [reviewedStatus("section_301_china"), reviewedStatus("section_301_forced_labor")]);
     const d = (await expectSameAsCalculator(tables, { hts: "7208101500", origin: "CN" }))!;

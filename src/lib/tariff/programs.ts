@@ -53,7 +53,7 @@ export type ProgramWarning = {
   // 12.5% (about $1,250.00) — indicative rate from the HTS, not
   // expert-reviewed". Null to just name it.
   hint?: string | null;
-  // Whether the total excludes it (an exempt-pending note doesn't).
+  // Whether the total excludes it (a conditional note doesn't).
   counted?: boolean;
 };
 

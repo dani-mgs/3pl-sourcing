@@ -4,6 +4,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### Unreviewed exemptions can't be covered by a program-linked manual duty (Landed Cost)
+- **Added:** 2026-10-26 (B-14 follow-up, commit d16d8ed)
+- **What:** A pending program whose own rows say the line is exempt (`exempt_pending`) now makes the estimate incomplete, but Landed Cost's "Programs not counted" doesn't list it (`MANUAL_PROGRAM_KINDS` in `result-view.ts`), so it has no "Apply manually". For an item that isn't actually exempt, the duty can only be added with "Add manual duty", free-labelled, with no program key. It isn't linked to the program, so if the program is later reviewed and the app applies it, both count, with no "This duty is now applied by the app; remove the manual duty" conflict (that check in `applyRateOverrides`, `manual-rates.ts`, needs a `layerKey`).
+- **Why deferred:** Out of scope for the B-14 fix; adding the kind changes what the manual-rates UI offers and needs its own decision.
+- **Severity:** Low (needs an unreviewed exemption that's wrong, then a manual duty, then that program's review; the duties would be overstated, not missing)
+- **Where:** Possible fix: add `exempt_pending` to `MANUAL_PROGRAM_KINDS` so unreviewed exemptions are listed with "Apply manually" (a program-keyed add, which gets the conflict), plus a render test, `manual-rates-ui.test.tsx`, and the /help "Manual rates" part.
+
 ### No way to remove a fee row added by mistake
 - **Added:** 2026-10-26 (regression 2026-10-23, N-9)
 - **What:** The fees page (`/tariff-calculator/duty-data/fees`) only end-dates a row or adds one. A row that hasn't started yet can't be removed: it can't end before it starts (`customs_fees_dates_check`), and its neighbours can't be stretched over its dates (`customs_fees_no_overlap`). The local database keeps a QA test row (HMF 0.2% on 2027-06-01 only) for this reason.

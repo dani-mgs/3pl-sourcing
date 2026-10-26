@@ -21,8 +21,10 @@ import {
 //
 // Only rows of REVIEWED programs count toward the total. A pending program is
 // evaluated the same way, but only to describe what it would add ("pending
-// expert review — could add up to 12.5%"), and a program with no rows yet
-// falls back to its indicative HTS rate. Rules, from U.S. notes 16, 20, 31,
+// expert review — could add up to 12.5%"), and is left out of the total
+// (the estimate is incomplete) even when it works out to $0 or its own rows
+// say the line is exempt. A program with
+// no rows yet falls back to its indicative HTS rate. Rules, from U.S. notes 16, 20, 31,
 // 50 and 52:
 //   - duties of different programs stack (note 52(a), 50(a)(i), 20, 31);
 //   - within a program one row applies (note 16(a): the 232 metal headings
@@ -137,7 +139,8 @@ type Charge = {
 
 type Outcome =
   | { kind: "not_applicable" }
-  | { kind: "exempt"; heading: string; reason: string; notes: string[] }
+  // ifNotExemptCents: what the row it overrides would charge.
+  | { kind: "exempt"; heading: string; reason: string; notes: string[]; ifNotExemptCents: bigint }
   | { kind: "depends_on"; heading: string; programs: string[] }
   // The best match is a row whose rate isn't confirmed: named, not counted.
   | { kind: "unconfirmed"; row: DutyRow; notes: string[] }
@@ -350,6 +353,7 @@ function evaluate(
         heading: ex.chapter99_heading,
         reason: ex.label,
         notes: isAssumed(ex) ? [`Assumes ${ex.condition_text}`] : [],
+        ifNotExemptCents: chosen.charge.cents,
       };
     }
     if (ex.condition_text) mayBeExempt.push(`${ex.chapter99_heading}${until}: may be exempt if ${ex.condition_text}`);
@@ -380,6 +384,7 @@ function evaluate(
         heading: row.exclusion_heading ?? row.chapter99_heading,
         reason: `${programName(applying[0])} applies`,
         notes: exemptNotes,
+        ifNotExemptCents: chosen.charge.cents,
       };
     }
     const unknown = states.filter(([, s]) => s.state === "unknown").map(([key]) => programName(key));
@@ -408,8 +413,8 @@ export type AdditionalDutiesInput = {
 export type AdditionalDutiesResult = {
   lines: EstimateLine[];
   additionalDutiesUsd: number;
-  // Programs that may apply but aren't in the total, plus notes about
-  // pending exemptions (counted: false).
+  // Programs that may apply but aren't in the total (pending exemptions
+  // included), plus notes that aren't (counted: false).
   warnings: ProgramWarning[];
   dutyReviews: DutyReviewNote[];
 };
@@ -542,13 +547,16 @@ export function evaluateAdditionalDuties(input: AdditionalDutiesInput): Addition
     if (status === "pending_review") {
       const pending = "pending expert review";
       if (outcome.kind === "exempt") {
+        // An exemption from unreviewed rows is unverified too, and if it's
+        // wrong the whole duty is missing: left out, so incomplete.
+        const ifNot = centsUsd(outcome.ifNotExemptCents);
         warnings.push({
           ...base,
           kind: "exempt_pending",
-          text: `Appears exempt under ${outcome.heading} (${outcome.reason}), ${pending}.`,
+          text: `May be exempt (pending review) under ${outcome.heading} (${outcome.reason}). Not included; if not exempt it adds ${ifNot} at the current unreviewed rate.`,
           indicativePct: null,
-          hint: `appears exempt (${outcome.heading}), ${pending}`,
-          counted: false,
+          hint: `may be exempt (${outcome.heading}), ${pending}; if not exempt, adds ${ifNot} at the current unreviewed rate`,
+          counted: true,
         });
       } else if (outcome.kind === "depends_on") {
         warnings.push({
@@ -560,18 +568,21 @@ export function evaluateAdditionalDuties(input: AdditionalDutiesInput): Addition
           counted: true,
         });
       } else {
+        // Left out even when it works out to $0 (e.g. a minimum total the
+        // base duty already meets): the rows aren't reviewed, so the total
+        // isn't known (B-14).
         const amount = centsToRational(outcome.cents);
         const share = div(mul(amount, HUNDRED), input.customsValueUsd);
+        const zero = outcome.cents === BigInt(0);
         warnings.push({
           ...base,
           kind: "pending_review",
-          text: `${program.warning_text} Duty data is loaded but ${pending}.`,
+          text: `${program.warning_text} Duty data is loaded but ${pending}.${zero ? ` At the current unreviewed rate it adds $0.00 (${outcome.detail}).` : ""}`,
           indicativePct: Number(toFixed(share, 4)),
-          hint:
-            outcome.cents === BigInt(0)
-              ? `would add nothing (${outcome.detail}); ${pending}`
-              : `could add ${pct(share)} (about ${usd(amount)}, ${outcome.heading}); ${pending}`,
-          counted: outcome.cents !== BigInt(0),
+          hint: zero
+            ? `adds $0.00 at the current unreviewed rate (${outcome.detail}); ${pending}`
+            : `could add ${pct(share)} (about ${usd(amount)}, ${outcome.heading}); ${pending}`,
+          counted: true,
         });
       }
       continue;
