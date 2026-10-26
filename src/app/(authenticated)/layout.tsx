@@ -48,7 +48,7 @@ export default async function AuthenticatedLayout({
 
   return (
     <div className="min-h-svh bg-neutral-bg">
-      <header className="sticky top-0 z-40 flex h-16 items-center gap-6 bg-move-navy px-8 max-sm:gap-4 max-sm:px-4">
+      <header className="print:hidden sticky top-0 z-40 flex h-16 items-center gap-6 bg-move-navy px-8 max-sm:gap-4 max-sm:px-4">
         <Link
           href="/"
           aria-label={APP_NAME}
