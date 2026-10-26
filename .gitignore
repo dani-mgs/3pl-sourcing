@@ -46,3 +46,6 @@ docs/regression-*/
 
 # tariff source downloads (scripts/tariff)
 /.cache/
+
+# local Claude Code settings
+/.claude/settings.local.json
