@@ -334,3 +334,21 @@ All on the `ZZQA-local` release. Today = run date (UTC).
 | X-12 | 404 | Unknown IDs | random UUID in each detail route | Open | Friendly 404 |
 | X-13 | Invalid IDs | Non-UUID in a route | `/forwarder-sourcing/abc` | Open | 404, not a 500 |
 | X-14 | Old URLs | Legacy redirects | `/dashboard`, `/projects/<id>` | Open | 308 to the right page |
+
+## 10. Forwarder Audit (behind `FORWARDER_AUDIT_ENABLED`)
+
+Cases FA-xx. Needs the flag on (`FORWARDER_AUDIT_ENABLED=true`); FA-01 also needs it off. Load the workbook cases with `npm run fa:seed-case Test_Airspeed_FCL` (and `Test_Navilink_LCL`, `Test_Synthetic_Errors`), Node 22, local stack only. Expected figures are those in the workbooks in `docs/forwarder-audit/cases/`.
+
+| ID | Module | Scenario | Test data | Steps | Expected result |
+|---|---|---|---|---|---|
+| FA-01 | Forwarder Audit | Flag off | expert1 | With the flag off, look at the nav and `/help`, open `/forwarder-audit` and an audit URL | Nav shows "Soon"; no Forwarder Audit section in `/help`; both URLs return 404; the actions are refused |
+| FA-02 | Forwarder Audit | Synthetic Errors | `Test_Synthetic_Errors` | Open the audit | Corrections Required; 4 errors · 8 questions · 1 risks; "All-In Firm Total (as quoted) — Subject to Correction" 1,039.40; line 1 "Error - differs by 2.60 USD"; confirmed discrepancies 52.60; under question 839.40 |
+| FA-03 | Forwarder Audit | Airspeed FCL | `Test_Airspeed_FCL` | Open the audit | Needs Clarification; 0 errors · 10 questions · 2 risks; "Known Firm Charges — Not All-In" 1,809.20; "Not all-in: 2 requested service(s) excluded, unpriced or not addressed; conditional charges; " |
+| FA-04 | Forwarder Audit | Navilink LCL | `Test_Navilink_LCL` | Open the audit | Needs Clarification; 0 errors · 10 questions · 6 risks; firm 739.14; "Exchange rate missing for 6 line(s)" |
+| FA-05 | Forwarder Audit | Live results and save | expert1 | Change a rate, add a charge line, watch section 5, Save, reload | Section 5 changes as you type; Save is enabled only when something changed; the saved values are there after reload; leaving with unsaved changes asks first |
+| FA-06 | Forwarder Audit | Stale save | expert1 | Open one audit in two tabs; save in one; save in the other | The second is refused with a plain "changed since you opened it" message; nothing is overwritten |
+| FA-07 | Forwarder Audit | Owner or admin only | expert1, expert2, admin | expert2 opens expert1's audit; admin opens it | expert2 sees it read-only (no Save or Delete); admin can edit and delete |
+| FA-08 | Forwarder Audit | Limits and validation | expert1 | Add lines up to 50; type text in a number field; enter an impossible date | "Add charge line" stops at 50; a non-number is marked and blocks Save; no raw Zod or database text |
+| FA-09 | Forwarder Audit | Summary | expert1, any case | Open "Summary (print)"; print preview | The workbook's Summary content; the app header is hidden; one page wide; it shows the last saved inputs, not unsaved edits |
+| FA-10 | Forwarder Audit | Access by URL | client user, signed out | Open `/forwarder-audit` | Client: redirected or 404, no data; signed out: redirected to `/login`; a PostgREST read of `forwarder_audits` with a client JWT returns 0 rows |
+| FA-11 | Forwarder Audit | Help | expert1 | Open `/help#forwarder-audit` with the flag on | The section matches FA-02 to FA-04 (statuses, finding types, limits) |

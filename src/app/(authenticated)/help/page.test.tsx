@@ -63,3 +63,30 @@ describe("/help and the Landed Cost flag", () => {
     expect(html).not.toContain("manual rate overrides");
   });
 });
+
+describe("/help and the Forwarder Audit flag", () => {
+  const renderAudit = (flag: string | undefined) => {
+    vi.stubEnv("FORWARDER_AUDIT_ENABLED", flag);
+    return renderToStaticMarkup(<HelpPage />);
+  };
+
+  test("on: the section after Landed Cost's position, its contents link and the module listed as Live", () => {
+    const html = renderAudit("true");
+    expect(html).toContain('id="forwarder-audit"');
+    expect(html).toContain('href="#forwarder-audit"');
+    expect(badgeOf(html, "Forwarder Audit")).toBe("Live");
+    expect(html).toContain("Audit Complete — No Issues Identified");
+    expect(html).toContain("Up to 50 charge lines and 30 findings are shown.");
+    expect(html).toContain("holds no duty or VAT rates");
+    expect(html.indexOf('id="forwarder-audit"')).toBeGreaterThan(html.indexOf('id="tariff"'));
+    expect(html.indexOf('id="forwarder-audit"')).toBeLessThan(html.indexOf('id="concepts"'));
+  });
+
+  test.each([["false"], [undefined]])("off (%s): no section, no contents link, the module shows Soon", (flag) => {
+    const html = renderAudit(flag);
+    expect(html).not.toContain('id="forwarder-audit"');
+    expect(html).not.toContain('href="#forwarder-audit"');
+    expect(html).not.toContain("Reading the lines");
+    expect(badgeOf(html, "Forwarder Audit")).toBe("Soon");
+  });
+});

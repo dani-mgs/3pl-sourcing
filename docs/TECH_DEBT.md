@@ -4,6 +4,20 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### pgTAP 07 (tariff reference) fails on the local database: duplicate seeded fee rows
+- **Added:** 2026-10-26 (seen during Forwarder Audit Phase B; not caused by it)
+- **What:** `npm run test:db` reports one failure in `07_tariff_reference.test.sql`, test 3 ("a signed-in user can read the seeded fees (MPF formal, MPF informal, HMF)"), with "more than one row returned by a subquery used as an expression". It fails the same way without the Forwarder Audit changes. The likely cause is more than one current row per fee in the local `customs_fees` (the rollover or fee-history work), which the test's scalar subquery doesn't expect; not investigated. The other 40 files pass.
+- **Why deferred:** outside the Forwarder Audit work; the production database wasn't checked.
+- **Severity:** Low (a test environment problem as far as known), but it makes `npm run test:db` end in FAIL until it's looked at.
+- **Where:** `supabase/tests/database/07_tariff_reference.test.sql` line 66 and the local `customs_fees` rows.
+
+### Forwarder Audit: the Summary prints the last saved inputs
+- **Added:** 2026-10-26 (Phase C)
+- **What:** `/forwarder-audit/[id]/summary` is rendered on the server from what is saved. Edits not yet saved aren't in it (the editor says so, and the Summary opens in a new tab). There are no locked versions, so a printed Summary can't be reproduced later if the audit is edited.
+- **Why deferred:** v1.0 has one live audit per quotation; locking would need its own table and rules.
+- **Severity:** Low
+- **Where:** `src/app/(authenticated)/forwarder-audit/[id]/summary/page.tsx`. Possible fix: lock versions as Landed Cost does.
+
 ### Forwarder Audit: v1.0 workbook quirks kept for parity (questions for v1.1)
 - **Added:** 2026-10-26 (Forwarder Audit Phase A)
 - **What:** The engine (`src/lib/forwarder-audit/`) copies the frozen v1.0 workbook exactly, including behaviour that looks like a bug. Each item below is pinned by a LibreOffice golden fixture (`__fixtures__/golden/`), so changing one is a v1.1 rule change: update the workbook, regenerate the fixtures (`python3 scripts/forwarder-audit/golden.py`), then the engine.
