@@ -3,7 +3,7 @@ import { pctText } from "@/lib/tariff/amount-text";
 import { countryName } from "@/lib/tariff/countries";
 import { NO_REVIEWED_DUTIES_TEXT } from "@/lib/tariff/effective-rate";
 import { formatHtsCode } from "@/lib/tariff/hts-code";
-import { parseDecimal } from "@/lib/tariff/rational";
+import { parseDecimal, toFixed } from "@/lib/tariff/rational";
 import { toComparisonView } from "./comparison-view";
 import { COMPONENT_KEYS, type ComponentKey } from "./components";
 import type { DutyLine } from "./manual-rates";
@@ -129,7 +129,8 @@ const plainRateText = (text: string) => text.replace(/^\+/, "");
 function manualCells(l: DutyLine): Cell[] {
   const m = l.manual;
   if (!m) return ["No", "", "", "", "", ""];
-  const value = m.ratePercent != null ? pctText(parseDecimal(m.ratePercent)) : `Fixed ${m.amountUsd}`;
+  // A fixed amount is stored as typed ("250"); shown with its cents ("Fixed 250.00").
+  const value = m.ratePercent != null ? pctText(parseDecimal(m.ratePercent)) : `Fixed ${toFixed(parseDecimal(m.amountUsd!), 2)}`;
   const appRate = m.engineRateText != null ? `${plainRateText(m.engineRateText)}${m.engineAmountUsd != null ? ` (${m.engineAmountUsd})` : ""}` : "";
   return ["Yes", value, appRate, m.reason, m.setByName, m.setAt.slice(0, 10)];
 }

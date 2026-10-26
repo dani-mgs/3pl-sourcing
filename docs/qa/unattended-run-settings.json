@@ -1,0 +1,47 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__playwright",
+      "Bash(npx supabase status*)",
+      "Bash(npx supabase start*)",
+      "Bash(npx supabase migration list --local*)",
+      "Bash(npx supabase migration up*)",
+      "Bash(git worktree add --detach ../3pl-sourcing-qa HEAD)",
+      "Bash(cp -cR node_modules ../3pl-sourcing-qa/node_modules)",
+      "Bash(node scripts/qa/qa-run.mjs *)",
+      "Bash(TZ=* node scripts/qa/qa-run.mjs npm test*)",
+      "Bash(PATH=* node scripts/qa/seed-qa.mjs)",
+      "Bash(git worktree remove --force ../3pl-sourcing-qa)",
+      "Bash(git worktree list*)",
+      "Bash(rm -f .playwright-mcp/*)",
+      "Bash(curl http://127.0.0.1*)",
+      "Bash(curl http://localhost*)",
+      "Bash(git status*)", "Bash(git log*)", "Bash(git diff*)",
+      "Bash(git add docs/qa/*)",
+      "Bash(git commit *)",
+      "Bash(mkdir *)",
+      "Edit(/docs/qa/**)"
+    ],
+    "deny": [
+      "Bash(npx supabase db reset*)", "Bash(supabase db reset*)",
+      "Bash(npx supabase db push*)", "Bash(supabase db push*)",
+      "Bash(npx supabase link*)",
+      "Bash(git push*)", "Bash(git reset --hard*)", "Bash(git merge*)",
+      "Bash(git checkout main*)",
+      "Bash(git add .)", "Bash(git add . *)", "Bash(git add ./)", "Bash(git add ./ *)",
+      "Bash(git add -A*)", "Bash(git add --all*)", "Bash(git add -u*)",
+      "Bash(git commit -a*)", "Bash(git commit --all*)",
+      "Bash(npm install*)", "Bash(npm i *)", "Bash(npm uninstall*)",
+      "Bash(npx -y *)", "Bash(npx --yes *)",
+      "Bash(npx next *)", "Bash(npx vitest *)", "Bash(npx playwright *)",
+      "Bash(npm run demo:remove*)",
+      "Bash(npm run tariff:fetch*)", "Bash(npm run tariff:verify*)",
+      "Bash(npm run tariff:extract*)", "Bash(npm run tariff:seed*)",
+      "Bash(*npm run tariff:*)",
+      "Bash(npm run dev*)", "Bash(npm run build*)", "Bash(npm run start*)",
+      "Bash(rm -rf *)", "Bash(*supabase.co*)",
+      "Read(./.env*)", "Bash(cat .env*)", "Bash(*.env.prod*)",
+      "Edit(/src/**)", "Edit(/supabase/**)", "Edit(/scripts/**)", "Edit(/.claude/**)"
+    ]
+  }
+}

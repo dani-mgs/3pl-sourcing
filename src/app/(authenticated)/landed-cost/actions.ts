@@ -7,7 +7,7 @@ import { requireStaff } from "@/lib/auth/require-staff";
 import type { StaffRole } from "@/lib/auth/get-user-role";
 import { todayUtc } from "@/lib/fx/server-rates";
 import { isLandedCostEnabled } from "@/lib/landed-cost/feature-flag";
-import { NOT_FOUND, OUTDATED, OWNER_ONLY, draftError, type DraftErrorCode } from "@/lib/landed-cost/draft-errors";
+import { NOT_FOUND, OUTDATED, OWNER_ONLY, draftError, hasLockedVersions, type DraftErrorCode } from "@/lib/landed-cost/draft-errors";
 import { buildWorkspaceCsv, versionFilename, workspaceCsvFilename } from "@/lib/landed-cost/export-csv";
 import { renderVersionPdf } from "@/lib/landed-cost/render-version-pdf";
 import { loadLockedVersion } from "@/lib/landed-cost/server-snapshots";
@@ -77,8 +77,6 @@ const LOCK_FAILED = "This version couldn't be locked right now. Try again.";
 const LOCK_MISMATCH = "This version couldn't be locked: the result didn't match the saved workspace. Reload it and try again.";
 const SNAPSHOT_NOT_FOUND = "This version doesn't exist, or you can't delete it.";
 const SNAPSHOT_OWNER_ONLY = "Only the person who locked this version, the workspace's owner or an admin can delete it.";
-const hasVersions = (n: number | null) =>
-  n ? `This workspace has ${n} locked ${n === 1 ? "version" : "versions"}. Delete ${n === 1 ? "it" : "them"} first.` : "This workspace has locked versions. Delete them first.";
 
 const saveResultSchema = z.object({
   updated_at: z.string(),
@@ -205,10 +203,10 @@ export async function deleteWorkspaceAction(input: unknown): Promise<DeleteWorks
     console.error("deleteWorkspaceAction versions error:", versions.error);
     return fail("failed", "The workspace couldn't be deleted right now. Try again.");
   }
-  if ((versions.count ?? 0) > 0) return fail("invalid", hasVersions(versions.count));
+  if ((versions.count ?? 0) > 0) return fail("invalid", hasLockedVersions(versions.count));
 
   const { error, count } = await supabase.from("landed_cost_workspaces").delete({ count: "exact" }).eq("id", workspaceId);
-  if (error?.code === "23503") return fail("invalid", hasVersions(null));
+  if (error?.code === "23503") return fail("invalid", hasLockedVersions(null));
   if (error) {
     console.error("deleteWorkspaceAction error:", error);
     return fail("failed", "The workspace couldn't be deleted right now. Try again.");

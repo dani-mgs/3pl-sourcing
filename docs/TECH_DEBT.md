@@ -4,6 +4,13 @@ Tracks known shortcuts, deferred work, and things that need revisiting later. No
 
 ## Open
 
+### No way to remove a fee row added by mistake
+- **Added:** 2026-10-26 (regression 2026-10-23, N-9)
+- **What:** The fees page (`/tariff-calculator/duty-data/fees`) only end-dates a row or adds one. A row that hasn't started yet can't be removed: it can't end before it starts (`customs_fees_dates_check`), and its neighbours can't be stretched over its dates (`customs_fees_no_overlap`). The local database keeps a QA test row (HMF 0.2% on 2027-06-01 only) for this reason.
+- **Why deferred:** Rare in practice and harmless to today's estimates; option 3 of the B-13–B-15 fix plan, left as a possible later feature.
+- **Severity:** Low
+- **Where:** A "Delete future row" action on the fees page for a row whose `effective_from` is after today (RLS already lets tariff editors delete `customs_fees`, and the history trigger records it), plus a way to reopen the previous row's end date, a Server Action in `src/app/(authenticated)/tariff-calculator/duty-data/actions.ts` starting with `requireStaff()`, and a /help update.
+
 ### Remove the live demo client
 - **Added:** 2026-10-15
 - **What:** "Brightline Apparel (Demo)" is on production: a 3PL and a forwarder project, published updates, a Market Report, requests and the portal user `brightline-demo@demo.example.test`. Testers can't delete it by hand, because published updates, reports and requests are immutable.

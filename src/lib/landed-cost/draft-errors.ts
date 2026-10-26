@@ -12,6 +12,11 @@ export const OWNER_ONLY = "Only the workspace's owner or an admin can edit it.";
 export const NOT_FOUND = "This workspace doesn't exist, or you can't open it.";
 export const STALE =
   "This workspace was changed by someone else since you opened it. Reload it to see their changes, then make yours again.";
+// Locked versions keep their workspace: the Delete workspace dialog says so
+// up front, and the delete action refuses with the same words (null: the
+// count isn't known).
+export const hasLockedVersions = (n: number | null) =>
+  n ? `This workspace has ${n} locked ${n === 1 ? "version" : "versions"}. Delete ${n === 1 ? "it" : "them"} first.` : "This workspace has locked versions. Delete them first.";
 // A page opened before the app's last change sent an old-style draft or
 // version (LC426, migration 20261022134839).
 export const OUTDATED = "This page is out of date. Reload to continue.";

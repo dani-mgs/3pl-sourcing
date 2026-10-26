@@ -496,6 +496,7 @@ the ZZQA Existing Client Co 3PL project. It can't be removed from the client sid
 
 ### B-15 — A locked Landed Cost version that contains a fixed-amount manual rate can never be opened or exported
 
+- **Status: Fixed 2026-10-26.** The cause differed from the suspect above: `ratePercent: null` was always accepted. A manual rate's value is stored as the database returns it, the numeric **as typed** (`"250"`, `"500"`; the `"250.00"` above was the on-screen amount), and the reader required it as money with exactly two decimals. The stored rows were right (the layer's own amount is `"250.00"` and the database had checked it), so only the reader changed (`snapshot-schema.ts`: a rate up to 4 decimals, an amount up to 2, exactly one of the two); no migration, no stored row touched. The CSV shows the value with its cents (`Fixed 250.00`). The 3b tests had missed it because every fixed-amount fixture was written with two decimals; `snapshot-manual-values.test.ts` now covers %-only, fixed-only (`250`, `250.5`, `0`, `12.34`) and both, through open, page, PDF and CSV. ZZQA LC Main v4 and ZZQA LC Entry v3 were checked with the fixed parser from read-only copies: both parse, show and export (`$500.00 fixed`, `$250.00 fixed`).
 - **Severity:** High. **Cases:** LCM-10, LCV-07 (for such versions).
 - **Steps (minimal, reproduced twice):** in a Landed Cost workspace with one origin and one SKU, add a manual duty with **Value → Fixed USD amount** (e.g. label "QA fixed repro", $250.00, any reason) → Save draft → Lock this version → open the new version.
 - **Expected:** the version page shows the stored result, with the manual rate in full, and offers Download PDF and Export CSV (as it does for a version whose manual rate is a percentage).
@@ -515,6 +516,7 @@ the ZZQA Existing Client Co 3PL project. It can't be removed from the client sid
 
 ### B-13 — Delete workspace offers Delete, then refuses, when the workspace has locked versions
 
+- **Status: Fixed 2026-10-26.** With locked versions the dialog now says "This workspace has N locked versions. Delete them first." (the action's own words, from one shared helper) and offers only Close; the server-side refusal stays for a stale page. With none, or when the versions list couldn't load, it is the confirmation as before.
 - **Severity:** Low. **Case:** LC-18.
 - **Steps:** open a Landed Cost workspace that has at least one locked version → Delete workspace → the dialog says only "Delete “<name>” with all its SKUs, inputs and costs? This cannot be undone." with Delete enabled → confirm.
 - **Expected:** the dialog says up front that the locked versions have to go first (or the control is disabled with that reason), as the lock control does for incomplete origins.
